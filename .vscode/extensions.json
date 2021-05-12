@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "golang.go",
+        "liuchao.go-struct-tag",
+        "premparihar.gotestexplorer",
+        "wayou.vscode-todo-highlight",
+        "gruntfuggly.todo-tree",
+        "marcusorchard.go-immutable"
+    ]
+}
