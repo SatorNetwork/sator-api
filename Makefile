@@ -27,7 +27,7 @@ run-local:
 migrate: ## Run all migrations
 	@rm -Rvf migrations/*.sql && \
 	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \
-	go run cmd/migrate/main.go
+	./bin/migrate
 
 migrate-local: ## Run all migrations
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
