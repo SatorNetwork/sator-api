@@ -9,7 +9,9 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/validator/v10 v10.6.1
-	github.com/google/uuid v1.0.0
+	github.com/google/uuid v1.1.2
 	github.com/lib/pq v1.10.1
 	github.com/rs/cors v1.7.0
+	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
+	github.com/ziutek/mymysql v1.5.4 // indirect
 )

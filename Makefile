@@ -27,8 +27,11 @@ run-local:
 migrate: ## Run all migrations
 	@rm -Rvf migrations/*.sql && \
 	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \
+	go run cmd/migrate/main.go
+
+migrate-local: ## Run all migrations
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
-	sql-migrate up -config=migrations/dbconfig.yml
+	make migrate
 
 up: ## Run all needed containers, including postgres with exposed port :5432
 	docker-compose up -d
