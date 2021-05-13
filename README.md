@@ -15,7 +15,7 @@ To use make commands you must have installed the following things:
 ## First run on localhost
 
 ```shell
-make up && sleep 10 && make migrate run-local
+make up && sleep 10 && make migrate-local run-local
 ```
 then the API will be available on `localhost:8080`
 
