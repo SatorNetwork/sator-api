@@ -31,9 +31,44 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwt.HTTPToContext()),
 	}
 
-	r.Get("/login", httptransport.NewServer(
+	r.Post("/login", httptransport.NewServer(
 		e.Login,
 		decodeLoginRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/logout", httptransport.NewServer(
+		e.Logout,
+		decodeLogoutRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/sign-up", httptransport.NewServer(
+		e.SignUp,
+		decodeSignUpRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/forgot-password", httptransport.NewServer(
+		e.ForgotPassword,
+		decodeForgotPasswordRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/reset-password", httptransport.NewServer(
+		e.ResetPassword,
+		decodeResetPasswordRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/verify-account", httptransport.NewServer(
+		e.VerifyAccount,
+		decodeVerifyAccountRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -47,6 +82,38 @@ func decodeLoginRequest(_ context.Context, r *http.Request) (request interface{}
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 	return req, nil
+}
+
+func decodeLogoutRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	return nil, nil
+}
+
+func decodeSignUpRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req SignUpRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
+func decodeForgotPasswordRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
+func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
+func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	return nil, nil
 }
 
 // returns http error code by error type
