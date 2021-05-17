@@ -32,11 +32,12 @@ paths:
       responses:
         "204":
           description: Get current API running status.
+
   /auth/login:
     post:
       tags:
         - "Auth"
-      summary: Login
+      summary: Log in
       requestBody:
         content:
           application/json:
@@ -51,7 +52,7 @@ paths:
                   example: "qwerty12345"
       responses:
         "200":
-          description: Returns current build tag, which contains build date and commit hash.
+          description: Returns JWT token.
           content:
             application/json:
               schema:
@@ -90,3 +91,95 @@ paths:
                         items:
                           type: string
                           example: "Field password must contain at least 8 chars"
+
+  /auth/signup:
+    post:
+      tags:
+        - "Auth"
+      summary: Sign up
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+                username:
+                  type: string
+                  example: "johndoe"
+                password:
+                  type: string
+                  example: "qwerty12345"
+      responses:
+        "201":
+          description: Returns only HTTP status 201 with empty body.
+        "400":
+          description: Bad request. The same for any code, except 422 - Unprocessable Entity.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "something went wrong"
+        "422":
+          description: Unprocessable Entity. It user for validation errors.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      email:
+                        type: array
+                        items:
+                          type: string
+                          example: "Field email must be a valid email address"
+                      username:
+                        type: array
+                        items:
+                          type: string
+                          example: "Field username cannot be empty"
+                      password:
+                        type: array
+                        items:
+                          type: string
+                          example: "Field password must contain at least 8 chars"
+
+  /profile:
+    get:
+      tags:
+        - "Profile"
+      summary: Get user profile data
+      responses:
+        "200":
+          description: Returns user profile data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  first_name:
+                    type: string
+                    example: "John"
+                  last_name:
+                    type: string
+                    example: "Doe"
+        "401":
+          description: Not authorized. User should be redirected to login page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Not authorized"
