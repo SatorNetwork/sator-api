@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS user_verifications (
     user_id uuid NOT NULL,
     email VARCHAR NOT NULL,
-    verification_code INT NOT NULL,
+    verification_code bytea NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     PRIMARY KEY(user_id, email)
 );

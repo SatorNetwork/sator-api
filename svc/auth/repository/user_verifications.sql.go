@@ -19,7 +19,7 @@ SET verification_code = $3
 type CreateUserVerificationParams struct {
 	UserID           uuid.UUID `json:"user_id"`
 	Email            string    `json:"email"`
-	VerificationCode int32     `json:"verification_code"`
+	VerificationCode []byte    `json:"verification_code"`
 }
 
 func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) error {
