@@ -39,6 +39,9 @@ var (
 	// JWT
 	jwtSigningKey = env.MustString("JWT_SIGNING_KEY")
 	jwtTTL        = env.GetDuration("JWT_TTL", 24*time.Hour)
+
+	// Auth
+	otpLength = env.GetInt("OTP_LENGTH", 5)
 )
 
 func main() {
@@ -93,7 +96,12 @@ func main() {
 			log.Fatalf("authRepo error: %v", err)
 		}
 		r.Mount("/auth", auth.MakeHTTPHandler(
-			auth.MakeEndpoints(auth.NewService(jwtInteractor, repo), jwtMdw),
+			auth.MakeEndpoints(auth.NewService(
+				jwtInteractor,
+				repo,
+				auth.WithCustomOTPLength(otpLength),
+				// auth.WithMailService(/** incapsulate mail service */),
+			), jwtMdw),
 			logger,
 		))
 	}
