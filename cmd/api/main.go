@@ -12,7 +12,9 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/svc/auth"
-	"github.com/SatorNetwork/sator-api/svc/auth/repository"
+	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
+	"github.com/SatorNetwork/sator-api/svc/profile"
+	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/TV4/graceful"
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-chi/chi"
@@ -91,7 +93,7 @@ func main() {
 
 	// Auth service
 	{
-		repo, err := repository.Prepare(ctx, db)
+		repo, err := authRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("authRepo error: %v", err)
 		}
@@ -102,6 +104,18 @@ func main() {
 				auth.WithCustomOTPLength(otpLength),
 				// auth.WithMailService(/** incapsulate mail service */),
 			), jwtMdw),
+			logger,
+		))
+	}
+
+	// Profile service
+	{
+		repo, err := profileRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("profileRepo error: %v", err)
+		}
+		r.Mount("/profile", profile.MakeHTTPHandler(
+			profile.MakeEndpoints(profile.NewService(repo), jwtMdw),
 			logger,
 		))
 	}
