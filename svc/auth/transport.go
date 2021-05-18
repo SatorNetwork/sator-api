@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
-	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -34,7 +33,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Post("/login", httptransport.NewServer(
 		e.Login,
 		decodeLoginRequest,
-		httpencoder.EncodeResponse,
+		encodeTokenResponse,
 		options...,
 	).ServeHTTP)
 
@@ -48,14 +47,14 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Post("/refresh-token", httptransport.NewServer(
 		e.RefreshToken,
 		decodeRefreshTokenRequest,
-		httpencoder.EncodeResponse,
+		encodeTokenResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/signup", httptransport.NewServer(
 		e.SignUp,
 		decodeSignUpRequest,
-		httpencoder.EncodeResponse,
+		encodeTokenResponse,
 		options...,
 	).ServeHTTP)
 
@@ -100,29 +99,11 @@ func decodeLoginRequest(_ context.Context, r *http.Request) (request interface{}
 }
 
 func decodeLogoutRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
-	tid, err := jwt.TokenIDFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get user id: %w", err)
-	}
-
-	return tid.String(), nil
+	return nil, nil
 }
 
 func decodeRefreshTokenRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
-	uid, err := jwt.UserIDFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get user id: %w", err)
-	}
-
-	tid, err := jwt.TokenIDFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get user id: %w", err)
-	}
-
-	return RefreshTokenRequest{
-		UserID:  uid.String(),
-		TokenID: tid.String(),
-	}, nil
+	return nil, nil
 }
 
 func decodeSignUpRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
@@ -161,18 +142,11 @@ func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request int
 	return req, nil
 }
 
-func decodeVerifyAccountRequest(ctx context.Context, r *http.Request) (request interface{}, err error) {
+func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req VerifyAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
-
-	userID, err := jwt.UserIDFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get user id: %w", err)
-	}
-	req.UserID = userID.String()
-
 	return req, nil
 }
 
@@ -189,4 +163,9 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func encodeTokenResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	w.Header().Set(httpencoder.ContentTypeHeader, httpencoder.ContentType)
+	return json.NewEncoder(w).Encode(response)
 }
