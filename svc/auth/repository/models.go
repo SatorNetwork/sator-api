@@ -30,6 +30,6 @@ type User struct {
 type UserVerification struct {
 	UserID           uuid.UUID `json:"user_id"`
 	Email            string    `json:"email"`
-	VerificationCode int32     `json:"verification_code"`
+	VerificationCode []byte    `json:"verification_code"`
 	CreatedAt        time.Time `json:"created_at"`
 }

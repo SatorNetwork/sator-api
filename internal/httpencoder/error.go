@@ -2,6 +2,7 @@ package httpencoder
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,6 +58,10 @@ func CodeAndMessageFrom(err error) (int, interface{}) {
 		errors.Is(err, jwt.ErrTokenNotActive) ||
 		errors.Is(err, jwt.ErrUnexpectedSigningMethod) {
 		return http.StatusUnauthorized, err.Error()
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return http.StatusNotFound, err.Error()
 	}
 
 	switch err {

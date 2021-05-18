@@ -14,8 +14,8 @@ FROM users
 WHERE email = $1
 LIMIT 1;
 -- name: CreateUser :one
-INSERT INTO users (id, email, password)
-VALUES ($1, $2, $3) RETURNING *;
+INSERT INTO users (id, email, username, password)
+VALUES ($1, $2, $3, $4) RETURNING *;
 -- name: UpdateUserEmail :exec
 UPDATE users
 SET email = $2
@@ -31,3 +31,6 @@ WHERE id = $1;
 -- name: DeleteUserByID :exec
 DELETE FROM users
 WHERE id = $1;
+-- name: UpdateUserVerifiedAt :exec
+UPDATE users
+SET verified_at = $1;

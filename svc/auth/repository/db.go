@@ -70,6 +70,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateUserStatusStmt, err = db.PrepareContext(ctx, updateUserStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserStatus: %w", err)
 	}
+	if q.updateUserVerifiedAtStmt, err = db.PrepareContext(ctx, updateUserVerifiedAt); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserVerifiedAt: %w", err)
+	}
 	return &q, nil
 }
 
@@ -155,6 +158,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateUserStatusStmt: %w", cerr)
 		}
 	}
+	if q.updateUserVerifiedAtStmt != nil {
+		if cerr := q.updateUserVerifiedAtStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserVerifiedAtStmt: %w", cerr)
+		}
+	}
 	return err
 }
 
@@ -210,6 +218,7 @@ type Queries struct {
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
+	updateUserVerifiedAtStmt            *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -232,5 +241,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,
+		updateUserVerifiedAtStmt:            q.updateUserVerifiedAtStmt,
 	}
 }
