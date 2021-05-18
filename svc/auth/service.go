@@ -58,7 +58,7 @@ type (
 	}
 )
 
-// NewService is a factory function, returns a new instance of the Service interface implementation
+// NewService is a factory function, returns a new instance of the Service interface implementation.
 func NewService(ji jwtInteractor, ur userRepository, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
@@ -69,7 +69,7 @@ func NewService(ji jwtInteractor, ur userRepository, opt ...ServiceOption) *Serv
 
 	s := &Service{jwt: ji, ur: ur, otpLen: 5}
 
-	// Set up options
+	// Set up options.
 	for _, o := range opt {
 		o(s)
 	}
@@ -77,7 +77,7 @@ func NewService(ji jwtInteractor, ur userRepository, opt ...ServiceOption) *Serv
 	return s
 }
 
-// Login by email and password, returns token
+// Login by email and password, returns token.
 func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -105,7 +105,7 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 	return nil
 }
 
-// RefreshToken returns new jwt string
+// RefreshToken returns new jwt string.
 func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, tid string) (string, error) {
 	// TODO: add JWT id into the revoked tokens list
 	_, token, err := s.jwt.NewWithUserID(uid)
@@ -116,20 +116,20 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, tid string) (
 }
 
 // SignUp registers account with email, password and username.
-func (s *Service) SignUp(ctx context.Context, email, password, username string) error {
+func (s *Service) SignUp(ctx context.Context, email, password, username string) (string, error) {
 	// Make email address case-insensitive
 	email = strings.ToLower(email)
 
-	// Check if the passed email address is not taken yet.
+	// Check if the passed email address is not taken yet
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
-		return ErrEmailAlreadyTaken
+		return "", ErrEmailAlreadyTaken
 	} else if !db.IsNotFoundError(err) {
-		return fmt.Errorf("could not create a new account: %w", err)
+		return "", fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	passwdHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("could not create a new account: %w", err)
+		return "", fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	u, err := s.ur.CreateUser(ctx, repository.CreateUserParams{
@@ -138,13 +138,13 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Username: username,
 	})
 	if err != nil {
-		return fmt.Errorf("could not create a new account: %w", err)
+		return "", fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
-		return fmt.Errorf("could not create a new account: %w", err)
+		return "", fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
@@ -152,12 +152,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Email:            email,
 		VerificationCode: otpHash,
 	}); err != nil {
-		return fmt.Errorf("could not generate verification code: %w", err)
+		return "", fmt.Errorf("could not generate verification code: %w", err)
 	}
 
 	if s.mail != nil {
 		if err := s.mail.SendVerificationEmail(ctx, email, otp); err != nil {
-			return fmt.Errorf("could not send verification code: %w", err)
+			return "", fmt.Errorf("could not send verification code: %w", err)
 		}
 	} else {
 		// log data for debug mode
@@ -165,7 +165,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	return nil
+	_, token, err := s.jwt.NewWithUserID(u.ID)
+	if err != nil {
+		return "", fmt.Errorf("could not generate new access token: %w", err)
+	}
+
+	return token, nil
 }
 
 // ForgotPassword requests password reset with email.
