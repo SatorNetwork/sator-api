@@ -1,5 +1,6 @@
 -- +migrate Up
 -- +migrate StatementBegin
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE
 OR REPLACE FUNCTION users_update_updated_at_column() RETURNS TRIGGER AS $$
 BEGIN NEW .updated_at = NOW();
