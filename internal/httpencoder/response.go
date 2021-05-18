@@ -50,7 +50,7 @@ func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface
 	}
 
 	switch response.(type) {
-	case Response, BoolResultResponse, ListResponse:
+	case *Response, *BoolResultResponse, *ListResponse:
 		return json.NewEncoder(w).Encode(response)
 	}
 	return json.NewEncoder(w).Encode(Response{Data: response})
