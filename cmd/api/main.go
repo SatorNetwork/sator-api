@@ -120,18 +120,6 @@ func main() {
 		))
 	}
 
-	// Profile service
-	{
-		repo, err := profileRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("profileRepo error: %v", err)
-		}
-		r.Mount("/profile", profile.MakeHTTPHandler(
-			profile.MakeEndpoints(profile.NewService(repo), jwtMdw),
-			logger,
-		))
-	}
-
 	// Init and run http server
 	httpServer := &http.Server{
 		Handler: r,
