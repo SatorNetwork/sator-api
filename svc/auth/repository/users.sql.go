@@ -5,23 +5,30 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, email, password)
-VALUES ($1, $2, $3) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at
+INSERT INTO users (id, email, username, password)
+VALUES ($1, $2, $3, $4) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at
 `
 
 type CreateUserParams struct {
 	ID       uuid.UUID `json:"id"`
 	Email    string    `json:"email"`
+	Username string    `json:"username"`
 	Password []byte    `json:"password"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser, arg.ID, arg.Email, arg.Password)
+	row := q.queryRow(ctx, q.createUserStmt, createUser,
+		arg.ID,
+		arg.Email,
+		arg.Username,
+		arg.Password,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -181,5 +188,15 @@ type UpdateUserStatusParams struct {
 
 func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
 	_, err := q.exec(ctx, q.updateUserStatusStmt, updateUserStatus, arg.ID, arg.Disabled)
+	return err
+}
+
+const updateUserVerifiedAt = `-- name: UpdateUserVerifiedAt :exec
+UPDATE users
+SET verified_at = $1
+`
+
+func (q *Queries) UpdateUserVerifiedAt(ctx context.Context, verifiedAt sql.NullTime) error {
+	_, err := q.exec(ctx, q.updateUserVerifiedAtStmt, updateUserVerifiedAt, verifiedAt)
 	return err
 }

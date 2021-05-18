@@ -30,6 +30,11 @@ type (
 			Offset       int64 `json:"offset,omitempty"`
 		} `json:"meta,omitempty"`
 	}
+
+	// BoolResultResponse struct
+	BoolResultResponse struct {
+		Result bool `json:"result"`
+	}
 )
 
 // EncodeResponse is the common method to encode all response types to the
@@ -38,8 +43,20 @@ type (
 // specialize on a per-response (per-method) basis.
 func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set(ContentTypeHeader, ContentType)
-	if _, ok := response.(Response); ok {
+
+	if response == nil {
+		w.WriteHeader(http.StatusCreated)
+		return nil
+	}
+
+	switch response.(type) {
+	case Response, BoolResultResponse, ListResponse:
 		return json.NewEncoder(w).Encode(response)
 	}
 	return json.NewEncoder(w).Encode(Response{Data: response})
+}
+
+// BoolResult response helper
+func BoolResult(result bool) BoolResultResponse {
+	return BoolResultResponse{Result: result}
 }

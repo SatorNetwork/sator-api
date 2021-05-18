@@ -1,0 +1,79 @@
+package mail
+
+import (
+	"crypto/tls"
+	"net"
+	"net/smtp"
+)
+
+// ensures that SMTPSender implements Sender.
+var _ Sender = (*SMTPSender)(nil)
+
+// SMTPSender is smtp sender.
+type SMTPSender struct {
+	ServerAddress string
+
+	From Address
+	Auth smtp.Auth
+}
+
+// FromAddress returns address of sender from.
+func (sender *SMTPSender) FromAddress() Address {
+	return sender.From
+}
+
+// SendEmail sends email message to the given recipient.
+func (sender *SMTPSender) SendEmail(msg *Message) error {
+	// TODO: validate address before initializing SMTPSender
+	// suppress error because address should be validated
+	// before creating SMTPSender.
+	host, _, _ := net.SplitHostPort(sender.ServerAddress)
+
+	client, err := smtp.Dial(sender.ServerAddress)
+	if err != nil {
+		return err
+	}
+	// close underlying connection.
+	defer client.Close()
+
+	// send smtp hello or ehlo msg and establish connection over tls.
+	err = client.StartTLS(&tls.Config{ServerName: host})
+	if err != nil {
+		return err
+	}
+
+	err = client.Auth(sender.Auth)
+	if err != nil {
+		return err
+	}
+
+	err = client.Mail(sender.From.Address)
+	if err != nil {
+		return err
+	}
+
+	// add recipients.
+	for _, to := range msg.To {
+		err = client.Rcpt(to.Address)
+		if err != nil {
+			return err
+		}
+	}
+
+	data, err := client.Data()
+	if err != nil {
+		return err
+	}
+
+	defer data.Close()
+
+	_, err = data.Write(msg.Bytes())
+	if err != nil {
+		return err
+	}
+
+	// send quit msg to stop gracefully returns err on
+	// success but we don't really care about the result.
+	_ = client.Quit()
+	return nil
+}
