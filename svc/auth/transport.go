@@ -45,6 +45,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/refresh-token", httptransport.NewServer(
+		e.RefreshToken,
+		decodeRefreshTokenRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/signup", httptransport.NewServer(
 		e.SignUp,
 		decodeSignUpRequest,
@@ -84,8 +91,29 @@ func decodeLoginRequest(_ context.Context, r *http.Request) (request interface{}
 	return req, nil
 }
 
-func decodeLogoutRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	return nil, nil
+func decodeLogoutRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	tid, err := jwt.TokenIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+	return tid.String(), nil
+}
+
+func decodeRefreshTokenRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	uid, err := jwt.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+
+	tid, err := jwt.TokenIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+
+	return RefreshTokenRequest{
+		UserID:  uid.String(),
+		TokenID: tid.String(),
+	}, nil
 }
 
 func decodeSignUpRequest(_ context.Context, r *http.Request) (request interface{}, err error) {

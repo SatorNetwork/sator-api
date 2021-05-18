@@ -14,6 +14,7 @@ type (
 		Login                     endpoint.Endpoint
 		Logout                    endpoint.Endpoint
 		SignUp                    endpoint.Endpoint
+		RefreshToken              endpoint.Endpoint
 		ForgotPassword            endpoint.Endpoint
 		ValidateResetPasswordCode endpoint.Endpoint
 		ResetPassword             endpoint.Endpoint
@@ -22,8 +23,9 @@ type (
 
 	authService interface {
 		Login(ctx context.Context, email, password string) (string, error)
-		Logout(ctx context.Context) error
+		Logout(ctx context.Context, tid string) error
 		SignUp(ctx context.Context, email, password, username string) error
+		RefreshToken(ctx context.Context, uid uuid.UUID, tid string) (string, error)
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
 		ResetPassword(ctx context.Context, email, password, otp string) error
@@ -39,6 +41,12 @@ type (
 	LoginRequest struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required"`
+	}
+
+	// RefreshTokenRequest struct
+	RefreshTokenRequest struct {
+		UserID  string `json:"user_id,omitempty" validate:"required"`
+		TokenID string `json:"token_id,omitempty" validate:"required"`
 	}
 
 	// SignUpRequest struct
@@ -79,8 +87,9 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 
 	e := Endpoints{
 		Login:                     MakeLoginEndpoint(as, validateFunc),
-		Logout:                    jwtMdw(MakeLogoutEndpoint(as, validateFunc)),
+		Logout:                    jwtMdw(MakeLogoutEndpoint(as)),
 		SignUp:                    MakeSignUpEndpoint(as, validateFunc),
+		RefreshToken:              jwtMdw(MakeRefreshTokenEndpoint(as, validateFunc)),
 		ForgotPassword:            MakeForgotPasswordEndpoint(as, validateFunc),
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
@@ -120,9 +129,10 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 }
 
 // MakeLogoutEndpoint ...
-func MakeLogoutEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, _ interface{}) (interface{}, error) {
-		if err := s.Logout(ctx); err != nil {
+func MakeLogoutEndpoint(s authService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		tid := request.(string)
+		if err := s.Logout(ctx, tid); err != nil {
 			return nil, err
 		}
 		return nil, nil
@@ -142,6 +152,28 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 		}
 
 		return nil, nil
+	}
+}
+
+// MakeRefreshTokenEndpoint ...
+func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(RefreshTokenRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := uuid.Parse(req.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		token, err := s.RefreshToken(ctx, uid, req.TokenID)
+		if err != nil {
+			return nil, err
+		}
+
+		return AccessToken{Token: token}, nil
 	}
 }
 

@@ -100,9 +100,19 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 }
 
 // Logout revokes JWT token.
-func (s *Service) Logout(ctx context.Context) error {
+func (s *Service) Logout(ctx context.Context, tid string) error {
 	// TODO: add JWT id into the revoked tokens list
 	return nil
+}
+
+// RefreshToken returns new jwt string
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, tid string) (string, error) {
+	// TODO: add JWT id into the revoked tokens list
+	_, token, err := s.jwt.NewWithUserID(uid)
+	if err != nil {
+		return "", fmt.Errorf("could not refresh access token: %w", err)
+	}
+	return token, nil
 }
 
 // SignUp registers account with email, password and username.
