@@ -207,7 +207,7 @@ paths:
                   example: "john.doe@mail.dev"
       responses:
         "200":
-          $ref: "#/components/responses/EmptyBody"
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":
@@ -234,7 +234,7 @@ paths:
                   example: "54367"
       responses:
         "200":
-          $ref: "#/components/responses/EmptyBody"
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":
@@ -265,7 +265,7 @@ paths:
                   example: "54367"
       responses:
         "200":
-          $ref: "#/components/responses/EmptyBody"
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":
@@ -290,7 +290,7 @@ paths:
                   example: "54367"
       responses:
         "200":
-          $ref: "#/components/responses/EmptyBody"
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":
