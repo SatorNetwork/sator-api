@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 
+	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
@@ -101,6 +102,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.Login = mdw(e.Login)
 			e.Logout = mdw(e.Logout)
 			e.SignUp = mdw(e.SignUp)
+			e.RefreshToken = mdw(e.RefreshToken)
 			e.ForgotPassword = mdw(e.ForgotPassword)
 			e.ValidateResetPasswordCode = mdw(e.ValidateResetPasswordCode)
 			e.ResetPassword = mdw(e.ResetPassword)
@@ -135,7 +137,7 @@ func MakeLogoutEndpoint(s authService) endpoint.Endpoint {
 		if err := s.Logout(ctx, tid); err != nil {
 			return nil, err
 		}
-		return nil, nil
+		return httpencoder.BoolResult(true), nil
 	}
 }
 
@@ -189,7 +191,7 @@ func MakeForgotPasswordEndpoint(s authService, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
-		return nil, nil
+		return httpencoder.BoolResult(true), nil
 	}
 }
 
@@ -205,7 +207,7 @@ func MakeValidateResetPasswordCodeEndpoint(s authService, v validator.ValidateFu
 			return nil, err
 		}
 
-		return nil, nil
+		return httpencoder.BoolResult(true), nil
 	}
 }
 
@@ -221,7 +223,7 @@ func MakeResetPasswordEndpoint(s authService, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		return nil, nil
+		return httpencoder.BoolResult(true), nil
 	}
 }
 
@@ -242,6 +244,6 @@ func MakeVerifyAccountEndpoint(s authService, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		return nil, nil
+		return httpencoder.BoolResult(true), nil
 	}
 }
