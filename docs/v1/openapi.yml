@@ -167,8 +167,8 @@ paths:
                   type: string
                   example: "qwerty12345"
       responses:
-        "201":
-          $ref: "#/components/responses/EmptyBody"
+        "200":
+          $ref: "#/components/responses/AccessToken"
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":
