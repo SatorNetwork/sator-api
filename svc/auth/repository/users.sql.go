@@ -11,24 +11,18 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, email, username, password)
-VALUES ($1, $2, $3, $4) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at
+INSERT INTO users (email, username, password)
+VALUES ($1, $2, $3) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at
 `
 
 type CreateUserParams struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	Username string    `json:"username"`
-	Password []byte    `json:"password"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password []byte `json:"password"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser,
-		arg.ID,
-		arg.Email,
-		arg.Username,
-		arg.Password,
-	)
+	row := q.queryRow(ctx, q.createUserStmt, createUser, arg.Email, arg.Username, arg.Password)
 	var i User
 	err := row.Scan(
 		&i.ID,
