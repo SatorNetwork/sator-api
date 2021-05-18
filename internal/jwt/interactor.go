@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var defaultSigningMethod jwt.SigningMethod = jwt.SigningMethodHS256
+
 type (
 	// JWT struct
 	JWT struct {
@@ -37,7 +39,7 @@ func (i *JWT) NewWithUserID(userID uuid.UUID) (uuid.UUID, string, error) {
 			IssuedAt:  time.Now().Unix(),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(defaultSigningMethod, claims)
 	ss, err := token.SignedString(i.signingKey)
 	if err != nil {
 		return uuid.Nil, "", fmt.Errorf("could not sign token: %w", err)

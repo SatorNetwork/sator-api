@@ -2,11 +2,9 @@ package profile
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
-	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -40,11 +38,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 }
 
 func decodeGetProfileRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
-	uid, err := jwt.UserIDFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get user profile id: %w", err)
-	}
-	return uid, nil
+	return nil, nil
 }
 
 // returns http error code by error type

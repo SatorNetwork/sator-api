@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
@@ -71,8 +73,7 @@ type (
 
 	// VerifyAccountRequest struct
 	VerifyAccountRequest struct {
-		UserID string `json:"user_id,omitempty" validate:"required"`
-		OTP    string `json:"otp" validate:"required"`
+		OTP string `json:"otp" validate:"required"`
 	}
 
 	// ValidateResetPasswordCodeRequest struct
@@ -132,9 +133,12 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 
 // MakeLogoutEndpoint ...
 func MakeLogoutEndpoint(s authService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		tid := request.(string)
-		if err := s.Logout(ctx, tid); err != nil {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		tid, err := jwt.TokenIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+		if err := s.Logout(ctx, tid.String()); err != nil {
 			return nil, err
 		}
 		return httpencoder.BoolResult(true), nil
@@ -160,18 +164,18 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 
 // MakeRefreshTokenEndpoint ...
 func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(RefreshTokenRequest)
-		if err := v(req); err != nil {
-			return nil, err
-		}
-
-		uid, err := uuid.Parse(req.UserID)
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		token, err := s.RefreshToken(ctx, uid, req.TokenID)
+		tid, err := jwt.TokenIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		token, err := s.RefreshToken(ctx, uid, tid.String())
 		if err != nil {
 			return nil, err
 		}
@@ -236,12 +240,12 @@ func MakeVerifyAccountEndpoint(s authService, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		userID, err := uuid.Parse(req.UserID)
+		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		if err := s.VerifyAccount(ctx, userID, req.OTP); err != nil {
+		if err := s.VerifyAccount(ctx, uid, req.OTP); err != nil {
 			return nil, err
 		}
 

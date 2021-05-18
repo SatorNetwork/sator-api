@@ -10,5 +10,5 @@ import (
 func NewParser(signingKey string) endpoint.Middleware {
 	return kitjwt.NewParser(func(token *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
-	}, jwt.SigningMethodHS256, ClaimsFactory)
+	}, defaultSigningMethod, ClaimsFactory)
 }

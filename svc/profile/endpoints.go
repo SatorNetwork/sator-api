@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -36,10 +37,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 // MakeGetProfileEndpoint ...
 func MakeGetProfileEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		uid, ok := req.(uuid.UUID)
-		if !ok {
-			return nil, fmt.Errorf("could not get user profile id")
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
 		resp, err := s.GetProfileByUserID(ctx, uid)
