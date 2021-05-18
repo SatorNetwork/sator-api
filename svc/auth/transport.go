@@ -66,6 +66,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/validate-reset-password-code", httptransport.NewServer(
+		e.ValidateResetPasswordCode,
+		decodeValidateResetPasswordCodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/reset-password", httptransport.NewServer(
 		e.ResetPassword,
 		decodeResetPasswordRequest,
@@ -126,6 +133,14 @@ func decodeSignUpRequest(_ context.Context, r *http.Request) (request interface{
 
 func decodeForgotPasswordRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
+func decodeValidateResetPasswordCodeRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req ValidateResetPasswordCodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
