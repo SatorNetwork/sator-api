@@ -95,6 +95,7 @@ func decodeLoginRequest(_ context.Context, r *http.Request) (request interface{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
 	return req, nil
 }
 
@@ -103,6 +104,7 @@ func decodeLogoutRequest(ctx context.Context, _ *http.Request) (request interfac
 	if err != nil {
 		return nil, fmt.Errorf("could not get user id: %w", err)
 	}
+
 	return tid.String(), nil
 }
 
@@ -128,6 +130,7 @@ func decodeSignUpRequest(_ context.Context, r *http.Request) (request interface{
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
 	return req, nil
 }
 
@@ -136,6 +139,7 @@ func decodeForgotPasswordRequest(_ context.Context, r *http.Request) (request in
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
 	return req, nil
 }
 
@@ -144,6 +148,7 @@ func decodeValidateResetPasswordCodeRequest(_ context.Context, r *http.Request) 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
 	return req, nil
 }
 
@@ -152,6 +157,7 @@ func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request int
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
 	return req, nil
 }
 
