@@ -8,8 +8,9 @@ import (
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-chi/chi"
-	"github.com/go-kit/kit/auth/jwt"
+	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
@@ -21,14 +22,13 @@ type (
 )
 
 // MakeHTTPHandler ...
-// TODO:  add missed methods
 func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r := chi.NewRouter()
 
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(log)),
 		httptransport.ServerErrorEncoder(httpencoder.EncodeError(log, codeAndMessageFrom)),
-		httptransport.ServerBefore(jwt.HTTPToContext()),
+		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
 	r.Post("/login", httptransport.NewServer(
@@ -45,7 +45,14 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/sign-up", httptransport.NewServer(
+	r.Post("/refresh-token", httptransport.NewServer(
+		e.RefreshToken,
+		decodeRefreshTokenRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/signup", httptransport.NewServer(
 		e.SignUp,
 		decodeSignUpRequest,
 		httpencoder.EncodeResponse,
@@ -55,6 +62,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Post("/forgot-password", httptransport.NewServer(
 		e.ForgotPassword,
 		decodeForgotPasswordRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/validate-reset-password-code", httptransport.NewServer(
+		e.ValidateResetPasswordCode,
+		decodeValidateResetPasswordCodeRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -84,8 +98,29 @@ func decodeLoginRequest(_ context.Context, r *http.Request) (request interface{}
 	return req, nil
 }
 
-func decodeLogoutRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	return nil, nil
+func decodeLogoutRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	tid, err := jwt.TokenIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+	return tid.String(), nil
+}
+
+func decodeRefreshTokenRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	uid, err := jwt.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+
+	tid, err := jwt.TokenIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+
+	return RefreshTokenRequest{
+		UserID:  uid.String(),
+		TokenID: tid.String(),
+	}, nil
 }
 
 func decodeSignUpRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
@@ -104,6 +139,14 @@ func decodeForgotPasswordRequest(_ context.Context, r *http.Request) (request in
 	return req, nil
 }
 
+func decodeValidateResetPasswordCodeRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req ValidateResetPasswordCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
 func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -112,8 +155,19 @@ func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request int
 	return req, nil
 }
 
-func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	return nil, nil
+func decodeVerifyAccountRequest(ctx context.Context, r *http.Request) (request interface{}, err error) {
+	var req VerifyAccountRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	userID, err := jwt.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get user id: %w", err)
+	}
+	req.UserID = userID.String()
+
+	return req, nil
 }
 
 // returns http error code by error type
@@ -123,7 +177,8 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	}
 
 	if errors.Is(err, ErrEmailAlreadyTaken) ||
-		errors.Is(err, ErrInvalidToken) {
+		errors.Is(err, ErrEmailAlreadyVerified) ||
+		errors.Is(err, ErrOTPCode) {
 		return http.StatusBadRequest, err.Error()
 	}
 

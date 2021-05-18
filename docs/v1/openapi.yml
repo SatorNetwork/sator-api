@@ -7,6 +7,77 @@ servers:
     description: Local server
   - url: https://sator-api-n7vrw.ondigitalocean.app/
     description: Development server
+components:
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    EmptyBody:
+      description: Returns only HTTP status, without any payload.
+    ResultSuccess:
+      description: "Successful result"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              result:
+                type: boolean
+                example: true
+    AccessToken:
+      description: Returns JWT token.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              access_token:
+                type: string
+                example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    DefaultError:
+      description: Default error view.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "something went wrong"
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+    ValidationError:
+      description: Validation errors.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  field_name:
+                    type: array
+                    items:
+                      type: string
+                      example:
+                        - "Field field_name cannot be empty"
+                        - "Field field_name must be a valid email address"
+                  another_field:
+                    type: array
+                    items:
+                      type: string
+                      example: "Field another_field must contain at least 8 chars"
 paths:
   /:
     get:
@@ -32,12 +103,14 @@ paths:
       responses:
         "204":
           description: Get current API running status.
+
   /auth/login:
     post:
       tags:
         - "Auth"
-      summary: Login
+      summary: Log in
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -51,42 +124,203 @@ paths:
                   example: "qwerty12345"
       responses:
         "200":
-          description: Returns current build tag, which contains build date and commit hash.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+          $ref: "#/components/responses/AccessToken"
         "400":
-          description: Bad request. The same for any code, except 422 - Unprocessable Entity.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "something went wrong"
+          $ref: "#/components/responses/DefaultError"
         "422":
-          description: Unprocessable Entity. It user for validation errors.
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/refresh-token:
+    post:
+      tags:
+        - "Auth"
+      summary: Refresh access token (JWT).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AccessToken"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /auth/signup:
+    post:
+      tags:
+        - "Auth"
+      summary: Sign up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+                username:
+                  type: string
+                  example: "johndoe"
+                password:
+                  type: string
+                  example: "qwerty12345"
+      responses:
+        "201":
+          $ref: "#/components/responses/EmptyBody"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/logout:
+    post:
+      tags:
+        - "Auth"
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - "Auth"
+      summary: Forgot password
+      description: Requests reset password code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyBody"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/validate-reset-password-code:
+    post:
+      tags:
+        - "Auth"
+      summary: Validate reset password code.
+      description: Can be used on screed with reset password code validation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+                otp:
+                  type: string
+                  example: "54367"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyBody"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/reset-password:
+    post:
+      tags:
+        - "Auth"
+      summary: Reset password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+                password:
+                  type: string
+                  minimum: 8
+                  maximum: 50
+                  example: "srgserge45g45grtg"
+                otp:
+                  type: string
+                  example: "54367"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyBody"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/verify-account:
+    post:
+      tags:
+        - "Auth"
+      summary: Account verification.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                otp:
+                  type: string
+                  example: "54367"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyBody"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /profile:
+    get:
+      tags:
+        - "Profile"
+      summary: Get user profile data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Returns user profile data.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  error:
-                    type: object
-                    properties:
-                      email:
-                        type: array
-                        items:
-                          type: string
-                          example: "Field email must be a valid email address"
-                      password:
-                        type: array
-                        items:
-                          type: string
-                          example: "Field password must contain at least 8 chars"
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  first_name:
+                    type: string
+                    example: "John"
+                  last_name:
+                    type: string
+                    example: "Doe"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
