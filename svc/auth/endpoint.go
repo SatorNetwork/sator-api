@@ -95,7 +95,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		ForgotPassword:            MakeForgotPasswordEndpoint(as, validateFunc),
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
-		VerifyAccount:             MakeVerifyAccountEndpoint(as, validateFunc),
+		VerifyAccount:             jwtMdw(MakeVerifyAccountEndpoint(as, validateFunc)),
 	}
 
 	if len(m) > 0 {
