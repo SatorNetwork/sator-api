@@ -25,7 +25,7 @@ type (
 	authService interface {
 		Login(ctx context.Context, email, password string) (string, error)
 		Logout(ctx context.Context, tid string) error
-		SignUp(ctx context.Context, email, password, username string) error
+		SignUp(ctx context.Context, email, password, username string) (string, error)
 		RefreshToken(ctx context.Context, uid uuid.UUID, tid string) (string, error)
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
@@ -149,11 +149,12 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, err
 		}
 
-		if err := s.SignUp(ctx, req.Email, req.Password, req.Username); err != nil {
+		token, err := s.SignUp(ctx, req.Email, req.Password, req.Username)
+		if err != nil {
 			return nil, err
 		}
 
-		return nil, nil
+		return AccessToken{Token: token}, nil
 	}
 }
 
