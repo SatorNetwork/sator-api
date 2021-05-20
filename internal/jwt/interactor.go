@@ -27,11 +27,12 @@ func NewInteractor(signingKey string, expiresIn time.Duration) *JWT {
 	}
 }
 
-// NewWithUserID returns signed JWT string with user id in claims
-func (i *JWT) NewWithUserID(userID uuid.UUID) (uuid.UUID, string, error) {
+// NewWithUserData returns signed JWT string with user id and username in claims
+func (i *JWT) NewWithUserData(userID uuid.UUID, username string) (uuid.UUID, string, error) {
 	tokenID := uuid.New()
 	claims := &Claims{
 		userID.String(),
+		username,
 		jwt.StandardClaims{
 			Id:        tokenID.String(),
 			ExpiresAt: time.Now().Add(i.expIn).Unix(),
