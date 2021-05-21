@@ -1,4 +1,4 @@
-package example
+package wallet
 
 import (
 	"context"
@@ -12,38 +12,38 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		Example endpoint.Endpoint
+		GetBalance endpoint.Endpoint
 	}
 
 	service interface {
-		Example(ctx context.Context, uid uuid.UUID) (interface{}, error)
+		GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, error)
 	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
-		Example: MakeExampleEndpoint(s),
+		GetBalance: MakeGetBalanceEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
 	if len(m) > 0 {
 		for _, mdw := range m {
-			e.Example = mdw(e.Example)
+			e.GetBalance = mdw(e.GetBalance)
 		}
 	}
 
 	return e
 }
 
-// MakeExampleEndpoint ...
-func MakeExampleEndpoint(s service) endpoint.Endpoint {
+// MakeGetBalanceEndpoint ...
+func MakeGetBalanceEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		resp, err := s.Example(ctx, uid)
+		resp, err := s.GetBalance(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
