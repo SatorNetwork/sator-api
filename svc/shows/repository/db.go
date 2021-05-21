@@ -22,17 +22,17 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.getShowsstmt, err = db.PrepareContext(ctx, getShows); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateWallet: %w", err)
+	if q.getShowsStmt, err = db.PrepareContext(ctx, getShows); err != nil {
+		return nil, fmt.Errorf("error preparing query GetShows: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.getShowsstmt != nil {
-		if cerr := q.getShowsstmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getShowsstmt: %w", cerr)
+	if q.getShowsStmt != nil {
+		if cerr := q.getShowsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getShowsStmt: %w", cerr)
 		}
 	}
 	return err
@@ -81,6 +81,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:           tx,
 		tx:           tx,
-		getShowsstmt: q.getShowsStmt,
+		getShowsStmt: q.getShowsStmt,
 	}
 }
