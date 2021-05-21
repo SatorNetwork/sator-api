@@ -16,7 +16,7 @@ type (
 	}
 
 	service interface {
-		GetProfileByUserID(ctx context.Context, userID uuid.UUID) (interface{}, error)
+		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (interface{}, error)
 	}
 )
 
@@ -43,7 +43,12 @@ func MakeGetProfileEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		resp, err := s.GetProfileByUserID(ctx, uid)
+		username, err := jwt.UsernameFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get username: %w", err)
+		}
+
+		resp, err := s.GetProfileByUserID(ctx, uid, username)
 		if err != nil {
 			return nil, err
 		}

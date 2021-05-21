@@ -39,7 +39,7 @@ func NewService(pr profileRepository) *Service {
 
 // GetProfileByUserID returns user profile by user id
 // If it doesn't exist, the method creates missed record in database and returns it
-func (s *Service) GetProfileByUserID(ctx context.Context, userID uuid.UUID) (interface{}, error) {
+func (s *Service) GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (interface{}, error) {
 	profile, err := s.pr.GetProfileByUserID(ctx, userID)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
@@ -54,13 +54,17 @@ func (s *Service) GetProfileByUserID(ctx context.Context, userID uuid.UUID) (int
 		}
 	}
 
-	return castToProfile(profile), nil
+	return castToProfile(profile, username), nil
 }
 
-func castToProfile(p repository.Profile) *Profile {
-	return &Profile{
+func castToProfile(p repository.Profile, username string) *Profile {
+	profile := &Profile{
 		UserID:    p.UserID.String(),
 		FirstName: p.FirstName.String,
 		LastName:  p.LastName.String,
 	}
+	if profile.FirstName == "" && profile.LastName == "" {
+		profile.FirstName = username
+	}
+	return profile
 }
