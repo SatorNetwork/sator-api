@@ -22,17 +22,25 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.getShowsStmt, err = db.PrepareContext(ctx, getShows); err != nil {
-		return nil, fmt.Errorf("error preparing query GetShows: %w", err)
+	if q.getChallengeByIDStmt, err = db.PrepareContext(ctx, getChallengeByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetChallengeByID: %w", err)
+	}
+	if q.getChallengesStmt, err = db.PrepareContext(ctx, getChallenges); err != nil {
+		return nil, fmt.Errorf("error preparing query GetChallenges: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.getShowsStmt != nil {
-		if cerr := q.getShowsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getShowsStmt: %w", cerr)
+	if q.getChallengeByIDStmt != nil {
+		if cerr := q.getChallengeByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getChallengeByIDStmt: %w", cerr)
+		}
+	}
+	if q.getChallengesStmt != nil {
+		if cerr := q.getChallengesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getChallengesStmt: %w", cerr)
 		}
 	}
 	return err
@@ -72,15 +80,17 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db           DBTX
-	tx           *sql.Tx
-	getShowsStmt *sql.Stmt
+	db                   DBTX
+	tx                   *sql.Tx
+	getChallengeByIDStmt *sql.Stmt
+	getChallengesStmt    *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:           tx,
-		tx:           tx,
-		getShowsStmt: q.getShowsStmt,
+		db:                   tx,
+		tx:                   tx,
+		getChallengeByIDStmt: q.getChallengeByIDStmt,
+		getChallengesStmt:    q.getChallengesStmt,
 	}
 }

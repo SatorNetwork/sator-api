@@ -1,4 +1,6 @@
 -- name: GetShows :many
 SELECT *
 FROM shows
-LIMIT $1 OFFSET $2;
+ORDER BY updated_at,
+    created_at DESC
+LIMIT $1 OFFSET $2; 

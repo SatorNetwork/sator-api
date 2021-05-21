@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 
-	"github.com/SatorNetwork/sator-api/svc/challenge"
+	repository2 "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/google/uuid"
 )
 
@@ -14,7 +14,7 @@ type (
 	}
 
 	service interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int64) ([]challenge.Challenge, error)
+		GetChallenges(ctx context.Context, arg repository2.GetChallengesParams) ([]repository2.Challenge, error)
 	}
 )
 
@@ -24,8 +24,12 @@ func New(s service) *Client {
 }
 
 // GetListByShowID returns challenges list filtered by show id
-func (c *Client) GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int64) (interface{}, error) {
+func (c *Client) GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int32) (interface{}, error) {
 	limit := itemsPerPage
 	offset := limit * (page - 1)
-	return c.s.GetListByShowID(ctx, showID, limit, offset)
+	return c.s.GetChallenges(ctx, repository2.GetChallengesParams{
+		ShowID: showID,
+		Limit:  limit,
+		Offset: offset,
+	})
 }

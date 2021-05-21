@@ -13,6 +13,8 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
+	"github.com/SatorNetwork/sator-api/svc/challenge"
+	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
@@ -137,6 +139,18 @@ func main() {
 		))
 	}
 
+	// Challenges service
+	{
+		repo, err := challengeRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("challengeRepo error: %v", err)
+		}
+		r.Mount("/challenges", challenge.MakeHTTPHandler(
+			challenge.MakeEndpoints(challenge.NewService(repo), jwtMdw),
+			logger,
+		))
+	}
+
 	// Shows service
 	{
 		repo, err := showsRepo.Prepare(ctx, db)
@@ -144,7 +158,7 @@ func main() {
 			log.Fatalf("showsRepo error: %v", err)
 		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(repo), jwtMdw),
+			shows.MakeEndpoints(shows.NewService(repo, nil), jwtMdw),
 			logger,
 		))
 	}
