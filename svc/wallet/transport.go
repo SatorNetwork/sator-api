@@ -1,4 +1,4 @@
-package example
+package wallet
 
 import (
 	"context"
@@ -27,9 +27,9 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Get("/", httptransport.NewServer(
-		e.Example,
-		decodeExampleRequest,
+	r.Get("/balance", httptransport.NewServer(
+		e.GetBalance,
+		decodeGetBalanceRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -37,7 +37,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeExampleRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
+func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
 }
 

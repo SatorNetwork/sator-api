@@ -322,5 +322,39 @@ paths:
                     example: "Doe"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
-        "422":
-          $ref: "#/components/responses/ValidationError"
+
+  /wallet/balance:
+    get:
+      tags:
+        - "Wallet"
+      summary: Get total balance.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Get user total balance across all wallets.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sao:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        example: 302
+                      currency:
+                        type: string
+                        example: "SAO"
+                  usd:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        example: 2541.39
+                      currency:
+                        type: string
+                        example: "USD"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
