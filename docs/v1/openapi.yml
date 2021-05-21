@@ -358,3 +358,146 @@ paths:
                         example: "USD"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+
+  /shows:
+    get:
+      tags:
+        - "Shows"
+      summary: Get shows list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns shows list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Peaky Blinders"
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    has_new_episode:
+                      type: boolean
+                      example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /shows/{show_id}/challenges:
+    get:
+      tags:
+        - "Shows"
+      summary: Get challenges list by show id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns challenges list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Challenge name"
+                    description:
+                      type: string
+                      example: "Fast Questions! More detailed description about this challenge here. We can use couple senteces."
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /challenges/{challenge_id}:
+    get:
+      tags:
+        - "Challenges"
+      summary: Get challenge details by id.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Returns challenge details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "Challenge name"
+                  description:
+                    type: string
+                    example: "Fast Questions! More detailed description about this challenge here. We can use couple senteces."
+                  prize_pool:
+                    type: string
+                    example: "250 SAO"
+                  players_to_start:
+                    type: integer
+                    example: 10
+                  time_per_question:
+                    type: string
+                    example: "15 sec"
+                  play_url:
+                    type: string
+                    description: "Absolute URL to start quiz. In the future it will be URL to connect websocket."
+                    example: "http://localhost:8080/challenges/{challenge_id}/play"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
