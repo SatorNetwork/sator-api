@@ -15,6 +15,9 @@ import (
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/wallet"
+
+	// walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/TV4/graceful"
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-chi/chi"
@@ -116,6 +119,14 @@ func main() {
 		}
 		r.Mount("/profile", profile.MakeHTTPHandler(
 			profile.MakeEndpoints(profile.NewService(repo), jwtMdw),
+			logger,
+		))
+	}
+
+	// Wallet service
+	{
+		r.Mount("/wallet", wallet.MakeHTTPHandler(
+			wallet.MakeEndpoints(wallet.NewService(), jwtMdw),
 			logger,
 		))
 	}
