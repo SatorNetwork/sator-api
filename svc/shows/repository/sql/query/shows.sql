@@ -1,4 +1,4 @@
 -- name: GetShows :many
 SELECT *
 FROM shows
-LIMIT 10 OFFSET $1;
+LIMIT $1 OFFSET $2;

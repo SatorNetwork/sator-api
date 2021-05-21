@@ -14,12 +14,12 @@ type (
 	}
 
 	service interface {
-		GetShows(ctx context.Context, page int) (interface{}, error)
+		GetShows(ctx context.Context, page int32) (interface{}, error)
 	}
 
 	// GetShowsRequest struct
 	GetShowsRequest struct {
-		Page int `json:"page" validate:"required"`
+		Page int32 `json:"page" validate:"required"`
 	}
 )
 

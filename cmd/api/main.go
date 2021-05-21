@@ -16,6 +16,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
+	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 

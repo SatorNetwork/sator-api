@@ -37,8 +37,11 @@ func NewService(sr showsRepository) *Service {
 }
 
 // GetShows returns shows.
-func (s *Service) GetShows(ctx context.Context, page int) (interface{}, error) {
-	shows, err := s.sr.GetShows(ctx, repository.GetShowsParams{Page: page})
+func (s *Service) GetShows(ctx context.Context, page int32) (interface{}, error) {
+	shows, err := s.sr.GetShows(ctx, repository.GetShowsParams{
+		Limit:  20,
+		Offset: 20*(page-1),
+	})
 	if err != nil {
 		return []repository.Show{}, err
 	}
