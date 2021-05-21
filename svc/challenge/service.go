@@ -10,6 +10,10 @@ type (
 	// Service struct
 	Service struct {
 	}
+
+	// Challenge struct
+	Challenge struct {
+	}
 )
 
 // NewService is a factory function,
