@@ -8,8 +8,10 @@ import (
 )
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode
+SELECT id, title, cover, has_new_episode, updated_at, created_at
 FROM shows
+ORDER BY updated_at,
+    created_at DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -32,6 +34,8 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.Title,
 			&i.Cover,
 			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

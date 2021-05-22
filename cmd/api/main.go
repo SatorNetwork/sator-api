@@ -144,7 +144,8 @@ func main() {
 			log.Fatalf("showsRepo error: %v", err)
 		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(repo), jwtMdw),
+			// FIXME: pass challenges client as a second parameter of shows.NewService
+			shows.MakeEndpoints(shows.NewService(repo, nil), jwtMdw),
 			logger,
 		))
 	}
