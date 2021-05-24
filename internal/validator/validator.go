@@ -19,6 +19,12 @@ type (
 	ValidateFunc func(s interface{}) error
 )
 
+// NewValidationError is a factory function,
+// returns a new instance of the ValidationError
+func NewValidationError(errBag url.Values) ValidationError {
+	return ValidationError{ErrorsBag: errBag}
+}
+
 func (v ValidationError) Error() string {
 	return v.ErrorStr
 }
