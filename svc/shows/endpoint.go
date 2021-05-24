@@ -44,7 +44,7 @@ func (r PaginationRequest) Limit() int32 {
 
 // Offset items
 func (r PaginationRequest) Offset() int32 {
-	if r.Page > 0 {
+	if r.Page > 1 {
 		return r.Page * r.Limit()
 	}
 	return 0
