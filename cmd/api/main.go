@@ -8,16 +8,19 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
+	"github.com/SatorNetwork/sator-api/svc/challenge"
+	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
-
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/TV4/graceful"
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-chi/chi"
@@ -34,6 +37,7 @@ var buildTag string
 var (
 	// General
 	appPort            = env.MustInt("APP_PORT")
+	appBaseURL         = env.MustString("APP_BASE_URL")
 	httpRequestTimeout = env.GetDuration("HTTP_REQUEST_TIMEOUT", 30*time.Second)
 
 	// DB
@@ -134,6 +138,33 @@ func main() {
 			logger,
 		))
 	}
+
+	// Challenges service
+	{
+		repo, err := challengeRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("challengeRepo error: %v", err)
+		}
+		r.Mount("/challenges", challenge.MakeHTTPHandler(
+			challenge.MakeEndpoints(challenge.NewService(
+				repo,
+				challenge.DefaultPlayURLGenerator(fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/"))),
+			), jwtMdw),
+			logger,
+		))
+	}
+
+	// Shows service
+	// {
+	// 	repo, err := showsRepo.Prepare(ctx, db)
+	// 	if err != nil {
+	// 		log.Fatalf("showsRepo error: %v", err)
+	// 	}
+	// 	r.Mount("/shows", shows.MakeHTTPHandler(
+	// 		shows.MakeEndpoints(shows.NewService(repo, nil), jwtMdw),
+	// 		logger,
+	// 	))
+	// }
 
 	// Init and run http server
 	httpServer := &http.Server{
