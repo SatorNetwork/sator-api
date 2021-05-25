@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -40,7 +39,6 @@ func (r PaginationRequest) Limit() int32 {
 	if r.ItemsPerPage > 0 {
 		return r.ItemsPerPage
 	}
-
 	return 20
 }
 
@@ -49,10 +47,10 @@ func (r PaginationRequest) Offset() int32 {
 	if r.Page > 1 {
 		return r.Page * r.Limit()
 	}
-
 	return 0
 }
 
+// MakeEndpoints ...
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 

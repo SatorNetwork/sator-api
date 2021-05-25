@@ -3,4 +3,4 @@ SELECT *
 FROM shows
 ORDER BY updated_at,
     created_at DESC
-LIMIT $1 OFFSET $2; 
+LIMIT $1 OFFSET $2;
