@@ -24,6 +24,7 @@ type (
 	// Profile struct
 	Profile struct {
 		UserID    string `json:"id"`
+		UserName  string `json:"username"`
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 	}
@@ -60,11 +61,10 @@ func (s *Service) GetProfileByUserID(ctx context.Context, userID uuid.UUID, user
 func castToProfile(p repository.Profile, username string) *Profile {
 	profile := &Profile{
 		UserID:    p.UserID.String(),
+		UserName:  username,
 		FirstName: p.FirstName.String,
 		LastName:  p.LastName.String,
 	}
-	if profile.FirstName == "" && profile.LastName == "" {
-		profile.FirstName = username
-	}
+
 	return profile
 }
