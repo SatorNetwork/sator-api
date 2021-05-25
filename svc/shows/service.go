@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
-
 	"github.com/google/uuid"
 )
 
@@ -32,7 +31,7 @@ type (
 
 	// Challenges service client
 	challengesClient interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int32) (interface{}, error)
 	}
 )
 
@@ -45,7 +44,6 @@ func NewService(sr showsRepository, chc challengesClient) *Service {
 	if chc == nil {
 		log.Fatalln("challenges client is not set")
 	}
-
 	return &Service{sr: sr, chc: chc}
 }
 
@@ -58,7 +56,6 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-
 	return castToShow(shows), nil
 }
 
@@ -68,14 +65,12 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenges list by show id: %w", err)
 	}
-
 	return challenges, nil
 }
 
 // Cast repository.Show to service Show structure
 func castToShow(source []repository.Show) []Show {
 	result := make([]Show, 0, len(source))
-
 	for _, s := range source {
 		result = append(result, Show{
 			ID:            s.ID,
@@ -84,6 +79,5 @@ func castToShow(source []repository.Show) []Show {
 			HasNewEpisode: s.HasNewEpisode,
 		})
 	}
-
 	return result
 }

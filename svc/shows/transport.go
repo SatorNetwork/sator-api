@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
-
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -53,7 +52,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetShowsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
 		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
@@ -62,7 +61,7 @@ func decodeGetShowsRequest(ctx context.Context, r *http.Request) (interface{}, e
 
 func decodeGetShowChallengesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetShowChallengesRequest{
-		ShowID:            chi.URLParam(r, "show_id"),
+		ShowID: chi.URLParam(r, "show_id"),
 		PaginationRequest: PaginationRequest{
 			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
@@ -75,7 +74,6 @@ func castStrToInt32(source string) int32 {
 	if err != nil {
 		return 0
 	}
-
 	return int32(res)
 }
 
@@ -84,6 +82,5 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	if errors.Is(err, ErrInvalidParameter) {
 		return http.StatusBadRequest, err.Error()
 	}
-
 	return httpencoder.CodeAndMessageFrom(err)
 }
