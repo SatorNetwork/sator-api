@@ -3,6 +3,7 @@ package challenge
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
@@ -29,13 +30,6 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Get("/list/{show_id}", httptransport.NewServer(
-		e.GetChallengesByShowId,
-		decodeGetChallengesByShowIdRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
 	r.Get("/{id}", httptransport.NewServer(
 		e.GetChallengesByShowId,
 		decodeGetChallengeByIdRequest,
@@ -46,12 +40,12 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetChallengesByShowIdRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetChallengesByShowIdRequest{ShowID: chi.URLParam(r, "show_id")}, nil
-}
-
-func decodeGetChallengeByIdRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetChallengeByIdRequest{ID: chi.URLParam(r, "id")}, nil
+func decodeGetChallengeByIdRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
+	}
+	return id, nil
 }
 
 // returns http error code by error type
@@ -59,6 +53,5 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	if errors.Is(err, ErrInvalidParameter) {
 		return http.StatusBadRequest, err.Error()
 	}
-
 	return httpencoder.CodeAndMessageFrom(err)
 }

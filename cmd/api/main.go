@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
@@ -38,6 +39,7 @@ var buildTag string
 var (
 	// General
 	appPort            = env.MustInt("APP_PORT")
+	appBaseURL         = env.MustString("APP_BASE_URL")
 	httpRequestTimeout = env.GetDuration("HTTP_REQUEST_TIMEOUT", 30*time.Second)
 
 	// DB
@@ -146,7 +148,10 @@ func main() {
 			log.Fatalf("challengeRepo error: %v", err)
 		}
 		r.Mount("/challenges", challenge.MakeHTTPHandler(
-			challenge.MakeEndpoints(challenge.NewService(repo), jwtMdw),
+			challenge.MakeEndpoints(challenge.NewService(
+				repo,
+				challenge.DefaultPlayURLGenerator(fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/"))),
+			), jwtMdw),
 			logger,
 		))
 	}

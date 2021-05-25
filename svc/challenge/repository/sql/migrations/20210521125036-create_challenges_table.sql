@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS challenges (
     show_id uuid NOT NULL,
     title VARCHAR NOT NULL,
     description VARCHAR DEFAULT NULL,
-    prize_pool DECIMAL NOT NULL,
+    prize_pool DOUBLE PRECISION NOT NULL,
     players_to_start INT NOT NULL,
     time_per_question INT DEFAULT 10,
     updated_at TIMESTAMP DEFAULT NULL,

@@ -14,7 +14,7 @@ type Challenge struct {
 	ShowID          uuid.UUID      `json:"show_id"`
 	Title           string         `json:"title"`
 	Description     sql.NullString `json:"description"`
-	PrizePool       string         `json:"prize_pool"`
+	PrizePool       float64        `json:"prize_pool"`
 	PlayersToStart  int32          `json:"players_to_start"`
 	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
