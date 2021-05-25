@@ -20,6 +20,7 @@ build: ## Build the app
 
 run-local:
 	@APP_PORT=8080 \
+	APP_BASE_URL=http://localhost:8080/ \
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	JWT_SIGNING_KEY=secret \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
