@@ -18,8 +18,6 @@ import (
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
-	"github.com/SatorNetwork/sator-api/svc/shows"
-	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 
@@ -157,16 +155,16 @@ func main() {
 	}
 
 	// Shows service
-	{
-		repo, err := showsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("showsRepo error: %v", err)
-		}
-		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(repo, nil), jwtMdw),
-			logger,
-		))
-	}
+	// {
+	// 	repo, err := showsRepo.Prepare(ctx, db)
+	// 	if err != nil {
+	// 		log.Fatalf("showsRepo error: %v", err)
+	// 	}
+	// 	r.Mount("/shows", shows.MakeHTTPHandler(
+	// 		shows.MakeEndpoints(shows.NewService(repo, nil), jwtMdw),
+	// 		logger,
+	// 	))
+	// }
 
 	// Init and run http server
 	httpServer := &http.Server{
