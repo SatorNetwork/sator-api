@@ -27,8 +27,8 @@ type (
 		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
 	}
 
-	// GetChallengesRequest struct
-	GetChallengesRequest struct {
+	// GetShowChallengesRequest struct
+	GetShowChallengesRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
 		PaginationRequest
 	}
@@ -90,7 +90,7 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 // MakeGetShowChallengesEndpoint ...
 func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(GetChallengesRequest)
+		req := request.(GetShowChallengesRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}

@@ -42,9 +42,9 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{showID}/challenges", httptransport.NewServer(
+	r.Get("/{show_id}/challenges", httptransport.NewServer(
 		e.GetShowChallenges,
-		decodeGetChallengesRequest,
+		decodeGetShowChallengesRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -59,14 +59,14 @@ func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, err
 	}, nil
 }
 
-func decodeGetChallengesRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	req := GetChallengesRequest{}
-
-	req.ShowID = chi.URLParam(r, "showID")
-	req.Page = castStrToInt32(r.URL.Query().Get(pageParam))
-	req.ItemsPerPage = castStrToInt32(r.URL.Query().Get(itemsPerPageParam))
-
-	return req, nil
+func decodeGetShowChallengesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetShowChallengesRequest{
+		ShowID: chi.URLParam(r, "show_id"),
+		PaginationRequest: PaginationRequest{
+			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func castStrToInt32(source string) int32 {

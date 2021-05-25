@@ -19,9 +19,9 @@ type (
 	// Show struct
 	// Fields were rearranged to optimize memory usage.
 	Show struct {
+		ID            uuid.UUID `json:"id"`
 		Title         string    `json:"title"`
 		Cover         string    `json:"cover"`
-		ID            uuid.UUID `json:"id"`
 		HasNewEpisode bool      `json:"has_new_episode"`
 	}
 
@@ -31,7 +31,7 @@ type (
 
 	// Challenges service client
 	challengesClient interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int32) (interface{}, error)
 	}
 )
 

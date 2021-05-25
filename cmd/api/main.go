@@ -8,11 +8,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
+	"github.com/SatorNetwork/sator-api/svc/challenge"
+	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
+	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
@@ -36,6 +40,7 @@ var buildTag string
 var (
 	// General
 	appPort            = env.MustInt("APP_PORT")
+	appBaseURL         = env.MustString("APP_BASE_URL")
 	httpRequestTimeout = env.GetDuration("HTTP_REQUEST_TIMEOUT", 30*time.Second)
 
 	// DB
@@ -137,15 +142,30 @@ func main() {
 		))
 	}
 
-	// Shows service
+	// Challenges service
 	{
-		repo, err := showsRepo.Prepare(ctx, db)
+		repo, err := challengeRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("challengeRepo error: %v", err)
+		}
+		challengeSvc := challenge.NewService(
+			repo,
+			challenge.DefaultPlayURLGenerator(
+				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
+			),
+		)
+		r.Mount("/challenges", challenge.MakeHTTPHandler(
+			challenge.MakeEndpoints(challengeSvc, jwtMdw),
+			logger,
+		))
+
+		// Shows service
+		showRepo, err := showsRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("showsRepo error: %v", err)
 		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			// FIXME: pass challenges client as a second parameter of shows.NewService
-			shows.MakeEndpoints(shows.NewService(repo, nil), jwtMdw),
+			shows.MakeEndpoints(shows.NewService(showRepo, challengeClient.New(challengeSvc)), jwtMdw),
 			logger,
 		))
 	}

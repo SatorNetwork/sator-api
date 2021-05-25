@@ -55,6 +55,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserByIDStmt, err = db.PrepareContext(ctx, getUserByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByID: %w", err)
 	}
+	if q.getUserByUsernameStmt, err = db.PrepareContext(ctx, getUserByUsername); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByUsername: %w", err)
+	}
 	if q.getUserVerificationByUserIDStmt, err = db.PrepareContext(ctx, getUserVerificationByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserVerificationByUserID: %w", err)
 	}
@@ -131,6 +134,11 @@ func (q *Queries) Close() error {
 	if q.getUserByIDStmt != nil {
 		if cerr := q.getUserByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByIDStmt: %w", cerr)
+		}
+	}
+	if q.getUserByUsernameStmt != nil {
+		if cerr := q.getUserByUsernameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByUsernameStmt: %w", cerr)
 		}
 	}
 	if q.getUserVerificationByUserIDStmt != nil {
@@ -213,6 +221,7 @@ type Queries struct {
 	getPasswordResetByEmailStmt         *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
+	getUserByUsernameStmt               *sql.Stmt
 	getUserVerificationByUserIDStmt     *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
@@ -236,6 +245,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getPasswordResetByEmailStmt:         q.getPasswordResetByEmailStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
+		getUserByUsernameStmt:               q.getUserByUsernameStmt,
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
