@@ -12,6 +12,8 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
+	repository2 "github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/dmitrymomot/random"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -21,6 +23,8 @@ type (
 	// Service struct
 	Service struct {
 		ur     userRepository
+		sc     solanaClient
+		ws     walletService
 		jwt    jwtInteractor
 		mail   mailer
 		otpLen int
@@ -58,18 +62,32 @@ type (
 		SendVerificationEmail(ctx context.Context, email, otp string) error
 		SendResetPasswordEmail(ctx context.Context, email, otp string) error
 	}
+
+	solanaClient interface {
+		CreateAccount(ctx context.Context) (string, []byte, error)
+	}
+
+	walletService interface {
+		CreateWallet(ctx context.Context, userID uuid.UUID, publicKey string, privateKey []byte) (repository2.Wallet, error)
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, sc solanaClient, ws walletService, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
 	if ji == nil {
 		log.Fatalln("jwt interactor is not set")
 	}
+	if sc == nil {
+		log.Fatalln("solana client is not set")
+	}
+	if ws == nil {
+		log.Fatalln("wallet service is not set")
+	}
 
-	s := &Service{jwt: ji, ur: ur, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, sc: sc, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -292,6 +310,16 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 
 	if err := s.ur.UpdateUserVerifiedAt(ctx, sql.NullTime{Time: time.Now(), Valid: true}); err != nil {
 		return fmt.Errorf("could not verify email address: %w", err)
+	}
+
+	publicKey, privateKey, err := s.sc.CreateAccount(ctx)
+	if err != nil {
+		return fmt.Errorf("counld not create solana account: %w", err)
+	}
+
+	_, err = s.ws.CreateWallet(ctx, u.ID, publicKey, privateKey)
+	if err != nil {
+		return fmt.Errorf("counld not create solana wallet: %w", err)
 	}
 
 	if err := s.ur.DeleteUserVerificationsByUserID(ctx, userID); err != nil {

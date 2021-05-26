@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
@@ -101,8 +102,22 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	solanaClient := solana.New()
+
 	// Auth service
 	{
+		// Wallet service
+		wRepo, err := walletRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("walletRepo error: %v", err)
+		}
+		walletService := wallet.NewService(wRepo, solanaClient)
+		r.Mount("/wallet", wallet.MakeHTTPHandler(
+			wallet.MakeEndpoints(walletService, jwtMdw),
+			logger,
+		))
+
+		// auth
 		repo, err := authRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("authRepo error: %v", err)
@@ -111,6 +126,8 @@ func main() {
 			auth.MakeEndpoints(auth.NewService(
 				jwtInteractor,
 				repo,
+				solanaClient,
+				walletService,
 				auth.WithCustomOTPLength(otpLength),
 				// auth.WithMailService(/** incapsulate mail service */),
 			), jwtMdw),
@@ -126,18 +143,6 @@ func main() {
 		}
 		r.Mount("/profile", profile.MakeHTTPHandler(
 			profile.MakeEndpoints(profile.NewService(repo), jwtMdw),
-			logger,
-		))
-	}
-
-	// Wallet service
-	{
-		repo, err := walletRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("walletRepo error: %v", err)
-		}
-		r.Mount("/wallet", wallet.MakeHTTPHandler(
-			wallet.MakeEndpoints(wallet.NewService(repo), jwtMdw),
 			logger,
 		))
 	}
