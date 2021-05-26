@@ -314,6 +314,9 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  username:
+                    type: string
+                    example: "BigBoy13"
                   first_name:
                     type: string
                     example: "John"
