@@ -418,6 +418,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: show_id
+          in: path
+          description: Show ID
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -467,6 +473,13 @@ paths:
       summary: Get challenge details by id.
       security:
         - bearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Challenge ID
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Returns challenge details.
