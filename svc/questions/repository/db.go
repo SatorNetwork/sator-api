@@ -25,6 +25,18 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addQuestionStmt, err = db.PrepareContext(ctx, addQuestion); err != nil {
 		return nil, fmt.Errorf("error preparing query AddQuestion: %w", err)
 	}
+	if q.addQuestionOptionStmt, err = db.PrepareContext(ctx, addQuestionOption); err != nil {
+		return nil, fmt.Errorf("error preparing query AddQuestionOption: %w", err)
+	}
+	if q.checkAnswerStmt, err = db.PrepareContext(ctx, checkAnswer); err != nil {
+		return nil, fmt.Errorf("error preparing query CheckAnswer: %w", err)
+	}
+	if q.getAnswerByIDStmt, err = db.PrepareContext(ctx, getAnswerByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAnswerByID: %w", err)
+	}
+	if q.getAnswersByQuestionIDStmt, err = db.PrepareContext(ctx, getAnswersByQuestionID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAnswersByQuestionID: %w", err)
+	}
 	if q.getQuestionByIDStmt, err = db.PrepareContext(ctx, getQuestionByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetQuestionByID: %w", err)
 	}
@@ -39,6 +51,26 @@ func (q *Queries) Close() error {
 	if q.addQuestionStmt != nil {
 		if cerr := q.addQuestionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addQuestionStmt: %w", cerr)
+		}
+	}
+	if q.addQuestionOptionStmt != nil {
+		if cerr := q.addQuestionOptionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addQuestionOptionStmt: %w", cerr)
+		}
+	}
+	if q.checkAnswerStmt != nil {
+		if cerr := q.checkAnswerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing checkAnswerStmt: %w", cerr)
+		}
+	}
+	if q.getAnswerByIDStmt != nil {
+		if cerr := q.getAnswerByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAnswerByIDStmt: %w", cerr)
+		}
+	}
+	if q.getAnswersByQuestionIDStmt != nil {
+		if cerr := q.getAnswersByQuestionIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAnswersByQuestionIDStmt: %w", cerr)
 		}
 	}
 	if q.getQuestionByIDStmt != nil {
@@ -91,6 +123,10 @@ type Queries struct {
 	db                            DBTX
 	tx                            *sql.Tx
 	addQuestionStmt               *sql.Stmt
+	addQuestionOptionStmt         *sql.Stmt
+	checkAnswerStmt               *sql.Stmt
+	getAnswerByIDStmt             *sql.Stmt
+	getAnswersByQuestionIDStmt    *sql.Stmt
 	getQuestionByIDStmt           *sql.Stmt
 	getQuestionsByChallengeIDStmt *sql.Stmt
 }
@@ -100,6 +136,10 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                            tx,
 		tx:                            tx,
 		addQuestionStmt:               q.addQuestionStmt,
+		addQuestionOptionStmt:         q.addQuestionOptionStmt,
+		checkAnswerStmt:               q.checkAnswerStmt,
+		getAnswerByIDStmt:             q.getAnswerByIDStmt,
+		getAnswersByQuestionIDStmt:    q.getAnswersByQuestionIDStmt,
 		getQuestionByIDStmt:           q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt: q.getQuestionsByChallengeIDStmt,
 	}

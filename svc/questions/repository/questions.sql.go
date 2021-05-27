@@ -10,24 +10,18 @@ import (
 )
 
 const addQuestion = `-- name: AddQuestion :one
-INSERT INTO questions (id, challenge_id, question, question_order)
-VALUES ($1, $2, $3, $4) RETURNING id, challenge_id, question, question_order, updated_at, created_at
+INSERT INTO questions (challenge_id, question, question_order)
+VALUES ($1, $2, $3) RETURNING id, challenge_id, question, question_order, updated_at, created_at
 `
 
 type AddQuestionParams struct {
-	ID            uuid.UUID `json:"id"`
 	ChallengeID   uuid.UUID `json:"challenge_id"`
 	Question      string    `json:"question"`
 	QuestionOrder int32     `json:"question_order"`
 }
 
 func (q *Queries) AddQuestion(ctx context.Context, arg AddQuestionParams) (Question, error) {
-	row := q.queryRow(ctx, q.addQuestionStmt, addQuestion,
-		arg.ID,
-		arg.ChallengeID,
-		arg.Question,
-		arg.QuestionOrder,
-	)
+	row := q.queryRow(ctx, q.addQuestionStmt, addQuestion, arg.ChallengeID, arg.Question, arg.QuestionOrder)
 	var i Question
 	err := row.Scan(
 		&i.ID,
@@ -65,6 +59,7 @@ const getQuestionsByChallengeID = `-- name: GetQuestionsByChallengeID :many
 SELECT id, challenge_id, question, question_order, updated_at, created_at
 FROM questions
 WHERE challenge_id = $1
+ORDER BY quiestion_order ASC
     LIMIT 1
 `
 

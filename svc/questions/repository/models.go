@@ -17,3 +17,12 @@ type Question struct {
 	UpdatedAt     sql.NullTime `json:"updated_at"`
 	CreatedAt     time.Time    `json:"created_at"`
 }
+
+type QuestionOption struct {
+	ID             uuid.UUID    `json:"id"`
+	QuestionID     uuid.UUID    `json:"question_id"`
+	QuestionOption string       `json:"question_option"`
+	IsCorrect      sql.NullBool `json:"is_correct"`
+	UpdatedAt      sql.NullTime `json:"updated_at"`
+	CreatedAt      time.Time    `json:"created_at"`
+}
