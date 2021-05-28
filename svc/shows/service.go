@@ -61,7 +61,7 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 
 // GetShowChallenges returns challenges by show id.
 func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
-	challenges, err := s.chc.GetListByShowID(ctx, showID, offset, limit)
+	challenges, err := s.chc.GetListByShowID(ctx, showID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenges list by show id: %w", err)
 	}

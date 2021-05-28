@@ -34,7 +34,7 @@ type CreateWalletParams struct {
 	AssetName     string        `json:"asset_name"`
 	WalletAddress string        `json:"wallet_address"`
 	PublicKey     string        `json:"public_key"`
-	PrivateKey    string        `json:"private_key"`
+	PrivateKey    []byte        `json:"private_key"`
 	Status        sql.NullInt32 `json:"status"`
 }
 

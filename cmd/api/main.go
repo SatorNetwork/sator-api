@@ -126,7 +126,6 @@ func main() {
 			auth.MakeEndpoints(auth.NewService(
 				jwtInteractor,
 				repo,
-				solanaClient,
 				walletService,
 				auth.WithCustomOTPLength(otpLength),
 				// auth.WithMailService(/** incapsulate mail service */),
