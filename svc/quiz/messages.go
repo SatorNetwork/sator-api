@@ -4,10 +4,12 @@ import "time"
 
 // Predefined message types
 const (
-	UserConnectedMessage   = "user_connected"
-	UserDisonnectedMessage = "user_disconnected"
+	UserConnectedMessage   = "player_connected"
+	UserDisonnectedMessage = "player_disconnected"
 	CountdownMessage       = "countdown"
 	QuestionMessage        = "question"
+	AnswerMessage          = "answer"
+	QuestionResultMessage  = "question_result"
 	ChallengeResultMessage = "challenge_result"
 )
 
