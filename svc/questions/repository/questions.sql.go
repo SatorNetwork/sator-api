@@ -60,7 +60,6 @@ SELECT id, challenge_id, question, question_order, updated_at, created_at
 FROM questions
 WHERE challenge_id = $1
 ORDER BY quiestion_order ASC
-    LIMIT 1
 `
 
 func (q *Queries) GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]Question, error) {

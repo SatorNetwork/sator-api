@@ -38,17 +38,12 @@ func (q *Queries) AddQuestionOption(ctx context.Context, arg AddQuestionOptionPa
 const checkAnswer = `-- name: CheckAnswer :one
 SELECT is_correct
 FROM question_options
-WHERE id = $1 AND question_id = $2
+WHERE id = $1
     LIMIT 1
 `
 
-type CheckAnswerParams struct {
-	ID         uuid.UUID `json:"id"`
-	QuestionID uuid.UUID `json:"question_id"`
-}
-
-func (q *Queries) CheckAnswer(ctx context.Context, arg CheckAnswerParams) (sql.NullBool, error) {
-	row := q.queryRow(ctx, q.checkAnswerStmt, checkAnswer, arg.ID, arg.QuestionID)
+func (q *Queries) CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error) {
+	row := q.queryRow(ctx, q.checkAnswerStmt, checkAnswer, id)
 	var is_correct sql.NullBool
 	err := row.Scan(&is_correct)
 	return is_correct, err
@@ -79,7 +74,6 @@ const getAnswersByQuestionID = `-- name: GetAnswersByQuestionID :many
 SELECT id, question_id, question_option, is_correct, updated_at, created_at
 FROM question_options
 WHERE question_id = $1
-    LIMIT 1
 `
 
 func (q *Queries) GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]QuestionOption, error) {

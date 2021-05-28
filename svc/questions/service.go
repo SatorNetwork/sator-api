@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/questions/repository"
+
 	"github.com/google/uuid"
 )
 
@@ -22,7 +22,7 @@ type (
 		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.QuestionOption, error)
-		CheckAnswer(ctx context.Context, arg repository.CheckAnswerParams) (sql.NullBool, error)
+		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
 	}
 
 	// Question struct
@@ -43,24 +43,24 @@ type (
 	}
 )
 
-// NewService is a factory function, returns a new instance of the Service interface implementation
-func NewService(qr questionsRepository) *Service {
-	if qr == nil {
-		log.Fatalln("question repository is not set")
-	}
-	return &Service{qr: qr}
-}
-
 // GetQuestionByID returns question by id
 func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	question, err := s.qr.GetQuestionByID(ctx, id)
-	if !db.IsNotFoundError(err) {
-		return nil, fmt.Errorf("could not get question: %w", err)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get question: %w", err)
+		}
+
+		return nil, fmt.Errorf("question with id %w not found", id)
 	}
 
 	answers, err := s.qr.GetAnswersByQuestionID(ctx, id)
-	if !db.IsNotFoundError(err) {
-		return nil, fmt.Errorf("could not get question: %w", err)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get answer: %w", err)
+		}
+
+		return nil, fmt.Errorf("answer with id %w not found", id)
 	}
 
 	return castToQuestion(question, answers), nil
@@ -89,21 +89,26 @@ func castToQuestion(q repository.Question, answers []repository.QuestionOption) 
 // GetQuestionByChallengeID returns questions by challenge id
 func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
-	if !db.IsNotFoundError(err) {
-		return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+		}
+
+		return nil, fmt.Errorf("questions with challenge id %w not found", id)
 	}
 
 	return questions, nil
 }
 
 // CheckAnswer returns question by id
-func (s *Service) CheckAnswer(ctx context.Context, id, questionID uuid.UUID) (bool, error) {
-	answers, err := s.qr.CheckAnswer(ctx, repository.CheckAnswerParams{
-		ID:         id,
-		QuestionID: questionID,
-	})
-	if !db.IsNotFoundError(err) {
-		return false, fmt.Errorf("could not validate answer: %w", err)
+func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
+	answers, err := s.qr.CheckAnswer(ctx, id)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return false, fmt.Errorf("could not validate answer: %w", err)
+		}
+
+		return false, fmt.Errorf("question with id %w not found", id)
 	}
 
 	return answers.Bool, nil
