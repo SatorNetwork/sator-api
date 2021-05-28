@@ -17,3 +17,5 @@ bin/
 # vendor/
 
 cmd/test/
+.trash/
+.DS_Store

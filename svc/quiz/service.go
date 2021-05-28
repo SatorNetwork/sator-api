@@ -2,38 +2,65 @@ package quiz
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
-	"github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/google/uuid"
 )
 
 type (
 	// Service struct
 	Service struct {
-		repo quizRepository
+		repo           quizRepository
+		tokenGenFunc   tokenGenFunc
+		tokenParseFunc tokenParseFunc
+		tokenTTL       int64
 	}
 
-	quizRepository interface {
-		AddNewChallegeRoom(ctx context.Context, arg repository.AddNewChallegeRoomParams) (repository.ChallengeRoom, error)
-		GetChallengeRoomByID(ctx context.Context, id uuid.UUID) (repository.ChallengeRoom, error)
-		UpdateChallengeRoomStatus(ctx context.Context, arg repository.UpdateChallengeRoomStatusParams) error
+	quizRepository interface{}
+
+	tokenGenFunc   func(data interface{}, ttl int64) (string, error)
+	tokenParseFunc func(token string) (interface{}, error)
+
+	TokenPayload struct {
+		UserID          string
+		Username        string
+		ChallengeRoomID string
 	}
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo quizRepository) *Service {
-	return &Service{
-		repo: repo,
+func NewService(repo quizRepository, gfn tokenGenFunc, pfn tokenParseFunc) *Service {
+	return &Service{repo: repo, tokenGenFunc: gfn}
+}
+
+// GetQuizLink returns link with token to connect to quiz
+func (s *Service) GetQuizLink(_ context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (interface{}, error) {
+	token, err := s.tokenGenFunc(TokenPayload{
+		UserID:          uid.String(),
+		Username:        username,
+		ChallengeRoomID: uuid.New().String(),
+	}, s.tokenTTL)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate new token to connect quiz: %w", err)
 	}
+	return token, nil
 }
 
-// Start function registers user in waiting room
-func (s *Service) Start(ctx context.Context, uid, challengeID uuid.UUID) (interface{}, error) {
-	return nil, nil
-}
-
-// Play function registers user in quiz hub
-func (s *Service) Play(ctx context.Context, uid, roomID uuid.UUID) (interface{}, error) {
-	return nil, nil
+// ParseQuizToken returns data from quiz connect token
+func (s *Service) ParseQuizToken(_ context.Context, token string) (*TokenPayload, error) {
+	payload, err := s.tokenParseFunc(token)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse connection token: %w", err)
+	}
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse connection token: %w", err)
+	}
+	result := &TokenPayload{}
+	if err := json.Unmarshal(b, result); err != nil {
+		return nil, fmt.Errorf("could not parse connection token: %w", err)
+	}
+	return result, nil
 }
