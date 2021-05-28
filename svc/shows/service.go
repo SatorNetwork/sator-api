@@ -31,7 +31,7 @@ type (
 
 	// Challenges service client
 	challengesClient interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int32) (interface{}, error)
+		GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 	}
 )
 
