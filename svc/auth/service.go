@@ -12,6 +12,8 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
+	repository2 "github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/dmitrymomot/random"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -21,6 +23,7 @@ type (
 	// Service struct
 	Service struct {
 		ur     userRepository
+		ws     walletService
 		jwt    jwtInteractor
 		mail   mailer
 		otpLen int
@@ -58,18 +61,25 @@ type (
 		SendVerificationEmail(ctx context.Context, email, otp string) error
 		SendResetPasswordEmail(ctx context.Context, email, otp string) error
 	}
+
+	walletService interface {
+		CreateWallet(ctx context.Context, userID uuid.UUID) (repository2.Wallet, error)
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
 	if ji == nil {
 		log.Fatalln("jwt interactor is not set")
 	}
+	if ws == nil {
+		log.Fatalln("wallet service is not set")
+	}
 
-	s := &Service{jwt: ji, ur: ur, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -181,6 +191,11 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
+	}
+
+	_, err = s.ws.CreateWallet(ctx, u.ID)
+	if err != nil {
+		return "", fmt.Errorf("counld not create solana wallet: %w", err)
 	}
 
 	return token, nil
