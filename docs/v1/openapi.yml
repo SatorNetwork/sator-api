@@ -469,13 +469,20 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /challenges/{challenge_id}:
+  /challenges/{id}:
     get:
       tags:
         - "Challenges"
       summary: Get challenge details by id.
       security:
         - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Returns challenge details.
