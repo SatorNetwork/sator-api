@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS wallets (
     asset_name VARCHAR NOT NULL,
     wallet_address VARCHAR NOT NULL,
     public_key VARCHAR NOT NULL,
-    private_key VARCHAR NOT NULL,
+    private_key BYTEA NOT NULL,
     status INT DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
