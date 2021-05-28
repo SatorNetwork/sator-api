@@ -67,7 +67,7 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 			Currency: "SAO",
 		},
 		"usd": Balance{
-			Amount:   2541.29,
+			Amount:   float64(amount) * 25,
 			Currency: "USD",
 		},
 	}, nil
