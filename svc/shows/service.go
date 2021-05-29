@@ -31,7 +31,7 @@ type (
 
 	// Challenges service client
 	challengesClient interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int32) (interface{}, error)
+		GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 	}
 )
 
@@ -65,6 +65,7 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenges list by show id: %w", err)
 	}
+
 	return challenges, nil
 }
 

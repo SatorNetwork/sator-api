@@ -421,6 +421,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |

@@ -3,7 +3,6 @@ package shows
 import (
 	"context"
 	"fmt"
-
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
@@ -45,7 +44,7 @@ func (r PaginationRequest) Limit() int32 {
 // Offset items
 func (r PaginationRequest) Offset() int32 {
 	if r.Page > 1 {
-		return r.Page * r.Limit()
+		return (r.Page - 1) * r.Limit()
 	}
 	return 0
 }
