@@ -68,7 +68,7 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	return challenge, nil
+	return castToChallenge(challenge, s.playUrlFn), nil
 }
 
 // GetChallengesByShowID ...
