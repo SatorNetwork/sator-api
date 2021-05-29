@@ -503,13 +503,16 @@ paths:
                   prize_pool:
                     type: string
                     example: "250 SAO"
-                  players_to_start:
+                  players:
                     type: integer
                     example: 10
+                  winners:
+                    type: string
+                    example: "you + 7 more"
                   time_per_question:
                     type: string
-                    example: "15 sec"
-                  play_url:
+                    example: "8 sec"
+                  play:
                     type: string
                     description: "Absolute URL to start quiz. In the future it will be URL to connect websocket."
                     example: "http://localhost:8080/challenges/{challenge_id}/play"

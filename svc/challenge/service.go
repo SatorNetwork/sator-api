@@ -24,13 +24,14 @@ type (
 	// Challenge struct
 	// Fields were rearranged to optimize memory usage.
 	Challenge struct {
-		ID          uuid.UUID `json:"id"`
-		Title       string    `json:"title"`
-		Description string    `json:"description"`
-		PrizePool   string    `json:"prize_pool"`
-		Players     int       `json:"players"`
-		Winners     int       `json:"winners"`
-		Play        string    `json:"play"`
+		ID              uuid.UUID `json:"id"`
+		Title           string    `json:"title"`
+		Description     string    `json:"description"`
+		PrizePool       string    `json:"prize_pool"`
+		Players         int       `json:"players"`
+		Winners         string    `json:"winners"`
+		TimePerQuestion string    `json:"time_per_question"`
+		Play            string    `json:"play"`
 	}
 
 	challengesRepository interface {
@@ -72,6 +73,7 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 }
 
 // GetChallengesByShowID ...
+// TODO: needs refactoring!
 func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
 	list, err := s.cr.GetChallenges(ctx, repository.GetChallengesParams{
 		ShowID: showID,
