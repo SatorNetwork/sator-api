@@ -94,11 +94,12 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 
 func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challenge {
 	return Challenge{
-		ID:          c.ID,
-		Title:       c.Title,
-		Description: c.Description.String,
-		PrizePool:   fmt.Sprintf("%.2f SAO", c.PrizePool),
-		Players:     int(c.PlayersToStart),
-		Play:        playUrlFn(c.ID),
+		ID:              c.ID,
+		Title:           c.Title,
+		Description:     c.Description.String,
+		PrizePool:       fmt.Sprintf("%.2f SAO", c.PrizePool),
+		Players:         int(c.PlayersToStart),
+		TimePerQuestion: fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
+		Play:            playUrlFn(c.ID),
 	}
 }
