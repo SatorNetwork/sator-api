@@ -7,7 +7,6 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/questions/repository"
-
 	"github.com/google/uuid"
 )
 
@@ -50,65 +49,44 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{
 		if !db.IsNotFoundError(err) {
 			return nil, fmt.Errorf("could not get question: %w", err)
 		}
-
-		return nil, fmt.Errorf("question with id %w not found", id)
+		return nil, fmt.Errorf("could not found question with i=%s: %w", id.String(), err)
 	}
 
 	answers, err := s.qr.GetAnswersByQuestionID(ctx, question.ID)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get answer: %w", err)
+			return nil, fmt.Errorf("could not get answer options for question with id=%s: %w", id.String(), err)
 		}
 
-		return nil, fmt.Errorf("answer with id %w not found", id)
+		return nil, fmt.Errorf("could not found any answer options for question with id=%s: %w", id.String(), err)
 	}
 
 	return castToQuestion(question, answers), nil
 }
 
-func castToQuestion(q repository.Question, a []repository.QuestionOption) *Question {
-	question := &Question{
-		ID:          q.ID,
-		ChallengeID: q.ChallengeID,
-		Question:    q.Question,
-		Order:       q.QuestionOrder,
-	}
-	for i := 0; i < len(a); i++ {
-		question.QuestionOptions = append(question.QuestionOptions, QuestionOption{
-			ID:         a[i].ID,
-			QuestionID: a[i].QuestionID,
-			Option:     a[i].QuestionOption,
-			IsCorrect:  a[i].IsCorrect.Bool,
-		})
-	}
-
-	return question
-}
-
 // GetQuestionByChallengeID returns questions by challenge id
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {  // TODO: Make query that will return required slice.
-	var result []Question
+// TODO: needs refactoring! Make query that will return required slice.
+func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
 			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
 		}
-
-		return nil, fmt.Errorf("questions with challenge id %w not found", id)
+		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
 	}
 
+	result := make([]Question, 0, len(questions))
 	for _, q := range questions {
 		answers, err := s.qr.GetAnswersByQuestionID(ctx, q.ID)
 		if err != nil {
 			if !db.IsNotFoundError(err) {
 				return nil, fmt.Errorf("could not get answer: %w", err)
 			}
-
-			return nil, fmt.Errorf("answer with id %w not found", id)
+			return nil, fmt.Errorf("could not found answer with id %s: %w", id.String(), err)
 		}
 
 		question := castToQuestion(q, answers)
-		result = append(result, *question)
+		result = append(result, question)
 	}
 
 	return result, nil
@@ -121,9 +99,28 @@ func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 		if !db.IsNotFoundError(err) {
 			return false, fmt.Errorf("could not validate answer: %w", err)
 		}
-
-		return false, fmt.Errorf("question with id %w not found", id)
+		return false, fmt.Errorf("could not found question with id %s: %w", id, err)
 	}
 
 	return answers.Bool, nil
+}
+
+func castToQuestion(q repository.Question, a []repository.QuestionOption) Question {
+	options := make([]QuestionOption, 0, len(a))
+	for _, ao := range a {
+		options = append(options, QuestionOption{
+			ID:         ao.ID,
+			QuestionID: ao.QuestionID,
+			Option:     ao.QuestionOption,
+			IsCorrect:  ao.IsCorrect.Bool,
+		})
+	}
+
+	return Question{
+		ID:              q.ID,
+		ChallengeID:     q.ChallengeID,
+		Question:        q.Question,
+		Order:           q.QuestionOrder,
+		QuestionOptions: options,
+	}
 }
