@@ -2,12 +2,12 @@ package solana_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/types"
-
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,8 +33,8 @@ func TestClient(t *testing.T) {
 			Instructions: []types.Instruction{
 				sysprog.Transfer(
 					accountA.PublicKey, // from
-					account.PublicKey, // to
-					10000, // 1 SOL
+					account.PublicKey,  // to
+					10000,              // 1 SOL
 				),
 			},
 			Signers:         []types.Account{feePayer, accountA},
@@ -61,4 +61,41 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, balance)
 	})
+}
+
+func TestClient_CreateAccount(t *testing.T) {
+	type fields struct {
+		c *client.Client
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    string
+		want1   []byte
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := &Client{
+				c: tt.fields.c,
+			}
+			got, got1, err := cl.CreateAccount(tt.args.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Client.CreateAccount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Client.CreateAccount() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Client.CreateAccount() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
 }

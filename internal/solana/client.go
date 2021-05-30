@@ -12,12 +12,12 @@ import (
 
 // Client holds all required fields to connect Solana network.
 type Client struct {
-	c client.Client
+	c *client.Client
 }
 
 // New constructor for Solana client.
-func New() *Client {
-	return &Client{c: *client.NewClient(client.DevnetRPCEndpoint)}
+func New(endpoint string) *Client {
+	return &Client{c: client.NewClient(endpoint)}
 }
 
 // CreateAccount creates new account and requests airdrop to activate account in solana network, returns base58 public key and private key in []byte.
