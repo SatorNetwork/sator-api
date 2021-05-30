@@ -24,13 +24,14 @@ type (
 	// Challenge struct
 	// Fields were rearranged to optimize memory usage.
 	Challenge struct {
-		ID          uuid.UUID `json:"id"`
-		Title       string    `json:"title"`
-		Description string    `json:"description"`
-		PrizePool   string    `json:"prize_pool"`
-		Players     int       `json:"players"`
-		Winners     int       `json:"winners"`
-		Play        string    `json:"play"`
+		ID              uuid.UUID `json:"id"`
+		Title           string    `json:"title"`
+		Description     string    `json:"description"`
+		PrizePool       string    `json:"prize_pool"`
+		Players         int       `json:"players"`
+		Winners         string    `json:"winners"`
+		TimePerQuestion string    `json:"time_per_question"`
+		Play            string    `json:"play"`
 	}
 
 	challengesRepository interface {
@@ -68,7 +69,7 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	return challenge, nil
+	return castToChallenge(challenge, s.playUrlFn), nil
 }
 
 // GetChallengesByShowID ...
@@ -92,11 +93,12 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 
 func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challenge {
 	return Challenge{
-		ID:          c.ID,
-		Title:       c.Title,
-		Description: c.Description.String,
-		PrizePool:   fmt.Sprintf("%.2f SAO", c.PrizePool),
-		Players:     int(c.PlayersToStart),
-		Play:        playUrlFn(c.ID),
+		ID:              c.ID,
+		Title:           c.Title,
+		Description:     c.Description.String,
+		PrizePool:       fmt.Sprintf("%.2f SAO", c.PrizePool),
+		Players:         int(c.PlayersToStart),
+		TimePerQuestion: fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
+		Play:            playUrlFn(c.ID),
 	}
 }

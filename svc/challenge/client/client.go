@@ -23,7 +23,9 @@ func New(s service) *Client {
 }
 
 // GetListByShowID returns challenges list filtered by show id
-func (c *Client) GetListByShowID(ctx context.Context, showID uuid.UUID, page, itemsPerPage int32) (interface{}, error) {
-	offset := itemsPerPage * (page - 1)
-	return c.s.GetChallengesByShowID(ctx, showID, itemsPerPage, offset)
+func (c *Client) GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
+	if limit < 1 {
+		limit = 20
+	}
+	return c.s.GetChallengesByShowID(ctx, showID, limit, offset)
 }
