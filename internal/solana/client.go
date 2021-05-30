@@ -3,6 +3,8 @@ package solana
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
@@ -24,9 +26,16 @@ func New() *Client {
 func (cl *Client) CreateAccount(ctx context.Context) (string, []byte, error) {
 	account := types.NewAccount()
 
-	_, err := cl.c.RequestAirdrop(context.Background(), account.PublicKey.ToBase58(), 1000000000)
-	if err != nil {
-		return "", nil, err
+	// workaround to avoid internal error while user signing up
+	for i := 0; i < 3; i++ {
+		_, err := cl.c.RequestAirdrop(context.Background(), account.PublicKey.ToBase58(), 1000000000)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Millisecond * time.Duration(100*(i+1)))
+		if i == 2 {
+			log.Printf("could not request airdrop for account %s", account.PublicKey.ToBase58())
+		}
 	}
 
 	return account.PublicKey.ToBase58(), account.PrivateKey, nil

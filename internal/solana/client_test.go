@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/SatorNetwork/sator-api/internal/solana"
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/types"
-
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,8 +33,8 @@ func TestClient(t *testing.T) {
 			Instructions: []types.Instruction{
 				sysprog.Transfer(
 					accountA.PublicKey, // from
-					account.PublicKey, // to
-					10000, // 1 SOL
+					account.PublicKey,  // to
+					10000,              // 1 SOL
 				),
 			},
 			Signers:         []types.Account{feePayer, accountA},
@@ -61,4 +61,17 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, balance)
 	})
+}
+
+func TestClient_CreateAccount(t *testing.T) {
+	pk58, pk, err := solana.New().CreateAccount(context.TODO())
+	if err != nil {
+		t.Fatalf("could not create solana account: %v", err)
+	}
+	if pk58 == "" {
+		t.Fatal("public key: expected base58 string, got empty")
+	}
+	if len(pk) < 1 {
+		t.Fatal("private key is empty")
+	}
 }
