@@ -2,9 +2,9 @@ package solana_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
+	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/types"
@@ -64,38 +64,14 @@ func TestClient(t *testing.T) {
 }
 
 func TestClient_CreateAccount(t *testing.T) {
-	type fields struct {
-		c *client.Client
+	pk58, pk, err := solana.New().CreateAccount(context.TODO())
+	if err != nil {
+		t.Fatalf("could not create solana account: %v", err)
 	}
-	type args struct {
-		ctx context.Context
+	if pk58 == "" {
+		t.Fatal("public key: expected base58 string, got empty")
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    string
-		want1   []byte
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cl := &Client{
-				c: tt.fields.c,
-			}
-			got, got1, err := cl.CreateAccount(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Client.CreateAccount() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("Client.CreateAccount() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("Client.CreateAccount() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
+	if len(pk) < 1 {
+		t.Fatal("private key is empty")
 	}
 }

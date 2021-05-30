@@ -52,23 +52,23 @@ func NewService(wr walletRepository, sc solanaClient) *Service {
 
 // GetBalance returns current user's balance
 func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, error) {
-	wallet, err := s.wr.GetWalletsByUserID(ctx, uid)
+	wallets, err := s.wr.GetWalletsByUserID(ctx, uid)
 	if err != nil {
-		return nil, fmt.Errorf("could not get wallet by id: %w", err)
+		return nil, fmt.Errorf("could not get wallets of current user [%s]: %w", uid.String(), err)
 	}
 
-	amount, err := s.sc.GetBalance(ctx, wallet[0].PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("could not get balance: %w", err)
+	var amount float64
+	if len(wallets) > 0 {
+		amount = s.getBalanceForWallet(ctx, wallets[0].PublicKey)
 	}
 
 	return WalletsBalance{
 		"sao": Balance{
-			Amount:   toSol(amount),
+			Amount:   amount,
 			Currency: "SAO",
 		},
 		"usd": Balance{
-			Amount:   toSol(amount) * 25,
+			Amount:   amount * 25,
 			Currency: "USD",
 		},
 	}, nil
@@ -78,7 +78,7 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) (repository.Wallet, error) {
 	publicKey, privateKey, err := s.sc.CreateAccount(ctx)
 	if err != nil {
-		return repository.Wallet{}, fmt.Errorf("counld not create solana account: %w", err)
+		return repository.Wallet{}, fmt.Errorf("could not create solana account: %w", err)
 	}
 
 	wallet, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
@@ -91,6 +91,15 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) (repositor
 	}
 
 	return wallet, nil
+}
+
+func (s *Service) getBalanceForWallet(ctx context.Context, pubKey string) float64 {
+	amount, err := s.sc.GetBalance(ctx, pubKey)
+	if err != nil {
+		log.Printf("could not get balance wir wallet %s: %v", pubKey, err)
+		return 0
+	}
+	return toSol(amount)
 }
 
 func toSol(income uint64) float64 {
