@@ -73,7 +73,6 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 }
 
 // GetChallengesByShowID ...
-// TODO: needs refactoring!
 func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
 	list, err := s.cr.GetChallenges(ctx, repository.GetChallengesParams{
 		ShowID: showID,

@@ -195,7 +195,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 
 	_, err = s.ws.CreateWallet(ctx, u.ID)
 	if err != nil {
-		return "", fmt.Errorf("counld not create solana wallet: %w", err)
+		return "", fmt.Errorf("could not create solana wallet: %w", err)
 	}
 
 	return token, nil
