@@ -33,7 +33,9 @@ import (
 	"github.com/go-chi/chi/middleware"
 	kitlog "github.com/go-kit/kit/log"
 	_ "github.com/lib/pq" // init pg driver
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/rs/cors"
+	"github.com/zeebo/errs"
 )
 
 // Build tag is set up while compiling
@@ -77,7 +79,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("init db connection error: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		err = errs.Combine(err, db.Close())
+	}()
 
 	db.SetMaxOpenConns(dbMaxOpenConns)
 	db.SetMaxIdleConns(dbMaxIdleConns)
@@ -108,7 +112,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	solanaClient := solana.New()
+	feePayerPK := []byte{57, 17, 193, 142, 252, 221, 81, 90, 60, 28, 93, 237, 212, 51, 95, 95, 41, 104, 221, 59, 13, 244, 54, 1, 79, 180, 120, 178, 81, 45, 46, 193, 142, 11, 237, 209, 82, 24, 36, 72, 7, 76, 66, 215, 44, 116, 17, 132, 252, 205, 47, 74, 57, 230, 36, 98, 119, 86, 11, 40, 71, 195, 47, 254}
+	payingAccPK := []byte{210, 26, 212, 148, 51, 216, 254, 151, 70, 177, 14, 51, 24, 82, 207, 128, 222, 200, 188, 175, 33, 76, 112, 231, 169, 182, 77, 195, 227, 87, 28, 143, 188, 216, 244, 205, 52, 123, 229, 204, 198, 210, 96, 123, 243, 180, 194, 108, 175, 124, 122, 229, 104, 69, 144, 208, 62, 200, 100, 237, 132, 82, 251, 23}
+
+	solanaClient := solana.New(client.DevnetRPCEndpoint, feePayerPK, payingAccPK)
 
 	// Auth service
 	{
