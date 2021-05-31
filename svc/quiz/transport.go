@@ -41,7 +41,7 @@ func MakeHTTPHandler(e Endpoints, log logger, quizWsHandler http.HandlerFunc) ht
 }
 
 func decodeGetQuizLinkRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "challenge_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}

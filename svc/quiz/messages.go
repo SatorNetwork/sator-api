@@ -37,7 +37,7 @@ type (
 		TotalQuestions int            `json:"total_questions"`
 		QuestionNumber int            `json:"question_number"`
 		AnswerOptions  []AnswerOption `json:"answer_options"`
-		correctID      string         `json:"correct_id"`
+		correctID      string
 	}
 
 	AnswerOption struct {
@@ -48,6 +48,12 @@ type (
 	Answer struct {
 		QuestionID string `json:"question_id"`
 		AnswerID   string `json:"answer_id"`
+	}
+
+	MessageAnswer struct {
+		Type    string    `json:"type"`
+		SentAt  time.Time `json:"sent_at"`
+		Payload Answer    `json:"payload"`
 	}
 
 	QuestionResult struct {
@@ -61,14 +67,14 @@ type (
 
 	ChallengeResult struct {
 		ChallengeID        string   `json:"challenge_id"`
-		PrizePool          float64  `json:"prize_pool"`
+		PrizePool          string   `json:"prize_pool"`
 		Winners            []Winner `json:"winners"`
 		ShowTransactionURL string   `json:"show_transaction_url"`
 	}
 
 	Winner struct {
-		UserID   string  `json:"user_id"`
-		Username string  `json:"username"`
-		Prize    float64 `json:"prize"`
+		UserID   string `json:"user_id"`
+		Username string `json:"username"`
+		Prize    string `json:"prize"`
 	}
 )

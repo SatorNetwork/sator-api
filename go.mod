@@ -6,6 +6,7 @@ require (
 	github.com/TV4/graceful v0.3.5
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dmitrymomot/go-env v0.1.0
+	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
 	github.com/go-chi/chi v1.5.4

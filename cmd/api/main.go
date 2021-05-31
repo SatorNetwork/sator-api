@@ -20,10 +20,12 @@ import (
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/quiz"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
+	signature "github.com/dmitrymomot/go-signature"
 
 	"github.com/TV4/graceful"
 	"github.com/dmitrymomot/go-env"
@@ -55,6 +57,9 @@ var (
 
 	// Auth
 	otpLength = env.GetInt("OTP_LENGTH", 5)
+
+	// Quiz
+	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
 )
 
 func main() {
@@ -92,6 +97,7 @@ func main() {
 
 		r.Get("/", rootHandler)
 		r.Get("/health", healthCheckHandler)
+		r.Get("/ws", testWsHandler)
 	}
 
 	// Init JWT parser middleware
@@ -174,6 +180,20 @@ func main() {
 		))
 	}
 
+	// Quiz service
+	{
+		// repo, err := profileRepo.Prepare(ctx, db)
+		// if err != nil {
+		// 	log.Fatalf("profileRepo error: %v", err)
+		// }
+		quizSvc := quiz.NewService(nil, signature.NewTemporary, signature.Parse, 10900, quizWsConnURL)
+		r.Mount("/quiz", quiz.MakeHTTPHandler(
+			quiz.MakeEndpoints(quizSvc, jwtMdw),
+			logger,
+			quiz.QuizWsHandler(quizSvc.ParseQuizToken),
+		))
+	}
+
 	// Init and run http server
 	httpServer := &http.Server{
 		Handler: r,
@@ -186,6 +206,11 @@ func main() {
 // returns current build tag
 func rootHandler(w http.ResponseWriter, _ *http.Request) {
 	defaultResponse(w, http.StatusOK, map[string]interface{}{"build_tag": buildTag})
+}
+
+// returns html page to test websocket
+func testWsHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./cmd/api/index.html")
 }
 
 // returns 204 HTTP status without content

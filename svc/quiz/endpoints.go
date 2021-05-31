@@ -18,6 +18,11 @@ type (
 	service interface {
 		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (interface{}, error)
 	}
+
+	// QuizConnectionURL struct
+	QuizConnectionURL struct {
+		PlayURL string `json:"play_url"`
+	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -53,11 +58,13 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get username: %w", err)
 		}
 
-		resp, err := s.GetQuizLink(ctx, uid, username, challengeID)
+		playURL, err := s.GetQuizLink(ctx, uid, username, challengeID)
 		if err != nil {
 			return nil, err
 		}
 
-		return resp, nil
+		return QuizConnectionURL{
+			PlayURL: fmt.Sprintf("%v", playURL),
+		}, nil
 	}
 }

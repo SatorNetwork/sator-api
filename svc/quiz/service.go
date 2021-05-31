@@ -15,6 +15,7 @@ type (
 		tokenGenFunc   tokenGenFunc
 		tokenParseFunc tokenParseFunc
 		tokenTTL       int64
+		baseQuizURL    string
 	}
 
 	quizRepository interface{}
@@ -31,8 +32,14 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo quizRepository, gfn tokenGenFunc, pfn tokenParseFunc) *Service {
-	return &Service{repo: repo, tokenGenFunc: gfn}
+func NewService(repo quizRepository, gfn tokenGenFunc, pfn tokenParseFunc, ttl int64, baseQuizURL string) *Service {
+	return &Service{
+		repo:           repo,
+		tokenGenFunc:   gfn,
+		tokenParseFunc: pfn,
+		tokenTTL:       ttl,
+		baseQuizURL:    baseQuizURL,
+	}
 }
 
 // GetQuizLink returns link with token to connect to quiz
@@ -45,7 +52,7 @@ func (s *Service) GetQuizLink(_ context.Context, uid uuid.UUID, username string,
 	if err != nil {
 		return nil, fmt.Errorf("could not generate new token to connect quiz: %w", err)
 	}
-	return token, nil
+	return fmt.Sprintf("%s/%s/play/%s", s.baseQuizURL, challengeID, token), nil
 }
 
 // ParseQuizToken returns data from quiz connect token

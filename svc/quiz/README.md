@@ -88,7 +88,7 @@
 {
     "question_id": "24adf20e-61e1-439f-b650-56886320501e",
     "result": true,
-    "rate": "3", // from 0 to 3
+    "rate": 3, // from 0 to 3
     "correct_answer_id": "44adf20e-61e1-439f-b650-56886320501e",
     "questions_left": 7,
     "additional_pts": 2,
@@ -99,13 +99,13 @@
 ```json
 {
     "challenge_id": "44adf20e-61e1-439f-b650-56886320501e",
-    "prize_pool": "",
+    "prize_pool": "250 SAO",
     "show_transaction_url": "https://....",
     "winners": [
         {
             "user_id": "24adf20e-61e1-439f-b650-56886320501e",
             "username": "johndoe",
-            "prize": 2.45,
+            "prize": "2.45",
         }
     ]
 }

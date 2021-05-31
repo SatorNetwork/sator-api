@@ -2,32 +2,13 @@ package quiz
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/dustin/go-broadcast"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	"golang.org/x/sync/errgroup"
 	"syreclabs.com/go/faker"
-)
-
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 512
 )
 
 type (
@@ -37,7 +18,7 @@ type (
 
 // QuizWsHandler handles websocket connections
 func QuizWsHandler(tpfn tokenParser) http.HandlerFunc {
-	// channels := make(map[string]broadcast.Broadcaster)
+	// rooms := make(map[string]broadcast.Broadcaster)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Current connection variables
@@ -50,109 +31,140 @@ func QuizWsHandler(tpfn tokenParser) http.HandlerFunc {
 		}
 		uid := tokenPayload.UserID
 		username := tokenPayload.Username
-		roomID := tokenPayload.ChallengeRoomID
+		// roomID := tokenPayload.ChallengeRoomID
 
-		// ws connection
-		upgrader := websocket.Upgrader{}
-		c, err := upgrader.Upgrade(w, r, nil)
+		client, err := NewWsClient(w, r)
 		if err != nil {
-			log.Printf("upgrade error: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer c.Close()
 
-		broadcaster := broadcast.NewBroadcaster(100)
-		defer broadcaster.Close()
+		go client.Read()
+		go client.Write()
 
-		// run listeners
-		g, ctx := errgroup.WithContext(r.Context())
-		g.Go(readMsg(ctx, broadcaster, c))
-		g.Go(writeMsg(ctx, broadcaster, c))
-		if err := g.Wait(); err != nil {
-			log.Printf("unexpected stop service: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-}
+		questions := getQuestions(5)
+		answers := make(map[string]QuestionResult)
 
-func readMsg(ctx context.Context, b broadcast.Broadcaster, conn *websocket.Conn) func() error {
-	return func() error {
-		// write msg channel
-		ch := make(chan interface{}, 100)
-		b.Register(ch)
-
+		ctx, cancel := context.WithCancel(context.Background())
 		defer func() {
-			conn.Close()
-			b.Unregister(ch)
-			close(ch)
+			cancel()
 		}()
 
-		conn.SetReadLimit(maxMessageSize)
-		conn.SetReadDeadline(time.Now().Add(pongWait))
-		conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-
-		for {
-			select {
-			case <-ctx.Done():
-				fmt.Printf("readMsg: connection closed")
-				return nil
-			default:
-				mt, messageSrc, err := conn.ReadMessage()
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						log.Printf("error: %v", err)
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case answer := <-client.ReadAnswers():
+					log.Printf("answer: %+v", answer)
+					log.Printf("question: %+v", questions[answer.Payload.QuestionID])
+					log.Printf("is correct answer: %v", questions[answer.Payload.QuestionID].correctID == answer.Payload.AnswerID)
+					if q, ok := questions[answer.Payload.QuestionID]; ok && q.correctID == answer.Payload.AnswerID {
+						answers[answer.Payload.QuestionID] = QuestionResult{
+							QuestionID:      q.QuestionID,
+							Result:          true,
+							Rate:            0,
+							CorrectAnswerID: q.correctID,
+							QuestionsLeft:   len(questions) - len(answers) + 1,
+							AdditionalPts:   0,
+						}
 					}
-					break
 				}
-				if mt != websocket.TextMessage {
-					return fmt.Errorf("unexpected message type: %v", mt)
-				}
-
-				message := &Answer{}
-				if err := json.Unmarshal(messageSrc, message); err != nil {
-					return fmt.Errorf("could not read message: %v", mt)
-				}
-
-				ch <- message
 			}
-		}
-
-		return nil
-	}
-}
-
-func writeMsg(ctx context.Context, b broadcast.Broadcaster, conn *websocket.Conn) func() error {
-	return func() error {
-		// Ping ticker
-		ticker := time.NewTicker(pingPeriod)
-		// write msg channel
-		ch := make(chan interface{}, 100)
-		b.Register(ch)
-
-		defer func() {
-			ticker.Stop()
-			conn.Close()
-			b.Unregister(ch)
-			close(ch)
 		}()
 
-		select {
-		case <-ctx.Done():
-			fmt.Println("writeMsg: finished")
-			return nil
-		case msg := <-ch:
-			fmt.Println("msg:", msg)
-			return nil
-		case <-ticker.C:
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return fmt.Errorf("ping: %w", err)
-			}
+		client.Send(Message{
+			Type:   UserConnectedMessage,
+			SentAt: time.Now(),
+			Payload: User{
+				UserID:   uid,
+				Username: username,
+			},
+		})
+
+		for i := 0; i < 9; i++ {
+			client.Send(Message{
+				Type:   UserConnectedMessage,
+				SentAt: time.Now(),
+				Payload: User{
+					UserID:   uuid.New().String(),
+					Username: faker.Internet().UserName(),
+				},
+			})
+			time.Sleep(time.Second)
 		}
 
-		return nil
+		for i := 3; i > 0; i-- {
+			client.Send(Message{
+				Type:   CountdownMessage,
+				SentAt: time.Now(),
+				Payload: Countdown{
+					Countdown: i,
+				},
+			})
+			time.Sleep(time.Second)
+		}
+
+		for _, q := range questions {
+			client.Send(Message{
+				Type:    QuestionMessage,
+				SentAt:  time.Now(),
+				Payload: q,
+			})
+			time.Sleep(time.Second * time.Duration(q.TimeForAnswer))
+
+			if res, ok := answers[q.QuestionID]; ok {
+				client.Send(Message{
+					Type:    QuestionResultMessage,
+					SentAt:  time.Now(),
+					Payload: res,
+				})
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			client.Send(Message{
+				Type:   QuestionResultMessage,
+				SentAt: time.Now(),
+				Payload: QuestionResult{
+					QuestionID:      q.QuestionID,
+					Result:          false,
+					CorrectAnswerID: q.correctID,
+				},
+			})
+			time.Sleep(time.Second * 3)
+			break
+		}
+
+		if len(questions) == len(answers) {
+			client.Send(Message{
+				Type:   ChallengeResultMessage,
+				SentAt: time.Now(),
+				Payload: ChallengeResult{
+					ChallengeID: challengeID,
+					PrizePool:   "250 SAO",
+					Winners: []Winner{
+						{
+							UserID:   uid,
+							Username: username,
+							Prize:    "125 SAO",
+						},
+						{
+							UserID:   uuid.New().String(),
+							Username: faker.Internet().UserName(),
+							Prize:    "100 SAO",
+						},
+						{
+							UserID:   uuid.New().String(),
+							Username: faker.Internet().UserName(),
+							Prize:    "25 SAO",
+						},
+					},
+					ShowTransactionURL: "https://explorer.solana.com/address/CizSaMmnZymceaDTPcNdXgKEpLarCQDvtAkAZA2tSE2u?cluster=devnet",
+				},
+			})
+			time.Sleep(time.Second * 5)
+		}
 	}
 }
 
@@ -164,7 +176,7 @@ func getQuestions(n int) map[string]Question {
 		qid := uuid.New().String()
 
 		questions[qid] = Question{
-			QuestionID:     uuid.New().String(),
+			QuestionID:     qid,
 			QuestionText:   faker.Lorem().Sentence(7),
 			TimeForAnswer:  8,
 			TotalQuestions: n,

@@ -58,6 +58,8 @@ github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZm
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/dmitrymomot/go-env v0.1.0 h1:HoX6h7lizCU8WDaP2WF98PvPM2A/XIDyUrKQidqgr4k=
 github.com/dmitrymomot/go-env v0.1.0/go.mod h1:NM1eMH8iEskjkdd78BIBqK4PH7XC7tnAwW4i++62uLM=
+github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3 h1:yF6awAXyo0ZoZGrqGGDMeavVlNB5VOWmTGG7nau6cm8=
+github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3/go.mod h1:mnH1ZTKNPliDCV/96Lmz5JeDFmdiQWqfgR4zgzmk8vU=
 github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3 h1:dKlGNcnOBhfOUcmYpmElj7GP8Y2RU4YLoV9xkZXhBwM=
 github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3/go.mod h1:7J6vVk7h9UIip/I8rZG6MEfiNgqwKTzQ0MQoh8YdAsg=
 github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66 h1:QnnoVdChKs+GeTvN4rPYTW6b5U6M3HMEvQ/+x4IGtfY=
