@@ -5,6 +5,8 @@ info:
 servers:
   - url: http://localhost:8080/
     description: Local server
+  - url: http://localhost:8000/
+    description: Local server 2
   - url: https://sator-api-n7vrw.ondigitalocean.app/
     description: Development server
 components:
@@ -516,6 +518,37 @@ paths:
                     type: string
                     description: "Absolute URL to start quiz. In the future it will be URL to connect websocket."
                     example: "http://localhost:8080/challenges/{challenge_id}/play"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /quiz/{challenge_id}/play:
+    get:
+      tags:
+        - "Quiz"
+      summary: Get quiz connection URL with access token.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns quiz connection URL with access token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  play_url:
+                    type: string
+                    description: "Absolute URL to connect websocket."
+                    example: "http://localhost:8080/challenges/{challenge_id}/play/{token}"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
