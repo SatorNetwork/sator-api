@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
+	"github.com/dustin/go-broadcast"
 	"github.com/google/uuid"
 )
 
@@ -16,6 +18,10 @@ type (
 		tokenParseFunc tokenParseFunc
 		tokenTTL       int64
 		baseQuizURL    string
+
+		quizzes   map[string]broadcast.Broadcaster
+		startQuiz chan string // receives quiz id to start
+		stopQuiz  chan string // receives quiz id to stop
 	}
 
 	quizRepository interface{}
@@ -70,4 +76,29 @@ func (s *Service) ParseQuizToken(_ context.Context, token string) (*TokenPayload
 		return nil, fmt.Errorf("could not parse connection token: %w", err)
 	}
 	return result, nil
+}
+
+func (s *Service) Serve(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("quiz service stopped")
+			return nil
+		case qid := <-s.startQuiz:
+			go func(c context.Context, id string) {
+				if err := s.runQuiz(c, id); err != nil {
+					log.Printf("quiz with id %s is finished with error: %v", id, err)
+				}
+			}(ctx, qid)
+		case qid := <-s.stopQuiz:
+			if b, ok := s.quizzes[qid]; ok {
+				b.Close()
+			}
+		}
+	}
+}
+
+func (s *Service) runQuiz(ctx context.Context, qid string) error {
+
+	return nil
 }
