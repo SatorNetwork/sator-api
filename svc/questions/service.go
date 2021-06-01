@@ -21,6 +21,7 @@ type (
 		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
+		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
 		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
 	}
 
@@ -43,48 +44,52 @@ type (
 )
 
 // GetQuestionByID returns question by id
-func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, error) {
 	question, err := s.qr.GetQuestionByID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get question: %w", err)
+			return Question{}, fmt.Errorf("could not get question: %w", err)
 		}
-		return nil, fmt.Errorf("could not found question with i=%s: %w", id.String(), err)
+		return Question{}, fmt.Errorf("could not found question with i=%s: %w", id.String(), err)
 	}
 
 	answers, err := s.qr.GetAnswersByQuestionID(ctx, question.ID)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get answer options for question with id=%s: %w", id.String(), err)
+			return Question{}, fmt.Errorf("could not get answer options for question with id=%s: %w", id.String(), err)
 		}
 
-		return nil, fmt.Errorf("could not found any answer options for question with id=%s: %w", id.String(), err)
+		return Question{}, fmt.Errorf("could not found any answer options for question with id=%s: %w", id.String(), err)
 	}
 
 	return castToQuestion(question, answers), nil
 }
 
 // GetQuestionByChallengeID returns questions by challenge id
-// TODO: needs refactoring! Make query that will return required slice.
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) ([]Question, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			return []Question{}, fmt.Errorf("could not get questions by challenge id: %w", err)
 		}
 		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
 	}
 
+	var idsSlice []uuid.UUID
+	for _, v := range questions {
+		idsSlice = append(idsSlice, v.ID)
+	}
+
+	answers, err := s.qr.GetAnswersByIDs(ctx, idsSlice)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return []Question{}, fmt.Errorf("could not get answers: %w", err)
+		}
+		return []Question{}, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
+	}
+
 	result := make([]Question, 0, len(questions))
 	for _, q := range questions {
-		answers, err := s.qr.GetAnswersByQuestionID(ctx, q.ID)
-		if err != nil {
-			if !db.IsNotFoundError(err) {
-				return nil, fmt.Errorf("could not get answer: %w", err)
-			}
-			return nil, fmt.Errorf("could not found answer with id %s: %w", id.String(), err)
-		}
-
 		question := castToQuestion(q, answers)
 		result = append(result, question)
 	}
