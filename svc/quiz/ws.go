@@ -160,7 +160,6 @@ func QuizWsHandler(tpfn tokenParser) http.HandlerFunc {
 							Prize:    "25 SAO",
 						},
 					},
-					ShowTransactionURL: "https://explorer.solana.com/address/CizSaMmnZymceaDTPcNdXgKEpLarCQDvtAkAZA2tSE2u?cluster=devnet",
 				},
 			})
 			time.Sleep(time.Second * 5)

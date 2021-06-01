@@ -3,17 +3,37 @@
 package repository
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type ChallengeRoom struct {
-	ID              uuid.UUID `json:"id"`
-	ChallengeID     uuid.UUID `json:"challenge_id"`
-	PrizePool       float64   `json:"prize_pool"`
-	PlayersToStart  int32     `json:"players_to_start"`
-	TimePerQuestion int32     `json:"time_per_question"`
-	Status          int32     `json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
+type Quiz struct {
+	ID              uuid.UUID    `json:"id"`
+	ChallengeID     uuid.UUID    `json:"challenge_id"`
+	PrizePool       float64      `json:"prize_pool"`
+	PlayersToStart  int32        `json:"players_to_start"`
+	TimePerQuestion int64        `json:"time_per_question"`
+	Status          int32        `json:"status"`
+	UpdatedAt       sql.NullTime `json:"updated_at"`
+	CreatedAt       time.Time    `json:"created_at"`
+}
+
+type QuizAnswer struct {
+	QuizID    uuid.UUID `json:"quiz_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	AnswerID  uuid.UUID `json:"answer_id"`
+	IsCorrect bool      `json:"is_correct"`
+	Pts       int32     `json:"pts"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type QuizPlayer struct {
+	QuizID    uuid.UUID    `json:"quiz_id"`
+	UserID    uuid.UUID    `json:"user_id"`
+	Username  string       `json:"username"`
+	Status    int32        `json:"status"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+	CreatedAt time.Time    `json:"created_at"`
 }

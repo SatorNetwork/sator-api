@@ -21,6 +21,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
+	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
@@ -182,11 +183,16 @@ func main() {
 
 	// Quiz service
 	{
-		// repo, err := profileRepo.Prepare(ctx, db)
-		// if err != nil {
-		// 	log.Fatalf("profileRepo error: %v", err)
-		// }
-		quizSvc := quiz.NewService(nil, signature.NewTemporary, signature.Parse, 10900, quizWsConnURL)
+		repo, err := quizRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("quizRepo error: %v", err)
+		}
+		quizSvc := quiz.NewService(
+			repo,
+			quizWsConnURL,
+			quiz.WithCustomTokenGenerateFunction(signature.NewTemporary),
+			quiz.WithCustomTokenParseFunction(signature.Parse),
+		)
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
     challenge_id uuid NOT NULL,
     prize_pool DOUBLE PRECISION NOT NULL,
     players_to_start INT NOT NULL,
-    time_per_question INT NOT NULL DEFAULT 10,
+    time_per_question BIGINT NOT NULL DEFAULT 10,
     status INT NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
