@@ -113,17 +113,6 @@ func (c *Client) Write() error {
 			}
 			w.Write(b)
 
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				b, err := json.Marshal(<-c.send)
-				if err != nil {
-					return fmt.Errorf("could not encode message: %w\nmessage: %+v", err, message)
-				}
-				w.Write(b)
-			}
-
 			if err := w.Close(); err != nil {
 				return fmt.Errorf("close connection: %w", err)
 			}
