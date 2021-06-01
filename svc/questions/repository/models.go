@@ -9,6 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type AnswerOption struct {
+	ID           uuid.UUID    `json:"id"`
+	QuestionID   uuid.UUID    `json:"question_id"`
+	AnswerOption string       `json:"answer_option"`
+	IsCorrect    sql.NullBool `json:"is_correct"`
+	UpdatedAt    sql.NullTime `json:"updated_at"`
+	CreatedAt    time.Time    `json:"created_at"`
+}
+
 type Question struct {
 	ID            uuid.UUID    `json:"id"`
 	ChallengeID   uuid.UUID    `json:"challenge_id"`
@@ -16,13 +25,4 @@ type Question struct {
 	QuestionOrder int32        `json:"question_order"`
 	UpdatedAt     sql.NullTime `json:"updated_at"`
 	CreatedAt     time.Time    `json:"created_at"`
-}
-
-type QuestionOption struct {
-	ID             uuid.UUID    `json:"id"`
-	QuestionID     uuid.UUID    `json:"question_id"`
-	QuestionOption string       `json:"question_option"`
-	IsCorrect      sql.NullBool `json:"is_correct"`
-	UpdatedAt      sql.NullTime `json:"updated_at"`
-	CreatedAt      time.Time    `json:"created_at"`
 }
