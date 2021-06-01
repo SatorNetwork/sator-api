@@ -2,3 +2,5 @@
 !.gitignore
 !readme.md
 !dbconfig.yml
+!seeds
+!seeds/*.sql
