@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
@@ -20,14 +22,23 @@ import (
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/questions"
+	questionsClient "github.com/SatorNetwork/sator-api/svc/questions/client"
+	questionsRepo "github.com/SatorNetwork/sator-api/svc/questions/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
+	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
+	"github.com/SatorNetwork/sator-api/svc/rewards"
+	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
+	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
+	"github.com/dmitrymomot/distlock"
+	"github.com/dmitrymomot/distlock/inmem"
 	signature "github.com/dmitrymomot/go-signature"
+	"github.com/oklog/run"
 
-	"github.com/TV4/graceful"
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -74,6 +85,14 @@ func main() {
 		logger = kitlog.With(logger, "caller", kitlog.DefaultCaller)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	mutex := distlock.New(
+		distlock.WithStorageDrivers(inmem.New()),
+		distlock.WithTries(10),
+	)
+
 	// Init DB connection
 	db, err := sql.Open("postgres", dbConnString)
 	if err != nil {
@@ -108,9 +127,6 @@ func main() {
 	// not depends on transport
 	jwtMdw := jwt.NewParser(jwtSigningKey)
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	feePayerPK := []byte{57, 17, 193, 142, 252, 221, 81, 90, 60, 28, 93, 237, 212, 51, 95, 95, 41, 104, 221, 59, 13, 244, 54, 1, 79, 180, 120, 178, 81, 45, 46, 193, 142, 11, 237, 209, 82, 24, 36, 72, 7, 76, 66, 215, 44, 116, 17, 132, 252, 205, 47, 74, 57, 230, 36, 98, 119, 86, 11, 40, 71, 195, 47, 254}
 	payingAccPK := []byte{210, 26, 212, 148, 51, 216, 254, 151, 70, 177, 14, 51, 24, 82, 207, 128, 222, 200, 188, 175, 33, 76, 112, 231, 169, 182, 77, 195, 227, 87, 28, 143, 188, 216, 244, 205, 52, 123, 229, 204, 198, 210, 96, 123, 243, 180, 194, 108, 175, 124, 122, 229, 104, 69, 144, 208, 62, 200, 100, 237, 132, 82, 251, 23}
@@ -160,54 +176,112 @@ func main() {
 	}
 
 	// Challenges service
-	{
-		repo, err := challengeRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("challengeRepo error: %v", err)
-		}
-		challengeSvc := challenge.NewService(
-			repo,
-			challenge.DefaultPlayURLGenerator(
-				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
-			),
-		)
-		r.Mount("/challenges", challenge.MakeHTTPHandler(
-			challenge.MakeEndpoints(challengeSvc, jwtMdw),
-			logger,
-		))
-
-		// Shows service
-		showRepo, err := showsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("showsRepo error: %v", err)
-		}
-		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(showRepo, challengeClient.New(challengeSvc)), jwtMdw),
-			logger,
-		))
+	challengeRepo, err := challengeRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("challengeRepo error: %v", err)
 	}
+	challengeSvc := challenge.NewService(
+		challengeRepo,
+		challenge.DefaultPlayURLGenerator(
+			fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
+		),
+	)
+	challengeClient := challengeClient.New(challengeSvc)
+	r.Mount("/challenges", challenge.MakeHTTPHandler(
+		challenge.MakeEndpoints(challengeSvc, jwtMdw),
+		logger,
+	))
+
+	// Shows service
+	showRepo, err := showsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("showsRepo error: %v", err)
+	}
+	r.Mount("/shows", shows.MakeHTTPHandler(
+		shows.MakeEndpoints(shows.NewService(showRepo, challengeClient), jwtMdw),
+		logger,
+	))
+
+	// Questions service
+	questRepo, err := questionsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("questionsRepo error: %v", err)
+	}
+	questClient := questionsClient.New(questions.NewService(questRepo))
+
+	// Rewards service
+	rewardRepo, err := rewardsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("rewardsRepo error: %v", err)
+	}
+	rewardClient := rewardsClient.New(rewards.NewService(rewardRepo))
 
 	// Quiz service
+	quizRepo, err := quizRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("quizRepo error: %v", err)
+	}
+	quizSvc := quiz.NewService(
+		mutex,
+		quizRepo,
+		questClient,
+		rewardClient,
+		challengeClient,
+		quizWsConnURL,
+		quiz.WithCustomTokenGenerateFunction(signature.NewTemporary),
+		quiz.WithCustomTokenParseFunction(signature.Parse),
+	)
+	r.Mount("/quiz", quiz.MakeHTTPHandler(
+		quiz.MakeEndpoints(quizSvc, jwtMdw),
+		logger,
+		quiz.QuizWsHandler(quizSvc),
+	))
+
+	var g run.Group
 	{
-		// repo, err := profileRepo.Prepare(ctx, db)
-		// if err != nil {
-		// 	log.Fatalf("profileRepo error: %v", err)
-		// }
-		quizSvc := quiz.NewService(nil, signature.NewTemporary, signature.Parse, 10900, quizWsConnURL)
-		r.Mount("/quiz", quiz.MakeHTTPHandler(
-			quiz.MakeEndpoints(quizSvc, jwtMdw),
-			logger,
-			quiz.QuizWsHandler(quizSvc.ParseQuizToken),
-		))
+		// run quiz service
+		g.Add(func() error {
+			return quizSvc.Serve(ctx)
+		}, func(err error) {
+			log.Fatalf("quiz service: %v", err)
+		})
+
+		// Init and run http server
+		httpServer := &http.Server{
+			Handler: r,
+			Addr:    fmt.Sprintf(":%d", appPort),
+		}
+		g.Add(func() error {
+			log.Printf("[http-server] start listening on :%d...\n", appPort)
+			err := httpServer.ListenAndServe()
+			if err != nil {
+				fmt.Println("[http-server] stopped listening with error:", err)
+			}
+			return err
+		}, func(err error) {
+			fmt.Println("[http-server] terminating because of error:", err)
+			_ = httpServer.Shutdown(context.Background())
+		})
+
+		g.Add(func() error {
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+			c := <-sigChan
+			return fmt.Errorf("terminated with sig %q", c)
+		}, func(err error) {})
 	}
 
 	// Init and run http server
-	httpServer := &http.Server{
-		Handler: r,
-		Addr:    fmt.Sprintf(":%d", appPort),
+	// httpServer := &http.Server{
+	// 	Handler: r,
+	// 	Addr:    fmt.Sprintf(":%d", appPort),
+	// }
+	// httpServer.RegisterOnShutdown(cancel)
+	// graceful.LogListenAndServe(httpServer, log.Default())
+
+	if err := g.Run(); err != nil {
+		log.Println("API terminated with error:", err)
 	}
-	httpServer.RegisterOnShutdown(cancel)
-	graceful.LogListenAndServe(httpServer, log.Default())
 }
 
 // returns current build tag

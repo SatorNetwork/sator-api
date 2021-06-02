@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/questions/repository"
@@ -20,27 +21,37 @@ type (
 		AddQuestion(ctx context.Context, arg repository.AddQuestionParams) (repository.Question, error)
 		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
-		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.QuestionOption, error)
+		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
 		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
 	}
 
 	// Question struct
 	Question struct {
-		ID              uuid.UUID        `json:"id"`
-		ChallengeID     uuid.UUID        `json:"challenge_id"`
-		Question        string           `json:"question"`
-		Order           int32            `json:"order"`
-		QuestionOptions []QuestionOption `json:"question_options"`
+		ID            uuid.UUID      `json:"id"`
+		ChallengeID   uuid.UUID      `json:"challenge_id"`
+		Question      string         `json:"question"`
+		Order         int32          `json:"order"`
+		AnswerOptions []AnswerOption `json:"question_options"`
 	}
 
-	// QuestionOption struct
-	QuestionOption struct {
+	// AnswerOption struct
+	AnswerOption struct {
 		ID         uuid.UUID `json:"id"`
 		QuestionID uuid.UUID `json:"question_id"`
 		Option     string    `json:"option"`
 		IsCorrect  bool      `json:"is_correct"`
 	}
 )
+
+// NewService is a factory function,
+// returns a new instance of the Service interface implementation.
+func NewService(qr questionsRepository) *Service {
+	if qr == nil {
+		log.Fatalln("questions repository is not set")
+	}
+
+	return &Service{qr: qr}
+}
 
 // GetQuestionByID returns question by id
 func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
@@ -66,7 +77,7 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{
 
 // GetQuestionByChallengeID returns questions by challenge id
 // TODO: needs refactoring! Make query that will return required slice.
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
@@ -92,7 +103,7 @@ func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (i
 	return result, nil
 }
 
-// CheckAnswer returns question by id
+// CheckAnswer checks answer
 func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 	answers, err := s.qr.CheckAnswer(ctx, id)
 	if err != nil {
@@ -105,22 +116,22 @@ func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 	return answers.Bool, nil
 }
 
-func castToQuestion(q repository.Question, a []repository.QuestionOption) Question {
-	options := make([]QuestionOption, 0, len(a))
+func castToQuestion(q repository.Question, a []repository.AnswerOption) Question {
+	options := make([]AnswerOption, 0, len(a))
 	for _, ao := range a {
-		options = append(options, QuestionOption{
+		options = append(options, AnswerOption{
 			ID:         ao.ID,
 			QuestionID: ao.QuestionID,
-			Option:     ao.QuestionOption,
+			Option:     ao.AnswerOption,
 			IsCorrect:  ao.IsCorrect.Bool,
 		})
 	}
 
 	return Question{
-		ID:              q.ID,
-		ChallengeID:     q.ChallengeID,
-		Question:        q.Question,
-		Order:           q.QuestionOrder,
-		QuestionOptions: options,
+		ID:            q.ID,
+		ChallengeID:   q.ChallengeID,
+		Question:      q.Question,
+		Order:         q.QuestionOrder,
+		AnswerOptions: options,
 	}
 }

@@ -24,8 +24,13 @@ const (
 	maxMessageSize = 512
 )
 
+var (
+	newline = []byte{'\n'}
+	space   = []byte{' '}
+)
+
 type (
-	Client struct {
+	WsClient struct {
 		conn    *websocket.Conn
 		answers chan MessageAnswer
 		send    chan Message
@@ -38,27 +43,27 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func NewWsClient(w http.ResponseWriter, r *http.Request) (*Client, error) {
+func NewWsClient(w http.ResponseWriter, r *http.Request) (*WsClient, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not establish websocket connection: %w", err)
 	}
-	return &Client{
+	return &WsClient{
 		conn:    conn,
 		answers: make(chan MessageAnswer, 100),
 		send:    make(chan Message, 100),
 	}, nil
 }
 
-func (c *Client) ReadAnswers() <-chan MessageAnswer {
+func (c *WsClient) ReadAnswers() <-chan MessageAnswer {
 	return c.answers
 }
 
-func (c *Client) Send(m Message) {
+func (c *WsClient) Send(m Message) {
 	c.send <- m
 }
 
-func (c *Client) Read() error {
+func (c *WsClient) Read() error {
 	defer func() {
 		c.conn.Close()
 	}()
@@ -83,7 +88,7 @@ func (c *Client) Read() error {
 	return nil
 }
 
-func (c *Client) Write() error {
+func (c *WsClient) Write() error {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -107,17 +112,6 @@ func (c *Client) Write() error {
 				return fmt.Errorf("could not encode message: %w\nmessage: %+v", err, message)
 			}
 			w.Write(b)
-
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				// w.Write(newline)
-				b, err := json.Marshal(<-c.send)
-				if err != nil {
-					return fmt.Errorf("could not encode message: %w\nmessage: %+v", err, message)
-				}
-				w.Write(b)
-			}
 
 			if err := w.Close(); err != nil {
 				return fmt.Errorf("close connection: %w", err)

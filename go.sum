@@ -8,8 +8,6 @@ github.com/Masterminds/sprig v2.22.0+incompatible/go.mod h1:y6hNFY5UBTIWBxnzTeuN
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
-github.com/TV4/graceful v0.3.5 h1:cNE7s4SlhjeLrxyXSraWyBMJMzlV7oiU8PlJ7SBhoiA=
-github.com/TV4/graceful v0.3.5/go.mod h1:yiVys+AUIzvRhlIcVhJNhBKM7KG0y2US9ETBo9TusFk=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -56,12 +54,16 @@ github.com/denisenkom/go-mssqldb v0.9.0/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27N
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
+github.com/dmitrymomot/distlock v0.1.1 h1:e5w0dwvEVBsGwx21z13GBsPuwWM314MXu46XRkiom5Q=
+github.com/dmitrymomot/distlock v0.1.1/go.mod h1:QX13Grcii9rh9SU8nROmjpqwkaAGWI049aB5RSWHHOg=
 github.com/dmitrymomot/go-env v0.1.0 h1:HoX6h7lizCU8WDaP2WF98PvPM2A/XIDyUrKQidqgr4k=
 github.com/dmitrymomot/go-env v0.1.0/go.mod h1:NM1eMH8iEskjkdd78BIBqK4PH7XC7tnAwW4i++62uLM=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3 h1:yF6awAXyo0ZoZGrqGGDMeavVlNB5VOWmTGG7nau6cm8=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3/go.mod h1:mnH1ZTKNPliDCV/96Lmz5JeDFmdiQWqfgR4zgzmk8vU=
 github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3 h1:dKlGNcnOBhfOUcmYpmElj7GP8Y2RU4YLoV9xkZXhBwM=
 github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3/go.mod h1:7J6vVk7h9UIip/I8rZG6MEfiNgqwKTzQ0MQoh8YdAsg=
+github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66 h1:QnnoVdChKs+GeTvN4rPYTW6b5U6M3HMEvQ/+x4IGtfY=
+github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66/go.mod h1:kTEh6M2J/mh7nsskr28alwLCXm/DSG5OSA/o31yy2XU=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
@@ -253,6 +255,7 @@ github.com/nats-io/nkeys v0.1.0/go.mod h1:xpnFELMwJABBLVhffcfd1MZx6VsNRFpEugbxzi
 github.com/nats-io/nkeys v0.1.3/go.mod h1:xpnFELMwJABBLVhffcfd1MZx6VsNRFpEugbxziKVo7w=
 github.com/nats-io/nuid v1.0.1/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OSON2c=
 github.com/oklog/oklog v0.3.2/go.mod h1:FCV+B7mhrz4o+ueLpx+KqkyXRGMWOYEvfiXtdGtbWGs=
+github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=

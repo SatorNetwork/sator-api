@@ -83,7 +83,7 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 	}, nil
 }
 
-// CreateWallet creates wallet for user with specified id
+// CreateWallet creates wallet for user with specified id.
 func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) (repository.Wallet, error) {
 	publicKey, privateKey, err := s.sc.CreateAccount(ctx)
 	if err != nil {

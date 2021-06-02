@@ -15,11 +15,11 @@ CREATE TABLE IF NOT EXISTS questions (
     question_order INT NOT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
-    );
+);
 CREATE INDEX question_order ON questions USING BTREE (question_order);
 CREATE TRIGGER update_questions_modtime BEFORE
-    UPDATE ON questions FOR EACH ROW EXECUTE PROCEDURE questions_update_updated_at_column();
+UPDATE ON questions FOR EACH ROW EXECUTE PROCEDURE questions_update_updated_at_column();
 -- +migrate Down
-DROP TRIGGER IF EXISTS update_question_options_modtime ON questions;
-DROP TABLE IF EXISTS question_options;
-DROP FUNCTION IF EXISTS question_options_update_updated_at_column();
+DROP TRIGGER IF EXISTS update_questions_modtime ON questions;
+DROP TABLE IF EXISTS questions;
+DROP FUNCTION IF EXISTS questions_update_updated_at_column();
