@@ -66,7 +66,7 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, 
 }
 
 // GetQuestionByChallengeID returns questions by challenge id
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (map[uuid.UUID]Question, error) {
+func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (map[string]Question, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
@@ -88,14 +88,14 @@ func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (m
 		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
 	}
 
-	m := make(map[uuid.UUID]Question, len(questions))
+	m := make(map[string]Question, len(questions))
 	for _, v := range questions {
-		m[v.ID] = Question{v.ID, v.ChallengeID, v.Question,v.QuestionOrder, []AnswerOption{}}
+		m[v.ID.String()] = Question{v.ID, v.ChallengeID, v.Question, v.QuestionOrder, []AnswerOption{}}
 	}
 
-	for _, v := range answers{
-		for key, val := range m{
-			if v.QuestionID == key{
+	for _, v := range answers {
+		for key, val := range m {
+			if v.QuestionID.String() == key {
 				val.AnswerOptions = append(val.AnswerOptions, AnswerOption{
 					ID:         v.ID,
 					QuestionID: v.QuestionID,
