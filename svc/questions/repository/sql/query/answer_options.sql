@@ -15,3 +15,7 @@ SELECT is_correct
 FROM answer_options
 WHERE id = $1
 LIMIT 1;
+-- name: GetAnswersByIDs :many
+SELECT *
+FROM answer_options
+WHERE question_id = ANY(@question_ids::uuid[]);
