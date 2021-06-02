@@ -13,6 +13,7 @@ type (
 	}
 
 	service interface {
+		AddReward(ctx context.Context, uid uuid.UUID, amount float64, qid uuid.UUID) error
 	}
 )
 
@@ -23,5 +24,5 @@ func New(s service) *Client {
 
 // AddReward ...
 func (c *Client) AddReward(ctx context.Context, userID uuid.UUID, amount float64, quizID uuid.UUID) error {
-	return nil
+	return c.s.AddReward(ctx, userID, amount, quizID)
 }

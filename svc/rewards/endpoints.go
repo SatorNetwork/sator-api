@@ -12,38 +12,38 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		Example endpoint.Endpoint
+		ClaimRewards endpoint.Endpoint
 	}
 
 	service interface {
-		Example(ctx context.Context, uid uuid.UUID) (interface{}, error)
+		ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error)
 	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
-		Example: MakeExampleEndpoint(s),
+		ClaimRewards: MakeClaimRewardsEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
 	if len(m) > 0 {
 		for _, mdw := range m {
-			e.Example = mdw(e.Example)
+			e.ClaimRewards = mdw(e.ClaimRewards)
 		}
 	}
 
 	return e
 }
 
-// MakeExampleEndpoint ...
-func MakeExampleEndpoint(s service) endpoint.Endpoint {
+// MakeClaimRewardsEndpoint ...
+func MakeClaimRewardsEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		resp, err := s.Example(ctx, uid)
+		resp, err := s.ClaimRewards(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
