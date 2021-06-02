@@ -32,7 +32,7 @@
                 };
 
                 if (window["WebSocket"]) {
-                    conn = new WebSocket("ws://localhost:8080/quiz/001b2c83-42a1-4ffc-bc75-1a85c7afcc9c/play/eyJwIjp7IlVzZXJJRCI6ImI0ZTM1ZGFlLTIwYzItNDFmOS04ZGVhLWZiMTY2ZTMwYjAwMSIsIlVzZXJuYW1lIjoiam9obmRvZSIsIkNoYWxsZW5nZVJvb21JRCI6IjJlM2EzYWM5LTZiZDktNDA2Yi04N2ZhLWRmMDhlMWQzYjNkNCJ9LCJlIjoxNjIyNDgwNzQ3fQ.YmUwOTZiNzhjMGUzOTk1YWY5OWQ1NTQ0ZTkxZTJkMDhiMDljM2VlMw");
+                    conn = new WebSocket("ws://localhost:8080/quiz/00cfe310-eb1e-42e5-9d6b-801e288a3f8f/play/eyJwIjp7IlVzZXJJRCI6IjJlMWUzNWMwLTFmOGYtNDViMy1hNTI1LTIwNTQ0NjVmOWMzYSIsIlVzZXJuYW1lIjoiam9obmRvZSIsIkNoYWxsZW5nZVJvb21JRCI6ImE0NTc0ZjIyLTRlYTAtNDU0NC1iNGI3LTAzZjg5NjY2ODY1NCJ9LCJlIjoxNjIyNjEyMDQxfQ.NTFlMTk2NzlhMTM3MmE2OWZhMGNkYmEwNjc3NDdiMDRiOGFhY2I0Mw");
                     conn.onclose = function (evt) {
                         var item = document.createElement("div");
                         item.innerHTML = "<b>Connection closed.</b>";

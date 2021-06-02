@@ -8,30 +8,33 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"github.com/oklog/run"
 	"syreclabs.com/go/faker"
 )
 
 type (
-	// connection token parse function
-	tokenParser func(ctx context.Context, token string) (*TokenPayload, error)
+	quizService interface {
+		ParseQuizToken(_ context.Context, token string) (*TokenPayload, error)
+		Play(ctx context.Context, quizID, uid uuid.UUID, username string) error
+	}
 )
 
 // QuizWsHandler handles websocket connections
-func QuizWsHandler(tpfn tokenParser) http.HandlerFunc {
-	// rooms := make(map[string]broadcast.Broadcaster)
-
+func QuizWsHandler(s quizService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Current connection variables
 		challengeID := chi.URLParam(r, "challenge_id")
 		token := chi.URLParam(r, "token")
-		tokenPayload, err := tpfn(r.Context(), token)
+
+		tokenPayload, err := s.ParseQuizToken(r.Context(), token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		uid := tokenPayload.UserID
 		username := tokenPayload.Username
-		// roomID := tokenPayload.ChallengeRoomID
+		quizID := tokenPayload.QuizID
 
 		client, err := NewWsClient(w, r)
 		if err != nil {
@@ -39,16 +42,30 @@ func QuizWsHandler(tpfn tokenParser) http.HandlerFunc {
 			return
 		}
 
-		go client.Read()
-		go client.Write()
-
-		questions := getQuestions(5)
-		answers := make(map[string]QuestionResult)
-
 		ctx, cancel := context.WithCancel(context.Background())
 		defer func() {
 			cancel()
 		}()
+
+		var g run.Group
+		{
+			g.Add(client.Read, func(err error) {
+				log.Printf("messages reading has been stopped with error: %v", err)
+			})
+			g.Add(client.Write, func(err error) {
+				log.Printf("messages reading has been stopped with error: %v", err)
+			})
+			g.Add(func() error {
+				return s.Play(ctx, uuid.MustParse(quizID), uuid.MustParse(uid), username)
+			}, func(err error) {
+				log.Printf("messages reading has been stopped with error: %v", err)
+			})
+		}
+
+		// quizChannel := make(chan interface{}, 100)
+
+		questions := getQuestions(5)
+		answers := make(map[string]QuestionResult)
 
 		go func() {
 			for {

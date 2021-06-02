@@ -30,7 +30,7 @@ var (
 )
 
 type (
-	Client struct {
+	WsClient struct {
 		conn    *websocket.Conn
 		answers chan MessageAnswer
 		send    chan Message
@@ -43,27 +43,27 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func NewWsClient(w http.ResponseWriter, r *http.Request) (*Client, error) {
+func NewWsClient(w http.ResponseWriter, r *http.Request) (*WsClient, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not establish websocket connection: %w", err)
 	}
-	return &Client{
+	return &WsClient{
 		conn:    conn,
 		answers: make(chan MessageAnswer, 100),
 		send:    make(chan Message, 100),
 	}, nil
 }
 
-func (c *Client) ReadAnswers() <-chan MessageAnswer {
+func (c *WsClient) ReadAnswers() <-chan MessageAnswer {
 	return c.answers
 }
 
-func (c *Client) Send(m Message) {
+func (c *WsClient) Send(m Message) {
 	c.send <- m
 }
 
-func (c *Client) Read() error {
+func (c *WsClient) Read() error {
 	defer func() {
 		c.conn.Close()
 	}()
@@ -88,7 +88,7 @@ func (c *Client) Read() error {
 	return nil
 }
 
-func (c *Client) Write() error {
+func (c *WsClient) Write() error {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()

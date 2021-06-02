@@ -21,12 +21,14 @@ type Quiz struct {
 }
 
 type QuizAnswer struct {
-	QuizID    uuid.UUID `json:"quiz_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	AnswerID  uuid.UUID `json:"answer_id"`
-	IsCorrect bool      `json:"is_correct"`
-	Pts       int32     `json:"pts"`
-	CreatedAt time.Time `json:"created_at"`
+	QuizID     uuid.UUID `json:"quiz_id"`
+	UserID     uuid.UUID `json:"user_id"`
+	QuestionID uuid.UUID `json:"question_id"`
+	AnswerID   uuid.UUID `json:"answer_id"`
+	IsCorrect  bool      `json:"is_correct"`
+	Rate       int32     `json:"rate"`
+	Pts        int32     `json:"pts"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type QuizPlayer struct {

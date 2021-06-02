@@ -24,14 +24,16 @@ type (
 	// Challenge struct
 	// Fields were rearranged to optimize memory usage.
 	Challenge struct {
-		ID              uuid.UUID `json:"id"`
-		Title           string    `json:"title"`
-		Description     string    `json:"description"`
-		PrizePool       string    `json:"prize_pool"`
-		Players         int       `json:"players"`
-		Winners         string    `json:"winners"`
-		TimePerQuestion string    `json:"time_per_question"`
-		Play            string    `json:"play"`
+		ID                 uuid.UUID `json:"id"`
+		Title              string    `json:"title"`
+		Description        string    `json:"description"`
+		PrizePool          string    `json:"prize_pool"`
+		PrizePoolAmount    float64   `json:"-"`
+		Players            int       `json:"players"`
+		Winners            string    `json:"winners"`
+		TimePerQuestion    string    `json:"time_per_question"`
+		TimePerQuestionSec int64     `json:"-"`
+		Play               string    `json:"play"`
 	}
 
 	challengesRepository interface {
@@ -62,14 +64,19 @@ func NewService(cr challengesRepository, fn playURLGenerator) *Service {
 	}
 }
 
-// GetChallengeByID ...
-func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+// GetByID ...
+func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (Challenge, error) {
 	challenge, err := s.cr.GetChallengeByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+		return Challenge{}, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
 	return castToChallenge(challenge, s.playUrlFn), nil
+}
+
+// GetChallengeByID ...
+func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+	return s.GetByID(ctx, id)
 }
 
 // GetChallengesByShowID ...
@@ -93,12 +100,14 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 
 func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challenge {
 	return Challenge{
-		ID:              c.ID,
-		Title:           c.Title,
-		Description:     c.Description.String,
-		PrizePool:       fmt.Sprintf("%.2f SAO", c.PrizePool),
-		Players:         int(c.PlayersToStart),
-		TimePerQuestion: fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
-		Play:            playUrlFn(c.ID),
+		ID:                 c.ID,
+		Title:              c.Title,
+		Description:        c.Description.String,
+		PrizePool:          fmt.Sprintf("%.2f SAO", c.PrizePool),
+		PrizePoolAmount:    c.PrizePool,
+		Players:            int(c.PlayersToStart),
+		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
+		TimePerQuestionSec: int64(c.TimePerQuestion.Int32),
+		Play:               playUrlFn(c.ID),
 	}
 }

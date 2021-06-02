@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/questions/repository"
@@ -42,6 +43,16 @@ type (
 	}
 )
 
+// NewService is a factory function,
+// returns a new instance of the Service interface implementation.
+func NewService(qr questionsRepository) *Service {
+	if qr == nil {
+		log.Fatalln("questions repository is not set")
+	}
+
+	return &Service{qr: qr}
+}
+
 // GetQuestionByID returns question by id
 func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	question, err := s.qr.GetQuestionByID(ctx, id)
@@ -66,7 +77,7 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (interface{
 
 // GetQuestionByChallengeID returns questions by challenge id
 // TODO: needs refactoring! Make query that will return required slice.
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
