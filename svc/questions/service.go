@@ -66,16 +66,16 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, 
 }
 
 // GetQuestionByChallengeID returns questions by challenge id
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) ([]Question, error) {
+func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (map[uuid.UUID]Question, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return []Question{}, fmt.Errorf("could not get questions by challenge id: %w", err)
+			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
 		}
 		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
 	}
 
-	var idsSlice []uuid.UUID
+	idsSlice := make([]uuid.UUID, 0, len(questions))
 	for _, v := range questions {
 		idsSlice = append(idsSlice, v.ID)
 	}
@@ -83,18 +83,30 @@ func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) ([
 	answers, err := s.qr.GetAnswersByIDs(ctx, idsSlice)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return []Question{}, fmt.Errorf("could not get answers: %w", err)
+			return nil, fmt.Errorf("could not get answers: %w", err)
 		}
-		return []Question{}, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
+		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
 	}
 
-	result := make([]Question, 0, len(questions))
-	for _, q := range questions {
-		question := castToQuestion(q, answers)
-		result = append(result, question)
+	m := make(map[uuid.UUID]Question, len(questions))
+	for _, v := range questions {
+		m[v.ID] = Question{v.ID, v.ChallengeID, v.Question,v.QuestionOrder, []AnswerOption{}}
 	}
 
-	return result, nil
+	for _, v := range answers{
+		for key, val := range m{
+			if v.QuestionID == key{
+				val.AnswerOptions = append(val.AnswerOptions, AnswerOption{
+					ID:         v.ID,
+					QuestionID: v.QuestionID,
+					Option:     v.AnswerOption,
+					IsCorrect:  v.IsCorrect.Bool,
+				})
+			}
+		}
+	}
+
+	return m, nil
 }
 
 // CheckAnswer checks answer
