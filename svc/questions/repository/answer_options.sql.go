@@ -8,6 +8,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const addQuestionOption = `-- name: AddQuestionOption :one
@@ -68,6 +69,42 @@ func (q *Queries) GetAnswerByID(ctx context.Context, id uuid.UUID) (AnswerOption
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getAnswersByIDs = `-- name: GetAnswersByIDs :many
+SELECT id, question_id, answer_option, is_correct, updated_at, created_at
+FROM answer_options
+WHERE question_id = ANY($1::uuid[])
+`
+
+func (q *Queries) GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]AnswerOption, error) {
+	rows, err := q.query(ctx, q.getAnswersByIDsStmt, getAnswersByIDs, pq.Array(questionIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AnswerOption
+	for rows.Next() {
+		var i AnswerOption
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuestionID,
+			&i.AnswerOption,
+			&i.IsCorrect,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getAnswersByQuestionID = `-- name: GetAnswersByQuestionID :many

@@ -34,6 +34,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAnswerByIDStmt, err = db.PrepareContext(ctx, getAnswerByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnswerByID: %w", err)
 	}
+	if q.getAnswersByIDsStmt, err = db.PrepareContext(ctx, getAnswersByIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAnswersByIDs: %w", err)
+	}
 	if q.getAnswersByQuestionIDStmt, err = db.PrepareContext(ctx, getAnswersByQuestionID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnswersByQuestionID: %w", err)
 	}
@@ -66,6 +69,11 @@ func (q *Queries) Close() error {
 	if q.getAnswerByIDStmt != nil {
 		if cerr := q.getAnswerByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAnswerByIDStmt: %w", cerr)
+		}
+	}
+	if q.getAnswersByIDsStmt != nil {
+		if cerr := q.getAnswersByIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAnswersByIDsStmt: %w", cerr)
 		}
 	}
 	if q.getAnswersByQuestionIDStmt != nil {
@@ -126,6 +134,7 @@ type Queries struct {
 	addQuestionOptionStmt         *sql.Stmt
 	checkAnswerStmt               *sql.Stmt
 	getAnswerByIDStmt             *sql.Stmt
+	getAnswersByIDsStmt           *sql.Stmt
 	getAnswersByQuestionIDStmt    *sql.Stmt
 	getQuestionByIDStmt           *sql.Stmt
 	getQuestionsByChallengeIDStmt *sql.Stmt
@@ -139,6 +148,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addQuestionOptionStmt:         q.addQuestionOptionStmt,
 		checkAnswerStmt:               q.checkAnswerStmt,
 		getAnswerByIDStmt:             q.getAnswerByIDStmt,
+		getAnswersByIDsStmt:           q.getAnswersByIDsStmt,
 		getAnswersByQuestionIDStmt:    q.getAnswersByQuestionIDStmt,
 		getQuestionByIDStmt:           q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt: q.getQuestionsByChallengeIDStmt,
