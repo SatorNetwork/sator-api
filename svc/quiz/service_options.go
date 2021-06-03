@@ -1,7 +1,5 @@
 package quiz
 
-import "time"
-
 // WithCustomTokenTTL service option
 func WithCustomTokenTTL(ttl int64) ServiceOption {
 	return func(s *Service) {
@@ -23,16 +21,16 @@ func WithCustomTokenParseFunction(fn tokenParseFunc) ServiceOption {
 	}
 }
 
-// WithCountdown service option
-func WithCountdown(n int) ServiceOption {
-	return func(s *Service) {
-		s.countdown = n
-	}
-}
+// // WithCountdown service option
+// func WithCountdown(n int) ServiceOption {
+// 	return func(s *Service) {
+// 		s.countdown = n
+// 	}
+// }
 
-// WithTimeBtwQuestion service option
-func WithTimeBtwQuestion(t time.Duration) ServiceOption {
-	return func(s *Service) {
-		s.timeBtwQuestion = t
-	}
-}
+// // WithTimeBtwQuestion service option
+// func WithTimeBtwQuestion(t time.Duration) ServiceOption {
+// 	return func(s *Service) {
+// 		s.timeBtwQuestion = t
+// 	}
+// }

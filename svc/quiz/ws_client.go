@@ -72,6 +72,7 @@ func (c *WsClient) Read() error {
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		_, message, err := c.conn.ReadMessage()
+		// log.Printf("read: %v", message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -97,6 +98,7 @@ func (c *WsClient) Write() error {
 	for {
 		select {
 		case message, ok := <-c.send:
+			// log.Printf("write: %v", message)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})

@@ -2,6 +2,8 @@ package quiz
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -14,27 +16,37 @@ import (
 
 type (
 	quizService interface {
-		ParseQuizToken(_ context.Context, token string) (*TokenPayload, error)
+		ParseQuizToken(ctx context.Context, token string) (*TokenPayload, error)
 		Play(ctx context.Context, quizID, uid uuid.UUID, username string) error
+		SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, error)
+		StoreAnswer(ctx context.Context, userID, quizId, questionID, answerID uuid.UUID) error
 	}
 )
 
 // QuizWsHandler handles websocket connections
 func QuizWsHandler(s quizService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Current connection variables
-		challengeID := chi.URLParam(r, "challenge_id")
 		token := chi.URLParam(r, "token")
-
 		tokenPayload, err := s.ParseQuizToken(r.Context(), token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		uid := tokenPayload.UserID
+		uid := uuid.MustParse(tokenPayload.UserID)
 		username := tokenPayload.Username
-		quizID := tokenPayload.QuizID
+		quizID := uuid.MustParse(tokenPayload.QuizID)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer func() {
+			cancel()
+		}()
+
+		quizHub, err := s.SetupNewQuizHub(ctx, quizID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		client, err := NewWsClient(w, r)
 		if err != nil {
@@ -42,182 +54,118 @@ func QuizWsHandler(s quizService) http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		if err := quizHub.AddPlayer(uid, username); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		defer func() {
-			cancel()
+			quizHub.RemovePlayer(uid)
 		}()
 
-		var g run.Group
-		{
-			g.Add(client.Read, func(err error) {
-				log.Printf("messages reading has been stopped with error: %v", err)
-			})
-			g.Add(client.Write, func(err error) {
-				log.Printf("messages reading has been stopped with error: %v", err)
-			})
-			g.Add(func() error {
-				return s.Play(ctx, uuid.MustParse(quizID), uuid.MustParse(uid), username)
-			}, func(err error) {
-				log.Printf("messages reading has been stopped with error: %v", err)
+		fakePlayers := make([]struct {
+			ID       uuid.UUID
+			Username string
+		}, 0, 10)
+		for i := 0; i < 10; i++ {
+			fakePlayers = append(fakePlayers, struct {
+				ID       uuid.UUID
+				Username string
+			}{
+				ID:       uuid.New(),
+				Username: faker.Internet().UserName(),
 			})
 		}
 
-		// quizChannel := make(chan interface{}, 100)
+		var g run.Group
+		{
+			// read messages from websocket connection
+			g.Add(client.Read, func(err error) {
+				if err != nil {
+					log.Printf("messages reading has been stopped with error: %v", err)
+				}
+			})
 
-		questions := getQuestions(5)
-		answers := make(map[string]QuestionResult)
+			// write messages to websocket connection
+			g.Add(client.Write, func(err error) {
+				if err != nil {
+					log.Printf("messages reading has been stopped with error: %v", err)
+				}
+			})
+
+			// connect to quiz hub and listen events
+			g.Add(func() error {
+				return s.Play(ctx, quizID, uid, username)
+			}, func(err error) {
+				if err != nil {
+					log.Printf("messages reading has been stopped with error: %v", err)
+				}
+			})
+
+			send := make(chan interface{}, 100)
+			quit := make(chan interface{}, 2)
+			quizHub.ListenPlayerQuitEvent(uid, quit)
+			quizHub.ListenMessageToSend(uid, send)
+			defer func() {
+				quizHub.UnsubscribeMessageToSend(uid, send)
+				quizHub.UnsubscribePlayerQuitEvent(uid, quit)
+				close(send)
+				close(quit)
+			}()
+
+			g.Add(func() error {
+				for {
+					select {
+					case <-ctx.Done():
+						return nil
+					case answer := <-client.ReadAnswers():
+						log.Printf("answer: %+v", answer)
+
+						if err := s.StoreAnswer(
+							ctx, uid, quizID,
+							uuid.MustParse(answer.Payload.QuestionID),
+							uuid.MustParse(answer.Payload.AnswerID),
+						); err != nil {
+							return fmt.Errorf("could not store answer: %v", err)
+						}
+					case msg := <-send:
+						m := Message{}
+						if err := json.Unmarshal(msg.([]byte), &m); err != nil {
+							return fmt.Errorf("could not decode message: %v", err)
+						}
+						log.Printf("send message: %+v", m)
+						client.Send(m)
+					case e := <-quit:
+						log.Printf("quit: %+v", e)
+						return client.conn.Close()
+					}
+				}
+			}, func(err error) {
+				if err != nil {
+					log.Printf("messages reading has been stopped with error: %v", err)
+				}
+			})
+		}
 
 		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case answer := <-client.ReadAnswers():
-					log.Printf("answer: %+v", answer)
-					log.Printf("question: %+v", questions[answer.Payload.QuestionID])
-					log.Printf("is correct answer: %v", questions[answer.Payload.QuestionID].correctID == answer.Payload.AnswerID)
-					if q, ok := questions[answer.Payload.QuestionID]; ok && q.correctID == answer.Payload.AnswerID {
-						answers[answer.Payload.QuestionID] = QuestionResult{
-							QuestionID:      q.QuestionID,
-							Result:          true,
-							Rate:            0,
-							CorrectAnswerID: q.correctID,
-							QuestionsLeft:   len(questions) - len(answers) + 1,
-							AdditionalPts:   0,
-						}
-					}
+			time.Sleep(time.Second * 15)
+
+			for _, u := range fakePlayers {
+				time.Sleep(time.Second)
+				if err := quizHub.AddPlayer(u.ID, u.Username); err != nil {
+					log.Printf("add dummy player %s: %v", u.Username, err)
+					continue
+				}
+				if err := quizHub.Connect(u.ID); err != nil {
+					log.Printf("connect dummy player %s: %v", u.Username, err)
 				}
 			}
 		}()
 
-		client.Send(Message{
-			Type:   UserConnectedMessage,
-			SentAt: time.Now(),
-			Payload: User{
-				UserID:   uid,
-				Username: username,
-			},
-		})
-
-		for i := 0; i < 9; i++ {
-			client.Send(Message{
-				Type:   UserConnectedMessage,
-				SentAt: time.Now(),
-				Payload: User{
-					UserID:   uuid.New().String(),
-					Username: faker.Internet().UserName(),
-				},
-			})
-			time.Sleep(time.Second)
+		if err := quizHub.Connect(uid); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		for i := 3; i > 0; i-- {
-			client.Send(Message{
-				Type:   CountdownMessage,
-				SentAt: time.Now(),
-				Payload: Countdown{
-					Countdown: i,
-				},
-			})
-			time.Sleep(time.Second)
-		}
-
-		for _, q := range questions {
-			client.Send(Message{
-				Type:    QuestionMessage,
-				SentAt:  time.Now(),
-				Payload: q,
-			})
-			time.Sleep(time.Second * time.Duration(q.TimeForAnswer))
-
-			if res, ok := answers[q.QuestionID]; ok {
-				client.Send(Message{
-					Type:    QuestionResultMessage,
-					SentAt:  time.Now(),
-					Payload: res,
-				})
-				time.Sleep(time.Second * 3)
-				continue
-			}
-
-			client.Send(Message{
-				Type:   QuestionResultMessage,
-				SentAt: time.Now(),
-				Payload: QuestionResult{
-					QuestionID:      q.QuestionID,
-					Result:          false,
-					CorrectAnswerID: q.correctID,
-				},
-			})
-			time.Sleep(time.Second * 3)
-			break
-		}
-
-		if len(questions) == len(answers) {
-			client.Send(Message{
-				Type:   ChallengeResultMessage,
-				SentAt: time.Now(),
-				Payload: ChallengeResult{
-					ChallengeID: challengeID,
-					PrizePool:   "250 SAO",
-					Winners: []Winner{
-						{
-							UserID:   uid,
-							Username: username,
-							Prize:    "125 SAO",
-						},
-						{
-							UserID:   uuid.New().String(),
-							Username: faker.Internet().UserName(),
-							Prize:    "100 SAO",
-						},
-						{
-							UserID:   uuid.New().String(),
-							Username: faker.Internet().UserName(),
-							Prize:    "25 SAO",
-						},
-					},
-				},
-			})
-			time.Sleep(time.Second * 5)
-		}
+		g.Run()
 	}
-}
-
-func getQuestions(n int) map[string]Question {
-	questions := make(map[string]Question)
-
-	for i := 0; i < n; i++ {
-		correctID := uuid.New().String()
-		qid := uuid.New().String()
-
-		questions[qid] = Question{
-			QuestionID:     qid,
-			QuestionText:   faker.Lorem().Sentence(7),
-			TimeForAnswer:  8,
-			TotalQuestions: n,
-			QuestionNumber: n + 1,
-			AnswerOptions: []AnswerOption{
-				{
-					AnswerID:   uuid.New().String(),
-					AnswerText: faker.Lorem().Word(),
-				},
-				{
-					AnswerID:   correctID,
-					AnswerText: faker.Lorem().Word(),
-				},
-				{
-					AnswerID:   uuid.New().String(),
-					AnswerText: faker.Lorem().Word(),
-				},
-				{
-					AnswerID:   uuid.New().String(),
-					AnswerText: faker.Lorem().Word(),
-				},
-			},
-			correctID: correctID,
-		}
-	}
-
-	return questions
 }

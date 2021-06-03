@@ -38,7 +38,11 @@ func NewService(repo rewardsRepository) *Service {
 
 // AddReward ...
 func (s *Service) AddReward(ctx context.Context, uid uuid.UUID, amount float64, qid uuid.UUID) error {
-	if err := s.repo.AddReward(ctx, repository.AddRewardParams{}); err != nil {
+	if err := s.repo.AddReward(ctx, repository.AddRewardParams{
+		UserID: uid,
+		QuizID: qid,
+		Amount: amount,
+	}); err != nil {
 		return fmt.Errorf("could not add reward for user_id=%s and quiz_id=%s: %w", uid.String(), qid.String(), err)
 	}
 	return nil
