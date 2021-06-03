@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/questions/repository"
@@ -43,6 +44,16 @@ type (
 	}
 )
 
+// NewService is a factory function,
+// returns a new instance of the Service interface implementation.
+func NewService(qr questionsRepository) *Service {
+	if qr == nil {
+		log.Fatalln("questions repository is not set")
+	}
+
+	return &Service{qr: qr}
+}
+
 // GetQuestionByID returns question by id
 func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, error) {
 	question, err := s.qr.GetQuestionByID(ctx, id)
@@ -65,8 +76,8 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, 
 	return castToQuestion(question, answers), nil
 }
 
-// GetQuestionByChallengeID returns questions by challenge id
-func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (map[string]Question, error) {
+// GetQuestionsByChallengeID returns questions by challenge id
+func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
@@ -88,25 +99,41 @@ func (s *Service) GetQuestionByChallengeID(ctx context.Context, id uuid.UUID) (m
 		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
 	}
 
-	m := make(map[string]Question, len(questions))
-	for _, v := range questions {
-		m[v.ID.String()] = Question{v.ID, v.ChallengeID, v.Question, v.QuestionOrder, []AnswerOption{}}
-	}
-
+	answMap := make(map[string][]AnswerOption)
 	for _, v := range answers {
-		for key, val := range m {
-			if v.QuestionID.String() == key {
-				val.AnswerOptions = append(val.AnswerOptions, AnswerOption{
+		if _, ok := answMap[v.QuestionID.String()]; ok {
+			answMap[v.QuestionID.String()] = append(answMap[v.QuestionID.String()], AnswerOption{
+				ID:         v.ID,
+				QuestionID: v.QuestionID,
+				Option:     v.AnswerOption,
+				IsCorrect:  v.IsCorrect.Bool,
+			})
+		} else {
+			answMap[v.QuestionID.String()] = []AnswerOption{
+				{
 					ID:         v.ID,
 					QuestionID: v.QuestionID,
 					Option:     v.AnswerOption,
 					IsCorrect:  v.IsCorrect.Bool,
-				})
+				},
 			}
 		}
 	}
 
-	return m, nil
+	qlist := make([]Question, 0, len(questions))
+	for _, v := range questions {
+		if opt, ok := answMap[v.ID.String()]; ok {
+			qlist = append(qlist, Question{
+				ID:            v.ID,
+				ChallengeID:   v.ChallengeID,
+				Question:      v.Question,
+				Order:         v.QuestionOrder,
+				AnswerOptions: opt,
+			})
+		}
+	}
+
+	return qlist, nil
 }
 
 // CheckAnswer checks answer

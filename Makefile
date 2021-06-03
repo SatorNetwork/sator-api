@@ -20,10 +20,10 @@ build: ## Build the app
 
 run-local:
 	@APP_PORT=8080 \
-	APP_BASE_URL=http://localhost:8080/ \
+	APP_BASE_URL=https://aec45cb3e117.ngrok.io/ \
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	JWT_SIGNING_KEY=secret \
-	QUIZ_WS_CONN_URL=ws://localhost:8080/quiz \
+	QUIZ_WS_CONN_URL=https://aec45cb3e117.ngrok.io/quiz \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
 
 migrate: ## Run all migrations on server

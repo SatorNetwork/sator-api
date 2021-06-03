@@ -38,7 +38,7 @@ const getQuestionByID = `-- name: GetQuestionByID :one
 SELECT id, challenge_id, question, question_order, updated_at, created_at
 FROM questions
 WHERE id = $1
-    LIMIT 1
+LIMIT 1
 `
 
 func (q *Queries) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, error) {
@@ -59,7 +59,7 @@ const getQuestionsByChallengeID = `-- name: GetQuestionsByChallengeID :many
 SELECT id, challenge_id, question, question_order, updated_at, created_at
 FROM questions
 WHERE challenge_id = $1
-ORDER BY quiestion_order ASC
+ORDER BY question_order ASC
 `
 
 func (q *Queries) GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]Question, error) {

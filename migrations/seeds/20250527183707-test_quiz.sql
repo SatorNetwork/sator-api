@@ -4,14 +4,12 @@
 -- https://tableplus.com/
 --
 -- Database: pgdb
--- Generation Time: 2021-06-01 8:46:28.9020 AM
+-- Generation Time: 2021-06-03 9:04:59.4020 AM
 -- -------------------------------------------------------------
 
 
 INSERT INTO "public"."answer_options" ("id", "question_id", "answer_option", "is_correct", "updated_at", "created_at") VALUES
 ('0fb79e84-3a8a-44e5-adc4-4e9e932a5eb2', 'e07427dd-0c8d-4422-95f7-f498da3b6b3a', 'Walmart', 'f', NULL, '2021-06-01 05:42:57.186513'),
-('11aa936f-8e38-464a-9129-33a4192300b8', '9127fcf8-eafa-42c5-9a91-12fcfa36d78a', '11', 'f', NULL, '2021-06-01 05:15:18.418472'),
-('17725672-b654-40ed-8701-3792360b37b8', '9127fcf8-eafa-42c5-9a91-12fcfa36d78a', '9', 'f', NULL, '2021-06-01 05:15:18.418472'),
 ('18e6dc8b-6de1-44c9-ba70-ca6ca8e08a93', '15b8dffe-2f20-40ca-9d86-7af111b414f2', 'Phoebe', 'f', NULL, '2021-06-01 05:42:56.883046'),
 ('1dea1f9b-60e7-49cf-930b-e890b35509bd', 'a6b247b4-fb05-41f3-bc3b-56132e0f2aea', 'Jack and Phoebe', 'f', NULL, '2021-06-01 05:42:57.062201'),
 ('1ec6958d-2ca6-42b3-9c1d-feaeff44ae7d', 'd4d099ca-09ab-438a-a25d-3266d7537065', 'Who knows', 'f', NULL, '2021-06-01 05:42:57.125759'),
@@ -21,11 +19,9 @@ INSERT INTO "public"."answer_options" ("id", "question_id", "answer_option", "is
 ('3406478b-506a-4f7d-b892-859633e049ee', 'a6b247b4-fb05-41f3-bc3b-56132e0f2aea', 'Jack and Judy', 't', NULL, '2021-06-01 05:42:57.062201'),
 ('3c2c7cc2-d99f-4c25-b7f1-e98dceebca7c', 'e9a36373-e2c0-44eb-9081-a6ccccc0f305', 'Santa Barbara', 'f', NULL, '2021-06-01 05:42:57.30738'),
 ('3de7edec-e64c-450d-915a-42d2cf0cfa8f', 'e334fcb5-831f-48ff-87b1-71f3398b6062', 'Berlin', 'f', NULL, '2021-06-01 05:42:57.24685'),
-('43b36079-0908-433d-845e-bd426761253b', '9127fcf8-eafa-42c5-9a91-12fcfa36d78a', '10', 't', NULL, '2021-06-01 05:15:18.418472'),
 ('49d7ce0f-189a-4830-85ef-bfefc84900e6', 'f3069ee6-503d-4740-8ecb-716f7a0ed588', 'Robert', 'f', NULL, '2021-06-01 05:42:57.429776'),
 ('4a49d565-8df3-4f14-b843-abf744377bca', '72569f97-26c5-4caf-a9aa-de8b908a8257', 'Orthodontist', 't', NULL, '2021-06-01 05:42:56.940693'),
 ('4aaf6b75-06a8-4eb0-b90f-9c895c0168f1', 'e07427dd-0c8d-4422-95f7-f498da3b6b3a', 'Pottery Barn', 't', NULL, '2021-06-01 05:42:57.186513'),
-('4ceebe3f-882d-40b9-94b8-8d8d0ee5779c', '9127fcf8-eafa-42c5-9a91-12fcfa36d78a', '12', 'f', '2021-06-01 05:15:28.642554', '2021-06-01 05:15:18.418472'),
 ('4ec9203b-c845-44fc-93a7-2379a06dc9ce', '72569f97-26c5-4caf-a9aa-de8b908a8257', 'Midwife', 'f', NULL, '2021-06-01 05:42:56.940693'),
 ('5386ad28-fb0c-4778-be94-f45435ae5c4e', 'd4d099ca-09ab-438a-a25d-3266d7537065', 'Two', 'f', NULL, '2021-06-01 05:42:57.125759'),
 ('6b69c628-8a01-49da-a7e8-027dfdd778d7', 'e9a36373-e2c0-44eb-9081-a6ccccc0f305', 'Days of Our Lives', 't', NULL, '2021-06-01 05:42:57.30738'),

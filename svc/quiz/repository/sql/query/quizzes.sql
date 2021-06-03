@@ -1,5 +1,5 @@
--- name: AddNewChallegeRoom :one
-INSERT INTO challenge_rooms (
+-- name: AddNewQuiz :one
+INSERT INTO quizzes (
         challenge_id,
         prize_pool,
         players_to_start,
@@ -11,17 +11,17 @@ VALUES (
         @players_to_start,
         @time_per_question
     ) RETURNING *;
--- name: UpdateChallengeRoomStatus :exec
-UPDATE challenge_rooms
+-- name: UpdateQuizStatus :exec
+UPDATE quizzes
 SET status = @status
 WHERE id = @id;
--- name: GetChallengeRoomByID :one
+-- name: GetQuizByID :one
 SELECT *
-FROM challenge_rooms
+FROM quizzes
 WHERE id = $1;
--- name: GetChallengeRoomByChallengeID :one
+-- name: GetQuizByChallengeID :one
 SELECT *
-FROM challenge_rooms
+FROM quizzes
 WHERE challenge_id = $1
     AND status = 0
 ORDER BY created_at DESC;

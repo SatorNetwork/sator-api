@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"net"
 	"net/smtp"
+
+	"github.com/zeebo/errs"
 )
 
 // ensures that SMTPSender implements Sender.
@@ -34,7 +36,9 @@ func (sender *SMTPSender) SendEmail(msg *Message) error {
 		return err
 	}
 	// close underlying connection.
-	defer client.Close()
+	defer func() {
+		err = errs.Combine(err, client.Close())
+	}()
 
 	// send smtp hello or ehlo msg and establish connection over tls.
 	err = client.StartTLS(&tls.Config{ServerName: host})
@@ -65,7 +69,9 @@ func (sender *SMTPSender) SendEmail(msg *Message) error {
 		return err
 	}
 
-	defer data.Close()
+	defer func() {
+		err = errs.Combine(err, data.Close())
+	}()
 
 	_, err = data.Write(msg.Bytes())
 	if err != nil {

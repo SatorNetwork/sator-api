@@ -110,3 +110,26 @@
     ]
 }
 ```
+
+---
+
+## Reward example calculation:
+
+| Prize pool | Total questions | Winners |
+| ---------- | --------------- | ------- |
+| 250 SAO    | 10              | 5       |
+|            |                 |         |
+
+### Formula:
+```
+reward = (prizePool / ((totalWinners * totalQuestions) + totalPts)) * (totalQuestions + pts)
+```
+
+| Winner # | PTS | Points | Reward |
+| -------- | --- | ------ | ------ |
+| #1       | 0   | 10     | ~21.74 |
+| #2       | 10  | 20     | ~43.48 |
+| #3       | 20  | 30     | ~65.22 |
+| #4       | 30  | 40     | ~86.96 |
+| #5       | 5   | 15     | ~32.61 |
+|          |     |        |        |
