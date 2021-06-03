@@ -554,32 +554,27 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /quiz/{challenge_id}/play:
+  /rewards/claim:
     get:
       tags:
-        - "Quiz"
-      summary: Get quiz connection URL with access token.
+        - "Rewards"
+      summary: Claim all collected rewards.
       security:
         - bearerAuth: []
-      parameters:
-        - name: challenge_id
-          in: path
-          description: Сhallenge ID.
-          required: true
-          schema:
-            type: string
       responses:
         "200":
-          description: Returns quiz connection URL with access token.
+          description: Returns claimed rewards amount and link to solana transaction.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  play_url:
+                  amount:
                     type: string
-                    description: "Absolute URL to connect websocket."
-                    example: "http://localhost:8080/challenges/{challenge_id}/play/{token}"
+                    example: "83.55 SAO"
+                  transaction_url:
+                    type: string
+                    example: "https://explorer.solana.com/address/CizSaMmnZymceaDTPcNdXgKEpLarCQDvtAkAZA2tSE2u?cluster=devnet"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

@@ -16,40 +16,32 @@ import (
 	"github.com/google/uuid"
 )
 
+// Predefiend quiz statuses
+const (
+	QuizOpenForRegistration = iota << 2
+	QuizClosedForRegistration
+)
+
 type (
 	// Service struct
 	Service struct {
-		mutex          mutex
-		repo           quizRepository
-		questions      questionService
-		rewards        rewardsService
-		challenges     challengesService
-		tokenGenFunc   tokenGenFunc
-		tokenParseFunc tokenParseFunc
-		tokenTTL       int64
-		baseQuizURL    string
-
-		countdown       int
-		timeForAnswer   time.Duration
-		timeBtwQuestion time.Duration
+		mutex           mutex
+		repo            quizRepository
+		questions       questionService
+		rewards         rewardsService
+		challenges      challengesService
+		tokenGenFunc    tokenGenFunc
+		tokenParseFunc  tokenParseFunc
+		tokenTTL        int64
+		baseQuizURL     string
 		rewardAssetName string
 
-		startQuiz broadcast.Broadcaster // receives quiz id to start
-		stopQuiz  broadcast.Broadcaster // receives quiz id to stop
-		quizzes   map[string]quizHub
-		players   map[string]playerHub
-	}
+		hub map[string]*Hub
 
-	playerHub struct {
-		send    broadcast.Broadcaster
-		receive broadcast.Broadcaster
-	}
-
-	quizHub struct {
-		send            broadcast.Broadcaster
-		questResult     broadcast.Broadcaster // fire event to send question result to each user
-		questionsSentAt map[string]time.Time  // time when question was sent
-		questionsNumber int
+		startQuiz      broadcast.Broadcaster
+		stopQuiz       broadcast.Broadcaster
+		startQuizEvent chan interface{}
+		stopQuizEvent  chan interface{}
 	}
 
 	quizRepository interface {
@@ -60,6 +52,7 @@ type (
 		UpdateQuizStatus(ctx context.Context, arg repository.UpdateQuizStatusParams) error
 		GetAnswer(ctx context.Context, arg repository.GetAnswerParams) (repository.QuizAnswer, error)
 		AddNewPlayer(ctx context.Context, arg repository.AddNewPlayerParams) error
+		CountPlayersInQuiz(ctx context.Context, quizID uuid.UUID) (int64, error)
 		StoreAnswer(ctx context.Context, arg repository.StoreAnswerParams) error
 	}
 
@@ -91,13 +84,6 @@ type (
 		Lock(key string, ttl time.Duration) error
 		Unlock(key string) error
 	}
-
-	PlayerAnswer struct {
-		QuizID     string `json:"quiz_id"`
-		UserID     string `json:"user_id"`
-		QuestionID string `json:"question_id"`
-		AnswerID   string `json:"answer_id"`
-	}
 )
 
 // NewService is a factory function,
@@ -122,15 +108,9 @@ func NewService(
 		tokenParseFunc:  signature.Parse,
 		tokenTTL:        900,
 		baseQuizURL:     baseQuizURL,
-		countdown:       3,
-		timeForAnswer:   time.Second * 15,
-		timeBtwQuestion: time.Second * 5,
 		rewardAssetName: "SAO",
 
-		startQuiz: broadcast.NewBroadcaster(100),
-		stopQuiz:  broadcast.NewBroadcaster(100), // receives quiz id to stop
-		quizzes:   make(map[string]quizHub),
-		players:   make(map[string]playerHub),
+		hub: make(map[string]*Hub),
 	}
 
 	for _, fn := range opt {
@@ -168,6 +148,43 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		}
 	}
 
+	playersNumber, err := s.repo.CountPlayersInQuiz(ctx, quiz.ID)
+	if err != nil && !db.IsNotFoundError(err) {
+		return nil, fmt.Errorf("could ont count players in current quiz: %w", err)
+	}
+	if playersNumber >= int64(quiz.PlayersToStart) {
+		// Close quiz for registration
+		if err := s.repo.UpdateQuizStatus(ctx, repository.UpdateQuizStatusParams{
+			ID:     quiz.ID,
+			Status: QuizClosedForRegistration,
+		}); err != nil {
+			log.Printf("could not update status of quiz with id=%s: %v", quiz.ID.String(), err)
+		}
+
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge with id=%s: %w", challengeID.String(), err)
+		}
+		// Create new quiz
+		quiz, err = s.repo.AddNewQuiz(ctx, repository.AddNewQuizParams{
+			ChallengeID:     challenge.ID,
+			PrizePool:       challenge.PrizePoolAmount,
+			PlayersToStart:  int32(challenge.Players),
+			TimePerQuestion: int64(challenge.TimePerQuestionSec),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not start new quiz: %w", err)
+		}
+	}
+
+	if err := s.repo.AddNewPlayer(ctx, repository.AddNewPlayerParams{
+		QuizID:   quiz.ID,
+		UserID:   uid,
+		Username: username,
+	}); err != nil {
+		return nil, fmt.Errorf("could not add a new player into quiz: %w", err)
+	}
+
 	token, err := s.tokenGenFunc(TokenPayload{
 		UserID:   uid.String(),
 		Username: username,
@@ -200,160 +217,96 @@ func (s *Service) ParseQuizToken(_ context.Context, token string) (*TokenPayload
 	return result, nil
 }
 
+func (s *Service) GetQuizHub(qid string) *Hub {
+	return s.hub[qid]
+}
+
+func (s *Service) SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, error) {
+	if h, ok := s.hub[qid.String()]; ok {
+		return h, nil
+	}
+
+	quiz, err := s.repo.GetQuizByID(ctx, qid)
+	if err != nil {
+		return nil, fmt.Errorf("could not get quiz with id=%s: %w", qid.String(), err)
+	}
+
+	qlist, err := s.questions.GetQuestionsByChallengeID(ctx, quiz.ChallengeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get questions list for quiz with id=%s: %w", qid.String(), err)
+	}
+
+	qlmap := make(map[string]questions.Question)
+	for _, item := range qlist {
+		qlmap[item.ID.String()] = item
+	}
+
+	s.hub[qid.String()] = NewQuizHub(quiz, qlmap)
+	s.hub[qid.String()].ListenQuizStartEvents(s.startQuizEvent)
+
+	return s.hub[qid.String()], nil
+}
+
+func (s *Service) StoreAnswer(ctx context.Context, userID, quizID, questionID, answerID uuid.UUID) error {
+	h := s.GetQuizHub(quizID.String())
+	if h == nil {
+		return fmt.Errorf("could not found quiz with id=%s", quizID.String())
+	}
+
+	result := h.Answer(userID, questionID, answerID)
+	if err := s.repo.StoreAnswer(ctx, repository.StoreAnswerParams{
+		QuizID:     quizID,
+		UserID:     userID,
+		QuestionID: questionID,
+		AnswerID:   answerID,
+		IsCorrect:  result.Result,
+		Rate:       int32(result.Rate),
+		Pts:        int32(result.AdditionalPts),
+	}); err != nil {
+		return fmt.Errorf("could not store answer: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Service) Play(ctx context.Context, quizID, uid uuid.UUID, username string) error {
-	qh := s.GetQuizHub(quizID.String())
-	ph := s.GetPlayerHub(uid.String())
-
-	s.sendQuizMsg(quizID.String(), UserConnectedMessage, User{
-		UserID:   uid.String(),
-		Username: username,
-	})
-
-	questResult := make(chan interface{}, 100)
-	qh.questResult.Register(questResult)
-	playerSend := make(chan interface{}, 100)
-	ph.send.Register(playerSend)
-	playerAnswers := make(chan interface{}, 100)
-	ph.receive.Register(playerAnswers)
+	h := s.GetQuizHub(quizID.String())
+	questionResultEvents := make(chan interface{}, 10)
+	stopQuiz := make(chan interface{}, 10)
+	h.ListenQuestionResultEvent(questionResultEvents)
+	h.ListenQuizStartEvents(stopQuiz)
 
 	defer func() {
-		qh.questResult.Unregister(questResult)
-		close(questResult)
-		ph.send.Unregister(playerSend)
-		close(playerSend)
-		ph.receive.Unregister(playerAnswers)
-		close(playerAnswers)
+		h.UnsubscribeQuestionResultEvent(questionResultEvents)
+		h.UnsubscribeQuizStartEvents(stopQuiz)
+		close(questionResultEvents)
+		close(stopQuiz)
 	}()
 
+stop:
 	for {
 		select {
-		case <-ctx.Done():
-			log.Printf("quiz service stopped")
-			return nil
-
-		case msg := <-questResult:
-			if questID, ok := msg.(string); ok {
-				result := false
-				answ, err := s.repo.GetAnswer(ctx, repository.GetAnswerParams{
-					QuizID:     quizID,
-					UserID:     uid,
-					QuestionID: uuid.MustParse(questID),
-				})
-				if err == nil && answ.IsCorrect {
-					result = true
-				}
-
-				if err := s.sendPersonalMsg(uid.String(), QuestionResultMessage, QuestionResult{
-					QuestionID:    questID,
-					Result:        result,
-					Rate:          int(answ.Rate),
-					AdditionalPts: int(answ.Pts),
-					QuestionsLeft: qh.questionsNumber - len(qh.questionsSentAt),
-				}); err != nil {
-					return fmt.Errorf("could not sent challenge result message for question with id=%s: %w", questID, err)
-				}
-
-				if !result {
-					log.Printf("user %s lose in quiz %s", uid.String(), quizID.String())
-					return nil
-				}
+		case e := <-stopQuiz:
+			if _, ok := e.(bool); ok && e.(bool) {
+				break stop
 			}
-
-		case answ := <-playerAnswers:
-			if a, ok := answ.(PlayerAnswer); ok {
-				answID := uuid.MustParse(a.AnswerID)
-				correct, err := s.questions.CheckAnswer(ctx, answID)
-				if err != nil {
-					correct = false
-				}
-				rate := int32(s.calcRate(a.QuizID, a.QuestionID, int64(s.timeForAnswer.Seconds())))
-				pts := 0
-				if rate > 2 {
-					pts = 2
-				}
-				if err := s.repo.StoreAnswer(ctx, repository.StoreAnswerParams{
-					QuizID:     uuid.MustParse(a.QuizID),
-					UserID:     uuid.MustParse(a.UserID),
-					QuestionID: uuid.MustParse(a.QuestionID),
-					AnswerID:   answID,
-					IsCorrect:  correct,
-					Rate:       rate,
-					Pts:        int32(pts),
-				}); err != nil {
-					log.Printf("could not store player`s (%s) answer (%s) for question (%s): %v",
-						uid.String(), a.AnswerID, a.QuestionID, err)
-				}
+		case questionID := <-questionResultEvents:
+			if err := h.SendQuestionResult(uid, uuid.MustParse(fmt.Sprintf("%v", questionID))); err != nil {
+				return fmt.Errorf("could not send question result: %w", err)
 			}
 		}
 	}
-}
 
-func (s *Service) calcRate(quizID, questID string, timeForAnswer int64) int {
-	qh := s.GetQuizHub(quizID)
-	if t, ok := qh.questionsSentAt[questID]; ok {
-		answTime := int64(time.Since(t).Seconds())
-		partDur := timeForAnswer / 4
-		if answTime <= partDur {
-			return 3
-		} else if answTime <= (partDur * 2) {
-			return 2
-		} else if answTime <= (partDur * 3) {
-			return 1
-		}
-	}
-	return 0
-}
-
-func (s *Service) SubmitAnswer(quizID, uid string, answ Answer) {
-	ph := s.GetPlayerHub(uid)
-	ph.receive.Submit(PlayerAnswer{
-		QuizID:     quizID,
-		UserID:     uid,
-		QuestionID: answ.QuestionID,
-		AnswerID:   answ.AnswerID,
-	})
-}
-
-func (s *Service) GetQuizHub(qid string) quizHub {
-	qb, ok := s.quizzes[qid]
-	if !ok {
-		s.quizzes[qid] = quizHub{
-			send:            broadcast.NewBroadcaster(100),
-			questResult:     broadcast.NewBroadcaster(100),
-			questionsSentAt: make(map[string]time.Time),
-		}
-	}
-	return qb
-}
-
-func (s *Service) GetPlayerHub(uid string) playerHub {
-	br, ok := s.players[uid]
-	if !ok {
-		s.players[uid] = playerHub{
-			send:    broadcast.NewBroadcaster(10),
-			receive: broadcast.NewBroadcaster(10),
-		}
-	}
-	return br
+	return nil
 }
 
 func (s *Service) Serve(ctx context.Context) error {
-	startCh := make(chan interface{}, 100)
-	s.startQuiz = broadcast.NewBroadcaster(1000)
-	s.startQuiz.Register(startCh)
-
-	stopCh := make(chan interface{}, 100)
-	s.stopQuiz = broadcast.NewBroadcaster(1000)
-	s.stopQuiz.Register(stopCh)
+	s.startQuizEvent = make(chan interface{}, 100)
+	s.stopQuizEvent = make(chan interface{}, 100)
 
 	defer func() {
-		s.startQuiz.Unregister(startCh)
-		s.startQuiz.Close()
-		close(startCh)
-
-		s.stopQuiz.Unregister(stopCh)
-		s.stopQuiz.Close()
-		close(stopCh)
+		close(s.startQuizEvent)
+		close(s.stopQuizEvent)
 	}()
 
 	for {
@@ -362,85 +315,72 @@ func (s *Service) Serve(ctx context.Context) error {
 			log.Printf("quiz service stopped")
 			return nil
 
-		case q := <-startCh:
-			if qz, ok := q.(repository.Quiz); ok {
-				go func(c context.Context, q repository.Quiz) {
-					if err := s.runQuiz(c, q); err != nil {
-						log.Printf("quiz with id %s is finished with error: %v", q.ID.String(), err)
+		case q := <-s.startQuizEvent:
+			if qid, ok := q.(string); ok {
+				go func(c context.Context, id string) {
+					if err := s.runQuiz(c, id); err != nil {
+						log.Printf("quiz with id %s is finished with error: %v", id, err)
 					} else {
-						log.Printf("quiz with id %s has been finished", q.ID.String())
+						log.Printf("quiz with id %s has been finished", id)
 					}
-				}(ctx, qz)
+				}(ctx, qid)
 			}
 
-		case q := <-stopCh:
-			if qz, ok := q.(repository.Quiz); ok {
-				if qch, ok := s.quizzes[qz.ID.String()]; ok {
-					qch.send.Close()
-					qch.questResult.Close()
-				}
+		case q := <-s.stopQuizEvent:
+			if qid, ok := q.(string); ok {
+				s.stopQuizRunner(qid)
 			}
 		}
 	}
 }
 
-func (s *Service) runQuiz(ctx context.Context, quiz repository.Quiz) error {
-	// countdown: 3.. 2.. 1.. 0!
-	for i := s.countdown; i > -1; i-- {
-		if err := s.sendQuizMsg(quiz.ID.String(), CountdownMessage, Countdown{
-			Countdown: i,
-		}); err != nil {
-			return fmt.Errorf("could not sent countdown message: %w", err)
-		}
-		time.Sleep(time.Second)
+func (s *Service) stopQuizRunner(quizID string) {
+	if q, ok := s.hub[quizID]; ok {
+		q.Shutdown()
+	}
+	delete(s.hub, quizID)
+}
+
+func (s *Service) runQuiz(ctx context.Context, quizID string) error {
+	h, ok := s.hub[quizID]
+	if !ok {
+		return fmt.Errorf("could not found quiz hub with id=%s", quizID)
 	}
 
-	questions, err := s.questions.GetQuestionsByChallengeID(ctx, quiz.ChallengeID)
+	if err := s.repo.UpdateQuizStatus(ctx, repository.UpdateQuizStatusParams{
+		ID:     h.QuizID,
+		Status: QuizClosedForRegistration,
+	}); err != nil {
+		return fmt.Errorf("could not update quiz status: %w", err)
+	}
+
+	if err := h.SendCountdownMessages(); err != nil {
+		return fmt.Errorf("run quiz: counntdown: %w", err)
+	}
+
+	if err := h.SendQuestions(); err != nil {
+		return fmt.Errorf("run quiz: questions: %w", err)
+	}
+
+	quiz, err := s.repo.GetQuizByID(ctx, h.QuizID)
 	if err != nil {
-		return fmt.Errorf("could not get questions for quiz with id=%s: %w", quiz.ID.String(), err)
+		return fmt.Errorf("could not get quiz with id=%s: %w", quizID, err)
 	}
-
-	totalQuestions := len(questions)
-	for n, q := range questions {
-		// send question
-		if err := s.sendQuizMsg(q.ID.String(), QuestionMessage, Question{
-			QuestionID:     q.ID.String(),
-			QuestionText:   q.Question,
-			TimeForAnswer:  int(quiz.TimePerQuestion),
-			TotalQuestions: totalQuestions,
-			QuestionNumber: n + 1,
-			AnswerOptions:  castAnswerOptions(q.AnswerOptions),
-		}); err != nil {
-			return fmt.Errorf("could not sent countdown message: %w", err)
-		}
-		// wait for question timer
-		time.Sleep(time.Duration(quiz.TimePerQuestion) * time.Second)
-
-		// send event, which means that question time is over and the result can be sent
-		if err := s.fireEventToSendQuestionResult(quiz.ID.String(), q.ID.String()); err != nil {
-			return fmt.Errorf("could not send result for question with id=%s: %w", q.ID.String(), err)
-		}
-		// pause to display question result for each users
-		time.Sleep(s.timeBtwQuestion)
-	}
-
-	winners, err := s.getQuizWinners(ctx, quiz, int32(totalQuestions))
+	winners, err := s.getQuizWinners(ctx, quiz, int32(h.TotalQuestions))
 	if err != nil {
 		return fmt.Errorf("could not show winners for quiz with id=%s: %w", quiz.ID.String(), err)
 	}
 
-	// send question
-	if err := s.sendQuizMsg(quiz.ID.String(), ChallengeResultMessage, ChallengeResult{
-		ChallengeID: quiz.ID.String(),
-		PrizePool:   fmt.Sprintf("%v %s", quiz.PrizePool, s.rewardAssetName),
-		Winners:     winners,
-	}); err != nil {
-		return fmt.Errorf("could not sent challenge result message for quiz with id=%s: %w", quiz.ID.String(), err)
+	if err := h.SendWinners(winners); err != nil {
+		return fmt.Errorf("run quiz: questions: %w", err)
 	}
-	// wait for question timer
-	time.Sleep(time.Duration(quiz.TimePerQuestion) * time.Second)
 
-	s.stopQuiz.Submit(quiz)
+	if err := s.repo.UpdateQuizStatus(ctx, repository.UpdateQuizStatusParams{
+		ID:     quiz.ID,
+		Status: QuizFinished,
+	}); err != nil {
+		return fmt.Errorf("could not update quiz status: %w", err)
+	}
 
 	return nil
 }
@@ -472,9 +412,10 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 				w.UserID.String(), quiz.ID.String(), prize, err)
 		}
 		winners = append(winners, Winner{
-			UserID:   w.UserID.String(),
-			Username: w.Username,
-			Prize:    fmt.Sprintf("%v %s", prize, s.rewardAssetName),
+			UserID:      w.UserID.String(),
+			Username:    w.Username,
+			Prize:       fmt.Sprintf("%v %s", prize, s.rewardAssetName),
+			PrizeAmount: prize,
 		})
 	}
 
@@ -490,57 +431,6 @@ func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, pts in
 	winnerPoints := totalQuestions + pts
 
 	return (prizePool / float64(totalPoints)) * float64(winnerPoints)
-}
-
-func (s *Service) sendQuizMsg(qid string, msgType string, msg interface{}) error {
-	br, ok := s.quizzes[qid]
-	if !ok {
-		return fmt.Errorf("could not found quiz with id: %s", qid)
-	}
-
-	b, err := json.Marshal(Message{
-		Type:    msgType,
-		SentAt:  time.Now(),
-		Payload: msg,
-	})
-	if err != nil {
-		return fmt.Errorf("could not encode message: %w", err)
-	}
-
-	br.send.Submit(b)
-
-	return nil
-}
-
-func (s *Service) sendPersonalMsg(uid string, msgType string, msg interface{}) error {
-	br, ok := s.players[uid]
-	if !ok {
-		return fmt.Errorf("could not found player with id: %s", uid)
-	}
-
-	b, err := json.Marshal(Message{
-		Type:    msgType,
-		SentAt:  time.Now(),
-		Payload: msg,
-	})
-	if err != nil {
-		return fmt.Errorf("could not encode message: %w", err)
-	}
-
-	br.send.Submit(b)
-
-	return nil
-}
-
-func (s *Service) fireEventToSendQuestionResult(quizID, questionID string) error {
-	br, ok := s.quizzes[quizID]
-	if !ok {
-		return fmt.Errorf("could not found quiz with id: %s", quizID)
-	}
-
-	br.questResult.Submit(questionID)
-
-	return nil
 }
 
 func castAnswerOptions(source []questions.AnswerOption) []AnswerOption {

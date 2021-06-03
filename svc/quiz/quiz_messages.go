@@ -72,8 +72,9 @@ type (
 	}
 
 	Winner struct {
-		UserID   string `json:"user_id"`
-		Username string `json:"username"`
-		Prize    string `json:"prize"`
+		UserID      string  `json:"user_id"`
+		Username    string  `json:"username"`
+		Prize       string  `json:"prize"`
+		PrizeAmount float64 `json:"-"`
 	}
 )

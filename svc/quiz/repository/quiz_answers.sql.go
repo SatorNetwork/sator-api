@@ -69,8 +69,8 @@ func (q *Queries) GetAnswer(ctx context.Context, arg GetAnswerParams) (QuizAnswe
 }
 
 const getQuizWinnners = `-- name: GetQuizWinnners :many
-SELECT quiz_players.quiz_id,
-    quiz_players.user_id,
+SELECT quiz_players.quiz_id AS quiz_id,
+    quiz_players.user_id AS user_id,
     quiz_players.username AS username,
     COUNT(quiz_answers.answer_id)::INT AS correct_answers,
     SUM(quiz_answers.pts)::INT AS pts
