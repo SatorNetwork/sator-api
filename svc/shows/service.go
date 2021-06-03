@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
+
 	"github.com/google/uuid"
 )
 

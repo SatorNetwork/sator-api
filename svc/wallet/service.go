@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 
+	repository2 "github.com/SatorNetwork/sator-api/svc/transactions/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/google/uuid"
 )
 
@@ -13,6 +15,7 @@ type (
 	// Service struct
 	Service struct {
 		wr walletRepository
+		tr transactionsRepository
 		sc solanaClient
 	}
 
@@ -32,9 +35,15 @@ type (
 		GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]repository.Wallet, error)
 	}
 
+	transactionsRepository interface {
+		GetTransactionByHash(ctx context.Context, transactionHash string) (repository2.Transaction, error)
+		StoreTransactions(ctx context.Context, arg repository2.StoreTransactionsParams) (repository2.Transaction, error)
+	}
+
 	solanaClient interface {
 		CreateAccount(ctx context.Context) (string, []byte, error)
 		GetBalance(ctx context.Context, base58key string) (uint64, error)
+		SendTo(ctx context.Context, receiverBase58Key string, amount uint64) (string, error)
 	}
 )
 
@@ -74,7 +83,7 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 	}, nil
 }
 
-// CreateWallet creates wallet for user with specified id
+// CreateWallet creates wallet for user with specified id.
 func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) (repository.Wallet, error) {
 	publicKey, privateKey, err := s.sc.CreateAccount(ctx)
 	if err != nil {
@@ -91,6 +100,30 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) (repositor
 	}
 
 	return wallet, nil
+}
+
+// SendToWallet sends specified amount to user's wallet, returns txHash.
+func (s *Service) SendToWallet(ctx context.Context, userID uuid.UUID, amount float64) (string, error) {
+	wallets, err := s.wr.GetWalletsByUserID(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+
+	txHash, err := s.sc.SendTo(ctx, wallets[0].PublicKey, uint64(amount))
+	if err != nil {
+		return "", err
+	}
+
+	_, err = s.tr.StoreTransactions(ctx, repository2.StoreTransactionsParams{
+		RecipientWalletID: wallets[0].ID,
+		TransactionHash:   txHash,
+		Amount:            amount,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return txHash, nil
 }
 
 func (s *Service) getBalanceForWallet(ctx context.Context, pubKey string) float64 {

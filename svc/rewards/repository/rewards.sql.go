@@ -24,3 +24,55 @@ func (q *Queries) AddReward(ctx context.Context, arg AddRewardParams) error {
 	_, err := q.exec(ctx, q.addRewardStmt, addReward, arg.UserID, arg.QuizID, arg.Amount)
 	return err
 }
+
+const getUnWithdrawnRewards = `-- name: GetUnWithdrawnRewards :many
+SELECT id, user_id, quiz_id, amount, withdrawn, updated_at, created_at FROM rewards
+WHERE user_id = $1 AND withdrawn = $2
+`
+
+type GetUnWithdrawnRewardsParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	Withdrawn bool      `json:"withdrawn"`
+}
+
+func (q *Queries) GetUnWithdrawnRewards(ctx context.Context, arg GetUnWithdrawnRewardsParams) ([]Reward, error) {
+	rows, err := q.query(ctx, q.getUnWithdrawnRewardsStmt, getUnWithdrawnRewards, arg.UserID, arg.Withdrawn)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Reward
+	for rows.Next() {
+		var i Reward
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.QuizID,
+			&i.Amount,
+			&i.Withdrawn,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const withdraw = `-- name: Withdraw :exec
+UPDATE rewards
+SET withdrawn = true
+WHERE user_id = $1
+`
+
+func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.withdrawStmt, withdraw, userID)
+	return err
+}

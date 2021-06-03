@@ -22,33 +22,25 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addRewardStmt, err = db.PrepareContext(ctx, addReward); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward: %w", err)
+	if q.getTransactionByHashStmt, err = db.PrepareContext(ctx, getTransactionByHash); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionByHash: %w", err)
 	}
-	if q.getUnWithdrawnRewardsStmt, err = db.PrepareContext(ctx, getUnWithdrawnRewards); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUnWithdrawnRewards: %w", err)
-	}
-	if q.withdrawStmt, err = db.PrepareContext(ctx, withdraw); err != nil {
-		return nil, fmt.Errorf("error preparing query Withdraw: %w", err)
+	if q.storeTransactionsStmt, err = db.PrepareContext(ctx, storeTransactions); err != nil {
+		return nil, fmt.Errorf("error preparing query StoreTransactions: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addRewardStmt != nil {
-		if cerr := q.addRewardStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addRewardStmt: %w", cerr)
+	if q.getTransactionByHashStmt != nil {
+		if cerr := q.getTransactionByHashStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionByHashStmt: %w", cerr)
 		}
 	}
-	if q.getUnWithdrawnRewardsStmt != nil {
-		if cerr := q.getUnWithdrawnRewardsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUnWithdrawnRewardsStmt: %w", cerr)
-		}
-	}
-	if q.withdrawStmt != nil {
-		if cerr := q.withdrawStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing withdrawStmt: %w", cerr)
+	if q.storeTransactionsStmt != nil {
+		if cerr := q.storeTransactionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing storeTransactionsStmt: %w", cerr)
 		}
 	}
 	return err
@@ -88,19 +80,17 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                        DBTX
-	tx                        *sql.Tx
-	addRewardStmt             *sql.Stmt
-	getUnWithdrawnRewardsStmt *sql.Stmt
-	withdrawStmt              *sql.Stmt
+	db                       DBTX
+	tx                       *sql.Tx
+	getTransactionByHashStmt *sql.Stmt
+	storeTransactionsStmt    *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                        tx,
-		tx:                        tx,
-		addRewardStmt:             q.addRewardStmt,
-		getUnWithdrawnRewardsStmt: q.getUnWithdrawnRewardsStmt,
-		withdrawStmt:              q.withdrawStmt,
+		db:                       tx,
+		tx:                       tx,
+		getTransactionByHashStmt: q.getTransactionByHashStmt,
+		storeTransactionsStmt:    q.storeTransactionsStmt,
 	}
 }
