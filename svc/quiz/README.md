@@ -121,15 +121,21 @@
 |            |                 |         |
 
 ### Formula:
+**Rate**
 ```
-reward = (prizePool / ((totalWinners * totalQuestions) + totalPts)) * (totalQuestions + pts)
+rate = round(4-(round(answerTimeSec / (questionTimeSec / 4))))
 ```
 
-| Winner # | PTS | Points | Reward |
-| -------- | --- | ------ | ------ |
-| #1       | 0   | 10     | ~21.74 |
-| #2       | 10  | 20     | ~43.48 |
-| #3       | 20  | 30     | ~65.22 |
-| #4       | 30  | 40     | ~86.96 |
-| #5       | 5   | 15     | ~32.61 |
-|          |     |        |        |
+**Reward**
+```
+reward = (prizePool / ((totalWinners * totalQuestions) + totalPts + totalRate)) * (totalQuestions + pts + rate)
+```
+
+| Winner # | PTS | Rate | Points | Reward |
+| -------- | --- | ---- | ------ | ------ |
+| #1       | 0   |      | 10     | ~21.74 |
+| #2       | 10  |      | 20     | ~43.48 |
+| #3       | 20  |      | 30     | ~65.22 |
+| #4       | 30  |      | 40     | ~86.96 |
+| #5       | 5   |      | 15     | ~32.61 |
+|          |     |      |        |

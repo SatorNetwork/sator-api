@@ -94,9 +94,9 @@ func NewQuizHub(quiz repository.Quiz, qs map[string]questions.Question) *Hub {
 		PlayersNumberToStart: int(quiz.PlayersToStart),
 		TotalQuestions:       len(qs),
 		TimePerQuestion:      time.Duration(quiz.TimePerQuestion) * time.Second,
-		TimeBtwQuestions:     time.Second * 5,
+		TimeBtwQuestions:     time.Second * 2,
 		Countdown:            3,
-		CountdownSleep:       time.Millisecond * 1000,
+		CountdownSleep:       time.Millisecond * 700,
 		RewardAssetName:      "SAO",
 
 		sendMsg:                 broadcast.NewBroadcaster(100),
@@ -351,30 +351,17 @@ func (h *Hub) GetCorrectAnswer(questionID uuid.UUID) uuid.UUID {
 	return h.answers[questionID.String()]
 }
 
-func (h *Hub) Answer(userID, questionID, answerID uuid.UUID) QuestionResult {
-	result := h.CheckAnswer(questionID, answerID)
-	var rate, pts int
-
-	if result {
-		for _, ph := range h.players {
-			if _, ok := ph.answers[questionID.String()]; ok {
-				break
-			}
-			pts = 2
-		}
-		d := time.Since(h.questionsSentAt[questionID.String()])
-		if d.Seconds() <= (h.TimePerQuestion.Seconds() / 4) {
-			rate = 3
-		} else if d.Seconds() <= (h.TimePerQuestion.Seconds()/4)*2 {
-			rate = 2
-		} else if d.Seconds() <= (h.TimePerQuestion.Seconds()/4)*3 {
-			rate = 1
-		}
+func (h *Hub) SinceQuestionSent(questionID uuid.UUID) (float64, error) {
+	if sentAt, ok := h.questionsSentAt[questionID.String()]; ok {
+		return time.Since(sentAt).Seconds(), nil
 	}
+	return 0, fmt.Errorf("question is not sent")
+}
 
+func (h *Hub) SetAnswer(userID, questionID, answerID uuid.UUID, isCorrect bool, rate, pts int) QuestionResult {
 	qr := QuestionResult{
 		QuestionID:      questionID.String(),
-		Result:          result,
+		Result:          isCorrect,
 		Rate:            rate,
 		AdditionalPts:   pts,
 		CorrectAnswerID: h.answers[questionID.String()].String(),
