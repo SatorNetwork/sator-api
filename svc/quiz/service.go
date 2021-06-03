@@ -400,13 +400,15 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 	totalWinnersNumber := len(result)
 	winners := make([]Winner, 0, totalWinnersNumber)
 	totalPts := 0
+	totalRate := 0
 
 	for _, w := range result {
 		totalPts += int(w.Pts)
+		totalRate += int(w.Rate)
 	}
 
 	for _, w := range result {
-		prize := calcPrize(quiz.PrizePool, totalWinnersNumber, int(questionsNumber), totalPts, int(w.Pts))
+		prize := calcPrize(quiz.PrizePool, totalWinnersNumber, int(questionsNumber), totalPts, totalRate, int(w.Pts), int(w.Rate))
 		if err := s.rewards.AddReward(ctx, w.UserID, prize, quiz.ID); err != nil {
 			log.Printf("could not store reward: user_id=%s, quiz_id=%s, amount=%v error: %v",
 				w.UserID.String(), quiz.ID.String(), prize, err)
@@ -414,7 +416,7 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 		winners = append(winners, Winner{
 			UserID:      w.UserID.String(),
 			Username:    w.Username,
-			Prize:       fmt.Sprintf("%v %s", prize, s.rewardAssetName),
+			Prize:       fmt.Sprintf("%.3f %s", prize, s.rewardAssetName),
 			PrizeAmount: prize,
 		})
 	}
@@ -422,13 +424,13 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 	return winners, nil
 }
 
-func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, pts int) float64 {
+func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, totalRate, pts, rate int) float64 {
 	if totalWinners == 1 {
 		return prizePool
 	}
 
-	totalPoints := (totalWinners * totalQuestions) + totalPts
-	winnerPoints := totalQuestions + pts
+	totalPoints := (totalWinners * totalQuestions) + totalPts + totalRate
+	winnerPoints := totalQuestions + pts + rate
 
 	return (prizePool / float64(totalPoints)) * float64(winnerPoints)
 }

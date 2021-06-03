@@ -353,22 +353,15 @@ func (h *Hub) GetCorrectAnswer(questionID uuid.UUID) uuid.UUID {
 
 func (h *Hub) Answer(userID, questionID, answerID uuid.UUID) QuestionResult {
 	result := h.CheckAnswer(questionID, answerID)
-	var rate, pts int
+	rate := calcRate(h.TimePerQuestion.Seconds(), time.Since(h.questionsSentAt[questionID.String()]).Seconds())
 
+	var pts int
 	if result {
 		for _, ph := range h.players {
 			if _, ok := ph.answers[questionID.String()]; ok {
 				break
 			}
 			pts = 2
-		}
-		d := time.Since(h.questionsSentAt[questionID.String()])
-		if d.Seconds() <= (h.TimePerQuestion.Seconds() / 4) {
-			rate = 3
-		} else if d.Seconds() <= (h.TimePerQuestion.Seconds()/4)*2 {
-			rate = 2
-		} else if d.Seconds() <= (h.TimePerQuestion.Seconds()/4)*3 {
-			rate = 1
 		}
 	}
 

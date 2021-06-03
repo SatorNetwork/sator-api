@@ -73,6 +73,7 @@ SELECT quiz_players.quiz_id AS quiz_id,
     quiz_players.user_id AS user_id,
     quiz_players.username AS username,
     COUNT(quiz_answers.answer_id)::INT AS correct_answers,
+    SUM(quiz_answers.rate)::INT AS rate,
     SUM(quiz_answers.pts)::INT AS pts
 FROM quiz_answers
     JOIN quiz_players ON quiz_players.quiz_id = quiz_answers.quiz_id
@@ -94,6 +95,7 @@ type GetQuizWinnnersRow struct {
 	UserID         uuid.UUID `json:"user_id"`
 	Username       string    `json:"username"`
 	CorrectAnswers int32     `json:"correct_answers"`
+	Rate           int32     `json:"rate"`
 	Pts            int32     `json:"pts"`
 }
 
@@ -111,6 +113,7 @@ func (q *Queries) GetQuizWinnners(ctx context.Context, arg GetQuizWinnnersParams
 			&i.UserID,
 			&i.Username,
 			&i.CorrectAnswers,
+			&i.Rate,
 			&i.Pts,
 		); err != nil {
 			return nil, err
