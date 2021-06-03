@@ -44,17 +44,20 @@ func QuizWsHandler(s quizService) http.HandlerFunc {
 
 		quizHub, err := s.SetupNewQuizHub(ctx, quizID)
 		if err != nil {
+			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		client, err := NewWsClient(w, r)
 		if err != nil {
+			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if err := quizHub.AddPlayer(uid, username); err != nil {
+			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -162,6 +165,7 @@ func QuizWsHandler(s quizService) http.HandlerFunc {
 		}()
 
 		if err := quizHub.Connect(uid); err != nil {
+			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

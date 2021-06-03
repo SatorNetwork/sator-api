@@ -43,9 +43,10 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo rewardsRepository) *Service {
+func NewService(repo rewardsRepository, ws walletService) *Service {
 	return &Service{
 		repo:      repo,
+		ws:        ws,
 		assetName: "SAO",
 	}
 }

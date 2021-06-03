@@ -32,6 +32,7 @@ import (
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
+	transactionRepo "github.com/SatorNetwork/sator-api/svc/transactions/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/distlock"
@@ -133,19 +134,23 @@ func main() {
 
 	solanaClient := solana.New(client.DevnetRPCEndpoint, feePayerPK, payingAccPK)
 
+	// Wallet service
+	tRepo, err := transactionRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("transactionRepo error: %v", err)
+	}
+	wRepo, err := walletRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("walletRepo error: %v", err)
+	}
+	walletService := wallet.NewService(wRepo, solanaClient, tRepo)
+	r.Mount("/wallet", wallet.MakeHTTPHandler(
+		wallet.MakeEndpoints(walletService, jwtMdw),
+		logger,
+	))
+
 	// Auth service
 	{
-		// Wallet service
-		wRepo, err := walletRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("walletRepo error: %v", err)
-		}
-		walletService := wallet.NewService(wRepo, solanaClient)
-		r.Mount("/wallet", wallet.MakeHTTPHandler(
-			wallet.MakeEndpoints(walletService, jwtMdw),
-			logger,
-		))
-
 		// auth
 		repo, err := authRepo.Prepare(ctx, db)
 		if err != nil {
@@ -214,7 +219,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("rewardsRepo error: %v", err)
 	}
-	rewardClient := rewardsClient.New(rewards.NewService(rewardRepo))
+	rewardSvc := rewards.NewService(rewardRepo, walletService)
+	rewardClient := rewardsClient.New(rewardSvc)
+	r.Mount("/rewards", rewards.MakeHTTPHandler(
+		rewards.MakeEndpoints(rewardSvc, jwtMdw),
+		logger,
+	))
 
 	// Quiz service
 	quizRepo, err := quizRepo.Prepare(ctx, db)

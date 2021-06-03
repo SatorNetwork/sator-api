@@ -49,14 +49,17 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solanaClient) *Service {
+func NewService(wr walletRepository, sc solanaClient, tr transactionsRepository) *Service {
 	if wr == nil {
 		log.Fatalln("wallet repository is not set")
 	}
 	if sc == nil {
 		log.Fatalln("solana client is not set")
 	}
-	return &Service{wr: wr, sc: sc}
+	if tr == nil {
+		log.Fatalln("transaction repository is not set")
+	}
+	return &Service{wr: wr, sc: sc, tr: tr}
 }
 
 // GetBalance returns current user's balance
