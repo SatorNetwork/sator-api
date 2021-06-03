@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/google/uuid"
 )
 
@@ -14,6 +15,7 @@ type (
 
 	service interface {
 		GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetByID(ctx context.Context, id uuid.UUID) (challenge.Challenge, error)
 	}
 )
 
@@ -28,4 +30,9 @@ func (c *Client) GetListByShowID(ctx context.Context, showID uuid.UUID, limit, o
 		limit = 20
 	}
 	return c.s.GetChallengesByShowID(ctx, showID, limit, offset)
+}
+
+// GetChallengeByID returns Challenge struct
+func (c *Client) GetChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.Challenge, error) {
+	return c.s.GetByID(ctx, challengeID)
 }

@@ -152,12 +152,9 @@ func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request int
 
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
-	if errors.Is(err, ErrInvalidCredentials) {
-		return http.StatusUnauthorized, err.Error()
-	}
-
 	if errors.Is(err, ErrEmailAlreadyTaken) ||
 		errors.Is(err, ErrEmailAlreadyVerified) ||
+		errors.Is(err, ErrInvalidCredentials) ||
 		errors.Is(err, ErrOTPCode) {
 		return http.StatusBadRequest, err.Error()
 	}

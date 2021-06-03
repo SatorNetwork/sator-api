@@ -30,7 +30,7 @@ var (
 )
 
 type (
-	Client struct {
+	WsClient struct {
 		conn    *websocket.Conn
 		answers chan MessageAnswer
 		send    chan Message
@@ -43,27 +43,27 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func NewWsClient(w http.ResponseWriter, r *http.Request) (*Client, error) {
+func NewWsClient(w http.ResponseWriter, r *http.Request) (*WsClient, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not establish websocket connection: %w", err)
 	}
-	return &Client{
+	return &WsClient{
 		conn:    conn,
 		answers: make(chan MessageAnswer, 100),
 		send:    make(chan Message, 100),
 	}, nil
 }
 
-func (c *Client) ReadAnswers() <-chan MessageAnswer {
+func (c *WsClient) ReadAnswers() <-chan MessageAnswer {
 	return c.answers
 }
 
-func (c *Client) Send(m Message) {
+func (c *WsClient) Send(m Message) {
 	c.send <- m
 }
 
-func (c *Client) Read() error {
+func (c *WsClient) Read() error {
 	defer func() {
 		c.conn.Close()
 	}()
@@ -72,6 +72,7 @@ func (c *Client) Read() error {
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		_, message, err := c.conn.ReadMessage()
+		// log.Printf("read: %v", message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -88,7 +89,7 @@ func (c *Client) Read() error {
 	return nil
 }
 
-func (c *Client) Write() error {
+func (c *WsClient) Write() error {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -97,6 +98,7 @@ func (c *Client) Write() error {
 	for {
 		select {
 		case message, ok := <-c.send:
+			// log.Printf("write: %v", message)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})

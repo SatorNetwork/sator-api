@@ -22,41 +22,97 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addNewChallegeRoomStmt, err = db.PrepareContext(ctx, addNewChallegeRoom); err != nil {
-		return nil, fmt.Errorf("error preparing query AddNewChallegeRoom: %w", err)
+	if q.addNewPlayerStmt, err = db.PrepareContext(ctx, addNewPlayer); err != nil {
+		return nil, fmt.Errorf("error preparing query AddNewPlayer: %w", err)
 	}
-	if q.getChallengeRoomByChallengeIDStmt, err = db.PrepareContext(ctx, getChallengeRoomByChallengeID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetChallengeRoomByChallengeID: %w", err)
+	if q.addNewQuizStmt, err = db.PrepareContext(ctx, addNewQuiz); err != nil {
+		return nil, fmt.Errorf("error preparing query AddNewQuiz: %w", err)
 	}
-	if q.getChallengeRoomByIDStmt, err = db.PrepareContext(ctx, getChallengeRoomByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetChallengeRoomByID: %w", err)
+	if q.countCorrectAnswersStmt, err = db.PrepareContext(ctx, countCorrectAnswers); err != nil {
+		return nil, fmt.Errorf("error preparing query CountCorrectAnswers: %w", err)
 	}
-	if q.updateChallengeRoomStatusStmt, err = db.PrepareContext(ctx, updateChallengeRoomStatus); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateChallengeRoomStatus: %w", err)
+	if q.countPlayersInQuizStmt, err = db.PrepareContext(ctx, countPlayersInQuiz); err != nil {
+		return nil, fmt.Errorf("error preparing query CountPlayersInQuiz: %w", err)
+	}
+	if q.getAnswerStmt, err = db.PrepareContext(ctx, getAnswer); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAnswer: %w", err)
+	}
+	if q.getQuizByChallengeIDStmt, err = db.PrepareContext(ctx, getQuizByChallengeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetQuizByChallengeID: %w", err)
+	}
+	if q.getQuizByIDStmt, err = db.PrepareContext(ctx, getQuizByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetQuizByID: %w", err)
+	}
+	if q.getQuizWinnnersStmt, err = db.PrepareContext(ctx, getQuizWinnners); err != nil {
+		return nil, fmt.Errorf("error preparing query GetQuizWinnners: %w", err)
+	}
+	if q.storeAnswerStmt, err = db.PrepareContext(ctx, storeAnswer); err != nil {
+		return nil, fmt.Errorf("error preparing query StoreAnswer: %w", err)
+	}
+	if q.updatePlayerStatusStmt, err = db.PrepareContext(ctx, updatePlayerStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdatePlayerStatus: %w", err)
+	}
+	if q.updateQuizStatusStmt, err = db.PrepareContext(ctx, updateQuizStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateQuizStatus: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addNewChallegeRoomStmt != nil {
-		if cerr := q.addNewChallegeRoomStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addNewChallegeRoomStmt: %w", cerr)
+	if q.addNewPlayerStmt != nil {
+		if cerr := q.addNewPlayerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addNewPlayerStmt: %w", cerr)
 		}
 	}
-	if q.getChallengeRoomByChallengeIDStmt != nil {
-		if cerr := q.getChallengeRoomByChallengeIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getChallengeRoomByChallengeIDStmt: %w", cerr)
+	if q.addNewQuizStmt != nil {
+		if cerr := q.addNewQuizStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addNewQuizStmt: %w", cerr)
 		}
 	}
-	if q.getChallengeRoomByIDStmt != nil {
-		if cerr := q.getChallengeRoomByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getChallengeRoomByIDStmt: %w", cerr)
+	if q.countCorrectAnswersStmt != nil {
+		if cerr := q.countCorrectAnswersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countCorrectAnswersStmt: %w", cerr)
 		}
 	}
-	if q.updateChallengeRoomStatusStmt != nil {
-		if cerr := q.updateChallengeRoomStatusStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateChallengeRoomStatusStmt: %w", cerr)
+	if q.countPlayersInQuizStmt != nil {
+		if cerr := q.countPlayersInQuizStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countPlayersInQuizStmt: %w", cerr)
+		}
+	}
+	if q.getAnswerStmt != nil {
+		if cerr := q.getAnswerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAnswerStmt: %w", cerr)
+		}
+	}
+	if q.getQuizByChallengeIDStmt != nil {
+		if cerr := q.getQuizByChallengeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getQuizByChallengeIDStmt: %w", cerr)
+		}
+	}
+	if q.getQuizByIDStmt != nil {
+		if cerr := q.getQuizByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getQuizByIDStmt: %w", cerr)
+		}
+	}
+	if q.getQuizWinnnersStmt != nil {
+		if cerr := q.getQuizWinnnersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getQuizWinnnersStmt: %w", cerr)
+		}
+	}
+	if q.storeAnswerStmt != nil {
+		if cerr := q.storeAnswerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing storeAnswerStmt: %w", cerr)
+		}
+	}
+	if q.updatePlayerStatusStmt != nil {
+		if cerr := q.updatePlayerStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updatePlayerStatusStmt: %w", cerr)
+		}
+	}
+	if q.updateQuizStatusStmt != nil {
+		if cerr := q.updateQuizStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateQuizStatusStmt: %w", cerr)
 		}
 	}
 	return err
@@ -96,21 +152,35 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                DBTX
-	tx                                *sql.Tx
-	addNewChallegeRoomStmt            *sql.Stmt
-	getChallengeRoomByChallengeIDStmt *sql.Stmt
-	getChallengeRoomByIDStmt          *sql.Stmt
-	updateChallengeRoomStatusStmt     *sql.Stmt
+	db                       DBTX
+	tx                       *sql.Tx
+	addNewPlayerStmt         *sql.Stmt
+	addNewQuizStmt           *sql.Stmt
+	countCorrectAnswersStmt  *sql.Stmt
+	countPlayersInQuizStmt   *sql.Stmt
+	getAnswerStmt            *sql.Stmt
+	getQuizByChallengeIDStmt *sql.Stmt
+	getQuizByIDStmt          *sql.Stmt
+	getQuizWinnnersStmt      *sql.Stmt
+	storeAnswerStmt          *sql.Stmt
+	updatePlayerStatusStmt   *sql.Stmt
+	updateQuizStatusStmt     *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                tx,
-		tx:                                tx,
-		addNewChallegeRoomStmt:            q.addNewChallegeRoomStmt,
-		getChallengeRoomByChallengeIDStmt: q.getChallengeRoomByChallengeIDStmt,
-		getChallengeRoomByIDStmt:          q.getChallengeRoomByIDStmt,
-		updateChallengeRoomStatusStmt:     q.updateChallengeRoomStatusStmt,
+		db:                       tx,
+		tx:                       tx,
+		addNewPlayerStmt:         q.addNewPlayerStmt,
+		addNewQuizStmt:           q.addNewQuizStmt,
+		countCorrectAnswersStmt:  q.countCorrectAnswersStmt,
+		countPlayersInQuizStmt:   q.countPlayersInQuizStmt,
+		getAnswerStmt:            q.getAnswerStmt,
+		getQuizByChallengeIDStmt: q.getQuizByChallengeIDStmt,
+		getQuizByIDStmt:          q.getQuizByIDStmt,
+		getQuizWinnnersStmt:      q.getQuizWinnnersStmt,
+		storeAnswerStmt:          q.storeAnswerStmt,
+		updatePlayerStatusStmt:   q.updatePlayerStatusStmt,
+		updateQuizStatusStmt:     q.updateQuizStatusStmt,
 	}
 }
