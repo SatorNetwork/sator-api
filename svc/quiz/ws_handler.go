@@ -150,7 +150,7 @@ func QuizWsHandler(s quizService) http.HandlerFunc {
 		}
 
 		go func() {
-			time.Sleep(time.Second * 15)
+			time.Sleep(time.Second * 5)
 
 			for _, u := range fakePlayers {
 				time.Sleep(time.Second)

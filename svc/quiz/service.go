@@ -53,7 +53,7 @@ type (
 		GetAnswer(ctx context.Context, arg repository.GetAnswerParams) (repository.QuizAnswer, error)
 		AddNewPlayer(ctx context.Context, arg repository.AddNewPlayerParams) error
 		CountPlayersInQuiz(ctx context.Context, quizID uuid.UUID) (int64, error)
-		StoreAnswer(ctx context.Context, arg repository.StoreAnswerParams) error
+		StoreAnswer(ctx context.Context, arg repository.StoreAnswerParams) (repository.QuizAnswer, error)
 	}
 
 	challengesService interface {
@@ -253,18 +253,29 @@ func (s *Service) StoreAnswer(ctx context.Context, userID, quizID, questionID, a
 		return fmt.Errorf("could not found quiz with id=%s", quizID.String())
 	}
 
-	result := h.Answer(userID, questionID, answerID)
-	if err := s.repo.StoreAnswer(ctx, repository.StoreAnswerParams{
+	isCorrect, err := s.questions.CheckAnswer(ctx, answerID)
+	if err != nil {
+		return fmt.Errorf("could not check answer: %w", err)
+	}
+
+	since, err := h.SinceQuestionSent(questionID)
+	if err != nil {
+		return err
+	}
+	rate := calcRate(h.TimePerQuestion.Seconds(), since)
+	a, err := s.repo.StoreAnswer(ctx, repository.StoreAnswerParams{
 		QuizID:     quizID,
 		UserID:     userID,
 		QuestionID: questionID,
 		AnswerID:   answerID,
-		IsCorrect:  result.Result,
-		Rate:       int32(result.Rate),
-		Pts:        int32(result.AdditionalPts),
-	}); err != nil {
+		IsCorrect:  isCorrect,
+		Rate:       int32(rate),
+	})
+	if err != nil {
 		return fmt.Errorf("could not store answer: %w", err)
 	}
+
+	h.SetAnswer(userID, questionID, answerID, isCorrect, int(a.Rate), int(a.Pts))
 
 	return nil
 }
