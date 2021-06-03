@@ -8,9 +8,11 @@ func Test_calcPrize(t *testing.T) {
 	type args struct {
 		prizePool      float64
 		pts            int
+		rate           int
 		totalWinners   int
 		totalQuestions int
 		totalPts       int
+		totalRate      int
 	}
 	tests := []struct {
 		name string
@@ -22,9 +24,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            0,
+				rate:           0,
 				totalWinners:   1,
 				totalQuestions: 10,
 				totalPts:       0,
+				totalRate:      0,
 			},
 			want: 250,
 		},
@@ -33,9 +37,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            9,
+				rate:           0,
 				totalWinners:   1,
 				totalQuestions: 10,
 				totalPts:       9,
+				totalRate:      0,
 			},
 			want: 250,
 		},
@@ -44,9 +50,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            10,
+				rate:           0,
 				totalWinners:   2,
 				totalQuestions: 10,
 				totalPts:       10,
+				totalRate:      0,
 			},
 			want: 166.67,
 		},
@@ -55,9 +63,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            0,
+				rate:           0,
 				totalWinners:   2,
 				totalQuestions: 10,
 				totalPts:       10,
+				totalRate:      0,
 			},
 			want: 83.33,
 		},
@@ -66,9 +76,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            10,
+				rate:           0,
 				totalWinners:   5,
 				totalQuestions: 10,
 				totalPts:       50,
+				totalRate:      0,
 			},
 			want: 50,
 		},
@@ -77,9 +89,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            0,
+				rate:           0,
 				totalWinners:   5,
 				totalQuestions: 10,
 				totalPts:       65,
+				totalRate:      0,
 			},
 			want: 21.74,
 		},
@@ -88,9 +102,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            5,
+				rate:           0,
 				totalWinners:   5,
 				totalQuestions: 10,
 				totalPts:       65,
+				totalRate:      0,
 			},
 			want: 32.61,
 		},
@@ -99,9 +115,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            10,
+				rate:           0,
 				totalWinners:   5,
 				totalQuestions: 10,
 				totalPts:       65,
+				totalRate:      0,
 			},
 			want: 43.48,
 		},
@@ -110,9 +128,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            20,
+				rate:           0,
 				totalWinners:   5,
 				totalQuestions: 10,
 				totalPts:       65,
+				totalRate:      0,
 			},
 			want: 65.22,
 		},
@@ -121,9 +141,11 @@ func Test_calcPrize(t *testing.T) {
 			args: args{
 				prizePool:      250,
 				pts:            30,
+				rate:           0,
 				totalWinners:   5,
 				totalQuestions: 10,
 				totalPts:       65,
+				totalRate:      0,
 			},
 			want: 86.96,
 		},
@@ -135,7 +157,9 @@ func Test_calcPrize(t *testing.T) {
 				tt.args.totalWinners,
 				tt.args.totalQuestions,
 				tt.args.totalPts,
+				tt.args.totalRate,
 				tt.args.pts,
+				tt.args.rate,
 			); toFixed(got, 2) != toFixed(tt.want, 2) {
 				t.Errorf("calcPrize() = %v, want %v", toFixed(got, 2), toFixed(tt.want, 2))
 			}

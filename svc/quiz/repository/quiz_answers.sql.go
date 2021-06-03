@@ -73,6 +73,7 @@ SELECT quiz_players.quiz_id AS quiz_id,
     quiz_players.user_id AS user_id,
     quiz_players.username AS username,
     COUNT(quiz_answers.answer_id)::INT AS correct_answers,
+    SUM(quiz_answers.rate)::INT AS rate,
     SUM(quiz_answers.pts)::INT AS pts
 FROM quiz_answers
     JOIN quiz_players ON quiz_players.quiz_id = quiz_answers.quiz_id
@@ -94,6 +95,7 @@ type GetQuizWinnnersRow struct {
 	UserID         uuid.UUID `json:"user_id"`
 	Username       string    `json:"username"`
 	CorrectAnswers int32     `json:"correct_answers"`
+	Rate           int32     `json:"rate"`
 	Pts            int32     `json:"pts"`
 }
 
@@ -111,6 +113,7 @@ func (q *Queries) GetQuizWinnners(ctx context.Context, arg GetQuizWinnnersParams
 			&i.UserID,
 			&i.Username,
 			&i.CorrectAnswers,
+			&i.Rate,
 			&i.Pts,
 		); err != nil {
 			return nil, err
@@ -126,7 +129,7 @@ func (q *Queries) GetQuizWinnners(ctx context.Context, arg GetQuizWinnnersParams
 	return items, nil
 }
 
-const storeAnswer = `-- name: StoreAnswer :exec
+const storeAnswer = `-- name: StoreAnswer :one
 INSERT INTO quiz_answers (
         quiz_id,
         user_id,
@@ -143,8 +146,23 @@ VALUES (
         $4,
         $5,
         $6,
-        $7
-    ) ON CONFLICT (quiz_id, user_id, question_id) DO NOTHING
+        CASE
+            WHEN $5 THEN COALESCE(
+                (
+                    SELECT CASE
+                            WHEN COUNT(*) > 0 THEN 0
+                        END AS pts
+                    FROM quiz_answers
+                    WHERE question_id = $3
+                        AND quiz_id = $1
+                        AND is_correct = TRUE
+                    GROUP BY question_id
+                ),
+                2
+            )
+            ELSE 0
+        END
+    ) ON CONFLICT (quiz_id, user_id, question_id) DO NOTHING RETURNING quiz_id, user_id, question_id, answer_id, is_correct, rate, pts, created_at
 `
 
 type StoreAnswerParams struct {
@@ -154,18 +172,27 @@ type StoreAnswerParams struct {
 	AnswerID   uuid.UUID `json:"answer_id"`
 	IsCorrect  bool      `json:"is_correct"`
 	Rate       int32     `json:"rate"`
-	Pts        int32     `json:"pts"`
 }
 
-func (q *Queries) StoreAnswer(ctx context.Context, arg StoreAnswerParams) error {
-	_, err := q.exec(ctx, q.storeAnswerStmt, storeAnswer,
+func (q *Queries) StoreAnswer(ctx context.Context, arg StoreAnswerParams) (QuizAnswer, error) {
+	row := q.queryRow(ctx, q.storeAnswerStmt, storeAnswer,
 		arg.QuizID,
 		arg.UserID,
 		arg.QuestionID,
 		arg.AnswerID,
 		arg.IsCorrect,
 		arg.Rate,
-		arg.Pts,
 	)
-	return err
+	var i QuizAnswer
+	err := row.Scan(
+		&i.QuizID,
+		&i.UserID,
+		&i.QuestionID,
+		&i.AnswerID,
+		&i.IsCorrect,
+		&i.Rate,
+		&i.Pts,
+		&i.CreatedAt,
+	)
+	return i, err
 }
