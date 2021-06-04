@@ -158,6 +158,12 @@ func QuizWsHandler(s quizService) http.HandlerFunc {
 					log.Printf("add dummy player %s: %v", u.Username, err)
 					continue
 				}
+
+				if err := quizHub.notifyPlayer(u.ID); err != nil {
+					log.Printf("notify player %s: %v", u.Username, err)
+					continue
+				}
+
 				if err := quizHub.Connect(u.ID); err != nil {
 					log.Printf("connect dummy player %s: %v", u.Username, err)
 				}

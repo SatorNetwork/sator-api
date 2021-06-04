@@ -19,8 +19,8 @@ type (
 		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (interface{}, error)
 	}
 
-	// QuizConnectionURL struct
-	QuizConnectionURL struct {
+	// ConnectionURL struct
+	ConnectionURL struct {
 		PlayURL string `json:"play_url"`
 	}
 )
@@ -63,7 +63,7 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return QuizConnectionURL{
+		return ConnectionURL{
 			PlayURL: fmt.Sprintf("%v", playURL),
 		}, nil
 	}

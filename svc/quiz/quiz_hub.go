@@ -9,19 +9,20 @@ import (
 
 	"github.com/SatorNetwork/sator-api/svc/questions"
 	"github.com/SatorNetwork/sator-api/svc/quiz/repository"
+
 	"github.com/dustin/go-broadcast"
 	"github.com/google/uuid"
 )
 
 // Quiz stages
 const (
-	QuizWaitingForPlayers = iota << 2
-	QuizInProgress
-	QuizFinished
+	WaitingForPlayers = iota << 2
+	InProgress
+	Finished
 )
 
 type (
-	// Quiz hub
+	// Hub quiz hub
 	Hub struct {
 		Stage int
 
@@ -60,7 +61,7 @@ type (
 	}
 )
 
-// Setup new player hub
+// NewPlayerHub setup new player hub
 func NewPlayerHub(userID uuid.UUID, username string) *PlayerHub {
 	return &PlayerHub{
 		UserID:      userID,
@@ -85,7 +86,7 @@ func (ph *PlayerHub) Close() error {
 	return nil
 }
 
-// Setup new quiz hub
+// NewQuizHub setup new quiz hub
 func NewQuizHub(quiz repository.Quiz, qs map[string]questions.Question) *Hub {
 	return &Hub{
 		ChallengeID:          quiz.ChallengeID,
@@ -111,15 +112,15 @@ func NewQuizHub(quiz repository.Quiz, qs map[string]questions.Question) *Hub {
 	}
 }
 
-// Adds player to a quiz hub annd send other players user_connected message
+// AddPlayer adds player to a quiz hub.
 func (h *Hub) AddPlayer(userID uuid.UUID, username string) error {
 	if _, ok := h.players[userID.String()]; !ok {
 		log.Printf("AddPlayer %s: %v", username, userID)
-		if h.Stage != QuizOpenForRegistration {
+		if h.Stage != OpenForRegistration {
 			return fmt.Errorf("quiz is closed for a new players")
 		}
 		if len(h.players) >= h.PlayersNumberToStart {
-			if h.Stage == QuizOpenForRegistration {
+			if h.Stage == OpenForRegistration {
 				h.SendQuizStartEvent()
 			}
 			return fmt.Errorf("quiz is full, try another one")
@@ -128,7 +129,7 @@ func (h *Hub) AddPlayer(userID uuid.UUID, username string) error {
 		h.players[userID.String()] = NewPlayerHub(userID, username)
 
 		if len(h.players) >= h.PlayersNumberToStart {
-			h.Stage = QuizClosedForRegistration
+			h.Stage = ClosedForRegistration
 			h.SendQuizStartEvent()
 		}
 	}
@@ -136,7 +137,7 @@ func (h *Hub) AddPlayer(userID uuid.UUID, username string) error {
 	return nil
 }
 
-// Adds player to a quiz hub annd send other players user_connected message
+// Connect adds player to a quiz hub and send other players user_connected message
 func (h *Hub) Connect(userID uuid.UUID) error {
 	if p, ok := h.players[userID.String()]; ok {
 		log.Printf("Connect: %v", userID)
@@ -159,7 +160,7 @@ func (h *Hub) RemovePlayer(userID uuid.UUID) error {
 			return fmt.Errorf("remove player: could not close player hub: %w", err)
 		}
 
-		if err := h.SendMessage(UserDisonnectedMessage, User{
+		if err := h.SendMessage(UserDisconnectedMessage, User{
 			UserID:   userID.String(),
 			Username: p.Username,
 		}); err != nil {
@@ -209,7 +210,7 @@ func (h *Hub) UnsubscribeMessageToSend(userID uuid.UUID, ch chan interface{}) {
 	}
 }
 
-// Sends message to general quiz channel
+// SendMessage sends message to general quiz channel
 func (h *Hub) SendMessage(msgType string, msg interface{}) error {
 	b, err := json.Marshal(Message{
 		Type:    msgType,
@@ -223,7 +224,7 @@ func (h *Hub) SendMessage(msgType string, msg interface{}) error {
 	return nil
 }
 
-// Sends message to general quiz channel
+// SendPersonalMessage sends message to general quiz channel
 func (h *Hub) SendPersonalMessage(userID uuid.UUID, msgType string, msg interface{}) error {
 	b, err := json.Marshal(Message{
 		Type:    msgType,
@@ -257,28 +258,28 @@ func (h *Hub) SendCountdownMessages() error {
 	return nil
 }
 
-// Fire event that means users should receive current question result
+// SendQuestionResultEvent fire event that means users should receive current question result
 func (h *Hub) SendQuestionResultEvent(questionID uuid.UUID) error {
 	h.sendQuestionResultEvent.Submit(questionID.String())
 	return nil
 }
 
-// subscribes for question result events
+// ListenQuestionResultEvent subscribes for question result events
 func (h *Hub) ListenQuestionResultEvent(ch chan interface{}) {
 	h.sendQuestionResultEvent.Register(ch)
 }
 
-// unsubscribes from question result events
+// UnsubscribeQuestionResultEvent unsubscribes from question result events
 func (h *Hub) UnsubscribeQuestionResultEvent(ch chan interface{}) {
 	h.sendQuestionResultEvent.Unregister(ch)
 }
 
-// Fire event that means quiz should start
+// SendQuizStartEvent fire event that means quiz should start
 func (h *Hub) SendQuizStartEvent() {
 	h.startQuiz.Submit(h.QuizID.String())
 }
 
-// Fire event that means quiz should stop
+// SendQuizStopEvent fire event that means quiz should stop
 func (h *Hub) SendQuizStopEvent() {
 	h.stopQuiz.Submit(h.QuizID.String())
 }
@@ -291,7 +292,7 @@ func (h *Hub) UnsubscribeQuizStartEvents(ch chan interface{}) {
 	h.startQuiz.Unregister(ch)
 }
 
-// Sends quiz questions
+// SendQuestions sends quiz questions
 func (h *Hub) SendQuestions() error {
 	for _, q := range h.questions {
 		// cast answer options
@@ -331,7 +332,10 @@ func (h *Hub) SendQuestions() error {
 		time.Sleep(h.TimePerQuestion)
 
 		// fire event "send question result"
-		h.SendQuestionResultEvent(q.ID)
+		err := h.SendQuestionResultEvent(q.ID)
+		if err != nil {
+			return fmt.Errorf("could not fire event sent question result: %w", err)
+		}
 
 		// time to check answers
 		time.Sleep(h.TimeBtwQuestions)
@@ -388,7 +392,10 @@ func (h *Hub) SendQuestionResult(userID, questionID uuid.UUID) error {
 	if !result.Result {
 		time.Sleep(h.TimeBtwQuestions)
 		h.SendPlayerQuitEvent(userID)
-		h.RemovePlayer(userID)
+		err := h.RemovePlayer(userID)
+		if err != nil {
+			return fmt.Errorf("could not remove player: %w", err)
+		}
 	}
 	return nil
 }
@@ -419,4 +426,31 @@ func (h *Hub) Shutdown() {
 	for _, ph := range h.players {
 		ph.Close()
 	}
+}
+
+func (h *Hub) notifyPlayer(uid uuid.UUID) error {
+	player, ok := h.players[uid.String()]
+	if !ok {
+		return fmt.Errorf("could not receive player from map")
+	}
+
+	for k, v := range h.players {
+		if k != uid.String() {
+			b, err := json.Marshal(Message{
+				Type:    UserConnectedMessage,
+				SentAt:  time.Now(),
+				Payload: User{
+					UserID:   v.UserID.String(),
+					Username: v.Username,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("could not encode message: %w", err)
+			}
+
+			player.sendMsg.Submit(b)
+		}
+	}
+
+	return nil
 }

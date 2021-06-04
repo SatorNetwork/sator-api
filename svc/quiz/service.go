@@ -16,10 +16,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Predefiend quiz statuses
+// Predefined quiz statuses
 const (
-	QuizOpenForRegistration = iota << 2
-	QuizClosedForRegistration
+	OpenForRegistration = iota << 2
+	ClosedForRegistration
 )
 
 type (
@@ -156,7 +156,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		// Close quiz for registration
 		if err := s.repo.UpdateQuizStatus(ctx, repository.UpdateQuizStatusParams{
 			ID:     quiz.ID,
-			Status: QuizClosedForRegistration,
+			Status: ClosedForRegistration,
 		}); err != nil {
 			log.Printf("could not update status of quiz with id=%s: %v", quiz.ID.String(), err)
 		}
@@ -360,7 +360,7 @@ func (s *Service) runQuiz(ctx context.Context, quizID string) error {
 
 	if err := s.repo.UpdateQuizStatus(ctx, repository.UpdateQuizStatusParams{
 		ID:     h.QuizID,
-		Status: QuizClosedForRegistration,
+		Status: ClosedForRegistration,
 	}); err != nil {
 		return fmt.Errorf("could not update quiz status: %w", err)
 	}
@@ -388,7 +388,7 @@ func (s *Service) runQuiz(ctx context.Context, quizID string) error {
 
 	if err := s.repo.UpdateQuizStatus(ctx, repository.UpdateQuizStatusParams{
 		ID:     quiz.ID,
-		Status: QuizFinished,
+		Status: Finished,
 	}); err != nil {
 		return fmt.Errorf("could not update quiz status: %w", err)
 	}
