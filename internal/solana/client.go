@@ -4,92 +4,110 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
+	"strconv"
 
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
-	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/types"
 )
 
-// Client holds all required fields to connect Solana network.
-type Client struct {
-	c             client.Client
-	feePayerPK    []byte
-	rewardPayerPK []byte
-}
-
-// New constructor for Solana client.
-func New(endpoint string, feePayerPK, rewardPayerPK []byte) *Client {
-	return &Client{c: *client.NewClient(endpoint), feePayerPK: feePayerPK, rewardPayerPK: rewardPayerPK}
-}
-
-// CreateAccount creates new account and requests airdrop to activate account in solana network, returns base58 public key and private key in []byte.
-func (cl *Client) CreateAccount(ctx context.Context) (string, []byte, error) {
-	account := types.NewAccount()
-
-	// workaround to avoid internal error while user signing up
-	for i := 0; i < 3; i++ {
-		_, err := cl.c.RequestAirdrop(ctx, account.PublicKey.ToBase58(), 1000000000)
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Millisecond * time.Duration(100*(i+1)))
-		if i == 2 {
-			log.Printf("could not request airdrop for account %s", account.PublicKey.ToBase58())
-		}
+type (
+	Client struct {
+		solana   *client.Client
+		decimals uint8
+		mltpl    uint64
 	}
+)
 
-	return account.PublicKey.ToBase58(), account.PrivateKey, nil
+// Creates new solana client wrapper
+func New(endpoint string) *Client {
+	return &Client{
+		solana:   client.NewClient(endpoint),
+		decimals: 9,
+		mltpl:    1e9,
+	}
 }
 
-// GetBalance returns account's balance by base58 public key.
-func (cl *Client) GetBalance(ctx context.Context, base58key string) (uint64, error) {
-	return cl.c.GetBalance(ctx, base58key)
+// Generates account keypair
+func (c *Client) NewAccount() types.Account {
+	return types.NewAccount()
 }
 
-// SendTo creates transaction from root account to receiver amount in SOL (1000000000 =  1 SOL), returns transaction hash.
-func (cl *Client) SendTo(ctx context.Context, receiverBase58Key string, amount uint64) (string, error) {
-	res, err := cl.c.GetRecentBlockhash(ctx)
+func (c *Client) PublicKeyFromString(pk string) common.PublicKey {
+	return common.PublicKeyFromString(pk)
+}
+
+func (c *Client) AccountFromPrivatekey(pk []byte) types.Account {
+	return types.AccountFromPrivateKeyBytes(pk)
+}
+
+// Working only in test and dev environment
+func (c *Client) RequestAirdrop(pubKey string, amount float64) (string, error) {
+	if amount > 10 {
+		log.Printf("requested airdrop is too large %f, max: 10 SOL", amount)
+		amount = 10
+	}
+	txhash, err := c.solana.RequestAirdrop(
+		context.Background(),
+		pubKey,
+		uint64(amount*float64(c.mltpl)),
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not request airdrop: %w", err)
+	}
+	return txhash, nil
+}
+
+// Sends transaction ans returns transaction hash
+func (c *Client) SendTransaction(feePayer, signer types.Account, instructions ...types.Instruction) (string, error) {
+	res, err := c.solana.GetRecentBlockhash(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("could not get recent block hash: %w", err)
 	}
 
-	feePayer := types.AccountFromPrivateKeyBytes(cl.feePayerPK)
-	accountA := types.AccountFromPrivateKeyBytes(cl.rewardPayerPK)
-
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			sysprog.Transfer(
-				accountA.PublicKey, // from
-				common.PublicKeyFromString(receiverBase58Key), // to
-				amount,
-			),
-		},
-		Signers:         []types.Account{feePayer, accountA},
+		Instructions:    instructions,
+		Signers:         []types.Account{feePayer, signer},
 		FeePayer:        feePayer.PublicKey,
 		RecentBlockHash: res.Blockhash,
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not create raw transaction: %w", err)
+		return "", fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
-	txHash, err := cl.c.SendRawTransaction(ctx, rawTx)
+	txhash, err := c.solana.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
-		return "", fmt.Errorf("could not send transaction: %w", err)
+		return "", fmt.Errorf("could not send raw transaction: %w", err)
 	}
 
-	return txHash, nil
+	return txhash, nil
 }
 
-// GetTransaction returns solana transaction by hash.
-func (cl *Client) GetTransaction(ctx context.Context, txHash string) (string, error) {
-	// TODO: figure out what to return from tx (can't find direct link atm)
-	tx, err := cl.c.GetConfirmedTransaction(ctx, txHash)
+// returns account's SOL balance
+func (c *Client) GetAccountBalanceSOL(accPubKey string) (float64, error) {
+	balance, err := c.solana.GetBalance(context.Background(), accPubKey)
 	if err != nil {
-		return "", fmt.Errorf("could not get transaction: %w", err)
+		return 0, fmt.Errorf("could not get account balance: %w", err)
 	}
-	log.Println(tx)
 
-	return tx.Transaction.Message.RecentBlockhash, nil
+	return float64(balance) / float64(1e9), nil
+}
+
+// returns token account's balance
+func (c *Client) GetTokenAccountBalance(accPubKey string) (float64, error) {
+	accBalance, err := c.solana.GetTokenAccountBalance(context.Background(), accPubKey, client.CommitmentFinalized)
+	if err != nil {
+		return 0, fmt.Errorf("could not get token account balance: %w", err)
+	}
+
+	if accBalance.Amount == "" {
+		return 0, nil
+	}
+
+	balance, err := strconv.ParseFloat(accBalance.UIAmountString, 64)
+	if err != nil {
+		return 0, fmt.Errorf("could not parse token account balance: %w", err)
+	}
+
+	return balance, nil
 }

@@ -32,19 +32,17 @@ import (
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
-	transactionRepo "github.com/SatorNetwork/sator-api/svc/transactions/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/distlock"
 	"github.com/dmitrymomot/distlock/inmem"
-	signature "github.com/dmitrymomot/go-signature"
-	"github.com/oklog/run"
-
 	"github.com/dmitrymomot/go-env"
+	signature "github.com/dmitrymomot/go-signature"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	kitlog "github.com/go-kit/kit/log"
 	_ "github.com/lib/pq" // init pg driver
+	"github.com/oklog/run"
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/rs/cors"
 	"github.com/zeebo/errs"
@@ -129,21 +127,19 @@ func main() {
 	jwtMdw := jwt.NewParser(jwtSigningKey)
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
-	feePayerPK := []byte{57, 17, 193, 142, 252, 221, 81, 90, 60, 28, 93, 237, 212, 51, 95, 95, 41, 104, 221, 59, 13, 244, 54, 1, 79, 180, 120, 178, 81, 45, 46, 193, 142, 11, 237, 209, 82, 24, 36, 72, 7, 76, 66, 215, 44, 116, 17, 132, 252, 205, 47, 74, 57, 230, 36, 98, 119, 86, 11, 40, 71, 195, 47, 254}
-	payingAccPK := []byte{210, 26, 212, 148, 51, 216, 254, 151, 70, 177, 14, 51, 24, 82, 207, 128, 222, 200, 188, 175, 33, 76, 112, 231, 169, 182, 77, 195, 227, 87, 28, 143, 188, 216, 244, 205, 52, 123, 229, 204, 198, 210, 96, 123, 243, 180, 194, 108, 175, 124, 122, 229, 104, 69, 144, 208, 62, 200, 100, 237, 132, 82, 251, 23}
-
-	solanaClient := solana.New(client.DevnetRPCEndpoint, feePayerPK, payingAccPK)
+	// rewards repo
+	// TODO: needs refactoring
+	rewardRepo, err := rewardsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("rewardsRepo error: %v", err)
+	}
 
 	// Wallet service
-	tRepo, err := transactionRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("transactionRepo error: %v", err)
-	}
 	wRepo, err := walletRepo.Prepare(ctx, db)
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(wRepo, solanaClient, tRepo)
+	walletService := wallet.NewService(wRepo, solana.New(client.DevnetRPCEndpoint), rewardRepo)
 	r.Mount("/wallet", wallet.MakeHTTPHandler(
 		wallet.MakeEndpoints(walletService, jwtMdw),
 		logger,
@@ -215,10 +211,6 @@ func main() {
 	questClient := questionsClient.New(questions.NewService(questRepo))
 
 	// Rewards service
-	rewardRepo, err := rewardsRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("rewardsRepo error: %v", err)
-	}
 	rewardSvc := rewards.NewService(rewardRepo, walletService)
 	rewardClient := rewardsClient.New(rewardSvc)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(

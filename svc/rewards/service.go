@@ -7,7 +7,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 
 	"github.com/google/uuid"
-	"github.com/zeebo/errs"
 )
 
 type (
@@ -25,8 +24,8 @@ type (
 
 	rewardsRepository interface {
 		AddReward(ctx context.Context, arg repository.AddRewardParams) error
-		GetUnWithdrawnRewards(ctx context.Context, arg repository.GetUnWithdrawnRewardsParams) ([]repository.Reward, error)
 		Withdraw(ctx context.Context, userID uuid.UUID) error
+		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -37,7 +36,7 @@ type (
 	}
 
 	walletService interface {
-		SendToWallet(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
+		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
 	}
 )
 
@@ -66,48 +65,33 @@ func (s *Service) AddReward(ctx context.Context, uid uuid.UUID, amount float64, 
 
 // ClaimRewards send rewards to user by it and sets them to withdrawn.
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error) {
-	rewards, err := s.repo.GetUnWithdrawnRewards(ctx, repository.GetUnWithdrawnRewardsParams{
-		UserID:    uuid.UUID{},
-		Withdrawn: false,
-	})
+	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
-		return ClaimRewardsResult{}, err
-	}
-	var amount float64
-
-	for _, reward := range rewards {
-		amount += reward.Amount
+		return ClaimRewardsResult{}, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
-	txHash, err := s.ws.SendToWallet(ctx, uid, amount)
+	txHash, err := s.ws.WithdrawRewards(ctx, uid, amount)
 	if err != nil {
-		return ClaimRewardsResult{}, err
+		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
 	}
 
-	err = s.repo.Withdraw(ctx, uid)
-	if err != nil {
-		return ClaimRewardsResult{}, err
+	if err = s.repo.Withdraw(ctx, uid); err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("ccould not update rewards status: %w", err)
 	}
 
 	return ClaimRewardsResult{
 		Amount:          amount,
 		DisplayAmount:   fmt.Sprintf("%.2f %s", amount, s.assetName),
 		TransactionHash: txHash,
+		TransactionURL:  fmt.Sprintf("https://explorer.solana.com/tx/%s?cluster=devnet", txHash),
 	}, nil
 }
 
-// DistributeRewards split rewards among users, store into db.
-func (s *Service) DistributeRewards(ctx context.Context, prizePool float64, winners []Winner, qid uuid.UUID) (err error) {
-	var totalPoints int
-
-	for _, winner := range winners {
-		totalPoints += winner.Points
+// ClaimRewards send rewards to user by it and sets them to withdrawn.
+func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
+	amount, err := s.repo.GetTotalAmount(ctx, uid)
+	if err != nil {
+		return 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
-	pointCost := prizePool / float64(totalPoints)
-
-	for _, winner := range winners {
-		err = errs.Combine(err, s.AddReward(ctx, winner.UserID, pointCost*float64(winner.Points), qid))
-	}
-
-	return err
+	return amount, nil
 }

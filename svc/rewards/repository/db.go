@@ -25,8 +25,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addRewardStmt, err = db.PrepareContext(ctx, addReward); err != nil {
 		return nil, fmt.Errorf("error preparing query AddReward: %w", err)
 	}
-	if q.getUnWithdrawnRewardsStmt, err = db.PrepareContext(ctx, getUnWithdrawnRewards); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUnWithdrawnRewards: %w", err)
+	if q.getTotalAmountStmt, err = db.PrepareContext(ctx, getTotalAmount); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTotalAmount: %w", err)
+	}
+	if q.getUserRewardsByStatusStmt, err = db.PrepareContext(ctx, getUserRewardsByStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserRewardsByStatus: %w", err)
 	}
 	if q.withdrawStmt, err = db.PrepareContext(ctx, withdraw); err != nil {
 		return nil, fmt.Errorf("error preparing query Withdraw: %w", err)
@@ -41,9 +44,14 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addRewardStmt: %w", cerr)
 		}
 	}
-	if q.getUnWithdrawnRewardsStmt != nil {
-		if cerr := q.getUnWithdrawnRewardsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUnWithdrawnRewardsStmt: %w", cerr)
+	if q.getTotalAmountStmt != nil {
+		if cerr := q.getTotalAmountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTotalAmountStmt: %w", cerr)
+		}
+	}
+	if q.getUserRewardsByStatusStmt != nil {
+		if cerr := q.getUserRewardsByStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserRewardsByStatusStmt: %w", cerr)
 		}
 	}
 	if q.withdrawStmt != nil {
@@ -88,19 +96,21 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                        DBTX
-	tx                        *sql.Tx
-	addRewardStmt             *sql.Stmt
-	getUnWithdrawnRewardsStmt *sql.Stmt
-	withdrawStmt              *sql.Stmt
+	db                         DBTX
+	tx                         *sql.Tx
+	addRewardStmt              *sql.Stmt
+	getTotalAmountStmt         *sql.Stmt
+	getUserRewardsByStatusStmt *sql.Stmt
+	withdrawStmt               *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                        tx,
-		tx:                        tx,
-		addRewardStmt:             q.addRewardStmt,
-		getUnWithdrawnRewardsStmt: q.getUnWithdrawnRewardsStmt,
-		withdrawStmt:              q.withdrawStmt,
+		db:                         tx,
+		tx:                         tx,
+		addRewardStmt:              q.addRewardStmt,
+		getTotalAmountStmt:         q.getTotalAmountStmt,
+		getUserRewardsByStatusStmt: q.getUserRewardsByStatusStmt,
+		withdrawStmt:               q.withdrawStmt,
 	}
 }

@@ -5,110 +5,29 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createWallet = `-- name: CreateWallet :one
-INSERT INTO wallets (
-        user_id,
-        asset_name,
-        wallet_address,
-        public_key,
-        private_key,
-        status
-    )
-VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6
-    ) RETURNING id, user_id, asset_name, wallet_address, public_key, private_key, status, updated_at, created_at
+INSERT INTO wallets (user_id, solana_account_id, wallet_name)
+VALUES ($1, $2, $3) RETURNING id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
 `
 
 type CreateWalletParams struct {
-	UserID        uuid.UUID     `json:"user_id"`
-	AssetName     string        `json:"asset_name"`
-	WalletAddress string        `json:"wallet_address"`
-	PublicKey     string        `json:"public_key"`
-	PrivateKey    []byte        `json:"private_key"`
-	Status        sql.NullInt32 `json:"status"`
+	UserID          uuid.UUID `json:"user_id"`
+	SolanaAccountID uuid.UUID `json:"solana_account_id"`
+	WalletName      string    `json:"wallet_name"`
 }
 
 func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error) {
-	row := q.queryRow(ctx, q.createWalletStmt, createWallet,
-		arg.UserID,
-		arg.AssetName,
-		arg.WalletAddress,
-		arg.PublicKey,
-		arg.PrivateKey,
-		arg.Status,
-	)
+	row := q.queryRow(ctx, q.createWalletStmt, createWallet, arg.UserID, arg.SolanaAccountID, arg.WalletName)
 	var i Wallet
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.AssetName,
-		&i.WalletAddress,
-		&i.PublicKey,
-		&i.PrivateKey,
-		&i.Status,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getWalletByAssetName = `-- name: GetWalletByAssetName :one
-SELECT id, user_id, asset_name, wallet_address, public_key, private_key, status, updated_at, created_at
-FROM wallets
-WHERE user_id = $1
-    AND asset_name = $2
-LIMIT 1
-`
-
-type GetWalletByAssetNameParams struct {
-	UserID    uuid.UUID `json:"user_id"`
-	AssetName string    `json:"asset_name"`
-}
-
-func (q *Queries) GetWalletByAssetName(ctx context.Context, arg GetWalletByAssetNameParams) (Wallet, error) {
-	row := q.queryRow(ctx, q.getWalletByAssetNameStmt, getWalletByAssetName, arg.UserID, arg.AssetName)
-	var i Wallet
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.AssetName,
-		&i.WalletAddress,
-		&i.PublicKey,
-		&i.PrivateKey,
-		&i.Status,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getWalletByID = `-- name: GetWalletByID :one
-SELECT id, user_id, asset_name, wallet_address, public_key, private_key, status, updated_at, created_at
-FROM wallets
-WHERE id = $1
-LIMIT 1
-`
-
-func (q *Queries) GetWalletByID(ctx context.Context, id uuid.UUID) (Wallet, error) {
-	row := q.queryRow(ctx, q.getWalletByIDStmt, getWalletByID, id)
-	var i Wallet
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.AssetName,
-		&i.WalletAddress,
-		&i.PublicKey,
-		&i.PrivateKey,
+		&i.SolanaAccountID,
+		&i.WalletName,
 		&i.Status,
 		&i.UpdatedAt,
 		&i.CreatedAt,
@@ -117,7 +36,7 @@ func (q *Queries) GetWalletByID(ctx context.Context, id uuid.UUID) (Wallet, erro
 }
 
 const getWalletsByUserID = `-- name: GetWalletsByUserID :many
-SELECT id, user_id, asset_name, wallet_address, public_key, private_key, status, updated_at, created_at
+SELECT id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
 FROM wallets
 WHERE user_id = $1
 `
@@ -134,10 +53,8 @@ func (q *Queries) GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]W
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.AssetName,
-			&i.WalletAddress,
-			&i.PublicKey,
-			&i.PrivateKey,
+			&i.SolanaAccountID,
+			&i.WalletName,
 			&i.Status,
 			&i.UpdatedAt,
 			&i.CreatedAt,
