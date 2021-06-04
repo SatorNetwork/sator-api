@@ -28,3 +28,20 @@ comming soon
 - [TablePlus](https://tableplus.com) - DB manager
 - [Insomnia](https://insomnia.rest) - open source API client
 - [VS Code](https://code.visualstudio.com) - IDE (in addition, you can find recommended plugins in the `.vscode` folder)
+
+
+## Create Solanna Token
+```shell
+solana config get
+solana config set --url https://devnet.solana.com
+solana-keygen new -o /Users/dmitrymomot/.config/solana/id.json
+solana airdrop 10
+spl-token create-token
+spl-token supply 4iC8n6BB6mxozHKYKUSKcZFJrLQNPTfs8ZAFxob2kX7A
+spl-token create-account 4iC8n6BB6mxozHKYKUSKcZFJrLQNPTfs8ZAFxob2kX7A
+spl-token balance 4iC8n6BB6mxozHKYKUSKcZFJrLQNPTfs8ZAFxob2kX7A
+spl-token mint 4iC8n6BB6mxozHKYKUSKcZFJrLQNPTfs8ZAFxob2kX7A 1000
+spl-token supply 4iC8n6BB6mxozHKYKUSKcZFJrLQNPTfs8ZAFxob2kX7A
+spl-token balance 4iC8n6BB6mxozHKYKUSKcZFJrLQNPTfs8ZAFxob2kX7A
+spl-token accounts
+```

@@ -25,18 +25,35 @@ func (q *Queries) AddReward(ctx context.Context, arg AddRewardParams) error {
 	return err
 }
 
-const getUnWithdrawnRewards = `-- name: GetUnWithdrawnRewards :many
-SELECT id, user_id, quiz_id, amount, withdrawn, updated_at, created_at FROM rewards
-WHERE user_id = $1 AND withdrawn = $2
+const getTotalAmount = `-- name: GetTotalAmount :one
+SELECT SUM(amount)::DOUBLE PRECISION
+FROM rewards
+WHERE user_id = $1
+    AND withdrawn = FALSE
+GROUP BY user_id
 `
 
-type GetUnWithdrawnRewardsParams struct {
+func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error) {
+	row := q.queryRow(ctx, q.getTotalAmountStmt, getTotalAmount, userID)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const getUserRewardsByStatus = `-- name: GetUserRewardsByStatus :many
+SELECT id, user_id, quiz_id, amount, withdrawn, updated_at, created_at
+FROM rewards
+WHERE user_id = $1
+    AND withdrawn = $2
+`
+
+type GetUserRewardsByStatusParams struct {
 	UserID    uuid.UUID `json:"user_id"`
 	Withdrawn bool      `json:"withdrawn"`
 }
 
-func (q *Queries) GetUnWithdrawnRewards(ctx context.Context, arg GetUnWithdrawnRewardsParams) ([]Reward, error) {
-	rows, err := q.query(ctx, q.getUnWithdrawnRewardsStmt, getUnWithdrawnRewards, arg.UserID, arg.Withdrawn)
+func (q *Queries) GetUserRewardsByStatus(ctx context.Context, arg GetUserRewardsByStatusParams) ([]Reward, error) {
+	rows, err := q.query(ctx, q.getUserRewardsByStatusStmt, getUserRewardsByStatus, arg.UserID, arg.Withdrawn)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +85,7 @@ func (q *Queries) GetUnWithdrawnRewards(ctx context.Context, arg GetUnWithdrawnR
 
 const withdraw = `-- name: Withdraw :exec
 UPDATE rewards
-SET withdrawn = true
+SET withdrawn = TRUE
 WHERE user_id = $1
 `
 

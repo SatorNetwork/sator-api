@@ -427,7 +427,7 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 		winners = append(winners, Winner{
 			UserID:      w.UserID.String(),
 			Username:    w.Username,
-			Prize:       fmt.Sprintf("%.3f %s", prize, s.rewardAssetName),
+			Prize:       fmt.Sprintf("%.2f %s", prize, s.rewardAssetName),
 			PrizeAmount: prize,
 		})
 	}

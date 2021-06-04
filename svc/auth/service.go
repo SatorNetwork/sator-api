@@ -12,7 +12,6 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
-	repository2 "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 
 	"github.com/dmitrymomot/random"
 	"github.com/google/uuid"
@@ -63,7 +62,7 @@ type (
 	}
 
 	walletService interface {
-		CreateWallet(ctx context.Context, userID uuid.UUID) (repository2.Wallet, error)
+		CreateWallet(ctx context.Context, userID uuid.UUID) error
 	}
 )
 
@@ -193,8 +192,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
 
-	_, err = s.ws.CreateWallet(ctx, u.ID)
-	if err != nil {
+	if err := s.ws.CreateWallet(ctx, u.ID); err != nil {
 		return "", fmt.Errorf("could not create solana wallet: %w", err)
 	}
 

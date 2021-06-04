@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount DOUBLE PRECISION NOT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
-    );
+);
 CREATE INDEX transactions_created_at ON transactions USING BTREE (updated_at, created_at);
 CREATE TRIGGER update_transactions_modtime BEFORE
-    UPDATE ON transactions FOR EACH ROW EXECUTE PROCEDURE transactions_update_updated_at_column();
+UPDATE ON transactions FOR EACH ROW EXECUTE PROCEDURE transactions_update_updated_at_column();
 -- +migrate Down
 DROP TRIGGER IF EXISTS update_transactions_modtime ON transactions;
 DROP TABLE IF EXISTS transactions;

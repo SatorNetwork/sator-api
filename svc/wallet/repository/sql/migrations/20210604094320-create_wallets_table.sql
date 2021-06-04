@@ -11,16 +11,13 @@ $$ LANGUAGE 'plpgsql';
 CREATE TABLE IF NOT EXISTS wallets (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
-    asset_name VARCHAR NOT NULL,
-    wallet_address VARCHAR NOT NULL,
-    public_key VARCHAR NOT NULL,
-    private_key BYTEA NOT NULL,
+    solana_account_id uuid NOT NULL,
+    wallet_name VARCHAR NOT NULL,
     status INT DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX wallets_user_id ON wallets USING BTREE (user_id, asset_name);
-CREATE INDEX wallets_created_at ON wallets USING BTREE (created_at);
+CREATE UNIQUE INDEX wallets_user_id ON wallets USING BTREE (user_id, solana_account_id);
 CREATE TRIGGER update_wallets_modtime BEFORE
 UPDATE ON wallets FOR EACH ROW EXECUTE PROCEDURE wallets_update_updated_at_column();
 -- +migrate Down
