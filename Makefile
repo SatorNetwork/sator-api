@@ -42,3 +42,8 @@ up: ## Run all needed containers, including postgres with exposed port :5432
 
 down: ## Stop and remove all related containers
 	docker-compose down -v --rmi=local
+
+
+solana: ## Prepage solana accounts
+	@DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
+	go run cmd/solana/main.go
