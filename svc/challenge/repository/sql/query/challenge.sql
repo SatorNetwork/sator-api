@@ -1,7 +1,8 @@
 -- name: GetChallenges :many
 SELECT *
-FROM challenges WHERE show_id = $1
-ORDER BY updated_at,
+FROM challenges
+WHERE show_id = $1
+ORDER BY updated_at DESC,
     created_at DESC
 LIMIT $2 OFFSET $3;
 -- name: GetChallengeByID :one

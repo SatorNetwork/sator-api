@@ -36,8 +36,9 @@ func (q *Queries) GetChallengeByID(ctx context.Context, id uuid.UUID) (Challenge
 
 const getChallenges = `-- name: GetChallenges :many
 SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at
-FROM challenges WHERE show_id = $1
-ORDER BY updated_at,
+FROM challenges
+WHERE show_id = $1
+ORDER BY updated_at DESC,
     created_at DESC
 LIMIT $2 OFFSET $3
 `
