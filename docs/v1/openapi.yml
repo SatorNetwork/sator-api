@@ -5,9 +5,7 @@ info:
 servers:
   - url: http://localhost:8080/
     description: Local server
-  - url: http://localhost:8000/
-    description: Local server 2
-  - url: https://sator-api-n7vrw.ondigitalocean.app/
+  - url: https://sator-api-stage-93k39.ondigitalocean.app/
     description: Development server
 components:
   securitySchemes:
