@@ -129,7 +129,6 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 	rewAmount, err := s.rw.GetTotalAmount(ctx, uid)
 	if err != nil {
 		rewAmount = 0
-		log.Println(err)
 	}
 
 	result = append(result, Balance{
