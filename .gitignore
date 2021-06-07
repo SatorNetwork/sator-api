@@ -18,3 +18,8 @@ bin/
 cmd/test/
 .trash/
 .DS_Store
+migrations/seeds/satordb_2021-06-05_upd.sql
+migrations/seeds/satordb_2021-06-05.sql
+migrations/seeds/satordb_2021-06-06.sql
+migrations/seeds/satordb_20210606_093618.sql
+migrations/seeds/pgdb.sql
