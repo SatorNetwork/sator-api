@@ -7,4 +7,5 @@ var (
 	ErrUserIDEmpty      = errors.New("user id is empty")
 	ErrJWTIDEmpty       = errors.New("jwt id is empty")
 	ErrInvalidJWTClaims = errors.New("invalid jwt claims")
+	ErrQRCodeIDEmpty    = errors.New("qrcode id is empty")
 )
