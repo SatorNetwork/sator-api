@@ -3,7 +3,6 @@ package wallet
 import (
 	"context"
 	"fmt"
-
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -14,13 +13,18 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
+<<<<<<< HEAD
 		Transfer                      endpoint.Endpoint
 		GetBalance                    endpoint.Endpoint
 		GetWallets                    endpoint.Endpoint
+=======
+		GetBalance          endpoint.Endpoint
+>>>>>>> wallets: getListTranscations added
 		GetListTransactionsByWalletID endpoint.Endpoint
 	}
 
 	service interface {
+<<<<<<< HEAD
 		GetBalanceWithRewards(ctx context.Context, uid uuid.UUID) (interface{}, error)
 		GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error)
 		GetBalanceByUserID(ctx context.Context, userID uuid.UUID) ([]Balance, error)
@@ -31,6 +35,10 @@ type (
 		SenderPrivateKey string  `json:"sender_private_key" validate:"required"`
 		RecipientPK      string  `json:"recipient_pk" validate:"required"`
 		Amount           float64 `json:"amount" validate:"required"`
+=======
+		GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, error)
+		GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error)
+>>>>>>> wallets: getListTranscations added
 	}
 )
 
@@ -38,9 +46,13 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
+<<<<<<< HEAD
 		Transfer:                      MakeTransferEndpoint(s, validateFunc),
 		GetBalance:                    MakeGetBalanceEndpoint(s),
 		GetWallets:                    MakeGetWalletsEndpoint(s),
+=======
+		GetBalance: MakeGetBalanceEndpoint(s),
+>>>>>>> wallets: getListTranscations added
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s),
 	}
 
@@ -50,7 +62,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.Transfer = mdw(e.Transfer)
 			e.GetBalance = mdw(e.GetBalance)
 			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
+<<<<<<< HEAD
 			e.GetWallets = mdw(e.GetWallets)
+=======
+>>>>>>> wallets: getListTranscations added
 		}
 	}
 
@@ -116,5 +131,21 @@ func MakeTransferEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 		}
 
 		return tx, nil
+	}
+}
+
+func MakeGetListTransactionsByWalletIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		walletUID, err := uuid.Parse(req.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		resp, err := s.GetListTransactionsByWalletID(ctx, walletUID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

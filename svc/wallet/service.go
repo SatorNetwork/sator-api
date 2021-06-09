@@ -378,6 +378,7 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uu
 
 	return transactions, nil
 }
+<<<<<<< HEAD
 
 // GetBalanceByUserID returns all user's wallets balance info's.
 func (s *Service) GetBalanceByUserID(ctx context.Context, userID uuid.UUID) ([]Balance, error) {
@@ -435,3 +436,5 @@ func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK st
 
 	return tx, nil
 }
+=======
+>>>>>>> wallets: getListTranscations added
