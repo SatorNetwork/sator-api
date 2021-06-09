@@ -37,12 +37,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getSolanaAccountByUserIDAndTypeStmt, err = db.PrepareContext(ctx, getSolanaAccountByUserIDAndType); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSolanaAccountByUserIDAndType: %w", err)
 	}
-<<<<<<< HEAD
 	if q.getSolanaAccountTypeByPublicKeyStmt, err = db.PrepareContext(ctx, getSolanaAccountTypeByPublicKey); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSolanaAccountTypeByPublicKey: %w", err)
 	}
-=======
->>>>>>> wallets: getListTranscations added
 	if q.getWalletByIDStmt, err = db.PrepareContext(ctx, getWalletByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWalletByID: %w", err)
 	}
@@ -82,14 +79,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getSolanaAccountByUserIDAndTypeStmt: %w", cerr)
 		}
 	}
-<<<<<<< HEAD
 	if q.getSolanaAccountTypeByPublicKeyStmt != nil {
 		if cerr := q.getSolanaAccountTypeByPublicKeyStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSolanaAccountTypeByPublicKeyStmt: %w", cerr)
 		}
 	}
-=======
->>>>>>> wallets: getListTranscations added
 	if q.getWalletByIDStmt != nil {
 		if cerr := q.getWalletByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getWalletByIDStmt: %w", cerr)
@@ -149,10 +143,7 @@ type Queries struct {
 	getSolanaAccountByIDStmt            *sql.Stmt
 	getSolanaAccountByTypeStmt          *sql.Stmt
 	getSolanaAccountByUserIDAndTypeStmt *sql.Stmt
-<<<<<<< HEAD
 	getSolanaAccountTypeByPublicKeyStmt *sql.Stmt
-=======
->>>>>>> wallets: getListTranscations added
 	getWalletByIDStmt                   *sql.Stmt
 	getWalletBySolanaAccountIDStmt      *sql.Stmt
 	getWalletsByUserIDStmt              *sql.Stmt
@@ -167,10 +158,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getSolanaAccountByIDStmt:            q.getSolanaAccountByIDStmt,
 		getSolanaAccountByTypeStmt:          q.getSolanaAccountByTypeStmt,
 		getSolanaAccountByUserIDAndTypeStmt: q.getSolanaAccountByUserIDAndTypeStmt,
-<<<<<<< HEAD
 		getSolanaAccountTypeByPublicKeyStmt: q.getSolanaAccountTypeByPublicKeyStmt,
-=======
->>>>>>> wallets: getListTranscations added
 		getWalletByIDStmt:                   q.getWalletByIDStmt,
 		getWalletBySolanaAccountIDStmt:      q.getWalletBySolanaAccountIDStmt,
 		getWalletsByUserIDStmt:              q.getWalletsByUserIDStmt,
