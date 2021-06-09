@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
-	"github.com/portto/solana-go-sdk/types"
 
 	"github.com/google/uuid"
+	"github.com/portto/solana-go-sdk/client"
+	"github.com/portto/solana-go-sdk/types"
 )
 
 const (
@@ -37,12 +38,14 @@ type (
 		Amount   float64 `json:"amount"`
 	}
 
-	// Solana account type
+	// SolanaAccountType solana account type
 	SolanaAccountType string
 
 	walletRepository interface {
 		CreateWallet(ctx context.Context, arg repository.CreateWalletParams) (repository.Wallet, error)
 		GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]repository.Wallet, error)
+		GetWalletBySolanaAccountID(ctx context.Context, solanaAccountID uuid.UUID) (repository.Wallet, error)
+		GetWalletByID(ctx context.Context, id uuid.UUID) (repository.Wallet, error)
 
 		AddSolanaAccount(ctx context.Context, arg repository.AddSolanaAccountParams) (repository.SolanaAccount, error)
 		GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (repository.SolanaAccount, error)
@@ -51,15 +54,16 @@ type (
 	}
 
 	solanaClient interface {
-		GetAccountBalanceSOL(accPubKey string) (float64, error)
-		GetTokenAccountBalance(accPubKey string) (float64, error)
+		GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
+		GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
 		NewAccount() types.Account
-		RequestAirdrop(pubKey string, amount float64) (string, error)
+		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 		AccountFromPrivatekey(pk []byte) types.Account
-		InitAccountToUseAsset(feePayer, issuer, asset, initAcc types.Account) (string, error)
-		SendAssets(feePayer, issuer, asset, sender types.Account, recipientAddr string, amount float64) (string, error)
-		CreateAsset(feePayer, issuer, asset types.Account) (string, error)
-		IssueAsset(feePayer, issuer, asset, dest types.Account, amount float64) (string, error)
+		InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
+		SendAssets(ctx context.Context, feePayer, issuer, asset, sender types.Account, recipientAddr string, amount float64) (string, error)
+		CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
+		IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error)
+		GetTransactions(ctx context.Context, publicKey string) ([]client.GetConfirmedTransactionResponse, error)
 	}
 
 	rewardsService interface {
@@ -110,12 +114,12 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 		switch sa.AccountType {
 		case TokenAccount.String():
 			currency = s.satorAssetName
-			if bal, err := s.sc.GetTokenAccountBalance(sa.PublicKey); err == nil {
+			if bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey); err == nil {
 				amount = bal
 			}
 		case GeneralAccount.String():
 			currency = s.solanaAssetName
-			if bal, err := s.sc.GetAccountBalanceSOL(sa.PublicKey); err == nil {
+			if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
 				amount = bal
 			}
 		}
@@ -157,6 +161,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	acc := s.sc.NewAccount()
 
 	txHash, err := s.sc.InitAccountToUseAsset(
+		ctx,
 		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 		s.sc.AccountFromPrivatekey(asset.PrivateKey),
@@ -187,7 +192,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
-// convert rewards innto sator tokens
+// WithdrawRewards convert rewards into sator tokens
 func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
 	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
 	if err != nil {
@@ -212,6 +217,7 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 	// sends token
 	for i := 0; i < 5; i++ {
 		if tx, err = s.sc.SendAssets(
+			ctx,
 			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
@@ -230,7 +236,7 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 	return tx, nil
 }
 
-// For usage in development mode only
+// Bootstrap for usage in development mode only
 func (s *Service) Bootstrap(ctx context.Context) error {
 	feePayer := s.sc.NewAccount()
 	issuer := s.sc.NewAccount()
@@ -245,7 +251,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err := s.sc.RequestAirdrop(feePayer.PublicKey.ToBase58(), 10)
+		tx, err := s.sc.RequestAirdrop(ctx, feePayer.PublicKey.ToBase58(), 10)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -266,6 +272,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	}
 
 	if tx, err := s.sc.CreateAsset(
+		ctx,
 		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 		s.sc.AccountFromPrivatekey(asset.PrivateKey),
@@ -286,6 +293,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	}
 
 	if tx, err := s.sc.InitAccountToUseAsset(
+		ctx,
 		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 		s.sc.AccountFromPrivatekey(asset.PrivateKey),
@@ -299,6 +307,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	time.Sleep(time.Second * 15)
 
 	if tx, err := s.sc.IssueAsset(
+		ctx,
 		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 		s.sc.AccountFromPrivatekey(asset.PrivateKey),
@@ -311,4 +320,51 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// GetListTransactionsByUserID returns list of user's transactions.
+func (s *Service) GetListTransactionsByUserID(ctx context.Context, userID uuid.UUID) (_ interface{}, err error) {
+	var transactions []client.GetConfirmedTransactionResponse
+	wallets, err := s.wr.GetWalletsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, wallet := range wallets {
+		txs, err := s.getListTransactionsByWalletID(ctx, wallet.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, tx := range txs {
+			transactions = append(transactions, tx)
+		}
+	}
+
+	return transactions, nil
+}
+
+// GetListTransactionsByWalletID returns list of all transactions of specific wallet.
+func (s *Service) GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error) {
+	return s.getListTransactionsByWalletID(ctx, walletID)
+}
+
+// getListTransactionsByWalletID returns list of all transactions of specific wallet.
+func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ []client.GetConfirmedTransactionResponse, err error) {
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return nil, err
+	}
+
+	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	transactions, err := s.sc.GetTransactions(ctx, solanaAcc.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
 }

@@ -326,7 +326,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 	return nil
 }
 
-// ForgotPassword requests password reset with email.
+// RequestChangeEmail requests password reset with email.
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
 	u, err := s.ur.GetUserByID(ctx, userID)
 	if err != nil {
