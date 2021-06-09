@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -38,13 +36,13 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 // MakeGetDataByQRCodeIDEndpoint ...
 func MakeGetDataByQRCodeIDEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, _ interface{}) (interface{}, error) {
-		uid, err := jwt.QRCodeUUIDFromContext(ctx)
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		qrcodeUID, err := uuid.Parse(req.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get qrcode id: %w", err)
 		}
 
-		resp, err := s.GetDataByQRCodeID(ctx, uid)
+		resp, err := s.GetDataByQRCodeID(ctx, qrcodeUID)
 		if err != nil {
 			return nil, err
 		}

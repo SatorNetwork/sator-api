@@ -3,6 +3,7 @@ package qrcodes
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
@@ -29,7 +30,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Get("/", httptransport.NewServer(
+	r.Get("/{qrcode-id}", httptransport.NewServer(
 		e.GetDataByQRCodeID,
 		decodeGetDataRequest,
 		httpencoder.EncodeResponse,
@@ -39,8 +40,12 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetDataRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
-	return nil, nil
+func decodeGetDataRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "qrcode-id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
+	}
+	return id, nil
 }
 
 // codeAndMessageFrom returns http error code by error type

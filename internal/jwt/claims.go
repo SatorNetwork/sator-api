@@ -13,7 +13,6 @@ import (
 type Claims struct {
 	UserID   string `json:"user_id,omitempty"`
 	Username string `json:"username,omitempty"`
-	QRCodeID string `json:"qrcode_id,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -66,28 +65,6 @@ func TokenIDFromContext(ctx context.Context) (uuid.UUID, error) {
 			return uuid.Nil, fmt.Errorf("could not parse jwt uuid: %w", err)
 		}
 		return id, nil
-	}
-	return uuid.Nil, ErrInvalidJWTClaims
-}
-
-// QRCodeUUID returns qrcode uuid,
-// parsed from string Claims.QRCodeID
-func (c *Claims) QRCodeUUID() (uuid.UUID, error) {
-	if c.QRCodeID == "" {
-		return uuid.Nil, ErrQRCodeIDEmpty
-	}
-	id, err := uuid.Parse(c.QRCodeID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("could not parse qrcode uuid: %w", err)
-	}
-	return id, nil
-}
-
-// QRCodeUUIDFromContext returns qrcode uuid from request context
-func QRCodeUUIDFromContext(ctx context.Context) (uuid.UUID, error) {
-	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
-	if cl, ok := claims.(*Claims); ok {
-		return cl.QRCodeUUID()
 	}
 	return uuid.Nil, ErrInvalidJWTClaims
 }

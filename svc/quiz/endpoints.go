@@ -55,7 +55,7 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 
 		challengeID, err := uuid.Parse(req.(string))
 		if err != nil {
-			return nil, fmt.Errorf("could not get username: %w", err)
+			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
 		playURL, err := s.GetQuizLink(ctx, uid, username, challengeID)
