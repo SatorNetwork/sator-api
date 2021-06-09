@@ -117,3 +117,19 @@ func MakeTransferEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 		return tx, nil
 	}
 }
+
+func MakeGetListTransactionsByWalletIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		walletUID, err := uuid.Parse(req.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		resp, err := s.GetListTransactionsByWalletID(ctx, walletUID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
