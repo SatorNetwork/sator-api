@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
@@ -34,11 +35,26 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/transactions", httptransport.NewServer(
+		e.GetListTransactionsByWalletID,
+		decodeGetListTransactionsByWalletIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
 func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
+}
+
+func decodeGetListTransactionsByWalletIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "wallet_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
+	}
+	return id, nil
 }
 
 // returns http error code by error type

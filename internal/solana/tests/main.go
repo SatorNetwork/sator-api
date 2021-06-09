@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -23,7 +23,8 @@ var (
 )
 
 func main() {
-	sc := solana.New(client.DevnetRPCEndpoint)
+	ctx := context.Background()
+	sc := solana.New("https://api.devnet.solana.com/")
 
 	// acc := sc.NewAccount()
 	// log.Printf("account pub key: %#v", acc.PublicKey.ToBase58())
@@ -90,25 +91,25 @@ func main() {
 	// 	}
 	// }
 
-	if info, err := sc.GetAccountBalanceSOL(feePayerPub); err != nil {
+	if info, err := sc.GetAccountBalanceSOL(ctx, feePayerPub); err != nil {
 		log.Println(err)
 	} else {
 		log.Printf("fee payer: %+v", info)
 	}
 
-	if info, err := sc.GetTokenAccountBalance(issuerPub); err != nil {
+	if info, err := sc.GetTokenAccountBalance(ctx, issuerPub); err != nil {
 		log.Println(err)
 	} else {
 		log.Printf("issuer: %+v", info)
 	}
 
-	if info, err := sc.GetTokenAccountBalance(assetPub); err != nil {
+	if info, err := sc.GetTokenAccountBalance(ctx, assetPub); err != nil {
 		log.Println(err)
 	} else {
 		log.Printf("asset: %+v", info)
 	}
 
-	if info, err := sc.GetTokenAccountBalance(userPub); err != nil {
+	if info, err := sc.GetTokenAccountBalance(ctx, userPub); err != nil {
 		log.Println(err)
 	} else {
 		log.Printf("user: %+v", info)

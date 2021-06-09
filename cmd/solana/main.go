@@ -9,7 +9,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/go-env"
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/zeebo/errs"
 
 	_ "github.com/lib/pq" // init pg driver
@@ -46,7 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint), nil)
+	walletService := wallet.NewService(repo, solana.New("https://api.devnet.solana.com/"), nil)
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)

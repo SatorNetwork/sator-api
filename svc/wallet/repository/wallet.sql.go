@@ -35,6 +35,50 @@ func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wal
 	return i, err
 }
 
+const getWalletByID = `-- name: GetWalletByID :one
+SELECT id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
+FROM wallets
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetWalletByID(ctx context.Context, id uuid.UUID) (Wallet, error) {
+	row := q.queryRow(ctx, q.getWalletByIDStmt, getWalletByID, id)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SolanaAccountID,
+		&i.WalletName,
+		&i.Status,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getWalletBySolanaAccountID = `-- name: GetWalletBySolanaAccountID :one
+SELECT id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
+FROM wallets
+WHERE solana_account_id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetWalletBySolanaAccountID(ctx context.Context, solanaAccountID uuid.UUID) (Wallet, error) {
+	row := q.queryRow(ctx, q.getWalletBySolanaAccountIDStmt, getWalletBySolanaAccountID, solanaAccountID)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SolanaAccountID,
+		&i.WalletName,
+		&i.Status,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getWalletsByUserID = `-- name: GetWalletsByUserID :many
 SELECT id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
 FROM wallets
