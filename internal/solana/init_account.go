@@ -10,14 +10,15 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) InitAccountToUseAsset(feePayer, issuer, asset, initAcc types.Account) (string, error) {
+func (c *Client) InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error) {
 	// Allow account hold the new asset
-	rentExemptionBalanceIssuer, err := c.solana.GetMinimumBalanceForRentExemption(context.Background(), tokenprog.TokenAccountSize)
+	rentExemptionBalanceIssuer, err := c.solana.GetMinimumBalanceForRentExemption(ctx, tokenprog.TokenAccountSize)
 	if err != nil {
 		return "", fmt.Errorf("could not get min balance for rent exemption: %w", err)
 	}
 
 	tx, err := c.SendTransaction(
+		ctx,
 		feePayer, initAcc,
 		sysprog.CreateAccount(
 			feePayer.PublicKey,

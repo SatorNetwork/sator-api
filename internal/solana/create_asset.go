@@ -10,13 +10,14 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) CreateAsset(feePayer, issuer, asset types.Account) (string, error) {
+func (c *Client) CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error) {
 	rentExemptionBalance, err := c.solana.GetMinimumBalanceForRentExemption(context.Background(), tokenprog.MintAccountSize)
 	if err != nil {
 		return "", fmt.Errorf("could not get min balance for rent exemption: %w", err)
 	}
 	// Transform general account to asset
 	tx, err := c.SendTransaction(
+		ctx,
 		feePayer, asset,
 		sysprog.CreateAccount(
 			feePayer.PublicKey,
