@@ -10,55 +10,112 @@ import (
 )
 
 const createUserVerification = `-- name: CreateUserVerification :exec
-INSERT INTO user_verifications (user_id, email, verification_code)
-VALUES ($1, $2, $3) ON CONFLICT (user_id, email) DO
+INSERT INTO user_verifications (request_type, user_id, email, verification_code)
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4
+    ) ON CONFLICT (request_type, user_id, email) DO
 UPDATE
-SET verification_code = $3
+SET verification_code = $4
 `
 
 type CreateUserVerificationParams struct {
+	RequestType      int32     `json:"request_type"`
 	UserID           uuid.UUID `json:"user_id"`
 	Email            string    `json:"email"`
 	VerificationCode []byte    `json:"verification_code"`
 }
 
 func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) error {
-	_, err := q.exec(ctx, q.createUserVerificationStmt, createUserVerification, arg.UserID, arg.Email, arg.VerificationCode)
+	_, err := q.exec(ctx, q.createUserVerificationStmt, createUserVerification,
+		arg.RequestType,
+		arg.UserID,
+		arg.Email,
+		arg.VerificationCode,
+	)
 	return err
 }
 
 const deleteUserVerificationsByEmail = `-- name: DeleteUserVerificationsByEmail :exec
 DELETE FROM user_verifications
-WHERE email = $1
+WHERE request_type = $1
+    AND email = $2
 `
 
-func (q *Queries) DeleteUserVerificationsByEmail(ctx context.Context, email string) error {
-	_, err := q.exec(ctx, q.deleteUserVerificationsByEmailStmt, deleteUserVerificationsByEmail, email)
+type DeleteUserVerificationsByEmailParams struct {
+	RequestType int32  `json:"request_type"`
+	Email       string `json:"email"`
+}
+
+func (q *Queries) DeleteUserVerificationsByEmail(ctx context.Context, arg DeleteUserVerificationsByEmailParams) error {
+	_, err := q.exec(ctx, q.deleteUserVerificationsByEmailStmt, deleteUserVerificationsByEmail, arg.RequestType, arg.Email)
 	return err
 }
 
 const deleteUserVerificationsByUserID = `-- name: DeleteUserVerificationsByUserID :exec
 DELETE FROM user_verifications
-WHERE user_id = $1
+WHERE request_type = $1
+    AND user_id = $2
 `
 
-func (q *Queries) DeleteUserVerificationsByUserID(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteUserVerificationsByUserIDStmt, deleteUserVerificationsByUserID, userID)
+type DeleteUserVerificationsByUserIDParams struct {
+	RequestType int32     `json:"request_type"`
+	UserID      uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserVerificationsByUserID(ctx context.Context, arg DeleteUserVerificationsByUserIDParams) error {
+	_, err := q.exec(ctx, q.deleteUserVerificationsByUserIDStmt, deleteUserVerificationsByUserID, arg.RequestType, arg.UserID)
 	return err
 }
 
-const getUserVerificationByUserID = `-- name: GetUserVerificationByUserID :one
-SELECT user_id, email, verification_code, created_at
+const getUserVerificationByEmail = `-- name: GetUserVerificationByEmail :one
+SELECT request_type, user_id, email, verification_code, created_at
 FROM user_verifications
-WHERE user_id = $1
+WHERE request_type = $1
+    AND email = $2
 ORDER BY created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) GetUserVerificationByUserID(ctx context.Context, userID uuid.UUID) (UserVerification, error) {
-	row := q.queryRow(ctx, q.getUserVerificationByUserIDStmt, getUserVerificationByUserID, userID)
+type GetUserVerificationByEmailParams struct {
+	RequestType int32  `json:"request_type"`
+	Email       string `json:"email"`
+}
+
+func (q *Queries) GetUserVerificationByEmail(ctx context.Context, arg GetUserVerificationByEmailParams) (UserVerification, error) {
+	row := q.queryRow(ctx, q.getUserVerificationByEmailStmt, getUserVerificationByEmail, arg.RequestType, arg.Email)
 	var i UserVerification
 	err := row.Scan(
+		&i.RequestType,
+		&i.UserID,
+		&i.Email,
+		&i.VerificationCode,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserVerificationByUserID = `-- name: GetUserVerificationByUserID :one
+SELECT request_type, user_id, email, verification_code, created_at
+FROM user_verifications
+WHERE request_type = $1
+    AND user_id = $2
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetUserVerificationByUserIDParams struct {
+	RequestType int32     `json:"request_type"`
+	UserID      uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetUserVerificationByUserID(ctx context.Context, arg GetUserVerificationByUserIDParams) (UserVerification, error) {
+	row := q.queryRow(ctx, q.getUserVerificationByUserIDStmt, getUserVerificationByUserID, arg.RequestType, arg.UserID)
+	var i UserVerification
+	err := row.Scan(
+		&i.RequestType,
 		&i.UserID,
 		&i.Email,
 		&i.VerificationCode,

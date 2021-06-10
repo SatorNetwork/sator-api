@@ -86,6 +86,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/request-destroy-account", httptransport.NewServer(
+		e.RequestDestroyAccount,
+		decodeRequestDestroyAccountRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/verify-destroy-account-code", httptransport.NewServer(
+		e.VerifyDestroyCode,
+		decodeVerifyDestroyAccountRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/destroy", httptransport.NewServer(
+		e.DestroyAccount,
+		decodeDestroyAccountRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -143,7 +164,54 @@ func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request int
 }
 
 func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req VerifyAccountRequest
+	var req VerifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
+func decodeRequestChangeEmailRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req RequestChangeEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeValidateChangeEmailCodeRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req ValidateChangeEmailCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeUpdateEmailRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req UpdateEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeRequestDestroyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	return nil, nil
+}
+
+func decodeVerifyDestroyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req VerifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	return req, nil
+}
+
+func decodeDestroyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req VerifyOTPRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
@@ -152,9 +220,12 @@ func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request int
 
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
+	if errors.Is(err, ErrInvalidCredentials) {
+		return http.StatusUnauthorized, err.Error()
+	}
+
 	if errors.Is(err, ErrEmailAlreadyTaken) ||
 		errors.Is(err, ErrEmailAlreadyVerified) ||
-		errors.Is(err, ErrInvalidCredentials) ||
 		errors.Is(err, ErrOTPCode) {
 		return http.StatusBadRequest, err.Error()
 	}

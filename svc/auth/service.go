@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
-
 	"github.com/dmitrymomot/random"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type (
@@ -40,25 +40,23 @@ type (
 		// user
 		CreateUser(ctx context.Context, arg repository.CreateUserParams) (repository.User, error)
 		GetUserByEmail(ctx context.Context, email string) (repository.User, error)
-		GetUserByUsername(ctx context.Context, username string) (repository.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (repository.User, error)
+		UpdateUserEmail(ctx context.Context, arg repository.UpdateUserEmailParams) error
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
-		UpdateUserVerifiedAt(ctx context.Context, verifiedAt sql.NullTime) error
+		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
+		DestroyUser(ctx context.Context, id uuid.UUID) error
 
 		// email verification
 		CreateUserVerification(ctx context.Context, arg repository.CreateUserVerificationParams) error
-		GetUserVerificationByUserID(ctx context.Context, userID uuid.UUID) (repository.UserVerification, error)
-		DeleteUserVerificationsByUserID(ctx context.Context, userID uuid.UUID) error
-
-		// reset password
-		CreatePasswordReset(ctx context.Context, arg repository.CreatePasswordResetParams) error
-		GetPasswordResetByEmail(ctx context.Context, email string) (repository.PasswordReset, error)
-		DeletePasswordResetsByUserID(ctx context.Context, userID uuid.UUID) error
+		GetUserVerificationByUserID(ctx context.Context, arg repository.GetUserVerificationByUserIDParams) (repository.UserVerification, error)
+		GetUserVerificationByEmail(ctx context.Context, arg repository.GetUserVerificationByEmailParams) (repository.UserVerification, error)
+		DeleteUserVerificationsByUserID(ctx context.Context, arg repository.DeleteUserVerificationsByUserIDParams) error
 	}
 
 	mailer interface {
-		SendVerificationEmail(ctx context.Context, email, otp string) error
-		SendResetPasswordEmail(ctx context.Context, email, otp string) error
+		SendVerificationCode(ctx context.Context, email, otp string) error
+		SendResetPasswordCode(ctx context.Context, email, otp string) error
+		SendDestroyAccountCode(ctx context.Context, email, otp string) error
 	}
 
 	walletService interface {
@@ -140,15 +138,6 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		return "", fmt.Errorf("could not create a new account: %w", err)
 	}
 
-	// Check if the passed username is not taken yet
-	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
-		return "", validator.NewValidationError(url.Values{
-			"username": []string{"username is already taken"},
-		})
-	} else if !db.IsNotFoundError(err) {
-		return "", fmt.Errorf("could not create a new account: %w", err)
-	}
-
 	passwdHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", fmt.Errorf("could not create a new account: %w", err)
@@ -170,6 +159,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
+		RequestType:      repository.VerifyConfirmAccount,
 		UserID:           u.ID,
 		Email:            email,
 		VerificationCode: otpHash,
@@ -178,7 +168,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	}
 
 	if s.mail != nil {
-		if err := s.mail.SendVerificationEmail(ctx, email, otp); err != nil {
+		if err := s.mail.SendVerificationCode(ctx, email, otp); err != nil {
 			return "", fmt.Errorf("could not send verification code: %w", err)
 		}
 	} else {
@@ -215,16 +205,17 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 		return fmt.Errorf("could not generate a new reset password code: %w", err)
 	}
 
-	if err := s.ur.CreatePasswordReset(ctx, repository.CreatePasswordResetParams{
-		UserID: u.ID,
-		Email:  email,
-		Token:  otpHash,
+	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
+		RequestType:      repository.VerifyResetPassword,
+		UserID:           u.ID,
+		Email:            email,
+		VerificationCode: otpHash,
 	}); err != nil {
-		return fmt.Errorf("could not store reset password code: %w", err)
+		return fmt.Errorf("could not generate verification code: %w", err)
 	}
 
 	if s.mail != nil {
-		if err := s.mail.SendResetPasswordEmail(ctx, email, otp); err != nil {
+		if err := s.mail.SendResetPasswordCode(ctx, email, otp); err != nil {
 			return fmt.Errorf("could not send reset password code: %w", err)
 		}
 	} else {
@@ -237,9 +228,12 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 }
 
 // ValidateResetPasswordCode validates reset password code,
-// it's needed to implement the reset password flow on the mobile client.
+// it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error) {
-	pr, err := s.ur.GetPasswordResetByEmail(ctx, email)
+	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
+		RequestType: repository.VerifyResetPassword,
+		Email:       email,
+	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return uuid.Nil, fmt.Errorf("%w user with given email address", ErrNotFound)
@@ -247,11 +241,11 @@ func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp stri
 		return uuid.Nil, fmt.Errorf("could not get user with given email address: %w", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(pr.Token, []byte(otp)); err != nil {
+	if err := bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp)); err != nil {
 		return uuid.Nil, ErrOTPCode
 	}
 
-	return pr.UserID, nil
+	return v.UserID, nil
 }
 
 // ResetPassword changing password.
@@ -273,7 +267,10 @@ func (s *Service) ResetPassword(ctx context.Context, email, password, otp string
 		return fmt.Errorf("could not reset password: %w", err)
 	}
 
-	if err := s.ur.DeletePasswordResetsByUserID(ctx, userID); err != nil {
+	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
+		RequestType: repository.VerifyResetPassword,
+		UserID:      userID,
+	}); err != nil {
 		// just log, not any error for user
 		log.Printf("could not delete password resets for user with id=%s: %v", userID.String(), err)
 	}
@@ -294,7 +291,10 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrEmailAlreadyVerified
 	}
 
-	uv, err := s.ur.GetUserVerificationByUserID(ctx, userID)
+	uv, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
+		RequestType: repository.VerifyConfirmAccount,
+		UserID:      userID,
+	})
 	if err != nil {
 		return fmt.Errorf("could not verify email address: %w", err)
 	}
@@ -303,13 +303,197 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrOTPCode
 	}
 
-	if err := s.ur.UpdateUserVerifiedAt(ctx, sql.NullTime{Time: time.Now(), Valid: true}); err != nil {
+	if err := s.ur.UpdateUserVerifiedAt(ctx, repository.UpdateUserVerifiedAtParams{
+		UserID:     userID,
+		VerifiedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	}); err != nil {
 		return fmt.Errorf("could not verify email address: %w", err)
 	}
 
-	if err := s.ur.DeleteUserVerificationsByUserID(ctx, userID); err != nil {
+	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
+		RequestType: repository.VerifyConfirmAccount,
+		UserID:      userID,
+	}); err != nil {
 		// just log, not any error for user
 		log.Printf("could not delete verification code for user with id=%s: %v", userID.String(), err)
+	}
+
+	return nil
+}
+
+// ForgotPassword requests password reset with email.
+func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
+	u, err := s.ur.GetUserByID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("user %w", ErrNotFound)
+		}
+		return fmt.Errorf("could not get user: %w", err)
+	}
+
+	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
+		return fmt.Errorf("could not update email: %w", ErrEmailAlreadyTaken)
+	}
+
+	otp := random.String(uint8(s.otpLen), random.Numeric)
+	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+	if err != nil {
+		return fmt.Errorf("could not generate a new reset password code: %w", err)
+	}
+
+	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
+		RequestType:      repository.VerifyChangeEmail,
+		UserID:           u.ID,
+		Email:            email,
+		VerificationCode: otpHash,
+	}); err != nil {
+		return fmt.Errorf("could not generate verification code: %w", err)
+	}
+
+	if s.mail != nil {
+		if err := s.mail.SendVerificationCode(ctx, email, otp); err != nil {
+			return fmt.Errorf("could not send verification code: %w", err)
+		}
+	} else {
+		// log data for debug mode
+		log.Println("mail service is not set")
+		log.Printf("[reset password] email: %s, otp: %s", email, otp)
+	}
+
+	return nil
+}
+
+// ValidateChangeEmailCode validates change email code,
+// it's needed to implement the reset password flow on the client.
+func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
+		RequestType: repository.VerifyChangeEmail,
+		Email:       email,
+	})
+	if err != nil || v.UserID != userID {
+		return ErrOTPCode
+	}
+
+	if err := bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp)); err != nil {
+		return ErrOTPCode
+	}
+
+	return nil
+}
+
+// UpdateEmail ...
+func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	if err := s.ValidateChangeEmailCode(ctx, userID, email, otp); err != nil {
+		return fmt.Errorf("could not update email: %w", err)
+	}
+
+	if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+		ID:    userID,
+		Email: email,
+	}); err != nil {
+		return fmt.Errorf("could not update email: %w", err)
+	}
+
+	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
+		RequestType: repository.VerifyChangeEmail,
+		UserID:      userID,
+	}); err != nil {
+		// just log, not any error for user
+		log.Printf("could not delete change email verifications for user with id=%s: %v", userID.String(), err)
+	}
+
+	if err := s.ur.UpdateUserVerifiedAt(ctx, repository.UpdateUserVerifiedAtParams{
+		UserID:     userID,
+		VerifiedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	}); err != nil {
+		return fmt.Errorf("could not verify email address: %w", err)
+	}
+
+	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
+		RequestType: repository.VerifyConfirmAccount,
+		UserID:      userID,
+	}); err != nil {
+		// just log, not any error for user
+		log.Printf("could not delete verification code for user with id=%s: %v", userID.String(), err)
+	}
+
+	return nil
+}
+
+// ForgotPassword requests password reset with email.
+func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) error {
+	u, err := s.ur.GetUserByID(ctx, uid)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("user %w", ErrNotFound)
+		}
+		return fmt.Errorf("could not get user: %w", err)
+	}
+
+	otp := random.String(uint8(s.otpLen), random.Numeric)
+	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+	if err != nil {
+		return fmt.Errorf("could not generate a new reset password code: %w", err)
+	}
+
+	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
+		RequestType:      repository.VerifyDestroyAccount,
+		UserID:           u.ID,
+		VerificationCode: otpHash,
+	}); err != nil {
+		return fmt.Errorf("could not generate verification code: %w", err)
+	}
+
+	if s.mail != nil {
+		if err := s.mail.SendDestroyAccountCode(ctx, u.Email, otp); err != nil {
+			return fmt.Errorf("could not send reset password code: %w", err)
+		}
+	} else {
+		// log data for debug mode
+		log.Println("mail service is not set")
+		log.Printf("[destroy account] email: %s, otp: %s", u.Email, otp)
+	}
+
+	return nil
+}
+
+// ValidateDestroyAccountCode validates destroy account code,
+// it's needed to implement the destroy account flow on the client.
+func (s *Service) ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID, otp string) error {
+	v, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
+		RequestType: repository.VerifyResetPassword,
+		UserID:      uid,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("%w user with given email address", ErrNotFound)
+		}
+		return fmt.Errorf("could not get user with given email address: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp)); err != nil {
+		return ErrOTPCode
+	}
+
+	return nil
+}
+
+// DestroyAccount destroys account.
+func (s *Service) DestroyAccount(ctx context.Context, uid uuid.UUID, otp string) error {
+	if err := s.ValidateDestroyAccountCode(ctx, uid, otp); err != nil {
+		return err
+	}
+
+	if err := s.ur.DestroyUser(ctx, uid); err != nil {
+		return fmt.Errorf("could not destroy account: %w", err)
+	}
+
+	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
+		RequestType: repository.VerifyDestroyAccount,
+		UserID:      uid,
+	}); err != nil {
+		// just log, not any error for user
+		log.Printf("could not delete verification code for user with id=%s: %v", uid.String(), err)
 	}
 
 	return nil

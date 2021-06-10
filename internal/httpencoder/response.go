@@ -49,9 +49,11 @@ func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface
 		return nil
 	}
 
-	switch response.(type) {
+	switch r := response.(type) {
 	case Response, BoolResultResponse, ListResponse:
 		return json.NewEncoder(w).Encode(response)
+	case bool:
+		return json.NewEncoder(w).Encode(BoolResult(r))
 	}
 
 	return json.NewEncoder(w).Encode(Response{Data: response})

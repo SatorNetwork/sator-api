@@ -47,6 +47,20 @@ func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const destroyUser = `-- name: DestroyUser :exec
+UPDATE users
+SET email = 'deleted',
+    username = 'deleted',
+    password = NULL,
+    disabled = TRUE
+WHERE id = $1
+`
+
+func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.destroyUserStmt, destroyUser, userID)
+	return err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
 FROM users
@@ -211,9 +225,15 @@ func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusPara
 const updateUserVerifiedAt = `-- name: UpdateUserVerifiedAt :exec
 UPDATE users
 SET verified_at = $1
+WHERE id = $2
 `
 
-func (q *Queries) UpdateUserVerifiedAt(ctx context.Context, verifiedAt sql.NullTime) error {
-	_, err := q.exec(ctx, q.updateUserVerifiedAtStmt, updateUserVerifiedAt, verifiedAt)
+type UpdateUserVerifiedAtParams struct {
+	VerifiedAt sql.NullTime `json:"verified_at"`
+	UserID     uuid.UUID    `json:"user_id"`
+}
+
+func (q *Queries) UpdateUserVerifiedAt(ctx context.Context, arg UpdateUserVerifiedAtParams) error {
+	_, err := q.exec(ctx, q.updateUserVerifiedAtStmt, updateUserVerifiedAt, arg.VerifiedAt, arg.UserID)
 	return err
 }
