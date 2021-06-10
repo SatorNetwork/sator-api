@@ -43,7 +43,6 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/rs/cors"
 	"github.com/zeebo/errs"
 )
@@ -72,6 +71,9 @@ var (
 
 	// Quiz
 	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
+
+	// Solana
+	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
 )
 
 func main() {
@@ -139,7 +141,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(wRepo, solana.New(client.DevnetRPCEndpoint), rewardRepo)
+	walletService := wallet.NewService(wRepo, solana.New(solanaApiBaseUrl), rewardRepo)
 	r.Mount("/wallet", wallet.MakeHTTPHandler(
 		wallet.MakeEndpoints(walletService, jwtMdw),
 		logger,
