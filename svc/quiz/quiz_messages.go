@@ -5,7 +5,7 @@ import "time"
 // Predefined message types
 const (
 	UserConnectedMessage   = "player_connected"
-	UserDisonnectedMessage = "player_disconnected"
+	UserDisconnectedMessage = "player_disconnected"
 	CountdownMessage       = "countdown"
 	QuestionMessage        = "question"
 	AnswerMessage          = "answer"
@@ -14,7 +14,7 @@ const (
 )
 
 type (
-	// Websocket message structure
+	// Message websocket message structure
 	Message struct {
 		Type    string      `json:"type"`
 		SentAt  time.Time   `json:"sent_at"`
