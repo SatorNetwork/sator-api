@@ -428,27 +428,15 @@ func (h *Hub) Shutdown() {
 	}
 }
 
-func (h *Hub) notifyPlayer(uid uuid.UUID) error {
-	player, ok := h.players[uid.String()]
-	if !ok {
-		return fmt.Errorf("could not receive player from map")
-	}
-
+func (h *Hub) sendConnectedPlayersList(uid uuid.UUID) error {
 	for k, v := range h.players {
 		if k != uid.String() {
-			b, err := json.Marshal(Message{
-				Type:    UserConnectedMessage,
-				SentAt:  time.Now(),
-				Payload: User{
-					UserID:   v.UserID.String(),
-					Username: v.Username,
-				},
-			})
-			if err != nil {
-				return fmt.Errorf("could not encode message: %w", err)
+			if err := h.SendPersonalMessage(uid, UserConnectedMessage, User{
+				UserID:   v.UserID.String(),
+				Username: v.Username,
+			}); err != nil {
+				return fmt.Errorf("previous players: could not encode message: %w", err)
 			}
-
-			player.sendMsg.Submit(b)
 		}
 	}
 
