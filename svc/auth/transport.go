@@ -86,6 +86,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/is-verified", httptransport.NewServer(
+		e.IsVerified,
+		decodeIsVerifiedRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/resend-otp", httptransport.NewServer(
+		e.ResendOTP,
+		decodeResendOTPRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -148,6 +162,14 @@ func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request int
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 	return req, nil
+}
+
+func decodeIsVerifiedRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	return nil, nil
+}
+
+func decodeResendOTPRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	return nil, nil
 }
 
 // returns http error code by error type

@@ -22,6 +22,8 @@ type (
 		ValidateResetPasswordCode endpoint.Endpoint
 		ResetPassword             endpoint.Endpoint
 		VerifyAccount             endpoint.Endpoint
+		IsVerified                endpoint.Endpoint
+		ResendOTP                 endpoint.Endpoint
 	}
 
 	authService interface {
@@ -33,6 +35,8 @@ type (
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
 		ResetPassword(ctx context.Context, email, password, otp string) error
 		VerifyAccount(ctx context.Context, userID uuid.UUID, otp string) error
+		IsVerified(ctx context.Context, userID uuid.UUID) (bool, error)
+		ResendOTP(ctx context.Context, userID uuid.UUID) error
 	}
 
 	// AccessToken struct
@@ -96,6 +100,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
 		VerifyAccount:             jwtMdw(MakeVerifyAccountEndpoint(as, validateFunc)),
+		IsVerified:                MakeIsVerifiedEndpoint(as, validateFunc),
+		ResendOTP:                 MakeResendOTPEndpoint(as, validateFunc),
 	}
 
 	if len(m) > 0 {
@@ -108,6 +114,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.ValidateResetPasswordCode = mdw(e.ValidateResetPasswordCode)
 			e.ResetPassword = mdw(e.ResetPassword)
 			e.VerifyAccount = mdw(e.VerifyAccount)
+			e.IsVerified = mdw(e.IsVerified)
+			e.ResendOTP = mdw(e.ResendOTP)
 		}
 	}
 
@@ -255,5 +263,38 @@ func MakeVerifyAccountEndpoint(s authService, v validator.ValidateFunc) endpoint
 		}
 
 		return httpencoder.BoolResult(true), nil
+	}
+}
+
+// MakeIsVerifiedEndpoint ...
+func MakeIsVerifiedEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		isVerified, err := s.IsVerified(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return isVerified, nil
+	}
+}
+
+// MakeResendOTPEndpoint ...
+func MakeResendOTPEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.ResendOTP(ctx, uid); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 }

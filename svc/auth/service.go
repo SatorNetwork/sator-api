@@ -164,6 +164,9 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
+	if s.mail == nil {
+		otp = "12345"
+	}
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
 		return "", fmt.Errorf("could not create a new account: %w", err)
@@ -190,10 +193,6 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
-	}
-
-	if err := s.ws.CreateWallet(ctx, u.ID); err != nil {
-		return "", fmt.Errorf("could not create solana wallet: %w", err)
 	}
 
 	return token, nil
@@ -307,9 +306,60 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return fmt.Errorf("could not verify email address: %w", err)
 	}
 
+	if err := s.ws.CreateWallet(ctx, u.ID); err != nil {
+		return fmt.Errorf("could not create solana wallet: %w", err)
+	}
+
 	if err := s.ur.DeleteUserVerificationsByUserID(ctx, userID); err != nil {
 		// just log, not any error for user
 		log.Printf("could not delete verification code for user with id=%s: %v", userID.String(), err)
+	}
+
+	return nil
+}
+
+// IsVerified returns if account is being verified.
+func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error) {
+	u, err := s.ur.GetUserByID(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user by provided id: %w", err)
+	}
+
+	return u.VerifiedAt.Valid, nil
+}
+
+// ResendOTP resends OTP to user by provided ID.
+func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
+	u, err := s.ur.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user by provided id: %w", err)
+	}
+
+	otp := random.String(uint8(s.otpLen), random.Numeric)
+	if s.mail == nil {
+		otp = "12345"
+	}
+	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+	if err != nil {
+		return fmt.Errorf("could not create a new account: %w", err)
+	}
+
+	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
+		UserID:           u.ID,
+		Email:            u.Email,
+		VerificationCode: otpHash,
+	}); err != nil {
+		return fmt.Errorf("could not generate verification code: %w", err)
+	}
+
+	if s.mail != nil {
+		if err := s.mail.SendVerificationEmail(ctx, u.Email, otp); err != nil {
+			return fmt.Errorf("could not send verification code: %w", err)
+		}
+	} else {
+		// log data for debug mode
+		log.Println("mail service is not set")
+		log.Printf("[email verification] email: %s, otp: %s", u.Email, otp)
 	}
 
 	return nil
