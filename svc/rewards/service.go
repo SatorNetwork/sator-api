@@ -23,7 +23,7 @@ type (
 	}
 
 	rewardsRepository interface {
-		AddReward(ctx context.Context, arg repository.AddRewardParams) error
+		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
 		Withdraw(ctx context.Context, userID uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	}
@@ -40,6 +40,13 @@ type (
 	}
 )
 
+const (
+	// TrTypeDeposit indicates that transaction type deposit.
+	TrTypeDeposit = iota
+	// TrTypeWithdraw indicates that transaction type withdraw.
+	TrTypeWithdraw
+)
+
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
 func NewService(repo rewardsRepository, ws walletService) *Service {
@@ -50,14 +57,15 @@ func NewService(repo rewardsRepository, ws walletService) *Service {
 	}
 }
 
-// AddReward ...
-func (s *Service) AddReward(ctx context.Context, uid uuid.UUID, amount float64, qid uuid.UUID) error {
-	if err := s.repo.AddReward(ctx, repository.AddRewardParams{
-		UserID: uid,
-		QuizID: qid,
-		Amount: amount,
+// AddTransaction ..
+func (s *Service) AddTransaction(ctx context.Context, uid uuid.UUID, amount float64, qid uuid.UUID, trType int32) error {
+	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
+		UserID:          uid,
+		QuizID:          qid,
+		Amount:          amount,
+		TransactionType: trType,
 	}); err != nil {
-		return fmt.Errorf("could not add reward for user_id=%s and quiz_id=%s: %w", uid.String(), qid.String(), err)
+		return fmt.Errorf("could not add transaction for user_id=%s and quiz_id=%s: %w", uid.String(), qid.String(), err)
 	}
 
 	return nil
@@ -79,6 +87,17 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("ccould not update rewards status: %w", err)
 	}
 
+	arg := repository.AddTransactionParams{
+		UserID:          uid,
+		Amount:          amount,
+		TransactionType: TrTypeWithdraw,
+	}
+
+	err = s.repo.AddTransaction(ctx, arg)
+	if err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
+	}
+
 	return ClaimRewardsResult{
 		Amount:          amount,
 		DisplayAmount:   fmt.Sprintf("%.2f %s", amount, s.assetName),
@@ -87,7 +106,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 	}, nil
 }
 
-// ClaimRewards send rewards to user by it and sets them to withdrawn.
+// GetUserRewards returns users available balance.
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {

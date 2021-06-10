@@ -9,19 +9,25 @@ import (
 	"github.com/google/uuid"
 )
 
-const addReward = `-- name: AddReward :exec
-INSERT INTO rewards (user_id, quiz_id, amount)
-VALUES ($1, $2, $3)
+const addTransaction = `-- name: AddTransaction :exec
+INSERT INTO rewards (user_id, quiz_id, amount, transaction_type)
+VALUES ($1, $2, $3, $4)
 `
 
-type AddRewardParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	QuizID uuid.UUID `json:"quiz_id"`
-	Amount float64   `json:"amount"`
+type AddTransactionParams struct {
+	UserID          uuid.UUID `json:"user_id"`
+	QuizID          uuid.UUID `json:"quiz_id"`
+	Amount          float64   `json:"amount"`
+	TransactionType int32     `json:"transaction_type"`
 }
 
-func (q *Queries) AddReward(ctx context.Context, arg AddRewardParams) error {
-	_, err := q.exec(ctx, q.addRewardStmt, addReward, arg.UserID, arg.QuizID, arg.Amount)
+func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) error {
+	_, err := q.exec(ctx, q.addTransactionStmt, addTransaction,
+		arg.UserID,
+		arg.QuizID,
+		arg.Amount,
+		arg.TransactionType,
+	)
 	return err
 }
 
@@ -41,7 +47,7 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 }
 
 const getUserRewardsByStatus = `-- name: GetUserRewardsByStatus :many
-SELECT id, user_id, quiz_id, amount, withdrawn, updated_at, created_at
+SELECT id, user_id, quiz_id, amount, withdrawn, transaction_type, updated_at, created_at
 FROM rewards
 WHERE user_id = $1
     AND withdrawn = $2
@@ -67,6 +73,7 @@ func (q *Queries) GetUserRewardsByStatus(ctx context.Context, arg GetUserRewards
 			&i.QuizID,
 			&i.Amount,
 			&i.Withdrawn,
+			&i.TransactionType,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 		); err != nil {

@@ -1,6 +1,6 @@
--- name: AddReward :exec
-INSERT INTO rewards (user_id, quiz_id, amount)
-VALUES (@user_id, @quiz_id, @amount);
+-- name: AddTransaction :exec
+INSERT INTO rewards (user_id, quiz_id, amount, transaction_type)
+VALUES (@user_id, @quiz_id, @amount, @transaction_type);
 -- name: GetUserRewardsByStatus :many
 SELECT *
 FROM rewards

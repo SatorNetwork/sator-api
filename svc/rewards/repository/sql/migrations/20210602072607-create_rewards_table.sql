@@ -9,13 +9,14 @@ END;
 $$ LANGUAGE 'plpgsql';
 -- +migrate StatementEnd
 CREATE TABLE IF NOT EXISTS rewards (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id uuid NOT NULL,
-    quiz_id uuid DEFAULT NULL,
-    amount DOUBLE PRECISION NOT NULL DEFAULT 0,
-    withdrawn BOOLEAN NOT NULL DEFAULT FALSE,
-    updated_at TIMESTAMP DEFAULT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT now()
+    id                uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id           uuid NOT NULL,
+    quiz_id           uuid DEFAULT NULL,
+    amount            DOUBLE PRECISION NOT NULL DEFAULT 0,
+    withdrawn         BOOLEAN NOT NULL DEFAULT FALSE,
+    transaction_type  INTEGER NOT NULL,
+    updated_at        TIMESTAMP DEFAULT NULL,
+    created_at        TIMESTAMP NOT NULL DEFAULT now()
 );
 -- TODO: user can receive reward for quiz only once
 -- CREATE UNIQUE INDEX question_user_quiz ON rewards USING BTREE (user_id, quiz_id);
