@@ -22,20 +22,11 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.createPasswordResetStmt, err = db.PrepareContext(ctx, createPasswordReset); err != nil {
-		return nil, fmt.Errorf("error preparing query CreatePasswordReset: %w", err)
-	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
 	if q.createUserVerificationStmt, err = db.PrepareContext(ctx, createUserVerification); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUserVerification: %w", err)
-	}
-	if q.deletePasswordResetsByEmailStmt, err = db.PrepareContext(ctx, deletePasswordResetsByEmail); err != nil {
-		return nil, fmt.Errorf("error preparing query DeletePasswordResetsByEmail: %w", err)
-	}
-	if q.deletePasswordResetsByUserIDStmt, err = db.PrepareContext(ctx, deletePasswordResetsByUserID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeletePasswordResetsByUserID: %w", err)
 	}
 	if q.deleteUserByIDStmt, err = db.PrepareContext(ctx, deleteUserByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUserByID: %w", err)
@@ -46,8 +37,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteUserVerificationsByUserIDStmt, err = db.PrepareContext(ctx, deleteUserVerificationsByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUserVerificationsByUserID: %w", err)
 	}
-	if q.getPasswordResetByEmailStmt, err = db.PrepareContext(ctx, getPasswordResetByEmail); err != nil {
-		return nil, fmt.Errorf("error preparing query GetPasswordResetByEmail: %w", err)
+	if q.destroyUserStmt, err = db.PrepareContext(ctx, destroyUser); err != nil {
+		return nil, fmt.Errorf("error preparing query DestroyUser: %w", err)
 	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
@@ -57,6 +48,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getUserByUsernameStmt, err = db.PrepareContext(ctx, getUserByUsername); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByUsername: %w", err)
+	}
+	if q.getUserVerificationByEmailStmt, err = db.PrepareContext(ctx, getUserVerificationByEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserVerificationByEmail: %w", err)
 	}
 	if q.getUserVerificationByUserIDStmt, err = db.PrepareContext(ctx, getUserVerificationByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserVerificationByUserID: %w", err)
@@ -81,11 +75,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
-	if q.createPasswordResetStmt != nil {
-		if cerr := q.createPasswordResetStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createPasswordResetStmt: %w", cerr)
-		}
-	}
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
@@ -94,16 +83,6 @@ func (q *Queries) Close() error {
 	if q.createUserVerificationStmt != nil {
 		if cerr := q.createUserVerificationStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserVerificationStmt: %w", cerr)
-		}
-	}
-	if q.deletePasswordResetsByEmailStmt != nil {
-		if cerr := q.deletePasswordResetsByEmailStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deletePasswordResetsByEmailStmt: %w", cerr)
-		}
-	}
-	if q.deletePasswordResetsByUserIDStmt != nil {
-		if cerr := q.deletePasswordResetsByUserIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deletePasswordResetsByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteUserByIDStmt != nil {
@@ -121,9 +100,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteUserVerificationsByUserIDStmt: %w", cerr)
 		}
 	}
-	if q.getPasswordResetByEmailStmt != nil {
-		if cerr := q.getPasswordResetByEmailStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getPasswordResetByEmailStmt: %w", cerr)
+	if q.destroyUserStmt != nil {
+		if cerr := q.destroyUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing destroyUserStmt: %w", cerr)
 		}
 	}
 	if q.getUserByEmailStmt != nil {
@@ -139,6 +118,11 @@ func (q *Queries) Close() error {
 	if q.getUserByUsernameStmt != nil {
 		if cerr := q.getUserByUsernameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByUsernameStmt: %w", cerr)
+		}
+	}
+	if q.getUserVerificationByEmailStmt != nil {
+		if cerr := q.getUserVerificationByEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserVerificationByEmailStmt: %w", cerr)
 		}
 	}
 	if q.getUserVerificationByUserIDStmt != nil {
@@ -210,18 +194,16 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                                  DBTX
 	tx                                  *sql.Tx
-	createPasswordResetStmt             *sql.Stmt
 	createUserStmt                      *sql.Stmt
 	createUserVerificationStmt          *sql.Stmt
-	deletePasswordResetsByEmailStmt     *sql.Stmt
-	deletePasswordResetsByUserIDStmt    *sql.Stmt
 	deleteUserByIDStmt                  *sql.Stmt
 	deleteUserVerificationsByEmailStmt  *sql.Stmt
 	deleteUserVerificationsByUserIDStmt *sql.Stmt
-	getPasswordResetByEmailStmt         *sql.Stmt
+	destroyUserStmt                     *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
 	getUserByUsernameStmt               *sql.Stmt
+	getUserVerificationByEmailStmt      *sql.Stmt
 	getUserVerificationByUserIDStmt     *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
@@ -234,18 +216,16 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                                  tx,
 		tx:                                  tx,
-		createPasswordResetStmt:             q.createPasswordResetStmt,
 		createUserStmt:                      q.createUserStmt,
 		createUserVerificationStmt:          q.createUserVerificationStmt,
-		deletePasswordResetsByEmailStmt:     q.deletePasswordResetsByEmailStmt,
-		deletePasswordResetsByUserIDStmt:    q.deletePasswordResetsByUserIDStmt,
 		deleteUserByIDStmt:                  q.deleteUserByIDStmt,
 		deleteUserVerificationsByEmailStmt:  q.deleteUserVerificationsByEmailStmt,
 		deleteUserVerificationsByUserIDStmt: q.deleteUserVerificationsByUserIDStmt,
-		getPasswordResetByEmailStmt:         q.getPasswordResetByEmailStmt,
+		destroyUserStmt:                     q.destroyUserStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
 		getUserByUsernameStmt:               q.getUserByUsernameStmt,
+		getUserVerificationByEmailStmt:      q.getUserVerificationByEmailStmt,
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,

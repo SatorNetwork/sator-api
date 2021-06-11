@@ -296,6 +296,36 @@ paths:
         "422":
           $ref: "#/components/responses/ValidationError"
 
+  /auth/is-verified:
+    post:
+      tags:
+        - "Auth"
+      summary: Account verification status.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /auth/resend-otp:
+    post:
+      tags:
+        - "Auth"
+      summary: Resending OTP to email.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /profile:
     get:
       tags:
