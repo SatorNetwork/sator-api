@@ -551,6 +551,33 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /qrcodes/{id}:
+    get:
+      tags:
+        - "QR code"
+      summary: Get show id and episode id by qrcode id if qrcode isn't expired.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+
   /quiz/{challenge_id}/play:
     get:
       tags:
