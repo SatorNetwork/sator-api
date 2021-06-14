@@ -202,6 +202,9 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
+	if s.mail == nil {
+		otp = devEnvOPT
+	}
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
 		return fmt.Errorf("could not generate a new reset password code: %w", err)
@@ -338,6 +341,9 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
+	if s.mail == nil {
+		otp = devEnvOPT
+	}
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
 		return fmt.Errorf("could not generate a new reset password code: %w", err)
@@ -484,6 +490,9 @@ func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) erro
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
+	if s.mail == nil {
+		otp = devEnvOPT
+	}
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
 		return fmt.Errorf("could not generate a new reset password code: %w", err)
