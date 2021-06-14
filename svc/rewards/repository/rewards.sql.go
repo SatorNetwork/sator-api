@@ -47,7 +47,7 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 }
 
 const getUserRewardsByStatus = `-- name: GetUserRewardsByStatus :many
-SELECT id, user_id, quiz_id, amount, withdrawn, transaction_type, updated_at, created_at
+SELECT id, user_id, quiz_id, amount, withdrawn, updated_at, created_at, transaction_type
 FROM rewards
 WHERE user_id = $1
     AND withdrawn = $2
@@ -73,9 +73,9 @@ func (q *Queries) GetUserRewardsByStatus(ctx context.Context, arg GetUserRewards
 			&i.QuizID,
 			&i.Amount,
 			&i.Withdrawn,
-			&i.TransactionType,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.TransactionType,
 		); err != nil {
 			return nil, err
 		}
