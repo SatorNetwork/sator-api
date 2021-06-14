@@ -31,8 +31,8 @@ type (
 		RequestDestroyAccount endpoint.Endpoint
 		VerifyDestroyCode     endpoint.Endpoint
 		DestroyAccount        endpoint.Endpoint
-		IsVerified                endpoint.Endpoint
-		ResendOTP                 endpoint.Endpoint
+		IsVerified            endpoint.Endpoint
+		ResendOTP             endpoint.Endpoint
 	}
 
 	authService interface {
@@ -441,7 +441,7 @@ func MakeDestroyAccountEndpoint(s authService, v validator.ValidateFunc) endpoin
 
 // MakeIsVerifiedEndpoint ...
 func MakeIsVerifiedEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
@@ -458,7 +458,7 @@ func MakeIsVerifiedEndpoint(s authService, v validator.ValidateFunc) endpoint.En
 
 // MakeResendOTPEndpoint ...
 func MakeResendOTPEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
