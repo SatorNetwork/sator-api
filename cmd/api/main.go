@@ -50,7 +50,7 @@ import (
 // Build tag is set up while compiling
 var buildTag string
 
-// Application environemnt variables
+// Application environment variables
 var (
 	// General
 	appPort            = env.MustInt("APP_PORT")
@@ -160,7 +160,7 @@ func main() {
 				repo,
 				walletService,
 				auth.WithCustomOTPLength(otpLength),
-				// auth.WithMailService(/** incapsulate mail service */),
+				// auth.WithMailService(/** encapsulate mail service */),
 			), jwtMdw),
 			logger,
 		))

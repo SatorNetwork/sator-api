@@ -9,13 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type PasswordReset struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Email     string    `json:"email"`
-	Token     []byte    `json:"token"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 type User struct {
 	ID         uuid.UUID    `json:"id"`
 	Username   string       `json:"username"`
@@ -28,6 +21,7 @@ type User struct {
 }
 
 type UserVerification struct {
+	RequestType      int32     `json:"request_type"`
 	UserID           uuid.UUID `json:"user_id"`
 	Email            string    `json:"email"`
 	VerificationCode []byte    `json:"verification_code"`

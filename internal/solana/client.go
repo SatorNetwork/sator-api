@@ -19,7 +19,7 @@ type (
 	}
 )
 
-// Creates new solana client wrapper
+// New creates new solana client wrapper
 func New(endpoint string) *Client {
 	return &Client{
 		solana:   client.NewClient(endpoint),
@@ -28,7 +28,7 @@ func New(endpoint string) *Client {
 	}
 }
 
-// Generates account keypair
+// NewAccount generates account keypair
 func (c *Client) NewAccount() types.Account {
 	return types.NewAccount()
 }
@@ -41,7 +41,7 @@ func (c *Client) AccountFromPrivatekey(pk []byte) types.Account {
 	return types.AccountFromPrivateKeyBytes(pk)
 }
 
-// Working only in test and dev environment
+// RequestAirdrop working only in test and dev environment
 func (c *Client) RequestAirdrop(pubKey string, amount float64) (string, error) {
 	if amount > 10 {
 		log.Printf("requested airdrop is too large %f, max: 10 SOL", amount)
@@ -58,7 +58,7 @@ func (c *Client) RequestAirdrop(pubKey string, amount float64) (string, error) {
 	return txhash, nil
 }
 
-// Sends transaction ans returns transaction hash
+// SendTransaction sends transaction ans returns transaction hash
 func (c *Client) SendTransaction(feePayer, signer types.Account, instructions ...types.Instruction) (string, error) {
 	res, err := c.solana.GetRecentBlockhash(context.Background())
 	if err != nil {
@@ -83,7 +83,7 @@ func (c *Client) SendTransaction(feePayer, signer types.Account, instructions ..
 	return txhash, nil
 }
 
-// returns account's SOL balance
+// GetAccountBalanceSOL returns account's SOL balance
 func (c *Client) GetAccountBalanceSOL(accPubKey string) (float64, error) {
 	balance, err := c.solana.GetBalance(context.Background(), accPubKey)
 	if err != nil {
@@ -93,7 +93,7 @@ func (c *Client) GetAccountBalanceSOL(accPubKey string) (float64, error) {
 	return float64(balance) / float64(1e9), nil
 }
 
-// returns token account's balance
+// GetTokenAccountBalance returns token account's balance
 func (c *Client) GetTokenAccountBalance(accPubKey string) (float64, error) {
 	accBalance, err := c.solana.GetTokenAccountBalance(context.Background(), accPubKey, client.CommitmentFinalized)
 	if err != nil {

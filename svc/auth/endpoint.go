@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/endpoint"
@@ -14,14 +13,26 @@ import (
 type (
 	// Endpoints struct
 	Endpoints struct {
-		Login                     endpoint.Endpoint
-		Logout                    endpoint.Endpoint
-		SignUp                    endpoint.Endpoint
-		RefreshToken              endpoint.Endpoint
+		Login        endpoint.Endpoint
+		Logout       endpoint.Endpoint
+		SignUp       endpoint.Endpoint
+		RefreshToken endpoint.Endpoint
+
 		ForgotPassword            endpoint.Endpoint
 		ValidateResetPasswordCode endpoint.Endpoint
 		ResetPassword             endpoint.Endpoint
-		VerifyAccount             endpoint.Endpoint
+
+		VerifyAccount endpoint.Endpoint
+
+		RequestChangeEmail      endpoint.Endpoint
+		ValidateChangeEmailCode endpoint.Endpoint
+		UpdateEmail             endpoint.Endpoint
+
+		RequestDestroyAccount endpoint.Endpoint
+		VerifyDestroyCode     endpoint.Endpoint
+		DestroyAccount        endpoint.Endpoint
+		IsVerified            endpoint.Endpoint
+		ResendOTP             endpoint.Endpoint
 	}
 
 	authService interface {
@@ -29,10 +40,22 @@ type (
 		Logout(ctx context.Context, tid string) error
 		SignUp(ctx context.Context, email, password, username string) (string, error)
 		RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error)
+
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
 		ResetPassword(ctx context.Context, email, password, otp string) error
+
 		VerifyAccount(ctx context.Context, userID uuid.UUID, otp string) error
+
+		RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error
+		ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error
+		UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error
+
+		RequestDestroyAccount(ctx context.Context, uid uuid.UUID) error
+		ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID, otp string) error
+		DestroyAccount(ctx context.Context, uid uuid.UUID, otp string) error
+		IsVerified(ctx context.Context, userID uuid.UUID) (bool, error)
+		ResendOTP(ctx context.Context, userID uuid.UUID) error
 	}
 
 	// AccessToken struct
@@ -71,13 +94,27 @@ type (
 		OTP      string `json:"otp" validate:"required"`
 	}
 
-	// VerifyAccountRequest struct
-	VerifyAccountRequest struct {
+	// VerifyOTPRequest struct
+	VerifyOTPRequest struct {
 		OTP string `json:"otp" validate:"required"`
 	}
 
 	// ValidateResetPasswordCodeRequest struct
 	ValidateResetPasswordCodeRequest struct {
+		Email string `json:"email" validate:"required,email"`
+		OTP   string `json:"otp" validate:"required"`
+	}
+
+	RequestChangeEmailRequest struct {
+		Email string `json:"email" validate:"required,email"`
+	}
+
+	ValidateChangeEmailCodeRequest struct {
+		Email string `json:"email" validate:"required,email"`
+		OTP   string `json:"otp" validate:"required"`
+	}
+
+	UpdateEmailRequest struct {
 		Email string `json:"email" validate:"required,email"`
 		OTP   string `json:"otp" validate:"required"`
 	}
@@ -88,14 +125,25 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		Login:                     MakeLoginEndpoint(as, validateFunc),
-		Logout:                    jwtMdw(MakeLogoutEndpoint(as)),
-		SignUp:                    MakeSignUpEndpoint(as, validateFunc),
-		RefreshToken:              jwtMdw(MakeRefreshTokenEndpoint(as, validateFunc)),
+		Login:        MakeLoginEndpoint(as, validateFunc),
+		Logout:       jwtMdw(MakeLogoutEndpoint(as)),
+		SignUp:       MakeSignUpEndpoint(as, validateFunc),
+		RefreshToken: jwtMdw(MakeRefreshTokenEndpoint(as, validateFunc)),
+
 		ForgotPassword:            MakeForgotPasswordEndpoint(as, validateFunc),
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
 		VerifyAccount:             jwtMdw(MakeVerifyAccountEndpoint(as, validateFunc)),
+		IsVerified:                MakeIsVerifiedEndpoint(as, validateFunc),
+		ResendOTP:                 MakeResendOTPEndpoint(as, validateFunc),
+
+		RequestChangeEmail:      jwtMdw(MakeRequestChangeEmailEndpoint(as, validateFunc)),
+		ValidateChangeEmailCode: jwtMdw(MakeValidateChangeEmailCodeEndpoint(as, validateFunc)),
+		UpdateEmail:             jwtMdw(MakeUpdateEmailEndpoint(as, validateFunc)),
+
+		RequestDestroyAccount: jwtMdw(MakeRequestDestroyAccount(as, validateFunc)),
+		VerifyDestroyCode:     jwtMdw(MakeVerifyDestroyEndpoint(as, validateFunc)),
+		DestroyAccount:        jwtMdw(MakeDestroyAccountEndpoint(as, validateFunc)),
 	}
 
 	if len(m) > 0 {
@@ -104,10 +152,22 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.Logout = mdw(e.Logout)
 			e.SignUp = mdw(e.SignUp)
 			e.RefreshToken = mdw(e.RefreshToken)
+
 			e.ForgotPassword = mdw(e.ForgotPassword)
 			e.ValidateResetPasswordCode = mdw(e.ValidateResetPasswordCode)
 			e.ResetPassword = mdw(e.ResetPassword)
+
 			e.VerifyAccount = mdw(e.VerifyAccount)
+			e.IsVerified = mdw(e.IsVerified)
+			e.ResendOTP = mdw(e.ResendOTP)
+
+			e.RequestChangeEmail = mdw(e.RequestChangeEmail)
+			e.ValidateChangeEmailCode = mdw(e.ValidateChangeEmailCode)
+			e.UpdateEmail = mdw(e.UpdateEmail)
+
+			e.RequestDestroyAccount = mdw(e.RequestDestroyAccount)
+			e.VerifyDestroyCode = mdw(e.VerifyDestroyCode)
+			e.DestroyAccount = mdw(e.DestroyAccount)
 		}
 	}
 
@@ -141,7 +201,7 @@ func MakeLogoutEndpoint(s authService) endpoint.Endpoint {
 		if err := s.Logout(ctx, tid.String()); err != nil {
 			return nil, err
 		}
-		return httpencoder.BoolResult(true), nil
+		return true, nil
 	}
 }
 
@@ -201,7 +261,7 @@ func MakeForgotPasswordEndpoint(s authService, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
-		return httpencoder.BoolResult(true), nil
+		return true, nil
 	}
 }
 
@@ -217,7 +277,7 @@ func MakeValidateResetPasswordCodeEndpoint(s authService, v validator.ValidateFu
 			return nil, err
 		}
 
-		return httpencoder.BoolResult(true), nil
+		return true, nil
 	}
 }
 
@@ -233,14 +293,14 @@ func MakeResetPasswordEndpoint(s authService, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		return httpencoder.BoolResult(true), nil
+		return true, nil
 	}
 }
 
 // MakeVerifyAccountEndpoint ...
 func MakeVerifyAccountEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(VerifyAccountRequest)
+		req := request.(VerifyOTPRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -254,6 +314,160 @@ func MakeVerifyAccountEndpoint(s authService, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		return httpencoder.BoolResult(true), nil
+		return true, nil
+	}
+}
+
+// MakeRequestChangeEmailEndpoint ...
+func MakeRequestChangeEmailEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(RequestChangeEmailRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.RequestChangeEmail(ctx, uid, req.Email); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeValidateChangeEmailCodeEndpoint ...
+func MakeValidateChangeEmailCodeEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(ValidateChangeEmailCodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.ValidateChangeEmailCode(ctx, uid, req.Email, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeUpdateEmailEndpoint ...
+func MakeUpdateEmailEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateEmailRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.UpdateEmail(ctx, uid, req.Email, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeRequestDestroyAccount ...
+func MakeRequestDestroyAccount(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.RequestDestroyAccount(ctx, uid); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeVerifyDestroyEndpoint ...
+func MakeVerifyDestroyEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(VerifyOTPRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.ValidateDestroyAccountCode(ctx, uid, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDestroyAccountEndpoint ...
+func MakeDestroyAccountEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(VerifyOTPRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.ValidateDestroyAccountCode(ctx, uid, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeIsVerifiedEndpoint ...
+func MakeIsVerifiedEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		isVerified, err := s.IsVerified(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return isVerified, nil
+	}
+}
+
+// MakeResendOTPEndpoint ...
+func MakeResendOTPEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.ResendOTP(ctx, uid); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 }
