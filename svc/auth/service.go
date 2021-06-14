@@ -18,6 +18,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// TODO: remove it after connect to postmarkapp
+const devEnvOPT = "12345"
+
 type (
 	// Service struct
 	Service struct {
@@ -154,7 +157,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = "12345"
+		otp = devEnvOPT
 	}
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
@@ -442,7 +445,7 @@ func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = "12345"
+		otp = devEnvOPT
 	}
 	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 	if err != nil {
@@ -469,6 +472,7 @@ func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
 
 	return nil
 }
+
 // RequestDestroyAccount requests password reset with email.
 func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) error {
 	u, err := s.ur.GetUserByID(ctx, uid)
