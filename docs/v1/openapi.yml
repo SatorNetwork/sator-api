@@ -521,7 +521,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /qrcodes/:
+  /qrcodes/{id}:
     get:
       tags:
         - "QR code"

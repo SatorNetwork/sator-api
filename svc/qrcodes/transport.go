@@ -30,7 +30,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Get("/{qrcode-id}", httptransport.NewServer(
+	r.Get("/{id}", httptransport.NewServer(
 		e.GetDataByQRCodeID,
 		decodeGetDataRequest,
 		httpencoder.EncodeResponse,
@@ -40,8 +40,8 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetDataRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "qrcode-id")
+func decodeGetDataRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
 	}

@@ -48,10 +48,10 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, qrcodeID uuid.UUID) (in
 	}
 
 	now := time.Now()
-	if qrcodeData.StartsAt.Before(now) {
-		return nil, ErrQRCodeExpired
+	if now.Before(qrcodeData.StartsAt) {
+		return nil, ErrQRCodeInvalid
 	}
-	if qrcodeData.ExpiresAt.Before(now) {
+	if now.After(qrcodeData.ExpiresAt) {
 		return nil, ErrQRCodeExpired
 	}
 
