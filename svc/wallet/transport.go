@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -35,9 +36,23 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/transactions", httptransport.NewServer(
+	r.Get("/transactions/{wallet_id}", httptransport.NewServer(
 		e.GetListTransactionsByWalletID,
 		decodeGetListTransactionsByWalletIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/wallets", httptransport.NewServer(
+		e.GetWallets,
+		decodeGetWalletsRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/transfer", httptransport.NewServer(
+		e.Transfer,
+		decodeTransferRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -49,12 +64,25 @@ func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{},
 	return nil, nil
 }
 
+func decodeGetWalletsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
 func decodeGetListTransactionsByWalletIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "wallet_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
 	}
 	return id, nil
+}
+
+func decodeTransferRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req TransferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
 }
 
 // returns http error code by error type
