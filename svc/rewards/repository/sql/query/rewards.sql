@@ -13,6 +13,7 @@ WHERE user_id = $1;
 -- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
-WHERE user_id = $1
+WHERE user_id = @user_id
     AND withdrawn = FALSE
+    AND transaction_type = 1
 GROUP BY user_id;

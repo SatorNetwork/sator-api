@@ -36,6 +36,7 @@ SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = $1
     AND withdrawn = FALSE
+    AND transaction_type = 1
 GROUP BY user_id
 `
 
