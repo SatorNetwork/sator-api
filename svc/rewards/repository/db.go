@@ -22,8 +22,8 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addRewardStmt, err = db.PrepareContext(ctx, addReward); err != nil {
-		return nil, fmt.Errorf("error preparing query AddReward: %w", err)
+	if q.addTransactionStmt, err = db.PrepareContext(ctx, addTransaction); err != nil {
+		return nil, fmt.Errorf("error preparing query AddTransaction: %w", err)
 	}
 	if q.getTotalAmountStmt, err = db.PrepareContext(ctx, getTotalAmount); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTotalAmount: %w", err)
@@ -39,9 +39,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addRewardStmt != nil {
-		if cerr := q.addRewardStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addRewardStmt: %w", cerr)
+	if q.addTransactionStmt != nil {
+		if cerr := q.addTransactionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addTransactionStmt: %w", cerr)
 		}
 	}
 	if q.getTotalAmountStmt != nil {
@@ -98,7 +98,7 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                         DBTX
 	tx                         *sql.Tx
-	addRewardStmt              *sql.Stmt
+	addTransactionStmt         *sql.Stmt
 	getTotalAmountStmt         *sql.Stmt
 	getUserRewardsByStatusStmt *sql.Stmt
 	withdrawStmt               *sql.Stmt
@@ -108,7 +108,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                         tx,
 		tx:                         tx,
-		addRewardStmt:              q.addRewardStmt,
+		addTransactionStmt:         q.addTransactionStmt,
 		getTotalAmountStmt:         q.getTotalAmountStmt,
 		getUserRewardsByStatusStmt: q.getUserRewardsByStatusStmt,
 		withdrawStmt:               q.withdrawStmt,
