@@ -86,7 +86,7 @@ func decodeTransferRequest(_ context.Context, r *http.Request) (interface{}, err
 	return req, nil
 }
 
-// returns http error code by error type
+// returns http error code by error type.
 func codeAndMessageFrom(err error) (int, interface{}) {
 	return httpencoder.CodeAndMessageFrom(err)
 }
