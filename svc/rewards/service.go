@@ -9,12 +9,20 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// TransactionTypeDeposit indicates that transaction type deposit.
+	TransactionTypeDeposit = iota + 1
+	// TransactionTypeWithdraw indicates that transaction type withdraw.
+	TransactionTypeWithdraw
+)
+
 type (
 	// Service struct
 	Service struct {
-		repo      rewardsRepository
-		assetName string
-		ws        walletService
+		repo            rewardsRepository
+		ws              walletService
+		assetName       string
+		explorerURLTmpl string
 	}
 
 	Winner struct {
@@ -38,23 +46,26 @@ type (
 	walletService interface {
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
 	}
-)
 
-const (
-	// TrTypeDeposit indicates that transaction type deposit.
-	TrTypeDeposit = iota
-	// TrTypeWithdraw indicates that transaction type withdraw.
-	TrTypeWithdraw
+	// Option func to set custom service options
+	Option func(*Service)
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo rewardsRepository, ws walletService) *Service {
-	return &Service{
-		repo:      repo,
-		ws:        ws,
-		assetName: "SAO",
+func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Service {
+	s := &Service{
+		repo:            repo,
+		ws:              ws,
+		assetName:       "SAO",
+		explorerURLTmpl: "https://explorer.solana.com/tx/%s?cluster=devnet",
 	}
+
+	for _, fn := range opt {
+		fn(s)
+	}
+
+	return s
 }
 
 // AddTransaction ..
@@ -84,17 +95,14 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 	}
 
 	if err = s.repo.Withdraw(ctx, uid); err != nil {
-		return ClaimRewardsResult{}, fmt.Errorf("ccould not update rewards status: %w", err)
+		return ClaimRewardsResult{}, fmt.Errorf("could not update rewards status: %w", err)
 	}
 
-	arg := repository.AddTransactionParams{
+	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
 		Amount:          amount,
-		TransactionType: TrTypeWithdraw,
-	}
-
-	err = s.repo.AddTransaction(ctx, arg)
-	if err != nil {
+		TransactionType: TransactionTypeWithdraw,
+	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}
 
@@ -102,7 +110,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		Amount:          amount,
 		DisplayAmount:   fmt.Sprintf("%.2f %s", amount, s.assetName),
 		TransactionHash: txHash,
-		TransactionURL:  fmt.Sprintf("https://explorer.solana.com/tx/%s?cluster=devnet", txHash),
+		TransactionURL:  fmt.Sprintf(s.explorerURLTmpl, txHash),
 	}, nil
 }
 
