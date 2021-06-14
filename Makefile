@@ -24,6 +24,7 @@ run-local:
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	JWT_SIGNING_KEY=secret \
 	QUIZ_WS_CONN_URL=https://aec45cb3e117.ngrok.io/quiz \
+	SOLANA_API_BASE_URL=https://api.devnet.solana.com/ \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
 
 migrate: ## Run all migrations on server

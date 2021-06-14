@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	TokenAccount      SolanaAccountType = "token_account"   // custom token account with sator tokens
-	GeneralAccount    SolanaAccountType = "general_account" // general account with SOL
-	FeePayerAccount   SolanaAccountType = "fee_payer"       // general account with SOL to pay transaction comission
-	IssuerAccount     SolanaAccountType = "issuer"          // sator tokens issuer
-	DistibutorAccount SolanaAccountType = "distributor"     // sator tokens distributor
-	AssetAccount      SolanaAccountType = "asset"           // sator token account
+	TokenAccount       SolanaAccountType = "token_account"   // custom token account with sator tokens
+	GeneralAccount     SolanaAccountType = "general_account" // general account with SOL
+	FeePayerAccount    SolanaAccountType = "fee_payer"       // general account with SOL to pay transaction comission
+	IssuerAccount      SolanaAccountType = "issuer"          // sator tokens issuer
+	DistributorAccount SolanaAccountType = "distributor"     // sator tokens distributor
+	AssetAccount       SolanaAccountType = "asset"           // sator token account
 )
 
 type (

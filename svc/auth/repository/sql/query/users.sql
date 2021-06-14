@@ -38,4 +38,12 @@ DELETE FROM users
 WHERE id = $1;
 -- name: UpdateUserVerifiedAt :exec
 UPDATE users
-SET verified_at = $1;
+SET verified_at = @verified_at
+WHERE id = @user_id;
+-- name: DestroyUser :exec
+UPDATE users
+SET email = 'deleted',
+    username = 'deleted',
+    password = NULL,
+    disabled = TRUE
+WHERE id = @user_id;
