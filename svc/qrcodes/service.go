@@ -61,7 +61,7 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, qrcodeID uuid.UUID, use
 		return nil, ErrQRCodeExpired
 	}
 	if qrcodeData.RewardAmount.Float64 > 0 {
-		err := s.rs.AddDepositTransaction(ctx, userID, qrcodeData.RewardAmount.Float64, qrcodeID, "??")
+		err := s.rs.AddDepositTransaction(ctx, userID, qrcodeData.RewardAmount.Float64, qrcodeID, "qrcodes")
 		if err != nil {
 			return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), qrcodeID.String(), err)
 		}
