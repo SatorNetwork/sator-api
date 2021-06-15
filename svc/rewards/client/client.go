@@ -14,7 +14,7 @@ type (
 	}
 
 	service interface {
-		AddTransaction(ctx context.Context, uid uuid.UUID, amount float64, qid uuid.UUID, trType int32) error
+		AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error
 		GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error)
 	}
 )
@@ -25,13 +25,13 @@ func New(s service) *Client {
 }
 
 // AddDepositTransaction ...
-func (c *Client) AddDepositTransaction(ctx context.Context, userID uuid.UUID, amount float64, quizID uuid.UUID) error {
-	return c.s.AddTransaction(ctx, userID, amount, quizID, rewards.TransactionTypeDeposit)
+func (c *Client) AddDepositTransaction(ctx context.Context, userID, relationID uuid.UUID, relationType string, amount float64) error {
+	return c.s.AddTransaction(ctx, userID, relationID, relationType, amount, rewards.TransactionTypeDeposit)
 }
 
 // AddWithdrawTransaction ...
 func (c *Client) AddWithdrawTransaction(ctx context.Context, userID uuid.UUID, amount float64) error {
-	return c.s.AddTransaction(ctx, userID, amount, uuid.Nil, rewards.TransactionTypeWithdraw)
+	return c.s.AddTransaction(ctx, userID, uuid.Nil, "", amount, rewards.TransactionTypeWithdraw)
 }
 
 // GetUserRewards ...

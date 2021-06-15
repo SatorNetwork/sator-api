@@ -5,28 +5,31 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const addTransaction = `-- name: AddTransaction :exec
-INSERT INTO rewards (user_id, quiz_id, amount, transaction_type)
-VALUES ($1, $2, $3, $4)
+INSERT INTO rewards (user_id, relation_id, amount, transaction_type, relation_type)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type AddTransactionParams struct {
-	UserID          uuid.UUID `json:"user_id"`
-	QuizID          uuid.UUID `json:"quiz_id"`
-	Amount          float64   `json:"amount"`
-	TransactionType int32     `json:"transaction_type"`
+	UserID          uuid.UUID      `json:"user_id"`
+	RelationID      uuid.UUID      `json:"relation_id"`
+	Amount          float64        `json:"amount"`
+	TransactionType int32          `json:"transaction_type"`
+	RelationType    sql.NullString `json:"relation_type"`
 }
 
 func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) error {
 	_, err := q.exec(ctx, q.addTransactionStmt, addTransaction,
 		arg.UserID,
-		arg.QuizID,
+		arg.RelationID,
 		arg.Amount,
 		arg.TransactionType,
+		arg.RelationType,
 	)
 	return err
 }
@@ -48,7 +51,7 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 }
 
 const getUserRewardsByStatus = `-- name: GetUserRewardsByStatus :many
-SELECT id, user_id, quiz_id, amount, withdrawn, updated_at, created_at, transaction_type
+SELECT id, user_id, relation_id, relation_type, amount, withdrawn, updated_at, created_at, transaction_type
 FROM rewards
 WHERE user_id = $1
     AND withdrawn = $2
@@ -71,7 +74,8 @@ func (q *Queries) GetUserRewardsByStatus(ctx context.Context, arg GetUserRewards
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.QuizID,
+			&i.RelationID,
+			&i.RelationType,
 			&i.Amount,
 			&i.Withdrawn,
 			&i.UpdatedAt,

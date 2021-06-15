@@ -10,12 +10,13 @@ import (
 )
 
 type Reward struct {
-	ID              uuid.UUID    `json:"id"`
-	UserID          uuid.UUID    `json:"user_id"`
-	QuizID          uuid.UUID    `json:"quiz_id"`
-	Amount          float64      `json:"amount"`
-	Withdrawn       bool         `json:"withdrawn"`
-	UpdatedAt       sql.NullTime `json:"updated_at"`
-	CreatedAt       time.Time    `json:"created_at"`
-	TransactionType int32        `json:"transaction_type"`
+	ID              uuid.UUID      `json:"id"`
+	UserID          uuid.UUID      `json:"user_id"`
+	RelationID      uuid.UUID      `json:"relation_id"`
+	RelationType    sql.NullString `json:"relation_type"`
+	Amount          float64        `json:"amount"`
+	Withdrawn       bool           `json:"withdrawn"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
+	CreatedAt       time.Time      `json:"created_at"`
+	TransactionType int32          `json:"transaction_type"`
 }

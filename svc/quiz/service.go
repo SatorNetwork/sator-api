@@ -66,7 +66,7 @@ type (
 	}
 
 	rewardsService interface {
-		AddDepositTransaction(ctx context.Context, userID uuid.UUID, amount float64, quizID uuid.UUID) error
+		AddDepositTransaction(ctx context.Context, userID, relationID uuid.UUID, relationType string, amount float64) error
 	}
 
 	tokenGenFunc   func(data interface{}, ttl int64) (string, error)
@@ -420,7 +420,7 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 
 	for _, w := range result {
 		prize := calcPrize(quiz.PrizePool, totalWinnersNumber, int(questionsNumber), totalPts, totalRate, int(w.Pts), int(w.Rate))
-		if err := s.rewards.AddDepositTransaction(ctx, w.UserID, prize, quiz.ID); err != nil {
+		if err := s.rewards.AddDepositTransaction(ctx, w.UserID, quiz.ID, "quizzes", prize); err != nil {
 			log.Printf("could not store reward: user_id=%s, quiz_id=%s, amount=%v error: %v",
 				w.UserID.String(), quiz.ID.String(), prize, err)
 		}
