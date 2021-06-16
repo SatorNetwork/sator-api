@@ -3,7 +3,6 @@ package wallet
 import (
 	"context"
 	"fmt"
-
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/endpoint"
