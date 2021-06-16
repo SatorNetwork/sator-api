@@ -1,15 +1,23 @@
 -- name: AddTransaction :exec
-INSERT INTO rewards (user_id, relation_id, amount, transaction_type, relation_type)
-VALUES (@user_id, @relation_id, @amount, @transaction_type, @relation_type);
--- name: GetUserRewardsByStatus :many
-SELECT *
-FROM rewards
-WHERE user_id = $1
-    AND withdrawn = $2;
+INSERT INTO rewards (
+        user_id,
+        relation_id,
+        relation_type,
+        transaction_type,
+        amount
+    )
+VALUES (
+        @user_id,
+        @relation_id,
+        @relation_type,
+        @transaction_type,
+        @amount
+    );
 -- name: Withdraw :exec
 UPDATE rewards
 SET withdrawn = TRUE
-WHERE user_id = $1;
+WHERE user_id = $1
+    AND transaction_type = 1;
 -- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards

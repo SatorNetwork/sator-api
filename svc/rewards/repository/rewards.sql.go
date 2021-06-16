@@ -11,25 +11,37 @@ import (
 )
 
 const addTransaction = `-- name: AddTransaction :exec
-INSERT INTO rewards (user_id, relation_id, amount, transaction_type, relation_type)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO rewards (
+        user_id,
+        relation_id,
+        relation_type,
+        transaction_type,
+        amount
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5
+    )
 `
 
 type AddTransactionParams struct {
 	UserID          uuid.UUID      `json:"user_id"`
 	RelationID      uuid.UUID      `json:"relation_id"`
-	Amount          float64        `json:"amount"`
-	TransactionType int32          `json:"transaction_type"`
 	RelationType    sql.NullString `json:"relation_type"`
+	TransactionType int32          `json:"transaction_type"`
+	Amount          float64        `json:"amount"`
 }
 
 func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) error {
 	_, err := q.exec(ctx, q.addTransactionStmt, addTransaction,
 		arg.UserID,
 		arg.RelationID,
-		arg.Amount,
-		arg.TransactionType,
 		arg.RelationType,
+		arg.TransactionType,
+		arg.Amount,
 	)
 	return err
 }
@@ -50,55 +62,11 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 	return column_1, err
 }
 
-const getUserRewardsByStatus = `-- name: GetUserRewardsByStatus :many
-SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type
-FROM rewards
-WHERE user_id = $1
-    AND withdrawn = $2
-`
-
-type GetUserRewardsByStatusParams struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Withdrawn bool      `json:"withdrawn"`
-}
-
-func (q *Queries) GetUserRewardsByStatus(ctx context.Context, arg GetUserRewardsByStatusParams) ([]Reward, error) {
-	rows, err := q.query(ctx, q.getUserRewardsByStatusStmt, getUserRewardsByStatus, arg.UserID, arg.Withdrawn)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Reward
-	for rows.Next() {
-		var i Reward
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.RelationID,
-			&i.Amount,
-			&i.Withdrawn,
-			&i.UpdatedAt,
-			&i.CreatedAt,
-			&i.TransactionType,
-			&i.RelationType,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const withdraw = `-- name: Withdraw :exec
 UPDATE rewards
 SET withdrawn = TRUE
 WHERE user_id = $1
+    AND transaction_type = 1
 `
 
 func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {
