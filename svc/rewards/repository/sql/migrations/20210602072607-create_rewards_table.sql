@@ -11,8 +11,7 @@ $$ LANGUAGE 'plpgsql';
 CREATE TABLE IF NOT EXISTS rewards (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
-    relation_id uuid DEFAULT NULL,
-    relation_type VARCHAR DEFAULT NULL,
+    quiz_id uuid DEFAULT NULL,
     amount DOUBLE PRECISION NOT NULL DEFAULT 0,
     withdrawn BOOLEAN NOT NULL DEFAULT FALSE,
     updated_at TIMESTAMP DEFAULT NULL,
