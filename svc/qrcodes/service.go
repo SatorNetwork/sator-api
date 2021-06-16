@@ -12,6 +12,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// RelationTypeQRcodes indicates that relation type is "qrcodes".
+	RelationTypeQRcodes = "qrcodes"
+)
+
 type (
 	// Service struct
 	Service struct {
@@ -61,7 +66,7 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, qrcodeID uuid.UUID, use
 		return nil, ErrQRCodeExpired
 	}
 	if qrcodeData.RewardAmount.Float64 > 0 {
-		err := s.rs.AddDepositTransaction(ctx, userID, qrcodeID, "qrcodes", qrcodeData.RewardAmount.Float64)
+		err := s.rs.AddDepositTransaction(ctx, userID, qrcodeID, RelationTypeQRcodes, qrcodeData.RewardAmount.Float64)
 		if err != nil {
 			return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), qrcodeID.String(), err)
 		}
