@@ -132,7 +132,7 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (interface{}, e
 	}
 
 	result = append(result, Balance{
-		Currency: "rewards",
+		Currency: "unclaimed",
 		Amount:   rewAmount,
 	})
 
