@@ -3,7 +3,9 @@ package shows
 import (
 	"context"
 	"fmt"
+
 	"github.com/SatorNetwork/sator-api/internal/validator"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -13,11 +15,13 @@ type (
 	Endpoints struct {
 		GetShows          endpoint.Endpoint
 		GetShowChallenges endpoint.Endpoint
+		GetShowByID       endpoint.Endpoint
 	}
 
 	service interface {
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 	}
 
 	// PaginationRequest struct
@@ -56,6 +60,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
 		GetShows:          MakeGetShowsEndpoint(s, validateFunc),
 		GetShowChallenges: MakeGetShowChallengesEndpoint(s, validateFunc),
+		GetShowByID:       MakeGetShowByIDEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -63,6 +68,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		for _, mdw := range m {
 			e.GetShows = mdw(e.GetShows)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
+			e.GetShowByID = mdw(e.GetShowByID)
 		}
 	}
 
@@ -100,6 +106,23 @@ func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint
 		}
 
 		resp, err := s.GetShowChallenges(ctx, showID, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetShowByIDEndpoint ...
+func MakeGetShowByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.GetShowByID(ctx, id)
 		if err != nil {
 			return nil, err
 		}

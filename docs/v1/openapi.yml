@@ -499,6 +499,45 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /shows/{show_id}:
+    get:
+      tags:
+        - "Shows"
+      summary: Get show by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns show details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Peaky Blinders"
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    has_new_episode:
+                      type: boolean
+                      example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /challenges/{id}:
     get:
       tags:

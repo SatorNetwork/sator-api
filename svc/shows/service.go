@@ -28,6 +28,7 @@ type (
 
 	showsRepository interface {
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
 	}
 
 	// Challenges service client
@@ -82,4 +83,13 @@ func castToShow(source []repository.Show) []Show {
 		})
 	}
 	return result
+}
+
+// GetShowByID returns show with provided id.
+func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+	show, err := s.sr.GetShowByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
+	}
+	return show, nil
 }
