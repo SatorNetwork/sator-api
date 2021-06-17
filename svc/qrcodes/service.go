@@ -20,7 +20,7 @@ const (
 type (
 	// Service struct
 	Service struct {
-		pr qrcodeRepository
+		qr qrcodeRepository
 		rs rewardsService
 	}
 
@@ -42,20 +42,21 @@ type (
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation
-func NewService(pr qrcodeRepository) *Service {
-	if pr == nil {
+func NewService(qr qrcodeRepository) *Service {
+	if qr == nil {
 		log.Fatalln("qrcode repository is not set")
 	}
-	return &Service{pr: pr}
+	return &Service{qr: qr}
 }
 
 // GetDataByQRCodeID returns show id and episode id by qrcode id
-func (s *Service) GetDataByQRCodeID(ctx context.Context, qrcodeID uuid.UUID, userID uuid.UUID) (interface{}, error) {
-	qrcodeData, err := s.pr.GetDataByQRCodeID(ctx, qrcodeID)
+func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (interface{}, error) {
+	qrcodeData, err := s.qr.GetDataByQRCodeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not qrcode data: %w", err)
+			return nil, fmt.Errorf("could not get qrcode by id: %w", err)
 		}
+		return nil, fmt.Errorf("no qrcode with such id:%s, error:%w", id, err)
 	}
 
 	now := time.Now()
@@ -66,9 +67,9 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, qrcodeID uuid.UUID, use
 		return nil, ErrQRCodeExpired
 	}
 	if qrcodeData.RewardAmount.Float64 > 0 {
-		err := s.rs.AddDepositTransaction(ctx, userID, qrcodeID, RelationTypeQRcodes, qrcodeData.RewardAmount.Float64)
+		err := s.rs.AddDepositTransaction(ctx, userID, id, RelationTypeQRcodes, qrcodeData.RewardAmount.Float64)
 		if err != nil {
-			return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), qrcodeID.String(), err)
+			return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), id.String(), err)
 		}
 	}
 

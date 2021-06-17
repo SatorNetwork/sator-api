@@ -14,8 +14,8 @@ type (
 	}
 
 	service interface {
-		GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetByID(ctx context.Context, id uuid.UUID) (challenge.Challenge, error)
+		GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 	}
 )
 
