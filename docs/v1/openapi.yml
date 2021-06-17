@@ -131,7 +131,7 @@ paths:
           $ref: "#/components/responses/ValidationError"
 
   /auth/refresh-token:
-    post:
+    get:
       tags:
         - "Auth"
       summary: Refresh access token (JWT).
@@ -297,7 +297,7 @@ paths:
           $ref: "#/components/responses/ValidationError"
 
   /auth/is-verified:
-    post:
+    get:
       tags:
         - "Auth"
       summary: Account verification status.

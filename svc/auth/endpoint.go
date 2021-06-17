@@ -134,8 +134,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
 		VerifyAccount:             jwtMdw(MakeVerifyAccountEndpoint(as, validateFunc)),
-		IsVerified:                MakeIsVerifiedEndpoint(as, validateFunc),
-		ResendOTP:                 MakeResendOTPEndpoint(as, validateFunc),
+		IsVerified:                jwtMdw(MakeIsVerifiedEndpoint(as)),
+		ResendOTP:                 jwtMdw(MakeResendOTPEndpoint(as)),
 
 		RequestChangeEmail:      jwtMdw(MakeRequestChangeEmailEndpoint(as, validateFunc)),
 		ValidateChangeEmailCode: jwtMdw(MakeValidateChangeEmailCodeEndpoint(as, validateFunc)),
@@ -440,7 +440,7 @@ func MakeDestroyAccountEndpoint(s authService, v validator.ValidateFunc) endpoin
 }
 
 // MakeIsVerifiedEndpoint ...
-func MakeIsVerifiedEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeIsVerifiedEndpoint(s authService) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -457,7 +457,7 @@ func MakeIsVerifiedEndpoint(s authService, v validator.ValidateFunc) endpoint.En
 }
 
 // MakeResendOTPEndpoint ...
-func MakeResendOTPEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeResendOTPEndpoint(s authService) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
