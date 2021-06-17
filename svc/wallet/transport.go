@@ -68,7 +68,7 @@ func decodeGetWalletsRequest(ctx context.Context, _ *http.Request) (interface{},
 	return nil, nil
 }
 
-func decodeGetListTransactionsByWalletIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeGetListTransactionsByWalletIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "wallet_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
@@ -76,7 +76,7 @@ func decodeGetListTransactionsByWalletIDRequest(ctx context.Context, r *http.Req
 	return id, nil
 }
 
-func decodeTransferRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req TransferRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)

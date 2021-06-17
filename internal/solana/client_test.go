@@ -1,13 +1,6 @@
 package solana_test
 
-import (
-	"context"
-	"testing"
-
-	"github.com/portto/solana-go-sdk/client"
-	"github.com/stretchr/testify/require"
-)
-
+/**
 func TestNew(t *testing.T) {
 	c := client.NewClient("https://api.devnet.solana.com/")
 	ctx := context.Background()
@@ -52,3 +45,4 @@ func TestNew(t *testing.T) {
 	require.EqualValues(t, tb, diff)
 
 }
+*/
