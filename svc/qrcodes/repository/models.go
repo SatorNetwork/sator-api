@@ -10,11 +10,12 @@ import (
 )
 
 type Qrcode struct {
-	ID        uuid.UUID    `json:"id"`
-	ShowID    uuid.UUID    `json:"show_id"`
-	EpisodeID uuid.UUID    `json:"episode_id"`
-	StartsAt  time.Time    `json:"starts_at"`
-	ExpiresAt time.Time    `json:"expires_at"`
-	UpdatedAt sql.NullTime `json:"updated_at"`
-	CreatedAt time.Time    `json:"created_at"`
+	ID           uuid.UUID       `json:"id"`
+	ShowID       uuid.UUID       `json:"show_id"`
+	EpisodeID    uuid.UUID       `json:"episode_id"`
+	RewardAmount sql.NullFloat64 `json:"reward_amount"`
+	StartsAt     time.Time       `json:"starts_at"`
+	ExpiresAt    time.Time       `json:"expires_at"`
+	UpdatedAt    sql.NullTime    `json:"updated_at"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
