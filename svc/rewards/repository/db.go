@@ -28,9 +28,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getTotalAmountStmt, err = db.PrepareContext(ctx, getTotalAmount); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTotalAmount: %w", err)
 	}
-	if q.getUserRewardsByStatusStmt, err = db.PrepareContext(ctx, getUserRewardsByStatus); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUserRewardsByStatus: %w", err)
-	}
 	if q.withdrawStmt, err = db.PrepareContext(ctx, withdraw); err != nil {
 		return nil, fmt.Errorf("error preparing query Withdraw: %w", err)
 	}
@@ -47,11 +44,6 @@ func (q *Queries) Close() error {
 	if q.getTotalAmountStmt != nil {
 		if cerr := q.getTotalAmountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getTotalAmountStmt: %w", cerr)
-		}
-	}
-	if q.getUserRewardsByStatusStmt != nil {
-		if cerr := q.getUserRewardsByStatusStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUserRewardsByStatusStmt: %w", cerr)
 		}
 	}
 	if q.withdrawStmt != nil {
@@ -96,21 +88,19 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                         DBTX
-	tx                         *sql.Tx
-	addTransactionStmt         *sql.Stmt
-	getTotalAmountStmt         *sql.Stmt
-	getUserRewardsByStatusStmt *sql.Stmt
-	withdrawStmt               *sql.Stmt
+	db                 DBTX
+	tx                 *sql.Tx
+	addTransactionStmt *sql.Stmt
+	getTotalAmountStmt *sql.Stmt
+	withdrawStmt       *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                         tx,
-		tx:                         tx,
-		addTransactionStmt:         q.addTransactionStmt,
-		getTotalAmountStmt:         q.getTotalAmountStmt,
-		getUserRewardsByStatusStmt: q.getUserRewardsByStatusStmt,
-		withdrawStmt:               q.withdrawStmt,
+		db:                 tx,
+		tx:                 tx,
+		addTransactionStmt: q.addTransactionStmt,
+		getTotalAmountStmt: q.getTotalAmountStmt,
+		withdrawStmt:       q.withdrawStmt,
 	}
 }
