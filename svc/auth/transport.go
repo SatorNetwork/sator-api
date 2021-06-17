@@ -44,6 +44,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/refresh-token", httptransport.NewServer(
+		e.RefreshToken,
+		decodeRefreshTokenRequest,
+		encodeTokenResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/refresh-token", httptransport.NewServer(
 		e.RefreshToken,
 		decodeRefreshTokenRequest,
@@ -107,7 +114,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/is-verified", httptransport.NewServer(
+	r.Get("/is-verified", httptransport.NewServer(
 		e.IsVerified,
 		decodeIsVerifiedRequest,
 		httpencoder.EncodeResponse,
