@@ -2,6 +2,7 @@ package rewards
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
@@ -69,14 +70,15 @@ func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Servic
 }
 
 // AddTransaction ..
-func (s *Service) AddTransaction(ctx context.Context, uid uuid.UUID, amount float64, qid uuid.UUID, trType int32) error {
+func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error {
 	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
-		QuizID:          qid,
+		RelationID:      relationID,
 		Amount:          amount,
 		TransactionType: trType,
+		RelationType:    sql.NullString{String: relationType, Valid: true},
 	}); err != nil {
-		return fmt.Errorf("could not add transaction for user_id=%s and quiz_id=%s: %w", uid.String(), qid.String(), err)
+		return fmt.Errorf("could not add transaction for user_id=%s, relation_id=%s, relation_type=%s: %w", uid.String(), relationID.String(), relationType, err)
 	}
 
 	return nil
