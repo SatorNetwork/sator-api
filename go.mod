@@ -20,10 +20,9 @@ require (
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
 	github.com/oklog/run v1.0.0
-	github.com/portto/solana-go-sdk v0.0.0-20210602173707-b9943b947cd3
+	github.com/portto/solana-go-sdk v0.1.0
 	github.com/rs/cors v1.7.0
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
-	github.com/stretchr/testify v1.6.1
 	github.com/zeebo/errs v1.2.2
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect

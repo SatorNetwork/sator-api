@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 
 	"github.com/google/uuid"
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -65,11 +65,18 @@ type (
 		SendAssets(ctx context.Context, feePayer, issuer, asset, sender types.Account, recipientAddr string, amount float64) (string, error)
 		CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
 		IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error)
-		GetTransactions(ctx context.Context, publicKey string) ([]client.GetConfirmedTransactionResponse, error)
+		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
 	rewardsService interface {
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
+	}
+
+	// Transaction ...
+	Transaction struct {
+		TxHash    string  `json:"tx_hash"`
+		Amount    float64 `json:"amount"`
+		CreatedAt string  `json:"created_at"`
 	}
 )
 
@@ -98,6 +105,9 @@ func NewService(wr walletRepository, sc solanaClient, rw rewardsService) *Servic
 // GetBalanceWithRewards returns current user's balance
 func (s *Service) GetBalanceWithRewards(ctx context.Context, uid uuid.UUID) (interface{}, error) {
 	balance, err := s.getWalletsBalance(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
 
 	rewAmount, err := s.rw.GetTotalAmount(ctx, uid)
 	if err != nil {
@@ -332,35 +342,13 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	return nil
 }
 
-// GetListTransactionsByUserID returns list of user's transactions.
-func (s *Service) GetListTransactionsByUserID(ctx context.Context, userID uuid.UUID) (_ interface{}, err error) {
-	var transactions []client.GetConfirmedTransactionResponse
-	wallets, err := s.wr.GetWalletsByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, wallet := range wallets {
-		txs, err := s.getListTransactionsByWalletID(ctx, wallet.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, tx := range txs {
-			transactions = append(transactions, tx)
-		}
-	}
-
-	return transactions, nil
-}
-
 // GetListTransactionsByWalletID returns list of all transactions of specific wallet.
 func (s *Service) GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error) {
 	return s.getListTransactionsByWalletID(ctx, walletID)
 }
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
-func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ []client.GetConfirmedTransactionResponse, err error) {
+func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]Transaction, error) {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return nil, err
@@ -376,9 +364,13 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uu
 		return nil, err
 	}
 
-	return transactions, nil
+	txList := make([]Transaction, 0, len(transactions))
+	for _, tx := range transactions {
+		txList = append(txList, castSolanaTxToTransaction(tx))
+	}
+
+	return txList, nil
 }
-<<<<<<< HEAD
 
 // GetBalanceByUserID returns all user's wallets balance info's.
 func (s *Service) GetBalanceByUserID(ctx context.Context, userID uuid.UUID) ([]Balance, error) {
@@ -436,5 +428,11 @@ func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK st
 
 	return tx, nil
 }
-=======
->>>>>>> wallets: getListTranscations added
+
+func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse) Transaction {
+	return Transaction{
+		TxHash:    tx.TxHash,
+		Amount:    tx.Amount,
+		CreatedAt: tx.CreatedAt.String(),
+	}
+}
