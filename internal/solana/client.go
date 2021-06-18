@@ -14,6 +14,7 @@ import (
 type (
 	Client struct {
 		solana   *client.Client
+		endpoint string
 		decimals uint8
 		mltpl    uint64
 	}
@@ -23,6 +24,7 @@ type (
 func New(endpoint string) *Client {
 	return &Client{
 		solana:   client.NewClient(endpoint),
+		endpoint: endpoint,
 		decimals: 9,
 		mltpl:    1e9,
 	}
@@ -113,14 +115,17 @@ func (c *Client) GetTokenAccountBalance(ctx context.Context, accPubKey string) (
 }
 
 // GetTransactions ...
-func (c *Client) GetTransactions(ctx context.Context, pk string) (txList []client.GetConfirmedTransactionResponse, err error) {
-	signatures, err := c.solana.GetConfirmedSignaturesForAddress(ctx, pk, client.GetConfirmedSignaturesForAddressConfig{Limit: 30})
+func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList []ConfirmedTransactionResponse, err error) {
+	signatures, err := c.solana.GetConfirmedSignaturesForAddress(ctx, accPubKey, client.GetConfirmedSignaturesForAddressConfig{
+		Limit:      30,
+		Commitment: client.CommitmentFinalized,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	for _, signature := range signatures {
-		tx, err := c.solana.GetConfirmedTransaction(ctx, signature.Signature)
+		tx, err := c.GetConfirmedTransactionForAccount(ctx, accPubKey, signature.Signature)
 		if err != nil {
 			return nil, err
 		}

@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -24,7 +25,18 @@ var (
 
 func main() {
 	ctx := context.Background()
-	sc := solana.New("https://api.devnet.solana.com/")
+	sc := solana.New(client.DevnetRPCEndpoint)
+
+	txList, err := sc.GetTransactions(ctx, "3Z6t2topTRBVeQjbLf8mExLnEvxUz38rMkyiNSnwMkrj")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// log.Printf("txList: %+v\n\n", txList)
+
+	for _, tx := range txList {
+		log.Printf("tx: %+v\n\n", tx)
+	}
 
 	// acc := sc.NewAccount()
 	// log.Printf("account pub key: %#v", acc.PublicKey.ToBase58())
@@ -91,27 +103,27 @@ func main() {
 	// 	}
 	// }
 
-	if info, err := sc.GetAccountBalanceSOL(ctx, feePayerPub); err != nil {
-		log.Println(err)
-	} else {
-		log.Printf("fee payer: %+v", info)
-	}
+	// if info, err := sc.GetAccountBalanceSOL(ctx, feePayerPub); err != nil {
+	// 	log.Println(err)
+	// } else {
+	// 	log.Printf("fee payer: %+v", info)
+	// }
 
-	if info, err := sc.GetTokenAccountBalance(ctx, issuerPub); err != nil {
-		log.Println(err)
-	} else {
-		log.Printf("issuer: %+v", info)
-	}
+	// if info, err := sc.GetTokenAccountBalance(ctx, issuerPub); err != nil {
+	// 	log.Println(err)
+	// } else {
+	// 	log.Printf("issuer: %+v", info)
+	// }
 
-	if info, err := sc.GetTokenAccountBalance(ctx, assetPub); err != nil {
-		log.Println(err)
-	} else {
-		log.Printf("asset: %+v", info)
-	}
+	// if info, err := sc.GetTokenAccountBalance(ctx, assetPub); err != nil {
+	// 	log.Println(err)
+	// } else {
+	// 	log.Printf("asset: %+v", info)
+	// }
 
-	if info, err := sc.GetTokenAccountBalance(ctx, userPub); err != nil {
-		log.Println(err)
-	} else {
-		log.Printf("user: %+v", info)
-	}
+	// if info, err := sc.GetTokenAccountBalance(ctx, userPub); err != nil {
+	// 	log.Println(err)
+	// } else {
+	// 	log.Printf("user: %+v", info)
+	// }
 }
