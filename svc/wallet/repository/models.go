@@ -23,8 +23,8 @@ type Wallet struct {
 	ID              uuid.UUID     `json:"id"`
 	UserID          uuid.UUID     `json:"user_id"`
 	SolanaAccountID uuid.UUID     `json:"solana_account_id"`
-	WalletName      string        `json:"wallet_name"`
 	Status          sql.NullInt32 `json:"status"`
 	UpdatedAt       sql.NullTime  `json:"updated_at"`
 	CreatedAt       time.Time     `json:"created_at"`
+	WalletType      string        `json:"wallet_type"`
 }
