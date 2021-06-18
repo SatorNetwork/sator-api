@@ -477,6 +477,7 @@ func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
+		RequestType:      repository.VerifyConfirmAccount, // FIXME: it should be received from request
 		UserID:           u.ID,
 		Email:            u.Email,
 		VerificationCode: otpHash,
