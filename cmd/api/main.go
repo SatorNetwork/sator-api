@@ -68,6 +68,7 @@ var (
 
 	// Auth
 	otpLength = env.GetInt("OTP_LENGTH", 5)
+	masterOTPHash = os.Getenv("MASTER_OTP_HASH")
 
 	// Quiz
 	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
@@ -159,6 +160,7 @@ func main() {
 				jwtInteractor,
 				repo,
 				walletService,
+				masterOTPHash,
 				auth.WithCustomOTPLength(otpLength),
 				// auth.WithMailService(/** encapsulate mail service */),
 			), jwtMdw),
