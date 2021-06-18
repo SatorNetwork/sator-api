@@ -142,6 +142,11 @@ func main() {
 		log.Fatalf("walletRepo error: %v", err)
 	}
 	walletService := wallet.NewService(wRepo, solana.New(solanaApiBaseUrl), rewardRepo)
+	r.Mount("/wallets", wallet.MakeHTTPHandler(
+		wallet.MakeEndpoints(walletService, jwtMdw),
+		logger,
+	))
+	// TODO: deprecated! remove after client change endpoint to get wallet/balance
 	r.Mount("/wallet", wallet.MakeHTTPHandler(
 		wallet.MakeEndpoints(walletService, jwtMdw),
 		logger,
