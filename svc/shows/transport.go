@@ -3,10 +3,12 @@ package shows
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -49,6 +51,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/{show_id}", httptransport.NewServer(
+		e.GetShowByID,
+		decodeGetShowByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -67,6 +76,15 @@ func decodeGetShowChallengesRequest(ctx context.Context, r *http.Request) (inter
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
+}
+
+func decodeGetShowByIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	return id, nil
 }
 
 func castStrToInt32(source string) int32 {
