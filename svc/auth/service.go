@@ -18,17 +18,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: remove it after connect to postmarkapp
-const devEnvOPT = "12345"
-
 type (
 	// Service struct
 	Service struct {
-		ur     userRepository
-		ws     walletService
-		jwt    jwtInteractor
-		mail   mailer
-		otpLen int
+		ur         userRepository
+		ws         walletService
+		jwt        jwtInteractor
+		mail       mailer
+		otpLen     int
+		masterCode string
 	}
 
 	// ServiceOption function
@@ -68,7 +66,7 @@ type (
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, mc string, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -79,7 +77,7 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, opt ...Se
 		log.Fatalln("wallet service is not set")
 	}
 
-	s := &Service{jwt: ji, ur: ur, ws: ws, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ws: ws, masterCode: mc, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -129,6 +127,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, tid
 
 // SignUp registers account with email, password and username.
 func (s *Service) SignUp(ctx context.Context, email, password, username string) (string, error) {
+	var otpHash []byte
 	// Make email address case-insensitive
 	email = strings.ToLower(email)
 
@@ -157,11 +156,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = devEnvOPT
-	}
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
-	if err != nil {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		otpHash = []byte(s.masterCode)
+	} else {
+		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+		if err != nil {
+			return "", fmt.Errorf("could not create a new account: %w", err)
+		}
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
@@ -193,6 +193,8 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 
 // ForgotPassword requests password reset with email.
 func (s *Service) ForgotPassword(ctx context.Context, email string) error {
+	var otpHash []byte
+
 	u, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -203,11 +205,12 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = devEnvOPT
-	}
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
-	if err != nil {
-		return fmt.Errorf("could not generate a new reset password code: %w", err)
+		otpHash = []byte(s.masterCode)
+	} else {
+		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+		if err != nil {
+			return fmt.Errorf("could not process forgot password: %w", err)
+		}
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
@@ -246,8 +249,11 @@ func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp stri
 		return uuid.Nil, fmt.Errorf("could not get user with given email address: %w", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp)); err != nil {
-		return uuid.Nil, ErrOTPCode
+	err = bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp))
+	if err != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(s.masterCode), []byte(otp)); err != nil {
+			return uuid.Nil, ErrOTPCode
+		}
 	}
 
 	return v.UserID, nil
@@ -304,8 +310,11 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return fmt.Errorf("could not verify email address: %w", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(uv.VerificationCode, []byte(otp)); err != nil {
-		return ErrOTPCode
+	err = bcrypt.CompareHashAndPassword(uv.VerificationCode, []byte(otp))
+	if err != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(s.masterCode), []byte(otp)); err != nil {
+			return ErrOTPCode
+		}
 	}
 
 	if err := s.ur.UpdateUserVerifiedAt(ctx, repository.UpdateUserVerifiedAtParams{
@@ -326,8 +335,10 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 	return nil
 }
 
-// ForgotPassword requests password reset with email.
+// RequestChangeEmail requests password reset with email.
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
+	var otpHash []byte
+
 	u, err := s.ur.GetUserByID(ctx, userID)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -342,11 +353,12 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = devEnvOPT
-	}
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
-	if err != nil {
-		return fmt.Errorf("could not generate a new reset password code: %w", err)
+		otpHash = []byte(s.masterCode)
+	} else {
+		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+		if err != nil {
+			return fmt.Errorf("could not request email change: %w", err)
+		}
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
@@ -382,8 +394,11 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 		return ErrOTPCode
 	}
 
-	if err := bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp)); err != nil {
-		return ErrOTPCode
+	err = bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp))
+	if err != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(s.masterCode), []byte(otp)); err != nil {
+			return ErrOTPCode
+		}
 	}
 
 	return nil
@@ -444,6 +459,8 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 
 // ResendOTP resends OTP to user by provided ID.
 func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
+	var otpHash []byte
+
 	u, err := s.ur.GetUserByID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get user by provided id: %w", err)
@@ -451,11 +468,12 @@ func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = devEnvOPT
-	}
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
-	if err != nil {
-		return fmt.Errorf("could not create a new account: %w", err)
+		otpHash = []byte(s.masterCode)
+	} else {
+		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+		if err != nil {
+			return fmt.Errorf("could not request resend otp: %w", err)
+		}
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
@@ -481,6 +499,8 @@ func (s *Service) ResendOTP(ctx context.Context, userID uuid.UUID) error {
 
 // RequestDestroyAccount requests password reset with email.
 func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) error {
+	var otpHash []byte
+
 	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -491,11 +511,12 @@ func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) erro
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
-		otp = devEnvOPT
-	}
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
-	if err != nil {
-		return fmt.Errorf("could not generate a new reset password code: %w", err)
+		otpHash = []byte(s.masterCode)
+	} else {
+		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
+		if err != nil {
+			return fmt.Errorf("could not request destroy account: %w", err)
+		}
 	}
 
 	if err := s.ur.CreateUserVerification(ctx, repository.CreateUserVerificationParams{
@@ -533,8 +554,11 @@ func (s *Service) ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID,
 		return fmt.Errorf("could not get user with given email address: %w", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp)); err != nil {
-		return ErrOTPCode
+	err = bcrypt.CompareHashAndPassword(v.VerificationCode, []byte(otp))
+	if err != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(s.masterCode), []byte(otp)); err != nil {
+			return ErrOTPCode
+		}
 	}
 
 	return nil
