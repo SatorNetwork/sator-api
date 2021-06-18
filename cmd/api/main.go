@@ -23,6 +23,8 @@ import (
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/qrcodes"
+	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/questions"
 	questionsClient "github.com/SatorNetwork/sator-api/svc/questions/client"
 	questionsRepo "github.com/SatorNetwork/sator-api/svc/questions/repository"
@@ -247,6 +249,16 @@ func main() {
 	rewardClient := rewardsClient.New(rewardSvc)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
 		rewards.MakeEndpoints(rewardSvc, jwtMdw),
+		logger,
+	))
+
+	// QR-codes service
+	qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("questionsRepo error: %v", err)
+	}
+	r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
+		qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo, rewardClient), jwtMdw),
 		logger,
 	))
 
