@@ -597,6 +597,13 @@ paths:
       summary: Get show id and episode id by qrcode id if qrcode isn't expired.
       security:
         - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Returns qrcode data.
