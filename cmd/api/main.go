@@ -71,7 +71,7 @@ var (
 	jwtTTL        = env.GetDuration("JWT_TTL", 24*time.Hour)
 
 	// Auth
-	otpLength = env.GetInt("OTP_LENGTH", 5)
+	otpLength     = env.GetInt("OTP_LENGTH", 5)
 	masterOTPHash = os.Getenv("MASTER_OTP_HASH")
 
 	// Quiz
@@ -255,7 +255,7 @@ func main() {
 	// QR-codes service
 	qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
 	if err != nil {
-		log.Fatalf("questionsRepo error: %v", err)
+		log.Fatalf("qrcodesRepo error: %v", err)
 	}
 	r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
 		qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo, rewardClient), jwtMdw),
