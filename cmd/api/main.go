@@ -159,6 +159,7 @@ func main() {
 				jwtInteractor,
 				repo,
 				walletService,
+				os.Getenv("MASTER_OTP_HASH"),
 				auth.WithCustomOTPLength(otpLength),
 				// auth.WithMailService(/** encapsulate mail service */),
 			), jwtMdw),
