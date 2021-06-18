@@ -3,8 +3,8 @@ SELECT *
 FROM wallets
 WHERE user_id = $1;
 -- name: CreateWallet :one
-INSERT INTO wallets (user_id, solana_account_id, wallet_name)
-VALUES (@user_id, @solana_account_id, @wallet_name) RETURNING *;
+INSERT INTO wallets (user_id, solana_account_id, wallet_type)
+VALUES (@user_id, @solana_account_id, @wallet_type) RETURNING *;
 -- name: GetWalletBySolanaAccountID :one
 SELECT *
 FROM wallets

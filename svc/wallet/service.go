@@ -194,7 +194,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
 		UserID:          userID,
 		SolanaAccountID: sacc.ID,
-		WalletName:      s.satorAssetName,
+		WalletType:      WalletTypeSator,
 	}); err != nil {
 		return fmt.Errorf("could not new wallet for user with id=%s: %w", userID.String(), err)
 	}
