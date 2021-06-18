@@ -52,7 +52,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Get("/{show_id}", httptransport.NewServer(
-		e.GetShowChallenges,
+		e.GetShowByID,
 		decodeGetShowByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,

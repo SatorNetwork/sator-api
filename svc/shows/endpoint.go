@@ -60,7 +60,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
 		GetShows:          MakeGetShowsEndpoint(s, validateFunc),
 		GetShowChallenges: MakeGetShowChallengesEndpoint(s, validateFunc),
-		GetShowByID:       MakeGetShowByIDEndpoint(s, validateFunc),
+		GetShowByID:       MakeGetShowByIDEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -115,7 +115,7 @@ func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint
 }
 
 // MakeGetShowByIDEndpoint ...
-func MakeGetShowByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
