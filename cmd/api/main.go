@@ -173,7 +173,12 @@ func main() {
 		log.Fatalf("walletRepo error: %v", err)
 	}
 	walletService := wallet.NewService(wRepo, solana.New(solanaApiBaseUrl), rewardRepo)
+	// FIXME:  /wallet is deprecated path
 	r.Mount("/wallet", wallet.MakeHTTPHandler(
+		wallet.MakeEndpoints(walletService, jwtMdw),
+		logger,
+	))
+	r.Mount("/wallets", wallet.MakeHTTPHandler(
 		wallet.MakeEndpoints(walletService, jwtMdw),
 		logger,
 	))
