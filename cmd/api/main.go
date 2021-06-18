@@ -207,16 +207,6 @@ func main() {
 		logger,
 	))
 
-	// QR-codes service
-	qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("questionsRepo error: %v", err)
-	}
-	r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
-		qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo), jwtMdw),
-		logger,
-	))
-
 	// Questions service
 	questRepo, err := questionsRepo.Prepare(ctx, db)
 	if err != nil {
@@ -229,6 +219,16 @@ func main() {
 	rewardClient := rewardsClient.New(rewardSvc)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
 		rewards.MakeEndpoints(rewardSvc, jwtMdw),
+		logger,
+	))
+
+	// QR-codes service
+	qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("questionsRepo error: %v", err)
+	}
+	r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
+		qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo, rewardClient), jwtMdw),
 		logger,
 	))
 
