@@ -5,7 +5,29 @@ package repository
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
+
+const getShowByID = `-- name: GetShowByID :one
+SELECT id, title, cover, has_new_episode, updated_at, created_at
+FROM shows
+WHERE id = $1
+`
+
+func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
+	row := q.queryRow(ctx, q.getShowByIDStmt, getShowByID, id)
+	var i Show
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Cover,
+		&i.HasNewEpisode,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
 
 const getShows = `-- name: GetShows :many
 SELECT id, title, cover, has_new_episode, updated_at, created_at
