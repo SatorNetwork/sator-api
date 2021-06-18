@@ -43,7 +43,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/wallets", httptransport.NewServer(
+	r.Get("/", httptransport.NewServer(
 		e.GetWallets,
 		decodeGetWalletsRequest,
 		httpencoder.EncodeResponse,

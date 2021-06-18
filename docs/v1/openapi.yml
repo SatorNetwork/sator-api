@@ -516,6 +516,46 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /wallet/transfer:
+    post:
+      tags:
+        - "Wallet"
+      summary: Transfers amount of tokens from one wallet to another.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sender_private_key:
+                  type: string
+                  example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+                recipient_pk:
+                  type: string
+                  example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+                amount:
+                  type: number
+                  example: 120
+
+      responses:
+        "200":
+          description: Returns shows list with pagination.
+          content:
+            application/json:
+              schema:
+                type: string
+                properties:
+                  tx:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows:
     get:
       tags:
