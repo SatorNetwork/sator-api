@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -41,6 +42,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
 	"github.com/rs/cors"
@@ -75,6 +77,20 @@ var (
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+
+	// Mailer
+	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
+	postmarkAccountToken  = env.MustString("POSTMARK_ACCOUNT_TOKEN")
+	notificationFromName  = env.GetString("NOTIFICATION_FROM_NAME", "Sator.io")
+	notificationFromEmail = env.GetString("NOTIFICATION_FROM_EMAIL", "notifications@sator.io")
+
+	// Product
+	productName    = env.GetString("PRODUCT_NAME", "Sator.io")
+	productURL     = env.GetString("PRODUCT_URL", "https://sator.io")
+	supportURL     = env.GetString("SUPPORT_URL", "https://sator.io")
+	supportEmail   = env.GetString("SUPPORT_EMAIL", "support@sator.io")
+	companyName    = env.GetString("COMPANY_NAME", "Sator")
+	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
 )
 
 func main() {
@@ -110,6 +126,18 @@ func main() {
 	if err := db.Ping(); err != nil {
 		log.Fatalf("db pinng error: %v", err)
 	}
+
+	// Init mail service
+	mailer := mail.New(postmark.NewClient(postmarkServerToken, postmarkAccountToken), mail.Config{
+		ProductName:    productName,
+		ProductURL:     productURL,
+		SupportURL:     supportURL,
+		SupportEmail:   supportEmail,
+		CompanyName:    companyName,
+		CompanyAddress: companyAddress,
+		FromEmail:      notificationFromEmail,
+		FromName:       notificationFromName,
+	})
 
 	r := chi.NewRouter()
 	{
@@ -162,7 +190,7 @@ func main() {
 				walletService,
 				masterOTPHash,
 				auth.WithCustomOTPLength(otpLength),
-				// auth.WithMailService(/** encapsulate mail service */),
+				auth.WithMailService(mailer),
 			), jwtMdw),
 			logger,
 		))
