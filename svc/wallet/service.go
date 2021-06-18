@@ -13,15 +13,6 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-const (
-	TokenAccount       SolanaAccountType = "token_account"   // custom token account with sator tokens
-	GeneralAccount     SolanaAccountType = "general_account" // general account with SOL
-	FeePayerAccount    SolanaAccountType = "fee_payer"       // general account with SOL to pay transaction comission
-	IssuerAccount      SolanaAccountType = "issuer"          // sator tokens issuer
-	DistributorAccount SolanaAccountType = "distributor"     // sator tokens distributor
-	AssetAccount       SolanaAccountType = "asset"           // sator token account
-)
-
 type (
 	// Service struct
 	Service struct {
@@ -31,16 +22,6 @@ type (
 		satorAssetName  string
 		solanaAssetName string
 	}
-
-	// Balance struct
-	Balance struct {
-		SolanaAccountAddress string  `json:"solana_account_address"`
-		Currency             string  `json:"currency"`
-		Amount               float64 `json:"amount"`
-	}
-
-	// SolanaAccountType solana account type
-	SolanaAccountType string
 
 	walletRepository interface {
 		CreateWallet(ctx context.Context, arg repository.CreateWalletParams) (repository.Wallet, error)
@@ -71,18 +52,7 @@ type (
 	rewardsService interface {
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	}
-
-	// Transaction ...
-	Transaction struct {
-		TxHash    string  `json:"tx_hash"`
-		Amount    float64 `json:"amount"`
-		CreatedAt string  `json:"created_at"`
-	}
 )
-
-func (t SolanaAccountType) String() string {
-	return string(t)
-}
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
@@ -100,6 +70,26 @@ func NewService(wr walletRepository, sc solanaClient, rw rewardsService) *Servic
 		solanaAssetName: "SOL",
 		satorAssetName:  "SAO",
 	}
+}
+
+// GetWallets returns current user's wallets list with balance
+func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (interface{}, error) {
+	balance, err := s.getWalletsBalance(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	rewAmount, err := s.rw.GetTotalAmount(ctx, uid)
+	if err != nil {
+		rewAmount = 0
+	}
+
+	balance = append(balance, Balance{
+		Currency: "rewards",
+		Amount:   rewAmount,
+	})
+
+	return balance, nil
 }
 
 // GetBalanceWithRewards returns current user's balance
@@ -154,9 +144,9 @@ func (s *Service) getWalletsBalance(ctx context.Context, userID uuid.UUID) ([]Ba
 		}
 
 		result = append(result, Balance{
-			SolanaAccountAddress: sa.PublicKey,
-			Currency:             currency,
-			Amount:               amount,
+			// SolanaAccountAddress: sa.PublicKey,
+			Currency: currency,
+			Amount:   amount,
 		})
 	}
 
