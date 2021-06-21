@@ -324,6 +324,10 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return fmt.Errorf("could not verify email address: %w", err)
 	}
 
+	if err := s.ws.CreateWallet(ctx, userID); err != nil {
+		return fmt.Errorf("could not create solana wallet: %w", err)
+	}
+
 	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
 		RequestType: repository.VerifyConfirmAccount,
 		UserID:      userID,
@@ -417,23 +421,11 @@ func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp 
 		return fmt.Errorf("could not update email: %w", err)
 	}
 
-	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
-		RequestType: repository.VerifyChangeEmail,
-		UserID:      userID,
-	}); err != nil {
-		// just log, not any error for user
-		log.Printf("could not delete change email verifications for user with id=%s: %v", userID.String(), err)
-	}
-
 	if err := s.ur.UpdateUserVerifiedAt(ctx, repository.UpdateUserVerifiedAtParams{
 		UserID:     userID,
 		VerifiedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	}); err != nil {
 		return fmt.Errorf("could not verify email address: %w", err)
-	}
-
-	if err := s.ws.CreateWallet(ctx, userID); err != nil {
-		return fmt.Errorf("could not create solana wallet: %w", err)
 	}
 
 	if err := s.ur.DeleteUserVerificationsByUserID(ctx, repository.DeleteUserVerificationsByUserIDParams{
