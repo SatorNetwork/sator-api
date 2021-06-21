@@ -10,7 +10,7 @@ import (
 )
 
 const getDataByQRCodeID = `-- name: GetDataByQRCodeID :one
-SELECT id, show_id, episode_id, reward_amount, starts_at, expires_at, updated_at, created_at
+SELECT id, show_id, episode_id, starts_at, expires_at, updated_at, created_at, reward_amount
 FROM qrcodes
 WHERE id = $1
     LIMIT 1
@@ -23,11 +23,11 @@ func (q *Queries) GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (Qrcode, 
 		&i.ID,
 		&i.ShowID,
 		&i.EpisodeID,
-		&i.RewardAmount,
 		&i.StartsAt,
 		&i.ExpiresAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.RewardAmount,
 	)
 	return i, err
 }

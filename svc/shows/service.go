@@ -28,6 +28,7 @@ type (
 
 	showsRepository interface {
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
 	}
 
 	// Challenges service client
@@ -57,7 +58,7 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToShow(shows), nil
+	return castToListShow(shows), nil
 }
 
 // GetShowChallenges returns challenges by show id.
@@ -71,7 +72,7 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit
 }
 
 // Cast repository.Show to service Show structure
-func castToShow(source []repository.Show) []Show {
+func castToListShow(source []repository.Show) []Show {
 	result := make([]Show, 0, len(source))
 	for _, s := range source {
 		result = append(result, Show{
@@ -82,4 +83,23 @@ func castToShow(source []repository.Show) []Show {
 		})
 	}
 	return result
+}
+
+// GetShowByID returns show with provided id.
+func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+	show, err := s.sr.GetShowByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
+	}
+	return castToShow(show), nil
+}
+
+// Cast repository.Show to service Show structure
+func castToShow(source repository.Show) Show {
+	return Show{
+		ID:            source.ID,
+		Title:         source.Title,
+		Cover:         source.Cover,
+		HasNewEpisode: source.HasNewEpisode,
+	}
 }

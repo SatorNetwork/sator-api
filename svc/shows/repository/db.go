@@ -22,6 +22,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.getShowByIDStmt, err = db.PrepareContext(ctx, getShowByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetShowByID: %w", err)
+	}
 	if q.getShowsStmt, err = db.PrepareContext(ctx, getShows); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShows: %w", err)
 	}
@@ -30,6 +33,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.getShowByIDStmt != nil {
+		if cerr := q.getShowByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getShowByIDStmt: %w", cerr)
+		}
+	}
 	if q.getShowsStmt != nil {
 		if cerr := q.getShowsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getShowsStmt: %w", cerr)
@@ -72,15 +80,17 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db           DBTX
-	tx           *sql.Tx
-	getShowsStmt *sql.Stmt
+	db              DBTX
+	tx              *sql.Tx
+	getShowByIDStmt *sql.Stmt
+	getShowsStmt    *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:           tx,
-		tx:           tx,
-		getShowsStmt: q.getShowsStmt,
+		db:              tx,
+		tx:              tx,
+		getShowByIDStmt: q.getShowByIDStmt,
+		getShowsStmt:    q.getShowsStmt,
 	}
 }

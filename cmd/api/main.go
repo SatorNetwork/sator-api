@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -22,6 +23,8 @@ import (
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/qrcodes"
+	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/questions"
 	questionsClient "github.com/SatorNetwork/sator-api/svc/questions/client"
 	questionsRepo "github.com/SatorNetwork/sator-api/svc/questions/repository"
@@ -41,6 +44,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
 	"github.com/rs/cors"
@@ -67,13 +71,28 @@ var (
 	jwtTTL        = env.GetDuration("JWT_TTL", 24*time.Hour)
 
 	// Auth
-	otpLength = env.GetInt("OTP_LENGTH", 5)
+	otpLength     = env.GetInt("OTP_LENGTH", 5)
+	masterOTPHash = os.Getenv("MASTER_OTP_HASH")
 
 	// Quiz
 	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+
+	// Mailer
+	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
+	postmarkAccountToken  = env.MustString("POSTMARK_ACCOUNT_TOKEN")
+	notificationFromName  = env.GetString("NOTIFICATION_FROM_NAME", "Sator.io")
+	notificationFromEmail = env.GetString("NOTIFICATION_FROM_EMAIL", "notifications@sator.io")
+
+	// Product
+	productName    = env.GetString("PRODUCT_NAME", "Sator.io")
+	productURL     = env.GetString("PRODUCT_URL", "https://sator.io")
+	supportURL     = env.GetString("SUPPORT_URL", "https://sator.io")
+	supportEmail   = env.GetString("SUPPORT_EMAIL", "support@sator.io")
+	companyName    = env.GetString("COMPANY_NAME", "Sator")
+	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
 )
 
 func main() {
@@ -110,6 +129,18 @@ func main() {
 		log.Fatalf("db pinng error: %v", err)
 	}
 
+	// Init mail service
+	mailer := mail.New(postmark.NewClient(postmarkServerToken, postmarkAccountToken), mail.Config{
+		ProductName:    productName,
+		ProductURL:     productURL,
+		SupportURL:     supportURL,
+		SupportEmail:   supportEmail,
+		CompanyName:    companyName,
+		CompanyAddress: companyAddress,
+		FromEmail:      notificationFromEmail,
+		FromName:       notificationFromName,
+	})
+
 	r := chi.NewRouter()
 	{
 		r.Use(middleware.Recoverer)
@@ -142,12 +173,12 @@ func main() {
 		log.Fatalf("walletRepo error: %v", err)
 	}
 	walletService := wallet.NewService(wRepo, solana.New(solanaApiBaseUrl), rewardRepo)
-	r.Mount("/wallets", wallet.MakeHTTPHandler(
+	// FIXME:  /wallet is deprecated path
+	r.Mount("/wallet", wallet.MakeHTTPHandler(
 		wallet.MakeEndpoints(walletService, jwtMdw),
 		logger,
 	))
-	// TODO: deprecated! remove after client change endpoint to get wallet/balance
-	r.Mount("/wallet", wallet.MakeHTTPHandler(
+	r.Mount("/wallets", wallet.MakeHTTPHandler(
 		wallet.MakeEndpoints(walletService, jwtMdw),
 		logger,
 	))
@@ -164,8 +195,9 @@ func main() {
 				jwtInteractor,
 				repo,
 				walletService,
+				masterOTPHash,
 				auth.WithCustomOTPLength(otpLength),
-				// auth.WithMailService(/** encapsulate mail service */),
+				auth.WithMailService(mailer),
 			), jwtMdw),
 			logger,
 		))
@@ -222,6 +254,16 @@ func main() {
 	rewardClient := rewardsClient.New(rewardSvc)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
 		rewards.MakeEndpoints(rewardSvc, jwtMdw),
+		logger,
+	))
+
+	// QR-codes service
+	qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("qrcodesRepo error: %v", err)
+	}
+	r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
+		qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo, rewardClient), jwtMdw),
 		logger,
 	))
 
