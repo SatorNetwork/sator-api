@@ -373,15 +373,19 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 }
 
 // GetListTransactionsByWalletID returns list of all transactions of specific wallet.
-func (s *Service) GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error) {
-	return s.getListTransactionsByWalletID(ctx, walletID)
+func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ interface{}, err error) {
+	return s.getListTransactionsByWalletID(ctx, userID, walletID)
 }
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
-func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]Transaction, error) {
+func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (Transactions, error) {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return nil, err
+	}
+
+	if wallet.UserID != userID {
+		return nil, ErrForbidden
 	}
 
 	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
@@ -394,7 +398,7 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uu
 		return nil, err
 	}
 
-	txList := make([]Transaction, 0, len(transactions))
+	txList := make(Transactions, 0, len(transactions))
 	for _, tx := range transactions {
 		txList = append(txList, castSolanaTxToTransaction(tx))
 	}

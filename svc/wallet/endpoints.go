@@ -21,7 +21,7 @@ type (
 	}
 
 	service interface {
-		GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error)
+		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ interface{}, err error)
 		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error)
@@ -64,7 +64,12 @@ func MakeGetListTransactionsByWalletIDEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get wallet id: %w", err)
 		}
 
-		transactions, err := s.GetListTransactionsByWalletID(ctx, walletUID)
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		transactions, err := s.GetListTransactionsByWalletID(ctx, uid, walletUID)
 		if err != nil {
 			return nil, err
 		}
