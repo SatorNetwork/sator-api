@@ -356,7 +356,7 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
-  /wallets/balance:
+  /balance:
     get:
       tags:
         - "Wallet"
@@ -645,18 +645,18 @@ paths:
               schema:
                 type: object
                 properties:
-                    id:
-                      type: string
-                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    title:
-                      type: string
-                      example: "Peaky Blinders"
-                    cover:
-                      type: string
-                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
-                    has_new_episode:
-                      type: boolean
-                      example: true
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "Peaky Blinders"
+                  cover:
+                    type: string
+                    example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                  has_new_episode:
+                    type: boolean
+                    example: true
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

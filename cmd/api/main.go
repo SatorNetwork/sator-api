@@ -18,6 +18,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
+	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
@@ -36,8 +37,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
+	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
-
 	"github.com/dmitrymomot/distlock"
 	"github.com/dmitrymomot/distlock/inmem"
 	"github.com/dmitrymomot/go-env"
@@ -114,6 +115,9 @@ func main() {
 		distlock.WithTries(10),
 	)
 
+	// runtime group
+	var g run.Group
+
 	// Init DB connection
 	db, err := sql.Open("postgres", dbConnString)
 	if err != nil {
@@ -161,41 +165,32 @@ func main() {
 	jwtMdw := jwt.NewParser(jwtSigningKey)
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
-	// rewards repo
-	// TODO: needs refactoring
-	rewardRepository, err := rewardsRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("rewardsRepo error: %v", err)
-	}
-
+	var walletSvcClient *walletClient.Client
 	// Wallet service
-	walletRepository, err := walletRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("walletRepo error: %v", err)
+	{
+		wRepo, err := walletRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("walletRepo error: %v", err)
+		}
+		walletService := wallet.NewService(wRepo, solana.New(solanaApiBaseUrl))
+		r.Mount("/wallets", wallet.MakeHTTPHandler(
+			wallet.MakeEndpoints(walletService, jwtMdw),
+			logger,
+		))
 	}
-	walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), rewardRepository)
-	// FIXME:  /wallet is deprecated path
-	r.Mount("/wallet", wallet.MakeHTTPHandler(
-		wallet.MakeEndpoints(walletService, jwtMdw),
-		logger,
-	))
-	r.Mount("/wallets", wallet.MakeHTTPHandler(
-		wallet.MakeEndpoints(walletService, jwtMdw),
-		logger,
-	))
 
 	// Auth service
 	{
 		// auth
-		authRepository, err := authRepo.Prepare(ctx, db)
+		repo, err := authRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("authRepo error: %v", err)
 		}
 		r.Mount("/auth", auth.MakeHTTPHandler(
 			auth.MakeEndpoints(auth.NewService(
 				jwtInteractor,
-				authRepository,
-				walletService,
+				repo,
+				walletSvcClient,
 				masterOTPHash,
 				auth.WithCustomOTPLength(otpLength),
 				auth.WithMailService(mailer),
@@ -206,98 +201,123 @@ func main() {
 
 	// Profile service
 	{
-		profileRepository, err := profileRepo.Prepare(ctx, db)
+		repo, err := profileRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("profileRepo error: %v", err)
 		}
 		r.Mount("/profile", profile.MakeHTTPHandler(
-			profile.MakeEndpoints(profile.NewService(profileRepository), jwtMdw),
+			profile.MakeEndpoints(profile.NewService(repo), jwtMdw),
 			logger,
 		))
 	}
 
-	// Challenges service
-	challengeRepository, err := challengeRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("challengeRepo error: %v", err)
-	}
-	challengeSvc := challenge.NewService(
-		challengeRepository,
-		challenge.DefaultPlayURLGenerator(
-			fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
-		),
-	)
-	challengeSvcClient := challengeClient.New(challengeSvc)
-	r.Mount("/challenges", challenge.MakeHTTPHandler(
-		challenge.MakeEndpoints(challengeSvc, jwtMdw),
-		logger,
-	))
+	// Challenge client instance
+	var challengeSvcClient *challengeClient.Client
 
 	// Shows service
-	showRepo, err := showsRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("showsRepo error: %v", err)
-	}
-	r.Mount("/shows", shows.MakeHTTPHandler(
-		shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
-		logger,
-	))
+	{
+		// Challenges service
+		challengeRepo, err := challengeRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("challengeRepo error: %v", err)
+		}
+		challengeSvc := challenge.NewService(
+			challengeRepo,
+			challenge.DefaultPlayURLGenerator(
+				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
+			),
+		)
+		challengeSvcClient = challengeClient.New(challengeSvc)
+		r.Mount("/challenges", challenge.MakeHTTPHandler(
+			challenge.MakeEndpoints(challengeSvc, jwtMdw),
+			logger,
+		))
 
-	// Questions service
-	questionsRepository, err := questionsRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("questionsRepo error: %v", err)
+		// Shows service
+		showRepo, err := showsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("showsRepo error: %v", err)
+		}
+		r.Mount("/shows", shows.MakeHTTPHandler(
+			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
+			logger,
+		))
 	}
-	questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
 
+	var rewardsSvcClient *rewardsClient.Client
 	// Rewards service
-	rewardSvc := rewards.NewService(rewardRepository, walletService)
-	rewardClient := rewardsClient.New(rewardSvc)
-	r.Mount("/rewards", rewards.MakeHTTPHandler(
-		rewards.MakeEndpoints(rewardSvc, jwtMdw),
-		logger,
-	))
+	{
+		rewardRepo, err := rewardsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("rewardsRepo error: %v", err)
+		}
+		rewardSvc := rewards.NewService(rewardRepo, walletSvcClient)
+		rewardsSvcClient = rewardsClient.New(rewardSvc)
+		r.Mount("/rewards", rewards.MakeHTTPHandler(
+			rewards.MakeEndpoints(rewardSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	// Balance service
+	{
+		r.Mount("/rewards", balance.MakeHTTPHandler(
+			balance.MakeEndpoints(balance.NewService(walletSvcClient, rewardsSvcClient), jwtMdw),
+			logger,
+		))
+	}
 
 	// QR-codes service
-	qrcodesRepository, err := qrcodesRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("qrcodesRepo error: %v", err)
+	{
+		qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("qrcodesRepo error: %v", err)
+		}
+		r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
+			qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo, rewardsSvcClient), jwtMdw),
+			logger,
+		))
 	}
-	r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
-		qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepository, rewardClient), jwtMdw),
-		logger,
-	))
 
 	// Quiz service
-	quizRepository, err := quizRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("quizRepo error: %v", err)
-	}
-	quizSvc := quiz.NewService(
-		mutex,
-		quizRepository,
-		questionsSvcClient,
-		rewardClient,
-		challengeSvcClient,
-		quizWsConnURL,
-		quiz.WithCustomTokenGenerateFunction(signature.NewTemporary),
-		quiz.WithCustomTokenParseFunction(signature.Parse),
-	)
-	r.Mount("/quiz", quiz.MakeHTTPHandler(
-		quiz.MakeEndpoints(quizSvc, jwtMdw),
-		logger,
-		quiz.QuizWsHandler(quizSvc),
-	))
-
-	var g run.Group
 	{
+		// Questions service
+		questRepo, err := questionsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("questionsRepo error: %v", err)
+		}
+		questClient := questionsClient.New(questions.NewService(questRepo))
+
+		// Quiz service
+		quizRepo, err := quizRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("quizRepo error: %v", err)
+		}
+		quizSvc := quiz.NewService(
+			mutex,
+			quizRepo,
+			questClient,
+			rewardsSvcClient,
+			challengeSvcClient,
+			quizWsConnURL,
+			quiz.WithCustomTokenGenerateFunction(signature.NewTemporary),
+			quiz.WithCustomTokenParseFunction(signature.Parse),
+		)
+		r.Mount("/quiz", quiz.MakeHTTPHandler(
+			quiz.MakeEndpoints(quizSvc, jwtMdw),
+			logger,
+			quiz.QuizWsHandler(quizSvc),
+		))
+
 		// run quiz service
 		g.Add(func() error {
 			return quizSvc.Serve(ctx)
 		}, func(err error) {
 			log.Fatalf("quiz service: %v", err)
 		})
+	}
 
+	{
 		// Init and run http server
 		httpServer := &http.Server{
 			Handler: r,
