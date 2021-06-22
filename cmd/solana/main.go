@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"github.com/portto/solana-go-sdk/client"
 	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -45,7 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(repo, solana.New("https://api.devnet.solana.com/"))
+	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint))
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)

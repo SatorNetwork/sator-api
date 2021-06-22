@@ -39,6 +39,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/dmitrymomot/distlock"
 	"github.com/dmitrymomot/distlock/inmem"
 	"github.com/dmitrymomot/go-env"
@@ -168,11 +169,11 @@ func main() {
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
-		wRepo, err := walletRepo.Prepare(ctx, db)
+		walletRepository, err := walletRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(wRepo, solana.New(solanaApiBaseUrl))
+		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl))
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
 			logger,
@@ -182,14 +183,14 @@ func main() {
 	// Auth service
 	{
 		// auth
-		repo, err := authRepo.Prepare(ctx, db)
+		authRepository, err := authRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("authRepo error: %v", err)
 		}
 		r.Mount("/auth", auth.MakeHTTPHandler(
 			auth.MakeEndpoints(auth.NewService(
 				jwtInteractor,
-				repo,
+				authRepository,
 				walletSvcClient,
 				masterOTPHash,
 				auth.WithCustomOTPLength(otpLength),
@@ -201,12 +202,12 @@ func main() {
 
 	// Profile service
 	{
-		repo, err := profileRepo.Prepare(ctx, db)
+		profileRepository, err := profileRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("profileRepo error: %v", err)
 		}
 		r.Mount("/profile", profile.MakeHTTPHandler(
-			profile.MakeEndpoints(profile.NewService(repo), jwtMdw),
+			profile.MakeEndpoints(profile.NewService(profileRepository), jwtMdw),
 			logger,
 		))
 	}
@@ -217,12 +218,12 @@ func main() {
 	// Shows service
 	{
 		// Challenges service
-		challengeRepo, err := challengeRepo.Prepare(ctx, db)
+		challengeRepository, err := challengeRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("challengeRepo error: %v", err)
 		}
 		challengeSvc := challenge.NewService(
-			challengeRepo,
+			challengeRepository,
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
@@ -247,14 +248,14 @@ func main() {
 	var rewardsSvcClient *rewardsClient.Client
 	// Rewards service
 	{
-		rewardRepo, err := rewardsRepo.Prepare(ctx, db)
+		rewardsRepository, err := rewardsRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("rewardsRepo error: %v", err)
 		}
-		rewardSvc := rewards.NewService(rewardRepo, walletSvcClient)
-		rewardsSvcClient = rewardsClient.New(rewardSvc)
+		rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
+		rewardsSvcClient = rewardsClient.New(rewardService)
 		r.Mount("/rewards", rewards.MakeHTTPHandler(
-			rewards.MakeEndpoints(rewardSvc, jwtMdw),
+			rewards.MakeEndpoints(rewardService, jwtMdw),
 			logger,
 		))
 	}
@@ -269,12 +270,12 @@ func main() {
 
 	// QR-codes service
 	{
-		qrcodesRepo, err := qrcodesRepo.Prepare(ctx, db)
+		qrcodesRepository, err := qrcodesRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("qrcodesRepo error: %v", err)
 		}
 		r.Mount("/qrcodes", qrcodes.MakeHTTPHandler(
-			qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepo, rewardsSvcClient), jwtMdw),
+			qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepository, rewardsSvcClient), jwtMdw),
 			logger,
 		))
 	}
@@ -282,21 +283,21 @@ func main() {
 	// Quiz service
 	{
 		// Questions service
-		questRepo, err := questionsRepo.Prepare(ctx, db)
+		questionsRepository, err := questionsRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("questionsRepo error: %v", err)
 		}
-		questClient := questionsClient.New(questions.NewService(questRepo))
+		questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
 
 		// Quiz service
-		quizRepo, err := quizRepo.Prepare(ctx, db)
+		quizRepository, err := quizRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("quizRepo error: %v", err)
 		}
 		quizSvc := quiz.NewService(
 			mutex,
-			quizRepo,
-			questClient,
+			quizRepository,
+			questionsSvcClient,
 			rewardsSvcClient,
 			challengeSvcClient,
 			quizWsConnURL,

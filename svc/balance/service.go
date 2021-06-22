@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/svc/wallet"
+
 	"github.com/google/uuid"
 )
 
