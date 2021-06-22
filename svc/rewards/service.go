@@ -3,6 +3,7 @@ package rewards
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
@@ -16,6 +17,8 @@ const (
 	// TransactionTypeWithdraw indicates that transaction type withdraw.
 	TransactionTypeWithdraw
 )
+
+var sqlNoRowsErr = errors.New("sql: no rows in result set")
 
 type (
 	// Service struct
@@ -88,6 +91,10 @@ func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID,
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error) {
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
+		if amount == 0 {
+			return ClaimRewardsResult{}, errors.New("you have already claimed all rewards")
+		}
+
 		return ClaimRewardsResult{}, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
@@ -120,7 +127,12 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
+		if errors.Is(err, sqlNoRowsErr) {
+			return 0, nil
+		}
+
 		return 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
+
 	return amount, nil
 }
