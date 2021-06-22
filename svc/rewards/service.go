@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 
 	"github.com/google/uuid"
@@ -88,6 +89,10 @@ func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID,
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error) {
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
+		if db.IsNotFoundError(err) {
+			return ClaimRewardsResult{}, ErrRewardsAlreadyClaimed
+		}
+
 		return ClaimRewardsResult{}, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
@@ -120,7 +125,12 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+
 		return 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
+
 	return amount, nil
 }
