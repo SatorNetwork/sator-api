@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 
@@ -16,11 +17,17 @@ import (
 type (
 	// Service struct
 	Service struct {
-		wr              walletRepository
-		sc              solanaClient
-		rw              rewardsService
+		wr walletRepository
+		sc solanaClient
+		// rw rewardsService
+
 		satorAssetName  string
 		solanaAssetName string
+
+		walletDetailsURL        string // url template to get SOL & SAO wallet types details
+		walletTransactionsURL   string // url template to get SOL & SAO wallet types transactions list
+		rewardsWalletDetailsURL string // url template to get rewards wallet type details
+		rewardsTransactionsURL  string // url template to get rewards wallet type transactions list
 	}
 
 	walletRepository interface {
@@ -49,14 +56,14 @@ type (
 		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
-	rewardsService interface {
-		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
-	}
+	// rewardsService interface {
+	// 	GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
+	// }
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solanaClient, rw rewardsService) *Service {
+func NewService(wr walletRepository, sc solanaClient) *Service {
 	if wr == nil {
 		log.Fatalln("wallet repository is not set")
 	}
@@ -64,93 +71,119 @@ func NewService(wr walletRepository, sc solanaClient, rw rewardsService) *Servic
 		log.Fatalln("solana client is not set")
 	}
 	return &Service{
-		wr:              wr,
-		sc:              sc,
-		rw:              rw,
+		wr: wr,
+		sc: sc,
+		// rw: rw,
+
 		solanaAssetName: "SOL",
 		satorAssetName:  "SAO",
+
+		walletDetailsURL:        "/wallets/%s",
+		walletTransactionsURL:   "/wallets/%s/transactions",
+		rewardsWalletDetailsURL: "/rewards/wallet",
+		rewardsTransactionsURL:  "/rewards/transactions",
 	}
 }
 
 // GetWallets returns current user's wallets list with balance
-func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (interface{}, error) {
-	balance, err := s.getWalletsBalance(ctx, uid)
+func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error) {
+	wallets, err := s.wr.GetWalletsByUserID(ctx, uid)
 	if err != nil {
-		return nil, err
+		if db.IsNotFoundError(err) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("could not get wallets list: %w", err)
 	}
 
-	rewAmount, err := s.rw.GetTotalAmount(ctx, uid)
-	if err != nil {
-		rewAmount = 0
-	}
-
-	balance = append(balance, Balance{
-		Currency: "rewards",
-		Amount:   rewAmount,
-	})
-
-	return balance, nil
-}
-
-// GetBalanceWithRewards returns current user's balance
-func (s *Service) GetBalanceWithRewards(ctx context.Context, uid uuid.UUID) (interface{}, error) {
-	balance, err := s.getWalletsBalance(ctx, uid)
-	if err != nil {
-		return nil, err
-	}
-
-	rewAmount, err := s.rw.GetTotalAmount(ctx, uid)
-	if err != nil {
-		rewAmount = 0
-	}
-
-	balance = append(balance, Balance{
-		Currency: "rewards",
-		Amount:   rewAmount,
-	})
-
-	return balance, nil
-}
-
-// getWalletsBalance returns wallet's solana account address, currency and amount.
-func (s *Service) getWalletsBalance(ctx context.Context, userID uuid.UUID) ([]Balance, error) {
-	wallets, err := s.wr.GetWalletsByUserID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get wallets of current user [%s]: %w", userID.String(), err)
-	}
-
-	result := make([]Balance, 0, len(wallets))
+	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
-		sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
-		if err != nil {
-			log.Printf("could not get solana account with id=%s: %v", w.SolanaAccountID.String(), err)
-			continue
+		wli := WalletsListItem{ID: w.ID.String(), Type: w.WalletType}
+
+		switch w.WalletType {
+		case WalletTypeSolana, WalletTypeSator:
+			wli.GetDetailsURL = fmt.Sprintf(s.walletDetailsURL, w.ID.String())
+			wli.GetTransactionsURL = fmt.Sprintf(s.walletTransactionsURL, w.ID.String())
+		case WalletTypeRewards:
+			wli.GetDetailsURL = s.rewardsWalletDetailsURL
+			wli.GetTransactionsURL = s.rewardsTransactionsURL
 		}
 
-		var currency string
-		var amount float64
-
-		switch sa.AccountType {
-		case TokenAccount.String():
-			currency = s.satorAssetName
-			if bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey); err == nil {
-				amount = bal
-			}
-		case GeneralAccount.String():
-			currency = s.solanaAssetName
-			if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
-				amount = bal
-			}
-		}
-
-		result = append(result, Balance{
-			// SolanaAccountAddress: sa.PublicKey,
-			Currency: currency,
-			Amount:   amount,
-		})
+		result = append(result, wli)
 	}
 
 	return result, nil
+}
+
+// GetWalletByID returns wallet details by wallet id
+func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error) {
+	w, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Wallet{}, fmt.Errorf("%w wallet", ErrNotFound)
+		}
+		return Wallet{}, fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	if w.UserID != userID {
+		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Wallet{}, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return Wallet{}, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	var balance []Balance
+
+	switch sa.AccountType {
+	case TokenAccount.String():
+		if bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey); err == nil {
+			balance = []Balance{
+				{
+					Currency: s.satorAssetName,
+					Amount:   bal,
+				},
+				{
+					Currency: "USD",
+					Amount:   bal * 1.25, // FIXME: setup currency rate
+				},
+			}
+		}
+	case GeneralAccount.String():
+		if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
+			balance = []Balance{
+				{
+					Currency: s.solanaAssetName,
+					Amount:   bal,
+				},
+				{
+					Currency: "USD",
+					Amount:   bal * 34.5, // FIXME: setup currency rate
+				},
+			}
+		}
+	}
+
+	return Wallet{
+		ID:                   w.ID.String(),
+		SolanaAccountAddress: sa.PublicKey,
+		Actions: []Action{
+			{
+				Type: ActionSendTokens.String(),
+				Name: ActionSendTokens.Name(),
+				URL:  "",
+			},
+			{
+				Type: ActionReceiveTokens.String(),
+				Name: ActionReceiveTokens.Name(),
+				URL:  "",
+			},
+		},
+		Balance: balance,
+	}, nil
 }
 
 // CreateWallet creates wallet for user with specified id.
@@ -367,11 +400,6 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, walletID uu
 	}
 
 	return txList, nil
-}
-
-// GetBalanceByUserID returns all user's wallets balance info's.
-func (s *Service) GetBalanceByUserID(ctx context.Context, userID uuid.UUID) ([]Balance, error) {
-	return s.getWalletsBalance(ctx, userID)
 }
 
 // Transfer sends transaction from one account to another.

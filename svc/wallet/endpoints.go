@@ -14,16 +14,16 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		Transfer                      endpoint.Endpoint
-		GetBalance                    endpoint.Endpoint
 		GetWallets                    endpoint.Endpoint
+		GetWalletByID                 endpoint.Endpoint
 		GetListTransactionsByWalletID endpoint.Endpoint
+		Transfer                      endpoint.Endpoint
 	}
 
 	service interface {
-		GetBalanceWithRewards(ctx context.Context, uid uuid.UUID) (interface{}, error)
+		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
+		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		GetListTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) (_ interface{}, err error)
-		GetBalanceByUserID(ctx context.Context, userID uuid.UUID) ([]Balance, error)
 		Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error)
 	}
 
@@ -38,39 +38,59 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		Transfer:                      MakeTransferEndpoint(s, validateFunc),
-		GetBalance:                    MakeGetBalanceEndpoint(s),
 		GetWallets:                    MakeGetWalletsEndpoint(s),
+		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s),
+		Transfer:                      MakeTransferEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
 	if len(m) > 0 {
 		for _, mdw := range m {
-			e.Transfer = mdw(e.Transfer)
-			e.GetBalance = mdw(e.GetBalance)
-			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
 			e.GetWallets = mdw(e.GetWallets)
+			e.GetWalletByID = mdw(e.GetWalletByID)
+			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
+			e.Transfer = mdw(e.Transfer)
 		}
 	}
 
 	return e
 }
 
-// MakeGetBalanceEndpoint ...
-func MakeGetBalanceEndpoint(s service) endpoint.Endpoint {
+func MakeGetWalletsEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		balance, err := s.GetBalanceWithRewards(ctx, uid)
+		wallets, err := s.GetWallets(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
 
-		return balance, nil
+		return wallets, nil
+	}
+}
+
+func MakeGetWalletByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		walletID, err := uuid.Parse(req.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		w, err := s.GetWalletByID(ctx, uid, walletID)
+		if err != nil {
+			return nil, err
+		}
+
+		return w, nil
 	}
 }
 
@@ -87,22 +107,6 @@ func MakeGetListTransactionsByWalletIDEndpoint(s service) endpoint.Endpoint {
 		}
 
 		return transactions, nil
-	}
-}
-
-func MakeGetWalletsEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, _ interface{}) (interface{}, error) {
-		uid, err := jwt.UserIDFromContext(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not get user profile id: %w", err)
-		}
-
-		balance, err := s.GetBalanceByUserID(ctx, uid)
-		if err != nil {
-			return nil, err
-		}
-
-		return balance, nil
 	}
 }
 

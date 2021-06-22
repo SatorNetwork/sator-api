@@ -78,7 +78,7 @@ func decodeGetShowChallengesRequest(ctx context.Context, r *http.Request) (inter
 	}, nil
 }
 
-func decodeGetShowByIDRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeGetShowByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "show_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
