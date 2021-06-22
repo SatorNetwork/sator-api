@@ -80,8 +80,8 @@ func NewService(wr walletRepository, sc solanaClient) *Service {
 
 		walletDetailsURL:        "/wallets/%s",
 		walletTransactionsURL:   "/wallets/%s/transactions",
-		rewardsWalletDetailsURL: "/rewards/wallet",
-		rewardsTransactionsURL:  "/rewards/transactions",
+		rewardsWalletDetailsURL: "/rewards/wallet/%s",
+		rewardsTransactionsURL:  "/rewards/wallet/%s/transactions",
 	}
 }
 
@@ -104,8 +104,8 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 			wli.GetDetailsURL = fmt.Sprintf(s.walletDetailsURL, w.ID.String())
 			wli.GetTransactionsURL = fmt.Sprintf(s.walletTransactionsURL, w.ID.String())
 		case WalletTypeRewards:
-			wli.GetDetailsURL = s.rewardsWalletDetailsURL
-			wli.GetTransactionsURL = s.rewardsTransactionsURL
+			wli.GetDetailsURL = fmt.Sprintf(s.rewardsWalletDetailsURL, w.ID.String())
+			wli.GetTransactionsURL = fmt.Sprintf(s.rewardsTransactionsURL, w.ID.String())
 		}
 
 		result = append(result, wli)
