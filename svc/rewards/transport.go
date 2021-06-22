@@ -2,6 +2,7 @@ package rewards
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
@@ -34,11 +35,26 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/wallet/{wallet_id}", httptransport.NewServer(
+		e.GetRewardsWallet,
+		decodeGetRewardsWalletRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
 func decodeClaimRewardsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
+}
+
+func decodeGetRewardsWalletRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "wallet_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
+	}
+	return id, nil
 }
 
 // returns http error code by error type

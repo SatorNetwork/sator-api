@@ -7,6 +7,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
+	"github.com/SatorNetwork/sator-api/svc/wallet"
 
 	"github.com/google/uuid"
 )
@@ -68,6 +69,26 @@ func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Servic
 	}
 
 	return s
+}
+
+func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error) {
+	amount, err := s.GetUserRewards(ctx, userID)
+	if err != nil {
+		return wallet.Wallet{}, fmt.Errorf("could  not get rewards wallet: %w", err)
+	}
+
+	return wallet.Wallet{
+		ID: walletID.String(),
+		Balance: []wallet.Balance{{
+			Currency: "unclaimed rewards",
+			Amount:   amount,
+		}},
+		Actions: []wallet.Action{{
+			Type: wallet.ActionClaimRewards.String(),
+			Name: wallet.ActionClaimRewards.Name(),
+			URL:  "/rewards/claim",
+		}},
+	}, nil
 }
 
 // AddTransaction ..
