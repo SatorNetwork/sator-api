@@ -70,7 +70,7 @@ func (s *Service) GetAccountBalance(ctx context.Context, uid uuid.UUID) (interfa
 				continue
 			}
 			balance = append(balance, Balance{
-				Currency: "unclaimed",
+				Currency: "UNCLAIMED",
 				Amount:   amount,
 			})
 		}
