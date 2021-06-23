@@ -48,6 +48,7 @@ type (
 
 	walletService interface {
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
+		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ wallet.Transactions, err error)
 	}
 
 	// Option func to set custom service options
@@ -154,4 +155,9 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, e
 	}
 
 	return amount, nil
+}
+
+// GetTransactions returns list of transactions from rewards wallet.
+func (s *Service) GetTransactions(ctx context.Context, userID, walletID uuid.UUID) (wallet.Transactions, error) {
+	return s.ws.GetListTransactionsByWalletID(ctx, userID, walletID)
 }

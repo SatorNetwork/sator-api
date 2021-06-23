@@ -373,7 +373,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 }
 
 // GetListTransactionsByWalletID returns list of all transactions of specific wallet.
-func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ interface{}, err error) {
+func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ Transactions, err error) {
 	return s.getListTransactionsByWalletID(ctx, userID, walletID)
 }
 

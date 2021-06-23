@@ -15,11 +15,13 @@ type (
 	Endpoints struct {
 		ClaimRewards     endpoint.Endpoint
 		GetRewardsWallet endpoint.Endpoint
+		GetTransactions  endpoint.Endpoint
 	}
 
 	service interface {
 		ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error)
 		GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error)
+		GetTransactions(ctx context.Context, userID, walletID uuid.UUID) (wallet.Transactions, error)
 	}
 )
 
@@ -27,6 +29,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
 		ClaimRewards:     MakeClaimRewardsEndpoint(s),
 		GetRewardsWallet: MakeGetRewardsWalletEndpoint(s),
+		GetTransactions:  MakeGetTransactionsEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -34,6 +37,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		for _, mdw := range m {
 			e.ClaimRewards = mdw(e.ClaimRewards)
 			e.GetRewardsWallet = mdw(e.GetRewardsWallet)
+			e.GetTransactions = mdw(e.GetTransactions)
 		}
 	}
 
@@ -48,12 +52,12 @@ func MakeClaimRewardsEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		resp, err := s.ClaimRewards(ctx, uid)
+		rewards, err := s.ClaimRewards(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
 
-		return resp, nil
+		return rewards, nil
 	}
 }
 
@@ -70,11 +74,33 @@ func MakeGetRewardsWalletEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get wallet id: %w", err)
 		}
 
-		resp, err := s.GetRewardsWallet(ctx, uid, walletID)
+		wallet, err := s.GetRewardsWallet(ctx, uid, walletID)
 		if err != nil {
 			return nil, err
 		}
 
-		return resp, nil
+		return wallet, nil
+	}
+}
+
+// MakeGetTransactionsEndpoint ...
+func MakeGetTransactionsEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		walletID, err := uuid.Parse(req.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		transactions, err := s.GetTransactions(ctx, uid, walletID)
+		if err != nil {
+			return nil, err
+		}
+
+		return transactions, nil
 	}
 }

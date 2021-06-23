@@ -21,7 +21,7 @@ type (
 	}
 
 	service interface {
-		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ interface{}, err error)
+		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ Transactions, err error)
 		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error)

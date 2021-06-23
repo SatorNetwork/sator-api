@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
-	"github.com/portto/solana-go-sdk/client"
 	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/go-env"
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/zeebo/errs"
 
 	_ "github.com/lib/pq" // init pg driver

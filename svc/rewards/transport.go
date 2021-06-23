@@ -42,6 +42,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/wallet/{wallet_id}/transactions", httptransport.NewServer(
+		e.GetTransactions,
+		decodeGetTransactionsRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -50,6 +57,14 @@ func decodeClaimRewardsRequest(ctx context.Context, _ *http.Request) (interface{
 }
 
 func decodeGetRewardsWalletRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "wallet_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
+	}
+	return id, nil
+}
+
+func decodeGetTransactionsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "wallet_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)

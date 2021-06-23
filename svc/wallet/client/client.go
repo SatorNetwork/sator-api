@@ -19,6 +19,7 @@ type (
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error)
 		CreateWallet(ctx context.Context, userID uuid.UUID) error
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
+		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ wallet.Transactions, err error)
 	}
 )
 
@@ -27,7 +28,7 @@ func New(s service) *Client {
 	return &Client{s: s}
 }
 
-// GetWalletsList ...
+// GetWalletsListByUserID ...
 func (c *Client) GetWalletsListByUserID(ctx context.Context, userID uuid.UUID) (wallet.Wallets, error) {
 	return c.s.GetWallets(ctx, userID)
 }
@@ -45,4 +46,9 @@ func (c *Client) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 // WithdrawRewards ...
 func (c *Client) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
 	return c.s.WithdrawRewards(ctx, userID, amount)
+}
+
+// GetListTransactionsByWalletID ...
+func (c *Client) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ wallet.Transactions, err error) {
+	return c.s.GetListTransactionsByWalletID(ctx, userID, walletID)
 }
