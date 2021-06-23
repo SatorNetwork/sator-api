@@ -13,15 +13,17 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		GetShows          endpoint.Endpoint
-		GetShowChallenges endpoint.Endpoint
-		GetShowByID       endpoint.Endpoint
+		GetShows           endpoint.Endpoint
+		GetShowChallenges  endpoint.Endpoint
+		GetShowByID        endpoint.Endpoint
+		GetShowsByCategory endpoint.Endpoint
 	}
 
 	service interface {
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
+		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 	}
 
 	// PaginationRequest struct
@@ -33,6 +35,12 @@ type (
 	// GetShowChallengesRequest struct
 	GetShowChallengesRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
+		PaginationRequest
+	}
+
+	// GetShowsByCategoryRequest struct
+	GetShowsByCategoryRequest struct {
+		Category string `json:"category"`
 		PaginationRequest
 	}
 )
@@ -58,9 +66,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetShows:          MakeGetShowsEndpoint(s, validateFunc),
-		GetShowChallenges: MakeGetShowChallengesEndpoint(s, validateFunc),
-		GetShowByID:       MakeGetShowByIDEndpoint(s),
+		GetShows:           MakeGetShowsEndpoint(s, validateFunc),
+		GetShowChallenges:  MakeGetShowChallengesEndpoint(s, validateFunc),
+		GetShowByID:        MakeGetShowByIDEndpoint(s),
+		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -69,6 +78,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShows = mdw(e.GetShows)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
 			e.GetShowByID = mdw(e.GetShowByID)
+			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 		}
 	}
 
@@ -123,6 +133,32 @@ func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 		}
 
 		resp, err := s.GetShowByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetShowsByCategoryEndpoint ...
+func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(GetShowsByCategoryRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		if req.Category != "" {
+			resp, err := s.GetShowsByCategory(ctx, req.Category, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return resp, nil
+		}
+
+		resp, err := s.GetShows(ctx, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
