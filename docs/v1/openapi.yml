@@ -813,3 +813,106 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+  /rewards/wallet/{wallet_id}:
+    get:
+      tags:
+        - "Rewards"
+      summary: returns wallet data by wallet ID.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Get wallet details, including balance and available actions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  solana_account_address:
+                    type: string
+                    example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+                  balance:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        amount:
+                          type: number
+                          example: 123.45
+                        currency:
+                          type: string
+                          example: "SAO"
+                  actions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: "send_tokens"
+                          description: "Available values: send_tokens, receive_tokens, claim_rewards"
+                        name:
+                          type: string
+                          example: "Send"
+                        url:
+                          type: string
+                          example: "/wallets/f4f78cac-5db6-4ecc-ad13-5877705f3126/send"
+                          description: "Relative URL for the request to send tokens"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /rewards/wallet/{wallet_id}/transactions:
+    get:
+      tags:
+        - "Rewards"
+      summary: Returns all transactions of specific rewards wallet.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Get wallet transactions list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tx_hash:
+                      type: string
+                      example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+                    amount:
+                      type: number
+                      example: 123.45
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
