@@ -27,4 +27,5 @@ type Wallet struct {
 	UpdatedAt       sql.NullTime  `json:"updated_at"`
 	CreatedAt       time.Time     `json:"created_at"`
 	WalletType      string        `json:"wallet_type"`
+	Sort            int32         `json:"sort"`
 }
