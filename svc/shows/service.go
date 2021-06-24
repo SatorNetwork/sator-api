@@ -27,10 +27,22 @@ type (
 		HasNewEpisode bool      `json:"has_new_episode"`
 	}
 
+	Episode struct {
+		ID            uuid.UUID `json:"id"`
+		ShowID        uuid.UUID `json:"show_id"`
+		EpisodeNumber int32     `json:"episode_number"`
+		Cover         string    `json:"cover"`
+		Title         string    `json:"title"`
+		Description   string    `json:"description"`
+		ReleaseDate   string    `json:"release_date"`
+	}
+
 	showsRepository interface {
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
+		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.Episode, error)
+		GetEpisodes(ctx context.Context, arg repository.GetEpisodesParams) ([]repository.Episode, error)
 	}
 
 	// Challenges service client
@@ -48,6 +60,7 @@ func NewService(sr showsRepository, chc challengesClient) *Service {
 	if chc == nil {
 		log.Fatalln("challenges client is not set")
 	}
+
 	return &Service{sr: sr, chc: chc}
 }
 
@@ -117,4 +130,55 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
 	return castToListShow(shows), nil
+}
+
+// GetEpisodes returns episodes.
+func (s *Service) GetEpisodes(ctx context.Context, limit, offset int32) (interface{}, error) {
+	episodes, err := s.sr.GetEpisodes(ctx, repository.GetEpisodesParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get episodes list: %w", err)
+	}
+	return castToListEpisodes(episodes), nil
+}
+
+// Cast repository.Episode to service Episode structure
+func castToListEpisodes(source []repository.Episode) []Episode {
+	result := make([]Episode, 0, len(source))
+	for _, s := range source {
+		result = append(result, Episode{
+			ID:            s.ID,
+			ShowID:        s.ShowID,
+			EpisodeNumber: s.EpisodeNumber,
+			Cover:         s.Cover,
+			Title:         s.Title,
+			Description:   s.Description,
+			ReleaseDate:   s.ReleaseDate.Time.String(),
+		})
+	}
+	return result
+}
+
+// GetEpisodeByID returns episode with provided id.
+func (s *Service) GetEpisodeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+	episode, err := s.sr.GetEpisodeByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("could not get episode with id=%s: %w", id, err)
+	}
+	return castToEpisode(episode), nil
+}
+
+// Cast repository.Episode to service Episode structure
+func castToEpisode(source repository.Episode) Episode {
+	return Episode{
+		ID:            source.ID,
+		ShowID:        source.ShowID,
+		EpisodeNumber: source.EpisodeNumber,
+		Cover:         source.Cover,
+		Title:         source.Title,
+		Description:   source.Description,
+		ReleaseDate:   source.ReleaseDate.Time.String(),
+	}
 }
