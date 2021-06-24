@@ -262,7 +262,7 @@ func main() {
 
 	// Balance service
 	{
-		r.Mount("/rewards", balance.MakeHTTPHandler(
+		r.Mount("/balance", balance.MakeHTTPHandler(
 			balance.MakeEndpoints(balance.NewService(walletSvcClient, rewardsSvcClient), jwtMdw),
 			logger,
 		))

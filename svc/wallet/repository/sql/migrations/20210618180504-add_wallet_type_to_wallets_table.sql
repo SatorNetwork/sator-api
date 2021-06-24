@@ -1,6 +1,6 @@
 -- +migrate Up
 ALTER TABLE wallets
-ADD COLUMN wallet_type VARCHAR NOT NULL DEFAULT "sao";
+ADD COLUMN wallet_type VARCHAR NOT NULL DEFAULT 'sao';
 ALTER TABLE ONLY wallets
 ALTER COLUMN wallet_type
 SET DEFAULT NULL;
