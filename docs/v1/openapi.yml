@@ -662,7 +662,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /shows/filter/{category}:
     get:
       tags:
@@ -674,7 +673,7 @@ paths:
         - name: category
           in: path
           description: Category.
-          required: false
+          required: true
           schema:
             type: string
         - name: page
@@ -879,7 +878,7 @@ paths:
         - "Rewards"
       summary: returns wallet data by wallet ID.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
@@ -941,7 +940,7 @@ paths:
         - "Rewards"
       summary: Returns all transactions of specific rewards wallet.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
