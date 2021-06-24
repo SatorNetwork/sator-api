@@ -25,3 +25,8 @@ WHERE user_id = @user_id
     AND withdrawn = FALSE
     AND transaction_type = 1
 GROUP BY user_id;
+-- name: GetTransactionsByUserID :many
+SELECT *
+FROM rewards
+WHERE user_id = @user_id
+ORDER BY created_at DESC;

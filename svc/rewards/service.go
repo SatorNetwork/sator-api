@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
@@ -37,6 +38,7 @@ type (
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
 		Withdraw(ctx context.Context, userID uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
+		GetTransactionsByUserID(ctx context.Context, userID uuid.UUID) ([]repository.Reward, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -48,7 +50,6 @@ type (
 
 	walletService interface {
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
-		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ wallet.Transactions, err error)
 	}
 
 	// Option func to set custom service options
@@ -158,6 +159,31 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, e
 }
 
 // GetTransactions returns list of transactions from rewards wallet.
-func (s *Service) GetTransactions(ctx context.Context, userID, walletID uuid.UUID) (wallet.Transactions, error) {
-	return s.ws.GetListTransactionsByWalletID(ctx, userID, walletID)
+func (s *Service) GetTransactions(ctx context.Context, userID uuid.UUID) (wallet.Transactions, error) {
+	txList, err := s.repo.GetTransactionsByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return wallet.Transactions{}, nil
+		}
+		return nil, fmt.Errorf("could not get rewards transactions list: %w", err)
+	}
+
+	result := wallet.Transactions{}
+	for _, tx := range txList {
+		amount := tx.Amount
+		if tx.TransactionType == TransactionTypeWithdraw {
+			amount = amount * (-1)
+		}
+		desc := tx.RelationType.String
+		if desc == "" {
+			desc = "claim rewards"
+		}
+		result = append(result, wallet.Transaction{
+			TxHash:    desc,
+			Amount:    amount,
+			CreatedAt: tx.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return result, nil
 }

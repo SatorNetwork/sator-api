@@ -62,6 +62,46 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 	return column_1, err
 }
 
+const getTransactionsByUserID = `-- name: GetTransactionsByUserID :many
+SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type
+FROM rewards
+WHERE user_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetTransactionsByUserID(ctx context.Context, userID uuid.UUID) ([]Reward, error) {
+	rows, err := q.query(ctx, q.getTransactionsByUserIDStmt, getTransactionsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Reward
+	for rows.Next() {
+		var i Reward
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.RelationID,
+			&i.Amount,
+			&i.Withdrawn,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.TransactionType,
+			&i.RelationType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const withdraw = `-- name: Withdraw :exec
 UPDATE rewards
 SET withdrawn = TRUE
