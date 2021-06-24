@@ -462,6 +462,6 @@ func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse) Transacti
 	return Transaction{
 		TxHash:    tx.TxHash,
 		Amount:    tx.Amount,
-		CreatedAt: tx.CreatedAt.String(),
+		CreatedAt: tx.CreatedAt.Format(time.RFC3339),
 	}
 }
