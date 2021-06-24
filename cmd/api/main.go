@@ -75,7 +75,7 @@ var (
 
 	// Auth
 	otpLength     = env.GetInt("OTP_LENGTH", 5)
-	masterOTPHash = os.Getenv("MASTER_OTP_HASH")
+	masterOTPHash = env.GetString("MASTER_OTP_HASH", "")
 
 	// Quiz
 	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
@@ -174,6 +174,7 @@ func main() {
 			log.Fatalf("walletRepo error: %v", err)
 		}
 		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl))
+		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
 			logger,
@@ -192,7 +193,7 @@ func main() {
 				jwtInteractor,
 				authRepository,
 				walletSvcClient,
-				masterOTPHash,
+				auth.WithMasterOTPCode(masterOTPHash),
 				auth.WithCustomOTPLength(otpLength),
 				auth.WithMailService(mailer),
 			), jwtMdw),
