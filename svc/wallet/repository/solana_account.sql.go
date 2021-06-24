@@ -94,19 +94,19 @@ WHERE id = (
         SELECT solana_account_id
         FROM wallets
         WHERE user_id = $1
-            AND account_type = $2
+            AND wallet_type = $2
         LIMIT 1
     )
 LIMIT 1
 `
 
 type GetSolanaAccountByUserIDAndTypeParams struct {
-	UserID      uuid.UUID `json:"user_id"`
-	AccountType string    `json:"account_type"`
+	UserID     uuid.UUID `json:"user_id"`
+	WalletType string    `json:"wallet_type"`
 }
 
 func (q *Queries) GetSolanaAccountByUserIDAndType(ctx context.Context, arg GetSolanaAccountByUserIDAndTypeParams) (SolanaAccount, error) {
-	row := q.queryRow(ctx, q.getSolanaAccountByUserIDAndTypeStmt, getSolanaAccountByUserIDAndType, arg.UserID, arg.AccountType)
+	row := q.queryRow(ctx, q.getSolanaAccountByUserIDAndTypeStmt, getSolanaAccountByUserIDAndType, arg.UserID, arg.WalletType)
 	var i SolanaAccount
 	err := row.Scan(
 		&i.ID,

@@ -26,7 +26,7 @@ WHERE id = (
         SELECT solana_account_id
         FROM wallets
         WHERE user_id = @user_id
-            AND account_type = @account_type
+            AND wallet_type = @wallet_type
         LIMIT 1
     )
 LIMIT 1;
