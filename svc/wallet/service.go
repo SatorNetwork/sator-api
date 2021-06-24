@@ -259,8 +259,8 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		return "", fmt.Errorf("could not get asset account: %w", err)
 	}
 	user, err := s.wr.GetSolanaAccountByUserIDAndType(ctx, repository.GetSolanaAccountByUserIDAndTypeParams{
-		UserID:      userID,
-		AccountType: TokenAccount.String(),
+		UserID:     userID,
+		WalletType: WalletTypeSator,
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not get user token account: %w", err)
