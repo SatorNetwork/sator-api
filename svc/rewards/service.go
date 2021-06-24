@@ -38,7 +38,7 @@ type (
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
 		Withdraw(ctx context.Context, userID uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
-		GetTransactionsByUserID(ctx context.Context, userID uuid.UUID) ([]repository.Reward, error)
+		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -159,8 +159,11 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, e
 }
 
 // GetTransactions returns list of transactions from rewards wallet.
-func (s *Service) GetTransactions(ctx context.Context, userID uuid.UUID) (wallet.Transactions, error) {
-	txList, err := s.repo.GetTransactionsByUserID(ctx, userID)
+func (s *Service) GetTransactions(ctx context.Context, userID uuid.UUID, limit, offset int32) (wallet.Transactions, error) {
+	txList, err := s.repo.GetTransactionsByUserIDPaginated(ctx, repository.GetTransactionsByUserIDPaginatedParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset})
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return wallet.Transactions{}, nil

@@ -75,7 +75,7 @@ func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, err
 	}, nil
 }
 
-func decodeGetShowChallengesRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeGetShowChallengesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetShowChallengesRequest{
 		ShowID: chi.URLParam(r, "show_id"),
 		PaginationRequest: PaginationRequest{
