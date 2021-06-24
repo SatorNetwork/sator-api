@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
@@ -8,10 +9,11 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) IssueAsset(feePayer, issuer, asset, dest types.Account, amount float64) (string, error) {
+func (c *Client) IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
 	// Issue asset
 	tx, err := c.SendTransaction(
+		ctx,
 		feePayer, issuer,
 		tokenprog.MintToChecked(
 			asset.PublicKey,

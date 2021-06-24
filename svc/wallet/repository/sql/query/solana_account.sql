@@ -30,3 +30,8 @@ WHERE id = (
         LIMIT 1
     )
 LIMIT 1;
+-- name: GetSolanaAccountTypeByPublicKey :one
+SELECT account_type
+FROM solana_accounts
+WHERE public_key = $1
+LIMIT 1;

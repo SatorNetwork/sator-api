@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
+	"github.com/SatorNetwork/sator-api/svc/wallet"
 
 	"github.com/google/uuid"
 )
@@ -36,6 +38,7 @@ type (
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
 		Withdraw(ctx context.Context, userID uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
+		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -68,6 +71,26 @@ func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Servic
 	}
 
 	return s
+}
+
+func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error) {
+	amount, err := s.GetUserRewards(ctx, userID)
+	if err != nil {
+		return wallet.Wallet{}, fmt.Errorf("could  not get rewards wallet: %w", err)
+	}
+
+	return wallet.Wallet{
+		ID: walletID.String(),
+		Balance: []wallet.Balance{{
+			Currency: "unclaimed rewards",
+			Amount:   amount,
+		}},
+		Actions: []wallet.Action{{
+			Type: wallet.ActionClaimRewards.String(),
+			Name: wallet.ActionClaimRewards.Name(),
+			URL:  "/rewards/claim",
+		}},
+	}, nil
 }
 
 // AddTransaction ..
@@ -133,4 +156,37 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, e
 	}
 
 	return amount, nil
+}
+
+// GetTransactions returns list of transactions from rewards wallet.
+func (s *Service) GetTransactions(ctx context.Context, userID uuid.UUID, limit, offset int32) (wallet.Transactions, error) {
+	txList, err := s.repo.GetTransactionsByUserIDPaginated(ctx, repository.GetTransactionsByUserIDPaginatedParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return wallet.Transactions{}, nil
+		}
+		return nil, fmt.Errorf("could not get rewards transactions list: %w", err)
+	}
+
+	result := wallet.Transactions{}
+	for _, tx := range txList {
+		amount := tx.Amount
+		if tx.TransactionType == TransactionTypeWithdraw {
+			amount = amount * (-1)
+		}
+		desc := tx.RelationType.String
+		if desc == "" {
+			desc = "claim rewards"
+		}
+		result = append(result, wallet.Transaction{
+			TxHash:    desc,
+			Amount:    amount,
+			CreatedAt: tx.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return result, nil
 }

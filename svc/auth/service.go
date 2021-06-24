@@ -66,7 +66,7 @@ type (
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, mc string, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -77,7 +77,7 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, mc string
 		log.Fatalln("wallet service is not set")
 	}
 
-	s := &Service{jwt: ji, ur: ur, ws: ws, masterCode: mc, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -312,6 +312,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 
 	err = bcrypt.CompareHashAndPassword(uv.VerificationCode, []byte(otp))
 	if err != nil {
+		log.Printf("master otp: %s", s.masterCode)
 		if err := bcrypt.CompareHashAndPassword([]byte(s.masterCode), []byte(otp)); err != nil {
 			return ErrOTPCode
 		}

@@ -46,7 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint), nil)
+	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint))
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)

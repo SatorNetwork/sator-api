@@ -25,6 +25,8 @@ run-local:
 	JWT_SIGNING_KEY=secret \
 	QUIZ_WS_CONN_URL=https://aec45cb3e117.ngrok.io/quiz \
 	SOLANA_API_BASE_URL=https://api.devnet.solana.com/ \
+	POSTMARK_SERVER_TOKEN=local \
+	POSTMARK_ACCOUNT_TOKEN=local \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
 
 migrate: ## Run all migrations on server

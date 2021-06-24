@@ -10,33 +10,77 @@ import (
 )
 
 const createWallet = `-- name: CreateWallet :one
-INSERT INTO wallets (user_id, solana_account_id, wallet_name)
-VALUES ($1, $2, $3) RETURNING id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
+INSERT INTO wallets (user_id, solana_account_id, wallet_type)
+VALUES ($1, $2, $3) RETURNING id, user_id, solana_account_id, status, updated_at, created_at, wallet_type
 `
 
 type CreateWalletParams struct {
 	UserID          uuid.UUID `json:"user_id"`
 	SolanaAccountID uuid.UUID `json:"solana_account_id"`
-	WalletName      string    `json:"wallet_name"`
+	WalletType      string    `json:"wallet_type"`
 }
 
 func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error) {
-	row := q.queryRow(ctx, q.createWalletStmt, createWallet, arg.UserID, arg.SolanaAccountID, arg.WalletName)
+	row := q.queryRow(ctx, q.createWalletStmt, createWallet, arg.UserID, arg.SolanaAccountID, arg.WalletType)
 	var i Wallet
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.SolanaAccountID,
-		&i.WalletName,
 		&i.Status,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.WalletType,
+	)
+	return i, err
+}
+
+const getWalletByID = `-- name: GetWalletByID :one
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type
+FROM wallets
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetWalletByID(ctx context.Context, id uuid.UUID) (Wallet, error) {
+	row := q.queryRow(ctx, q.getWalletByIDStmt, getWalletByID, id)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SolanaAccountID,
+		&i.Status,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.WalletType,
+	)
+	return i, err
+}
+
+const getWalletBySolanaAccountID = `-- name: GetWalletBySolanaAccountID :one
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type
+FROM wallets
+WHERE solana_account_id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetWalletBySolanaAccountID(ctx context.Context, solanaAccountID uuid.UUID) (Wallet, error) {
+	row := q.queryRow(ctx, q.getWalletBySolanaAccountIDStmt, getWalletBySolanaAccountID, solanaAccountID)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SolanaAccountID,
+		&i.Status,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.WalletType,
 	)
 	return i, err
 }
 
 const getWalletsByUserID = `-- name: GetWalletsByUserID :many
-SELECT id, user_id, solana_account_id, wallet_name, status, updated_at, created_at
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type
 FROM wallets
 WHERE user_id = $1
 `
@@ -54,10 +98,10 @@ func (q *Queries) GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]W
 			&i.ID,
 			&i.UserID,
 			&i.SolanaAccountID,
-			&i.WalletName,
 			&i.Status,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.WalletType,
 		); err != nil {
 			return nil, err
 		}

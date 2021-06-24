@@ -286,8 +286,8 @@ github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pkg/profile v1.2.1/go.mod h1:hJw3o1OdXxsrSjjVksARp5W95eeEaEfptyVZyv6JUPA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/portto/solana-go-sdk v0.0.0-20210602173707-b9943b947cd3 h1:etRMQ36DTPyIRvlm7pLGNETKOIVDSuZZbijwV7pGl1M=
-github.com/portto/solana-go-sdk v0.0.0-20210602173707-b9943b947cd3/go.mod h1:YmsNJV8AdH6WBBrDBM7EEsc4MI3dBnZ3CVyRvqXNOTQ=
+github.com/portto/solana-go-sdk v0.1.0 h1:x3Y8/cuTh5YpvgY/dCRcHzIOaGmfuo0Iuo3DZ3SB/KA=
+github.com/portto/solana-go-sdk v0.1.0/go.mod h1:YmsNJV8AdH6WBBrDBM7EEsc4MI3dBnZ3CVyRvqXNOTQ=
 github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829/go.mod h1:p2iRAGwDERtqlqzRXnrOVns+ignqQo//hLXqYxZYVNs=
