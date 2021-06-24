@@ -78,10 +78,10 @@ func NewService(wr walletRepository, sc solanaClient) *Service {
 		solanaAssetName: "SOL",
 		satorAssetName:  "SAO",
 
-		walletDetailsURL:        "/wallets/%s",
-		walletTransactionsURL:   "/wallets/%s/transactions",
-		rewardsWalletDetailsURL: "/rewards/wallet/%s",
-		rewardsTransactionsURL:  "/rewards/wallet/%s/transactions",
+		walletDetailsURL:        "wallets/%s",
+		walletTransactionsURL:   "wallets/%s/transactions",
+		rewardsWalletDetailsURL: "rewards/wallet/%s",
+		rewardsTransactionsURL:  "rewards/wallet/%s/transactions",
 	}
 }
 
