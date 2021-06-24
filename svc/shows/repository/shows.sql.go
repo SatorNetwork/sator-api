@@ -5,12 +5,13 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const getShowByID = `-- name: GetShowByID :one
-SELECT id, title, cover, has_new_episode, updated_at, created_at
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category
 FROM shows
 WHERE id = $1
 `
@@ -25,12 +26,13 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
 		&i.HasNewEpisode,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Category,
 	)
 	return i, err
 }
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category
 FROM shows
 ORDER BY has_new_episode DESC,
     updated_at DESC,
@@ -59,6 +61,54 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.HasNewEpisode,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Category,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getShowsByCategory = `-- name: GetShowsByCategory :many
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category
+FROM shows
+WHERE category = $1
+ORDER BY has_new_episode DESC,
+         updated_at DESC,
+         created_at DESC
+    LIMIT $2 OFFSET $3
+`
+
+type GetShowsByCategoryParams struct {
+	Category sql.NullString `json:"category"`
+	Limit    int32          `json:"limit"`
+	Offset   int32          `json:"offset"`
+}
+
+func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategoryParams) ([]Show, error) {
+	rows, err := q.query(ctx, q.getShowsByCategoryStmt, getShowsByCategory, arg.Category, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Show
+	for rows.Next() {
+		var i Show
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Cover,
+			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Category,
 		); err != nil {
 			return nil, err
 		}

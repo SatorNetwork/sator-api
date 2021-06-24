@@ -58,6 +58,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/filter/{category}", httptransport.NewServer(
+		e.GetShowsByCategory,
+		decodeGetShowsByCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -85,6 +92,16 @@ func decodeGetShowByIDRequest(_ context.Context, r *http.Request) (interface{}, 
 	}
 
 	return id, nil
+}
+
+func decodeGetShowsByCategoryRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetShowsByCategoryRequest{
+		Category: chi.URLParam(r, "category"),
+		PaginationRequest: PaginationRequest{
+			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func castStrToInt32(source string) int32 {

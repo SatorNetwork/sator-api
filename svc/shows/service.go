@@ -2,6 +2,7 @@ package shows
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 
@@ -29,6 +30,7 @@ type (
 	showsRepository interface {
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
+		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 	}
 
 	// Challenges service client
@@ -102,4 +104,17 @@ func castToShow(source repository.Show) Show {
 		Cover:         source.Cover,
 		HasNewEpisode: source.HasNewEpisode,
 	}
+}
+
+// GetShowsByCategory returns show by provided category.
+func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error) {
+	shows, err := s.sr.GetShowsByCategory(ctx, repository.GetShowsByCategoryParams{
+		Category: sql.NullString{String: category, Valid: true},
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get shows list: %w", err)
+	}
+	return castToListShow(shows), nil
 }
