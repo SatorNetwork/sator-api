@@ -28,8 +28,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getTotalAmountStmt, err = db.PrepareContext(ctx, getTotalAmount); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTotalAmount: %w", err)
 	}
-	if q.getTransactionsByUserIDStmt, err = db.PrepareContext(ctx, getTransactionsByUserID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetTransactionsByUserID: %w", err)
+	if q.getTransactionsByUserIDPaginatedStmt, err = db.PrepareContext(ctx, getTransactionsByUserIDPaginated); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionsByUserIDPaginated: %w", err)
 	}
 	if q.withdrawStmt, err = db.PrepareContext(ctx, withdraw); err != nil {
 		return nil, fmt.Errorf("error preparing query Withdraw: %w", err)
@@ -49,9 +49,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getTotalAmountStmt: %w", cerr)
 		}
 	}
-	if q.getTransactionsByUserIDStmt != nil {
-		if cerr := q.getTransactionsByUserIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getTransactionsByUserIDStmt: %w", cerr)
+	if q.getTransactionsByUserIDPaginatedStmt != nil {
+		if cerr := q.getTransactionsByUserIDPaginatedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionsByUserIDPaginatedStmt: %w", cerr)
 		}
 	}
 	if q.withdrawStmt != nil {
@@ -96,21 +96,21 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                          DBTX
-	tx                          *sql.Tx
-	addTransactionStmt          *sql.Stmt
-	getTotalAmountStmt          *sql.Stmt
-	getTransactionsByUserIDStmt *sql.Stmt
-	withdrawStmt                *sql.Stmt
+	db                                   DBTX
+	tx                                   *sql.Tx
+	addTransactionStmt                   *sql.Stmt
+	getTotalAmountStmt                   *sql.Stmt
+	getTransactionsByUserIDPaginatedStmt *sql.Stmt
+	withdrawStmt                         *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                          tx,
-		tx:                          tx,
-		addTransactionStmt:          q.addTransactionStmt,
-		getTotalAmountStmt:          q.getTotalAmountStmt,
-		getTransactionsByUserIDStmt: q.getTransactionsByUserIDStmt,
-		withdrawStmt:                q.withdrawStmt,
+		db:                                   tx,
+		tx:                                   tx,
+		addTransactionStmt:                   q.addTransactionStmt,
+		getTotalAmountStmt:                   q.getTotalAmountStmt,
+		getTransactionsByUserIDPaginatedStmt: q.getTransactionsByUserIDPaginatedStmt,
+		withdrawStmt:                         q.withdrawStmt,
 	}
 }

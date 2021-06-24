@@ -62,15 +62,22 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 	return column_1, err
 }
 
-const getTransactionsByUserID = `-- name: GetTransactionsByUserID :many
+const getTransactionsByUserIDPaginated = `-- name: GetTransactionsByUserIDPaginated :many
 SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type
 FROM rewards
 WHERE user_id = $1
 ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetTransactionsByUserID(ctx context.Context, userID uuid.UUID) ([]Reward, error) {
-	rows, err := q.query(ctx, q.getTransactionsByUserIDStmt, getTransactionsByUserID, userID)
+type GetTransactionsByUserIDPaginatedParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) GetTransactionsByUserIDPaginated(ctx context.Context, arg GetTransactionsByUserIDPaginatedParams) ([]Reward, error) {
+	rows, err := q.query(ctx, q.getTransactionsByUserIDPaginatedStmt, getTransactionsByUserIDPaginated, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
