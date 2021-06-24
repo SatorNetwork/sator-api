@@ -1,10 +1,16 @@
 -- name: GetWalletsByUserID :many
 SELECT *
 FROM wallets
-WHERE user_id = $1;
+WHERE user_id = $1
+ORDER BY sort ASC;
 -- name: CreateWallet :one
-INSERT INTO wallets (user_id, solana_account_id, wallet_type)
-VALUES (@user_id, @solana_account_id, @wallet_type) RETURNING *;
+INSERT INTO wallets (user_id, solana_account_id, wallet_type, sort)
+VALUES (
+        @user_id,
+        @solana_account_id,
+        @wallet_type,
+        @sort
+    ) RETURNING *;
 -- name: GetWalletBySolanaAccountID :one
 SELECT *
 FROM wallets
