@@ -119,3 +119,17 @@ func (q *Queries) GetSolanaAccountByUserIDAndType(ctx context.Context, arg GetSo
 	)
 	return i, err
 }
+
+const getSolanaAccountTypeByPublicKey = `-- name: GetSolanaAccountTypeByPublicKey :one
+SELECT account_type
+FROM solana_accounts
+WHERE public_key = $1
+LIMIT 1
+`
+
+func (q *Queries) GetSolanaAccountTypeByPublicKey(ctx context.Context, publicKey string) (string, error) {
+	row := q.queryRow(ctx, q.getSolanaAccountTypeByPublicKeyStmt, getSolanaAccountTypeByPublicKey, publicKey)
+	var account_type string
+	err := row.Scan(&account_type)
+	return account_type, err
+}

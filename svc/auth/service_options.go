@@ -15,3 +15,11 @@ func WithCustomOTPLength(n int) ServiceOption {
 		s.otpLen = n
 	}
 }
+
+// WithMasterOTP option
+// Sets up master OTP code to use in dev environment
+func WithMasterOTPCode(hash string) ServiceOption {
+	return func(s *Service) {
+		s.masterCode = hash
+	}
+}
