@@ -382,7 +382,14 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 		return Transactions{}, err
 	}
 
-	transactionsPaginated := paginateTransactions(transactions, int(offset), int(limit))
+	var notEmptyTransactions Transactions
+	for _, transaction := range transactions {
+		if transaction.Amount != 0 {
+			notEmptyTransactions = append(notEmptyTransactions, transaction)
+		}
+	}
+
+	transactionsPaginated := paginateTransactions(notEmptyTransactions, int(offset), int(limit))
 	return transactionsPaginated, nil
 }
 
