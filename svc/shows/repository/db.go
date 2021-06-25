@@ -25,8 +25,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEpisodeByIDStmt, err = db.PrepareContext(ctx, getEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeByID: %w", err)
 	}
-	if q.getEpisodesStmt, err = db.PrepareContext(ctx, getEpisodes); err != nil {
-		return nil, fmt.Errorf("error preparing query GetEpisodes: %w", err)
+	if q.getEpisodesByShowIDStmt, err = db.PrepareContext(ctx, getEpisodesByShowID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEpisodesByShowID: %w", err)
 	}
 	if q.getShowByIDStmt, err = db.PrepareContext(ctx, getShowByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShowByID: %w", err)
@@ -47,9 +47,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getEpisodeByIDStmt: %w", cerr)
 		}
 	}
-	if q.getEpisodesStmt != nil {
-		if cerr := q.getEpisodesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getEpisodesStmt: %w", cerr)
+	if q.getEpisodesByShowIDStmt != nil {
+		if cerr := q.getEpisodesByShowIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEpisodesByShowIDStmt: %w", cerr)
 		}
 	}
 	if q.getShowByIDStmt != nil {
@@ -104,23 +104,23 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                     DBTX
-	tx                     *sql.Tx
-	getEpisodeByIDStmt     *sql.Stmt
-	getEpisodesStmt        *sql.Stmt
-	getShowByIDStmt        *sql.Stmt
-	getShowsStmt           *sql.Stmt
-	getShowsByCategoryStmt *sql.Stmt
+	db                      DBTX
+	tx                      *sql.Tx
+	getEpisodeByIDStmt      *sql.Stmt
+	getEpisodesByShowIDStmt *sql.Stmt
+	getShowByIDStmt         *sql.Stmt
+	getShowsStmt            *sql.Stmt
+	getShowsByCategoryStmt  *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                     tx,
-		tx:                     tx,
-		getEpisodeByIDStmt:     q.getEpisodeByIDStmt,
-		getEpisodesStmt:        q.getEpisodesStmt,
-		getShowByIDStmt:        q.getShowByIDStmt,
-		getShowsStmt:           q.getShowsStmt,
-		getShowsByCategoryStmt: q.getShowsByCategoryStmt,
+		db:                      tx,
+		tx:                      tx,
+		getEpisodeByIDStmt:      q.getEpisodeByIDStmt,
+		getEpisodesByShowIDStmt: q.getEpisodesByShowIDStmt,
+		getShowByIDStmt:         q.getShowByIDStmt,
+		getShowsStmt:            q.getShowsStmt,
+		getShowsByCategoryStmt:  q.getShowsByCategoryStmt,
 	}
 }

@@ -42,7 +42,7 @@ type (
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.Episode, error)
-		GetEpisodes(ctx context.Context, arg repository.GetEpisodesParams) ([]repository.Episode, error)
+		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
 	}
 
 	// Challenges service client
@@ -132,9 +132,10 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit
 	return castToListShow(shows), nil
 }
 
-// GetEpisodes returns episodes.
-func (s *Service) GetEpisodes(ctx context.Context, limit, offset int32) (interface{}, error) {
-	episodes, err := s.sr.GetEpisodes(ctx, repository.GetEpisodesParams{
+// GetEpisodesByShowID returns episodes by show id.
+func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
+	episodes, err := s.sr.GetEpisodesByShowID(ctx, repository.GetEpisodesByShowIDParams{
+		ShowID: showID,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -152,9 +153,9 @@ func castToListEpisodes(source []repository.Episode) []Episode {
 			ID:            s.ID,
 			ShowID:        s.ShowID,
 			EpisodeNumber: s.EpisodeNumber,
-			Cover:         s.Cover,
+			Cover:         s.Cover.String,
 			Title:         s.Title,
-			Description:   s.Description,
+			Description:   s.Description.String,
 			ReleaseDate:   s.ReleaseDate.Time.String(),
 		})
 	}
@@ -176,9 +177,9 @@ func castToEpisode(source repository.Episode) Episode {
 		ID:            source.ID,
 		ShowID:        source.ShowID,
 		EpisodeNumber: source.EpisodeNumber,
-		Cover:         source.Cover,
+		Cover:         source.Cover.String,
 		Title:         source.Title,
-		Description:   source.Description,
+		Description:   source.Description.String,
 		ReleaseDate:   source.ReleaseDate.Time.String(),
 	}
 }

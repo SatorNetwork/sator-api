@@ -10,15 +10,15 @@ import (
 )
 
 type Episode struct {
-	ID            uuid.UUID    `json:"id"`
-	ShowID        uuid.UUID    `json:"show_id"`
-	EpisodeNumber int32        `json:"episode_number"`
-	Cover         string       `json:"cover"`
-	Title         string       `json:"title"`
-	Description   string       `json:"description"`
-	ReleaseDate   sql.NullTime `json:"release_date"`
-	UpdatedAt     sql.NullTime `json:"updated_at"`
-	CreatedAt     time.Time    `json:"created_at"`
+	ID            uuid.UUID      `json:"id"`
+	ShowID        uuid.UUID      `json:"show_id"`
+	EpisodeNumber int32          `json:"episode_number"`
+	Cover         sql.NullString `json:"cover"`
+	Title         string         `json:"title"`
+	Description   sql.NullString `json:"description"`
+	ReleaseDate   sql.NullTime   `json:"release_date"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
 }
 
 type Show struct {

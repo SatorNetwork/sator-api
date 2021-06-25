@@ -32,20 +32,22 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, er
 	return i, err
 }
 
-const getEpisodes = `-- name: GetEpisodes :many
+const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
 SELECT id, show_id, episode_number, cover, title, description, release_date, updated_at, created_at
 FROM episodes
+WHERE show_id = $1
 ORDER BY episode_number DESC
-    LIMIT $1 OFFSET $2
+    LIMIT $2 OFFSET $3
 `
 
-type GetEpisodesParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+type GetEpisodesByShowIDParams struct {
+	ShowID uuid.UUID `json:"show_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) GetEpisodes(ctx context.Context, arg GetEpisodesParams) ([]Episode, error) {
-	rows, err := q.query(ctx, q.getEpisodesStmt, getEpisodes, arg.Limit, arg.Offset)
+func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShowIDParams) ([]Episode, error) {
+	rows, err := q.query(ctx, q.getEpisodesByShowIDStmt, getEpisodesByShowID, arg.ShowID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
