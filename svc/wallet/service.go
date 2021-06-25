@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
@@ -375,8 +376,14 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 }
 
 // GetListTransactionsByWalletID returns list of all transactions of specific wallet.
-func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ Transactions, err error) {
-	return s.getListTransactionsByWalletID(ctx, userID, walletID)
+func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ Transactions, err error) {
+	transactions, err := s.getListTransactionsByWalletID(ctx, userID, walletID)
+	if err != nil {
+		return Transactions{}, err
+	}
+
+	transactionsPaginated := paginateTransactions(transactions, int(offset), int(limit))
+	return transactionsPaginated, nil
 }
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
@@ -466,4 +473,21 @@ func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse) Transacti
 		Amount:    tx.Amount,
 		CreatedAt: tx.CreatedAt.Format(time.RFC3339),
 	}
+}
+
+func paginateTransactions(transactions Transactions, offset, limit int) Transactions {
+	sort.Slice(transactions, func(i, j int) bool {
+		return transactions[i].CreatedAt < (transactions[j].CreatedAt)
+	})
+
+	if offset > len(transactions) {
+		offset = len(transactions)
+	}
+
+	end := offset + limit
+	if end > len(transactions) {
+		end = len(transactions)
+	}
+
+	return transactions[offset:end]
 }
