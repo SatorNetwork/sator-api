@@ -21,7 +21,7 @@ type (
 	}
 
 	service interface {
-		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (_ Transactions, err error)
+		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ Transactions, err error)
 		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error)
@@ -32,7 +32,35 @@ type (
 		RecipientPK      string  `json:"recipient_pk" validate:"required"`
 		Amount           float64 `json:"amount" validate:"required"`
 	}
+
+	// GetListTransactionsByWalletIDRequest struct
+	GetListTransactionsByWalletIDRequest struct {
+		WalletID string `json:"wallet_id" validate:"required,uuid"`
+		PaginationRequest
+	}
+
+	// PaginationRequest struct
+	PaginationRequest struct {
+		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
+		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
+	}
 )
+
+// Limit of items
+func (r PaginationRequest) Limit() int32 {
+	if r.ItemsPerPage > 0 {
+		return r.ItemsPerPage
+	}
+	return 20
+}
+
+// Offset items
+func (r PaginationRequest) Offset() int32 {
+	if r.Page > 1 {
+		return (r.Page - 1) * r.Limit()
+	}
+	return 0
+}
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
@@ -40,7 +68,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
 		GetWallets:                    MakeGetWalletsEndpoint(s),
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
-		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s),
+		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
 		Transfer:                      MakeTransferEndpoint(s, validateFunc),
 	}
 
@@ -57,19 +85,24 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	return e
 }
 
-func MakeGetListTransactionsByWalletIDEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		walletUID, err := uuid.Parse(req.(string))
-		if err != nil {
-			return nil, fmt.Errorf("could not get wallet id: %w", err)
-		}
-
+func MakeGetListTransactionsByWalletIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		transactions, err := s.GetListTransactionsByWalletID(ctx, uid, walletUID)
+		req := request.(GetListTransactionsByWalletIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		walletUID, err := uuid.Parse(req.WalletID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		transactions, err := s.GetListTransactionsByWalletID(ctx, uid, walletUID, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}

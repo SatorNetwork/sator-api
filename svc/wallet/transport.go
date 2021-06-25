@@ -6,12 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+)
+
+// Predefined request query keys
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -78,11 +86,13 @@ func decodeGetWalletByIDRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func decodeGetListTransactionsByWalletIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "wallet_id")
-	if id == "" {
-		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
-	}
-	return id, nil
+	return GetListTransactionsByWalletIDRequest{
+		WalletID: chi.URLParam(r, "wallet_id"),
+		PaginationRequest: PaginationRequest{
+			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -109,4 +119,12 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func castStrToInt32(source string) int32 {
+	res, err := strconv.Atoi(source)
+	if err != nil {
+		return 0
+	}
+	return int32(res)
 }
