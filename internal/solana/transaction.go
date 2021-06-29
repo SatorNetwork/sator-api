@@ -3,6 +3,7 @@ package solana
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/portto/solana-go-sdk/client"
@@ -73,7 +74,7 @@ func (c *Client) GetConfirmedTransaction(ctx context.Context, txhash string) (Ge
 	return res.Result, nil
 }
 
-// GetTokenTransactions returns transactions list for given account
+// GetConfirmedTransactionForAccount returns transactions list for given account
 func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKey, txhash string) (ConfirmedTransactionResponse, error) {
 	tx, err := c.GetConfirmedTransaction(ctx, txhash)
 	if err != nil {
@@ -88,7 +89,11 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 		}
 	}
 
-	amount := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accountIndex)
+	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accountIndex)
+	if err != nil {
+		return ConfirmedTransactionResponse{}, err
+	}
+
 	tr := ConfirmedTransactionResponse{
 		TxHash:        txhash,
 		Amount:        amount,
@@ -100,20 +105,31 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 	return tr, nil
 }
 
-func getTransactionAmountForAccountIdx(pre, post []TokenBalance, accountIndex int) float64 {
-	var preTokenBalance, postTokenBalance float64
+func getTransactionAmountForAccountIdx(pre, post []TokenBalance, accountIndex int) (float64, error) {
+	var preTokenBalance, postTokenBalance int64
 	for _, b := range pre {
 		if b.AccountIndex == accountIndex {
-			preTokenBalance = b.UITokenAmount.UIAmount
-			break
-		}
-	}
-	for _, b := range post {
-		if b.AccountIndex == accountIndex {
-			postTokenBalance = b.UITokenAmount.UIAmount
+			a, err := strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
+			if err != nil {
+				return 0, err
+			}
+
+			preTokenBalance = a
 			break
 		}
 	}
 
-	return postTokenBalance - preTokenBalance
+	for _, b := range post {
+		if b.AccountIndex == accountIndex {
+			a, err :=  strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
+			if err != nil {
+				return 0, err
+			}
+
+			postTokenBalance = a
+			break
+		}
+	}
+
+	return float64(postTokenBalance - preTokenBalance)/100000000, nil
 }
