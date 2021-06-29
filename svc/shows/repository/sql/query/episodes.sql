@@ -8,3 +8,35 @@ ORDER BY episode_number DESC
 SELECT *
 FROM episodes
 WHERE id = $1;
+-- name: AddEpisode :exec
+INSERT INTO episodes (
+    show_id,
+    episode_number,
+    cover,
+    title,
+    description,
+    release_date
+)
+VALUES (
+           @show_id,
+           @episode_number,
+           @cover,
+           @title,
+           @description,
+           @release_date
+       );
+-- name: UpdateEpisode :exec
+UPDATE episodes
+SET show_id = @show_id,
+    episode_number = @episode_number,
+    cover = @cover,
+    title = @title,
+    description = @description,
+    release_date = @release_date
+WHERE id = @id;
+-- name: DeleteEpisodeByID :exec
+DELETE FROM episodes
+WHERE id = @id;
+-- name: DeleteEpisodeByShowID :exec
+DELETE FROM episodes
+WHERE show_id = @show_id;

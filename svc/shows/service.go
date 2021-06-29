@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ type (
 		Title         string    `json:"title"`
 		Cover         string    `json:"cover"`
 		HasNewEpisode bool      `json:"has_new_episode"`
+		Category      string    `json:"category"`
 	}
 
 	Episode struct {
@@ -38,11 +40,19 @@ type (
 	}
 
 	showsRepository interface {
+		AddShow(ctx context.Context, arg repository.AddShowParams) error
+		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
+		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
+
+		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) error
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.Episode, error)
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
+		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
+		DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error
+		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
 	}
 
 	// Challenges service client
@@ -182,4 +192,125 @@ func castToEpisode(source repository.Episode) Episode {
 		Description:   source.Description.String,
 		ReleaseDate:   source.ReleaseDate.Time.String(),
 	}
+}
+
+// AddShow ..
+func (s *Service) AddShow(ctx context.Context, sh Show) error {
+	if err := s.sr.AddShow(ctx, repository.AddShowParams{
+		Title:         sh.Title,
+		Cover:         sh.Cover,
+		HasNewEpisode: sh.HasNewEpisode,
+		Category: sql.NullString{
+			String: sh.Category,
+			Valid:  true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
+	}
+
+	return nil
+}
+
+// UpdateShow ..
+func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
+	if err := s.sr.UpdateShow(ctx, repository.UpdateShowParams{
+		Title:         sh.Title,
+		Cover:         sh.Cover,
+		HasNewEpisode: sh.HasNewEpisode,
+		Category: sql.NullString{
+			String: sh.Category,
+			Valid:  true,
+		},
+		ID: sh.ID,
+	}); err != nil {
+		return fmt.Errorf("could not update show with id=%s:%w", sh.ID, err)
+	}
+	return nil
+}
+
+// DeleteShowByID ..
+func (s *Service) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.sr.DeleteShowByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete show with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// AddEpisode ..
+func (s *Service) AddEpisode(ctx context.Context, ep Episode) error {
+	rDate, err := utils.DateFromString(ep.ReleaseDate)
+	if err != nil {
+		return fmt.Errorf("could not add parse date from string: %w", err)
+	}
+
+	if err = s.sr.AddEpisode(ctx, repository.AddEpisodeParams{
+		ShowID:        ep.ShowID,
+		EpisodeNumber: ep.EpisodeNumber,
+		Cover: sql.NullString{
+			String: ep.Cover,
+			Valid:  true,
+		},
+		Title: ep.Title,
+		Description: sql.NullString{
+			String: ep.Description,
+			Valid:  true,
+		},
+		ReleaseDate: sql.NullTime{
+			Time:  rDate,
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not add episode with show_id=%s, episodeNumber=%v: %w", ep.ShowID, ep.EpisodeNumber, err)
+	}
+
+	return nil
+}
+
+// UpdateEpisode ..
+func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
+	rDate, err := utils.DateFromString(ep.ReleaseDate)
+	if err != nil {
+		return fmt.Errorf("could not add parse date from string: %w", err)
+	}
+
+	if err := s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
+		ShowID:        ep.ShowID,
+		EpisodeNumber: ep.EpisodeNumber,
+		Cover: sql.NullString{
+			String: ep.Cover,
+			Valid:  true,
+		},
+		Title: ep.Title,
+		Description: sql.NullString{
+			String: ep.Title,
+			Valid:  true,
+		},
+		ReleaseDate: sql.NullTime{
+			Time:  rDate,
+			Valid: true,
+		},
+		ID: ep.ID,
+	}); err != nil {
+		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
+	}
+	return nil
+}
+
+// DeleteEpisodeByID ..
+func (s *Service) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.sr.DeleteEpisodeByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete episode with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// DeleteEpisodeByShowID ..
+func (s *Service) DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error {
+	if err := s.sr.DeleteEpisodeByShowID(ctx, showID); err != nil {
+		return fmt.Errorf("could not delete episode with show_id=%s:%w", showID, err)
+	}
+
+	return nil
 }
