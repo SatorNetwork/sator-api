@@ -382,7 +382,7 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 		return Transactions{}, err
 	}
 
-	var notEmptyTransactions Transactions
+	notEmptyTransactions := make(Transactions, 0, len(transactions))
 	for _, transaction := range transactions {
 		if transaction.Amount != 0 {
 			notEmptyTransactions = append(notEmptyTransactions, transaction)
