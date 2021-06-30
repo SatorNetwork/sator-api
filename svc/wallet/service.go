@@ -389,8 +389,10 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 		}
 	}
 
-	transactionsPaginated := paginateTransactions(notEmptyTransactions, int(offset), int(limit))
-	return transactionsPaginated, nil
+	// pagination for solana trannsactions is disabled
+	// transactionsPaginated := paginateTransactions(notEmptyTransactions, int(offset), int(limit))
+	// return transactionsPaginated, nil
+	return notEmptyTransactions, nil
 }
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
