@@ -274,7 +274,7 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		return fmt.Errorf("could not add parse date from string: %w", err)
 	}
 
-	if err := s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
+	if err = s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
 		ShowID:        ep.ShowID,
 		EpisodeNumber: ep.EpisodeNumber,
 		Cover: sql.NullString{

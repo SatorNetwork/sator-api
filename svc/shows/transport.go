@@ -19,6 +19,14 @@ import (
 const (
 	pageParam         = "page"
 	itemsPerPageParam = "items_per_page"
+	title             = "title"
+	cover             = "cover"
+	hasNewEpisode     = "has_new_episode"
+	category          = "category"
+	showId            = "show_id"
+	episodeNumber     = "episode_number"
+	description       = "description"
+	releaseDate       = "release_date"
 )
 
 type (
@@ -44,6 +52,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/", httptransport.NewServer(
+		e.AddShow,
+		decodeAddShowRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{show_id}/challenges", httptransport.NewServer(
 		e.GetShowChallenges,
 		decodeGetShowChallengesRequest,
@@ -58,9 +73,51 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Patch("/{show_id}", httptransport.NewServer(
+		e.UpdateShow,
+		decodeUpdateShowRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{show_id}", httptransport.NewServer(
+		e.DeleteShowByID,
+		decodeDeleteShowByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/filter/{category}", httptransport.NewServer(
 		e.GetShowsByCategory,
 		decodeGetShowsByCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/episodes", httptransport.NewServer(
+		e.AddEpisode,
+		decodeAddEpisodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Patch("/episodes/{id}", httptransport.NewServer(
+		e.UpdateEpisode,
+		decodeUpdateEpisodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/episodes/{id}", httptransport.NewServer(
+		e.DeleteEpisodeByID,
+		decodeDeleteEpisodeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{show_id}/episodes", httptransport.NewServer(
+		e.DeleteEpisodeByShowID,
+		decodeDeleteEpisodeByShowIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -118,4 +175,80 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusBadRequest, err.Error()
 	}
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func decodeAddShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	b, err := strconv.ParseBool(r.URL.Query().Get(hasNewEpisode))
+	if err != nil {
+		return nil, fmt.Errorf("can not parse boolean value from string")
+	}
+
+	return AddShowRequest{
+		Title:         r.URL.Query().Get(title),
+		Cover:         r.URL.Query().Get(cover),
+		HasNewEpisode: b,
+		Category:      r.URL.Query().Get(category),
+	}, nil
+}
+
+func decodeUpdateShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	b, err := strconv.ParseBool(r.URL.Query().Get(hasNewEpisode))
+	if err != nil {
+		return nil, fmt.Errorf("can not parse boolean value from string")
+	}
+
+	return UpdateShowRequest{
+		ID:            chi.URLParam(r, "show_id"),
+		Title:         r.URL.Query().Get(title),
+		Cover:         r.URL.Query().Get(cover),
+		HasNewEpisode: b,
+		Category:      r.URL.Query().Get(category),
+	}, nil
+}
+
+func decodeDeleteShowByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
+	}
+	return id, nil
+}
+
+func decodeAddEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return AddEpisodeRequest{
+		ShowID:        r.URL.Query().Get(showId),
+		EpisodeNumber: castStrToInt32(r.URL.Query().Get(episodeNumber)),
+		Cover:         r.URL.Query().Get(cover),
+		Title:         r.URL.Query().Get(title),
+		Description:   r.URL.Query().Get(description),
+		ReleaseDate:   r.URL.Query().Get(releaseDate),
+	}, nil
+}
+
+func decodeUpdateEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return UpdateEpisodeRequest{
+		ID:            chi.URLParam(r, "id"),
+		ShowID:        r.URL.Query().Get(showId),
+		EpisodeNumber: castStrToInt32(r.URL.Query().Get(episodeNumber)),
+		Cover:         r.URL.Query().Get(cover),
+		Title:         r.URL.Query().Get(title),
+		Description:   r.URL.Query().Get(description),
+		ReleaseDate:   r.URL.Query().Get(releaseDate),
+	}, nil
+}
+
+func decodeDeleteEpisodeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
+	}
+	return id, nil
+}
+
+func decodeDeleteEpisodeByShowIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
+	}
+	return id, nil
 }
