@@ -25,3 +25,6 @@ FROM quizzes
 WHERE challenge_id = $1
     AND status = 0
 ORDER BY created_at DESC;
+-- name: DeleteQuizByID :exec
+DELETE FROM quizzes
+WHERE id = @id;

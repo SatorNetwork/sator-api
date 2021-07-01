@@ -52,6 +52,16 @@ func (q *Queries) AddNewQuiz(ctx context.Context, arg AddNewQuizParams) (Quiz, e
 	return i, err
 }
 
+const deleteQuizByID = `-- name: DeleteQuizByID :exec
+DELETE FROM quizzes
+WHERE id = $1
+`
+
+func (q *Queries) DeleteQuizByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteQuizByIDStmt, deleteQuizByID, id)
+	return err
+}
+
 const getQuizByChallengeID = `-- name: GetQuizByChallengeID :one
 SELECT id, challenge_id, prize_pool, players_to_start, time_per_question, status, updated_at, created_at
 FROM quizzes

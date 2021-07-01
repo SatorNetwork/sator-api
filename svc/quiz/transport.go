@@ -12,6 +12,15 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+// Predefined request query keys
+const (
+	token       = "token"
+	userid      = "userid"
+	quizid      = "quizid"
+	questionidi = "questionidi"
+	answerid    = "answerid"
+)
+
 type (
 	logger interface {
 		Log(keyvals ...interface{}) error
@@ -37,6 +46,27 @@ func MakeHTTPHandler(e Endpoints, log logger, quizWsHandler http.HandlerFunc) ht
 
 	r.Get("/{challenge_id}/play/{token}", quizWsHandler)
 
+	r.Get("/quizzes/token", httptransport.NewServer(
+		e.ParseQuizToken,
+		decodeParseQuizTokenRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/quizzes/answer", httptransport.NewServer(
+		e.StoreAnswer,
+		decodeStoreAnswerRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/quizzes/{quiz_id}", httptransport.NewServer(
+		e.DeleteQuizByID,
+		decodeDeleteQuizByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -51,4 +81,25 @@ func decodeGetQuizLinkRequest(_ context.Context, r *http.Request) (interface{}, 
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func decodeParseQuizTokenRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return r.URL.Query().Get(token), nil // TODO: Do I need to get from Header?
+}
+
+func decodeDeleteQuizByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "quiz_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed quiz_id", ErrInvalidParameter)
+	}
+	return id, nil
+}
+
+func decodeStoreAnswerRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return StoreAnswerRequest{
+		UserID:     r.URL.Query().Get(userid),
+		QuizID:     r.URL.Query().Get(quizid),
+		QuestionID: r.URL.Query().Get(questionidi),
+		AnswerID:   r.URL.Query().Get(answerid),
+	}, nil
 }

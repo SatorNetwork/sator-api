@@ -51,6 +51,7 @@ type (
 		AddNewQuiz(ctx context.Context, arg repository.AddNewQuizParams) (repository.Quiz, error)
 		GetQuizByChallengeID(ctx context.Context, challengeID uuid.UUID) (repository.Quiz, error)
 		GetQuizByID(ctx context.Context, id uuid.UUID) (repository.Quiz, error)
+		DeleteQuizByID(ctx context.Context, id uuid.UUID) error
 		GetQuizWinnners(ctx context.Context, arg repository.GetQuizWinnnersParams) ([]repository.GetQuizWinnnersRow, error)
 		UpdateQuizStatus(ctx context.Context, arg repository.UpdateQuizStatusParams) error
 		GetAnswer(ctx context.Context, arg repository.GetAnswerParams) (repository.QuizAnswer, error)
@@ -76,9 +77,9 @@ type (
 	tokenParseFunc func(token string) (interface{}, error)
 
 	TokenPayload struct {
-		UserID   string
-		Username string
-		QuizID   string
+		UserID   string `json:"user_id"`
+		Username string `json:"username"`
+		QuizID   string `json:"quiz_id"`
 	}
 
 	ServiceOption func(s *Service)
@@ -458,4 +459,13 @@ func castAnswerOptions(source []questions.AnswerOption) []AnswerOption {
 		})
 	}
 	return result
+}
+
+// DeleteQuizByID ..
+func (s *Service) DeleteQuizByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.repo.DeleteQuizByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete quiz with id=%s:%w", id, err)
+	}
+
+	return nil
 }
