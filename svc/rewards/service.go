@@ -88,7 +88,7 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 		Actions: []wallet.Action{{
 			Type: wallet.ActionClaimRewards.String(),
 			Name: wallet.ActionClaimRewards.Name(),
-			URL:  "/rewards/claim",
+			URL:  "rewards/claim",
 		}},
 	}, nil
 }
