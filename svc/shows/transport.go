@@ -101,6 +101,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/episodes/{id}}", httptransport.NewServer(
+		e.GetEpisodeByID,
+		decodeGetEpisodeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{show-id}/episodes}", httptransport.NewServer(
+		e.GetEpisodesByShowID,
+		decodeGetEpisodesByShowIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Patch("/episodes/{id}", httptransport.NewServer(
 		e.UpdateEpisode,
 		decodeUpdateEpisodeRequest,
@@ -251,4 +265,23 @@ func decodeDeleteEpisodeByShowIDRequest(_ context.Context, r *http.Request) (int
 		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
 	}
 	return id, nil
+}
+
+func decodeGetEpisodeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
+	}
+
+	return id, nil
+}
+
+func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetEpisodesByShowIDRequest{
+		ShowID: chi.URLParam(r, "show_id"),
+		PaginationRequest: PaginationRequest{
+			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
