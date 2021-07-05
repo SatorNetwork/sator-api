@@ -29,4 +29,5 @@ type Show struct {
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
 	Category      sql.NullString `json:"category"`
+	Description   sql.NullString `json:"description"`
 }

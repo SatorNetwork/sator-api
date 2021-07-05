@@ -202,6 +202,7 @@ func decodeAddShowRequest(_ context.Context, r *http.Request) (interface{}, erro
 		Cover:         r.URL.Query().Get(cover),
 		HasNewEpisode: b,
 		Category:      r.URL.Query().Get(category),
+		Description:   r.URL.Query().Get(description),
 	}, nil
 }
 
@@ -217,6 +218,7 @@ func decodeUpdateShowRequest(_ context.Context, r *http.Request) (interface{}, e
 		Cover:         r.URL.Query().Get(cover),
 		HasNewEpisode: b,
 		Category:      r.URL.Query().Get(category),
+		Description:   r.URL.Query().Get(description),
 	}, nil
 }
 

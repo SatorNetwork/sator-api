@@ -70,6 +70,7 @@ type (
 		Cover         string `json:"cover" validate:"required, gt=0"`
 		HasNewEpisode bool   `json:"has_new_episode"`
 		Category      string `json:"category"`
+		Description   string `json:"description"`
 	}
 
 	// UpdateShowRequest struct
@@ -79,6 +80,7 @@ type (
 		Cover         string `json:"cover" validate:"required, gt=0"`
 		HasNewEpisode bool   `json:"has_new_episode"`
 		Category      string `json:"category"`
+		Description   string `json:"description"`
 	}
 
 	// AddEpisodeRequest struct
@@ -264,6 +266,7 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			Cover:         req.Cover,
 			HasNewEpisode: req.HasNewEpisode,
 			Category:      req.Category,
+			Description:   req.Description,
 		})
 		if err != nil {
 			return nil, err
@@ -289,6 +292,7 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			Cover:         req.Cover,
 			HasNewEpisode: req.HasNewEpisode,
 			Category:      req.Category,
+			Description:   req.Description,
 		})
 		if err != nil {
 			return nil, err

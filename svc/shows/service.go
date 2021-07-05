@@ -27,6 +27,7 @@ type (
 		Cover         string    `json:"cover"`
 		HasNewEpisode bool      `json:"has_new_episode"`
 		Category      string    `json:"category"`
+		Description   string    `json:"description"`
 	}
 
 	Episode struct {
@@ -105,6 +106,8 @@ func castToListShow(source []repository.Show) []Show {
 			Title:         s.Title,
 			Cover:         s.Cover,
 			HasNewEpisode: s.HasNewEpisode,
+			Category:      s.Category.String,
+			Description:   s.Description.String,
 		})
 	}
 	return result
@@ -126,6 +129,8 @@ func castToShow(source repository.Show) Show {
 		Title:         source.Title,
 		Cover:         source.Cover,
 		HasNewEpisode: source.HasNewEpisode,
+		Category:      source.Category.String,
+		Description:   source.Description.String,
 	}
 }
 
@@ -204,6 +209,10 @@ func (s *Service) AddShow(ctx context.Context, sh Show) error {
 			String: sh.Category,
 			Valid:  true,
 		},
+		Description: sql.NullString{
+			String: sh.Description,
+			Valid:  true,
+		},
 	}); err != nil {
 		return fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
 	}
@@ -219,6 +228,10 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		HasNewEpisode: sh.HasNewEpisode,
 		Category: sql.NullString{
 			String: sh.Category,
+			Valid:  true,
+		},
+		Description: sql.NullString{
+			String: sh.Description,
 			Valid:  true,
 		},
 		ID: sh.ID,

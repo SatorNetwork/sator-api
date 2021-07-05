@@ -22,20 +22,23 @@ INSERT INTO shows (
     title,
     cover,
     has_new_episode,
-    category
+    category,
+    description
   )
 VALUES (
            @title,
            @cover,
            @has_new_episode,
-           @category
-        );
+           @category,
+           @description
+       );
 -- name: UpdateShow :exec
 UPDATE shows
 SET title = @title,
     cover = @cover,
     has_new_episode = @has_new_episode,
-    category = @category
+    category = @category,
+    description = @description
 WHERE id = @id;
 -- name: DeleteShowByID :exec
 DELETE FROM shows
