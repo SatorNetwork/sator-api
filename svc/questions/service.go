@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/questions/repository"
@@ -98,6 +100,9 @@ func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (
 		}
 		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
 	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
 
 	answMap := make(map[string][]AnswerOption)
 	for _, v := range answers {
