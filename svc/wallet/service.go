@@ -39,9 +39,7 @@ type (
 
 		AddSolanaAccount(ctx context.Context, arg repository.AddSolanaAccountParams) (repository.SolanaAccount, error)
 		GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (repository.SolanaAccount, error)
-		GetSolanaAccountByType(ctx context.Context, accountType string) (repository.SolanaAccount, error)
-		GetSolanaAccountTypeByPublicKey(ctx context.Context, publicKey string) (string, error)
-		GetSolanaAccountByUserIDAndType(ctx context.Context, arg repository.GetSolanaAccountByUserIDAndTypeParams) (repository.SolanaAccount, error)
+		GetSolanaAccountByUserID(ctx context.Context, userID uuid.UUID) (repository.SolanaAccount, error)
 	}
 
 	solanaClient interface {
@@ -98,7 +96,7 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
-		wli := WalletsListItem{ID: w.ID.String(), Type: w.WalletType}
+		wli := WalletsListItem{ID: w.ID.String()}
 
 		switch w.WalletType {
 		case WalletTypeSolana, WalletTypeSator:
@@ -139,33 +137,29 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	var balance []Balance
 
-	switch sa.AccountType {
-	case TokenAccount.String():
-		if bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey); err == nil {
-			balance = []Balance{
-				{
-					Currency: s.satorAssetName,
-					Amount:   bal,
-				},
-				{
-					Currency: "USD",
-					Amount:   bal * 1.25, // FIXME: setup currency rate
-				},
-			}
-		}
-	case GeneralAccount.String():
-		if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
-			balance = []Balance{
-				{
-					Currency: s.solanaAssetName,
-					Amount:   bal,
-				},
-				{
-					Currency: "USD",
-					Amount:   bal * 34.5, // FIXME: setup currency rate
-				},
-			}
-		}
+	balSat, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey)
+	if err != nil {
+		return Wallet{}, fmt.Errorf("could not get token account balance for this wallet: %w", err)
+	}
+
+	balSol, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey)
+	if err != nil {
+		return Wallet{}, fmt.Errorf("could not get token account balance for this wallet: %w", err)
+	}
+
+	balance = []Balance{
+		{
+			Currency: s.satorAssetName,
+			Amount:   balSat,
+		},
+		{
+			Currency: s.solanaAssetName,
+			Amount:   balSol,
+		},
+		{
+			Currency: "USD",
+			Amount:   balSol * 34.5 +  balSat * 1.25, // FIXME: setup currency rate
+		},
 	}
 
 	return Wallet{
@@ -217,7 +211,6 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	log.Printf("init token holder account transaction: %s", txHash)
 
 	sacc, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: TokenAccount.String(),
 		PublicKey:   acc.PublicKey.ToBase58(),
 		PrivateKey:  acc.PrivateKey,
 	})
@@ -228,7 +221,6 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
 		UserID:          userID,
 		SolanaAccountID: sacc.ID,
-		WalletType:      WalletTypeSator,
 		Sort:            1,
 	}); err != nil {
 		return fmt.Errorf("could not new SAO wallet for user with id=%s: %w", userID.String(), err)
@@ -236,7 +228,6 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
 		UserID:     userID,
-		WalletType: WalletTypeRewards,
 		Sort:       2,
 	}); err != nil {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
@@ -317,7 +308,6 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	time.Sleep(time.Second * 15)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: AssetAccount.String(),
 		PublicKey:   asset.PublicKey.ToBase58(),
 		PrivateKey:  asset.PrivateKey,
 	}); err != nil {
@@ -338,7 +328,6 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	time.Sleep(time.Second * 15)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: IssuerAccount.String(),
 		PublicKey:   issuer.PublicKey.ToBase58(),
 		PrivateKey:  issuer.PrivateKey,
 	}); err != nil {

@@ -1,12 +1,5 @@
 package wallet
 
-// Predefined wallet types
-const (
-	WalletTypeSolana  string = "sol"
-	WalletTypeSator   string = "sao"
-	WalletTypeRewards string = "rewards"
-)
-
 // Predefined  solana account types
 const (
 	TokenAccount       SolanaAccountType = "token_account"   // custom token account with sator tokens

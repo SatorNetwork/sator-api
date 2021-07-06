@@ -10,29 +10,22 @@ import (
 )
 
 const createWallet = `-- name: CreateWallet :one
-INSERT INTO wallets (user_id, solana_account_id, wallet_type, sort)
+INSERT INTO wallets (user_id, solana_account_id, sort)
 VALUES (
         $1,
         $2,
-        $3,
-        $4
-    ) RETURNING id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort
+        $3
+    ) RETURNING id, user_id, solana_account_id, status, updated_at, created_at, sort
 `
 
 type CreateWalletParams struct {
 	UserID          uuid.UUID `json:"user_id"`
 	SolanaAccountID uuid.UUID `json:"solana_account_id"`
-	WalletType      string    `json:"wallet_type"`
 	Sort            int32     `json:"sort"`
 }
 
 func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error) {
-	row := q.queryRow(ctx, q.createWalletStmt, createWallet,
-		arg.UserID,
-		arg.SolanaAccountID,
-		arg.WalletType,
-		arg.Sort,
-	)
+	row := q.queryRow(ctx, q.createWalletStmt, createWallet, arg.UserID, arg.SolanaAccountID, arg.Sort)
 	var i Wallet
 	err := row.Scan(
 		&i.ID,
@@ -41,14 +34,13 @@ func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wal
 		&i.Status,
 		&i.UpdatedAt,
 		&i.CreatedAt,
-		&i.WalletType,
 		&i.Sort,
 	)
 	return i, err
 }
 
 const getWalletByID = `-- name: GetWalletByID :one
-SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, sort
 FROM wallets
 WHERE id = $1
 LIMIT 1
@@ -64,14 +56,13 @@ func (q *Queries) GetWalletByID(ctx context.Context, id uuid.UUID) (Wallet, erro
 		&i.Status,
 		&i.UpdatedAt,
 		&i.CreatedAt,
-		&i.WalletType,
 		&i.Sort,
 	)
 	return i, err
 }
 
 const getWalletBySolanaAccountID = `-- name: GetWalletBySolanaAccountID :one
-SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, sort
 FROM wallets
 WHERE solana_account_id = $1
 LIMIT 1
@@ -87,14 +78,13 @@ func (q *Queries) GetWalletBySolanaAccountID(ctx context.Context, solanaAccountI
 		&i.Status,
 		&i.UpdatedAt,
 		&i.CreatedAt,
-		&i.WalletType,
 		&i.Sort,
 	)
 	return i, err
 }
 
 const getWalletsByUserID = `-- name: GetWalletsByUserID :many
-SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, sort
 FROM wallets
 WHERE user_id = $1
 ORDER BY sort ASC
@@ -116,7 +106,6 @@ func (q *Queries) GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]W
 			&i.Status,
 			&i.UpdatedAt,
 			&i.CreatedAt,
-			&i.WalletType,
 			&i.Sort,
 		); err != nil {
 			return nil, err

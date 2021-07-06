@@ -10,13 +10,12 @@ import (
 )
 
 type SolanaAccount struct {
-	ID          uuid.UUID     `json:"id"`
-	AccountType string        `json:"account_type"`
-	PublicKey   string        `json:"public_key"`
-	PrivateKey  []byte        `json:"private_key"`
-	Status      sql.NullInt32 `json:"status"`
-	UpdatedAt   sql.NullTime  `json:"updated_at"`
-	CreatedAt   time.Time     `json:"created_at"`
+	ID         uuid.UUID     `json:"id"`
+	PublicKey  string        `json:"public_key"`
+	PrivateKey []byte        `json:"private_key"`
+	Status     sql.NullInt32 `json:"status"`
+	UpdatedAt  sql.NullTime  `json:"updated_at"`
+	CreatedAt  time.Time     `json:"created_at"`
 }
 
 type Wallet struct {
@@ -26,6 +25,5 @@ type Wallet struct {
 	Status          sql.NullInt32 `json:"status"`
 	UpdatedAt       sql.NullTime  `json:"updated_at"`
 	CreatedAt       time.Time     `json:"created_at"`
-	WalletType      string        `json:"wallet_type"`
 	Sort            int32         `json:"sort"`
 }

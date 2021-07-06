@@ -31,14 +31,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getSolanaAccountByIDStmt, err = db.PrepareContext(ctx, getSolanaAccountByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSolanaAccountByID: %w", err)
 	}
-	if q.getSolanaAccountByTypeStmt, err = db.PrepareContext(ctx, getSolanaAccountByType); err != nil {
-		return nil, fmt.Errorf("error preparing query GetSolanaAccountByType: %w", err)
-	}
-	if q.getSolanaAccountByUserIDAndTypeStmt, err = db.PrepareContext(ctx, getSolanaAccountByUserIDAndType); err != nil {
-		return nil, fmt.Errorf("error preparing query GetSolanaAccountByUserIDAndType: %w", err)
-	}
-	if q.getSolanaAccountTypeByPublicKeyStmt, err = db.PrepareContext(ctx, getSolanaAccountTypeByPublicKey); err != nil {
-		return nil, fmt.Errorf("error preparing query GetSolanaAccountTypeByPublicKey: %w", err)
+	if q.getSolanaAccountByUserIDStmt, err = db.PrepareContext(ctx, getSolanaAccountByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSolanaAccountByUserID: %w", err)
 	}
 	if q.getWalletByIDStmt, err = db.PrepareContext(ctx, getWalletByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWalletByID: %w", err)
@@ -69,19 +63,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getSolanaAccountByIDStmt: %w", cerr)
 		}
 	}
-	if q.getSolanaAccountByTypeStmt != nil {
-		if cerr := q.getSolanaAccountByTypeStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getSolanaAccountByTypeStmt: %w", cerr)
-		}
-	}
-	if q.getSolanaAccountByUserIDAndTypeStmt != nil {
-		if cerr := q.getSolanaAccountByUserIDAndTypeStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getSolanaAccountByUserIDAndTypeStmt: %w", cerr)
-		}
-	}
-	if q.getSolanaAccountTypeByPublicKeyStmt != nil {
-		if cerr := q.getSolanaAccountTypeByPublicKeyStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getSolanaAccountTypeByPublicKeyStmt: %w", cerr)
+	if q.getSolanaAccountByUserIDStmt != nil {
+		if cerr := q.getSolanaAccountByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSolanaAccountByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.getWalletByIDStmt != nil {
@@ -136,31 +120,27 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                  DBTX
-	tx                                  *sql.Tx
-	addSolanaAccountStmt                *sql.Stmt
-	createWalletStmt                    *sql.Stmt
-	getSolanaAccountByIDStmt            *sql.Stmt
-	getSolanaAccountByTypeStmt          *sql.Stmt
-	getSolanaAccountByUserIDAndTypeStmt *sql.Stmt
-	getSolanaAccountTypeByPublicKeyStmt *sql.Stmt
-	getWalletByIDStmt                   *sql.Stmt
-	getWalletBySolanaAccountIDStmt      *sql.Stmt
-	getWalletsByUserIDStmt              *sql.Stmt
+	db                             DBTX
+	tx                             *sql.Tx
+	addSolanaAccountStmt           *sql.Stmt
+	createWalletStmt               *sql.Stmt
+	getSolanaAccountByIDStmt       *sql.Stmt
+	getSolanaAccountByUserIDStmt   *sql.Stmt
+	getWalletByIDStmt              *sql.Stmt
+	getWalletBySolanaAccountIDStmt *sql.Stmt
+	getWalletsByUserIDStmt         *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                  tx,
-		tx:                                  tx,
-		addSolanaAccountStmt:                q.addSolanaAccountStmt,
-		createWalletStmt:                    q.createWalletStmt,
-		getSolanaAccountByIDStmt:            q.getSolanaAccountByIDStmt,
-		getSolanaAccountByTypeStmt:          q.getSolanaAccountByTypeStmt,
-		getSolanaAccountByUserIDAndTypeStmt: q.getSolanaAccountByUserIDAndTypeStmt,
-		getSolanaAccountTypeByPublicKeyStmt: q.getSolanaAccountTypeByPublicKeyStmt,
-		getWalletByIDStmt:                   q.getWalletByIDStmt,
-		getWalletBySolanaAccountIDStmt:      q.getWalletBySolanaAccountIDStmt,
-		getWalletsByUserIDStmt:              q.getWalletsByUserIDStmt,
+		db:                             tx,
+		tx:                             tx,
+		addSolanaAccountStmt:           q.addSolanaAccountStmt,
+		createWalletStmt:               q.createWalletStmt,
+		getSolanaAccountByIDStmt:       q.getSolanaAccountByIDStmt,
+		getSolanaAccountByUserIDStmt:   q.getSolanaAccountByUserIDStmt,
+		getWalletByIDStmt:              q.getWalletByIDStmt,
+		getWalletBySolanaAccountIDStmt: q.getWalletBySolanaAccountIDStmt,
+		getWalletsByUserIDStmt:         q.getWalletsByUserIDStmt,
 	}
 }
