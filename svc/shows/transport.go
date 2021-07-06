@@ -87,14 +87,14 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{show_id}/episodes}", httptransport.NewServer(
+	r.Get("/{show_id}/episodes", httptransport.NewServer(
 		e.GetEpisodesByShowID,
 		decodeGetEpisodesByShowIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{show_id}/episodes/{episode_id}}", httptransport.NewServer(
+	r.Get("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.GetEpisodeByID,
 		decodeGetEpisodeByIDRequest,
 		httpencoder.EncodeResponse,
