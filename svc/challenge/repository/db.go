@@ -22,17 +22,36 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addChallengeStmt, err = db.PrepareContext(ctx, addChallenge); err != nil {
+		return nil, fmt.Errorf("error preparing query AddChallenge: %w", err)
+	}
+	if q.deleteChallengeByIDStmt, err = db.PrepareContext(ctx, deleteChallengeByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteChallengeByID: %w", err)
+	}
 	if q.getChallengeByIDStmt, err = db.PrepareContext(ctx, getChallengeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallengeByID: %w", err)
 	}
 	if q.getChallengesStmt, err = db.PrepareContext(ctx, getChallenges); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallenges: %w", err)
 	}
+	if q.updateChallengeStmt, err = db.PrepareContext(ctx, updateChallenge); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateChallenge: %w", err)
+	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addChallengeStmt != nil {
+		if cerr := q.addChallengeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addChallengeStmt: %w", cerr)
+		}
+	}
+	if q.deleteChallengeByIDStmt != nil {
+		if cerr := q.deleteChallengeByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteChallengeByIDStmt: %w", cerr)
+		}
+	}
 	if q.getChallengeByIDStmt != nil {
 		if cerr := q.getChallengeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getChallengeByIDStmt: %w", cerr)
@@ -41,6 +60,11 @@ func (q *Queries) Close() error {
 	if q.getChallengesStmt != nil {
 		if cerr := q.getChallengesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getChallengesStmt: %w", cerr)
+		}
+	}
+	if q.updateChallengeStmt != nil {
+		if cerr := q.updateChallengeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateChallengeStmt: %w", cerr)
 		}
 	}
 	return err
@@ -80,17 +104,23 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                   DBTX
-	tx                   *sql.Tx
-	getChallengeByIDStmt *sql.Stmt
-	getChallengesStmt    *sql.Stmt
+	db                      DBTX
+	tx                      *sql.Tx
+	addChallengeStmt        *sql.Stmt
+	deleteChallengeByIDStmt *sql.Stmt
+	getChallengeByIDStmt    *sql.Stmt
+	getChallengesStmt       *sql.Stmt
+	updateChallengeStmt     *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                   tx,
-		tx:                   tx,
-		getChallengeByIDStmt: q.getChallengeByIDStmt,
-		getChallengesStmt:    q.getChallengesStmt,
+		db:                      tx,
+		tx:                      tx,
+		addChallengeStmt:        q.addChallengeStmt,
+		deleteChallengeByIDStmt: q.deleteChallengeByIDStmt,
+		getChallengeByIDStmt:    q.getChallengeByIDStmt,
+		getChallengesStmt:       q.getChallengesStmt,
+		updateChallengeStmt:     q.updateChallengeStmt,
 	}
 }

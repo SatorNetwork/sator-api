@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,6 +38,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/", httptransport.NewServer(
+		e.AddChallenge,
+		decodeAddChallengeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{id}", httptransport.NewServer(
+		e.DeleteChallengeByID,
+		decodeDeleteChallengeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/{id}", httptransport.NewServer(
+		e.UpdateChallenge,
+		decodeUpdateChallengeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -54,4 +76,38 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusBadRequest, err.Error()
 	}
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func decodeAddChallengeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AddChallengeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeDeleteChallengeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
+	}
+
+	return id, nil
+
+}
+
+func decodeUpdateChallengeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateChallengeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	challengeID := chi.URLParam(r, "id")
+	if challengeID == "" {
+		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
+	}
+	req.ID = challengeID
+
+	return req, nil
 }

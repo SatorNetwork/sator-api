@@ -2,8 +2,11 @@ package challenge
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
 
@@ -25,6 +28,7 @@ type (
 	// Fields were rearranged to optimize memory usage.
 	Challenge struct {
 		ID                 uuid.UUID `json:"id"`
+		ShowID             uuid.UUID `json:"show_id"`
 		Title              string    `json:"title"`
 		Description        string    `json:"description"`
 		PrizePool          string    `json:"prize_pool"`
@@ -39,6 +43,9 @@ type (
 	challengesRepository interface {
 		GetChallengeByID(ctx context.Context, id uuid.UUID) (repository.Challenge, error)
 		GetChallenges(ctx context.Context, arg repository.GetChallengesParams) ([]repository.Challenge, error)
+		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) error
+		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
+		UpdateChallenge(ctx context.Context, arg repository.UpdateChallengeParams) error
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -90,7 +97,7 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
 	}
 
-	// Cast repository.Callange into challenge.Challenge struct
+	// Cast repository.Challenge into challenge.Challenge struct
 	result := make([]Challenge, 0, len(list))
 	for _, v := range list {
 		result = append(result, castToChallenge(v, s.playUrlFn))
@@ -110,4 +117,84 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challen
 		TimePerQuestionSec: int64(c.TimePerQuestion.Int32),
 		Play:               playUrlFn(c.ID),
 	}
+}
+
+// AddChallenge ..
+func (s *Service) AddChallenge(ctx context.Context, ch Challenge) error {
+	timePerQuestion, err := strconv.Atoi(ch.TimePerQuestion)
+	if err != nil {
+		return fmt.Errorf("can not parse TimePerQuestion value from string")
+	}
+
+	prizePool, err := strconv.Atoi(ch.PrizePool)
+	if err != nil {
+		return fmt.Errorf("can not parse PrizePool value from string")
+	}
+
+	if err := s.cr.AddChallenge(ctx, repository.AddChallengeParams{
+		ShowID: ch.ShowID,
+		Title:  ch.Title,
+		Description: sql.NullString{
+			String: ch.Description,
+			Valid:  len(ch.Description) > 0,
+		},
+		PrizePool:      float64(prizePool),
+		PlayersToStart: int32(ch.Players),
+		TimePerQuestion: sql.NullInt32{
+			Int32: int32(timePerQuestion),
+			Valid: true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
+	}
+	return nil
+}
+
+// DeleteChallengeByID ...
+func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.cr.DeleteChallengeByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete challenge with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// UpdateChallenge ..
+func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
+	timePerQuestion, err := strconv.Atoi(ch.TimePerQuestion)
+	if err != nil {
+		return fmt.Errorf("can not parse TimePerQuestion value from string")
+	}
+
+	prizePool, err := strconv.Atoi(ch.PrizePool)
+	if err != nil {
+		return fmt.Errorf("can not parse PrizePool value from string")
+	}
+
+	if err := s.cr.UpdateChallenge(ctx, repository.UpdateChallengeParams{
+		ShowID: ch.ShowID,
+		Title:  ch.Title,
+		Description: sql.NullString{
+			String: ch.Title,
+			Valid:  len(ch.Description) > 0,
+		},
+		PrizePool:      float64(prizePool),
+		PlayersToStart: int32(ch.Players),
+		TimePerQuestion: sql.NullInt32{
+			Int32: int32(timePerQuestion),
+			Valid: false,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		ID: ch.ID,
+	}); err != nil {
+		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)
+	}
+	return nil
 }

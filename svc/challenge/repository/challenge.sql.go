@@ -5,9 +5,64 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
+
+const addChallenge = `-- name: AddChallenge :exec
+INSERT INTO challenges (
+    show_id,
+    title,
+    description,
+    prize_pool,
+    players_to_start,
+    time_per_question,
+    updated_at
+)
+VALUES (
+           $1,
+           $2,
+           $3,
+           $4,
+           $5,
+           $6,
+           $7
+       )
+`
+
+type AddChallengeParams struct {
+	ShowID          uuid.UUID      `json:"show_id"`
+	Title           string         `json:"title"`
+	Description     sql.NullString `json:"description"`
+	PrizePool       float64        `json:"prize_pool"`
+	PlayersToStart  int32          `json:"players_to_start"`
+	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) error {
+	_, err := q.exec(ctx, q.addChallengeStmt, addChallenge,
+		arg.ShowID,
+		arg.Title,
+		arg.Description,
+		arg.PrizePool,
+		arg.PlayersToStart,
+		arg.TimePerQuestion,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const deleteChallengeByID = `-- name: DeleteChallengeByID :exec
+DELETE FROM challenges
+WHERE id = $1
+`
+
+func (q *Queries) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteChallengeByIDStmt, deleteChallengeByID, id)
+	return err
+}
 
 const getChallengeByID = `-- name: GetChallengeByID :one
 SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at
@@ -80,4 +135,41 @@ func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateChallenge = `-- name: UpdateChallenge :exec
+UPDATE challenges
+SET show_id = $1,
+    title = $2,
+    description = $3,
+    prize_pool = $4,
+    players_to_start = $5,
+    time_per_question = $6,
+    updated_at = $7
+WHERE id = $8
+`
+
+type UpdateChallengeParams struct {
+	ShowID          uuid.UUID      `json:"show_id"`
+	Title           string         `json:"title"`
+	Description     sql.NullString `json:"description"`
+	PrizePool       float64        `json:"prize_pool"`
+	PlayersToStart  int32          `json:"players_to_start"`
+	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
+	ID              uuid.UUID      `json:"id"`
+}
+
+func (q *Queries) UpdateChallenge(ctx context.Context, arg UpdateChallengeParams) error {
+	_, err := q.exec(ctx, q.updateChallengeStmt, updateChallenge,
+		arg.ShowID,
+		arg.Title,
+		arg.Description,
+		arg.PrizePool,
+		arg.PlayersToStart,
+		arg.TimePerQuestion,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	return err
 }
