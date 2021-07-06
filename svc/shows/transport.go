@@ -94,7 +94,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{show_id}/episodes/{episodes_id}}", httptransport.NewServer(
+	r.Get("/{show_id}/episodes/{episode_id}}", httptransport.NewServer(
 		e.GetEpisodeByID,
 		decodeGetEpisodeByIDRequest,
 		httpencoder.EncodeResponse,
@@ -108,14 +108,14 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Put("/{show_id}/episodes/{episodes_id}", httptransport.NewServer(
+	r.Put("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.UpdateEpisode,
 		decodeUpdateEpisodeRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Delete("/{show_id}/episodes/{episodes_id}", httptransport.NewServer(
+	r.Delete("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.DeleteEpisodeByID,
 		decodeDeleteEpisodeByIDRequest,
 		httpencoder.EncodeResponse,
@@ -233,8 +233,8 @@ func decodeUpdateEpisodeRequest(_ context.Context, r *http.Request) (interface{}
 	}
 	req.ShowID = showID
 
-	episodeID := chi.URLParam(r, "episodes_id")
-	if showID == "" {
+	episodeID := chi.URLParam(r, "episode_id")
+	if episodeID == "" {
 		return nil, fmt.Errorf("%w: missed episodes id", ErrInvalidParameter)
 	}
 	req.ID = episodeID
@@ -248,7 +248,7 @@ func decodeDeleteEpisodeByIDRequest(_ context.Context, r *http.Request) (interfa
 		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
 	}
 
-	episodeID := chi.URLParam(r, "episodes_id")
+	episodeID := chi.URLParam(r, "episode_id")
 	if episodeID == "" {
 		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
 	}
@@ -265,7 +265,7 @@ func decodeGetEpisodeByIDRequest(_ context.Context, r *http.Request) (interface{
 		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
 	}
 
-	episodeID := chi.URLParam(r, "episodes_id")
+	episodeID := chi.URLParam(r, "episode_id")
 	if episodeID == "" {
 		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
 	}
