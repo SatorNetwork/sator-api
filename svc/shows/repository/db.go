@@ -31,9 +31,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteEpisodeByIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEpisodeByID: %w", err)
 	}
-	if q.deleteEpisodeByShowIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByShowID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteEpisodeByShowID: %w", err)
-	}
 	if q.deleteShowByIDStmt, err = db.PrepareContext(ctx, deleteShowByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteShowByID: %w", err)
 	}
@@ -76,11 +73,6 @@ func (q *Queries) Close() error {
 	if q.deleteEpisodeByIDStmt != nil {
 		if cerr := q.deleteEpisodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteEpisodeByIDStmt: %w", cerr)
-		}
-	}
-	if q.deleteEpisodeByShowIDStmt != nil {
-		if cerr := q.deleteEpisodeByShowIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteEpisodeByShowIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteShowByIDStmt != nil {
@@ -160,37 +152,35 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                        DBTX
-	tx                        *sql.Tx
-	addEpisodeStmt            *sql.Stmt
-	addShowStmt               *sql.Stmt
-	deleteEpisodeByIDStmt     *sql.Stmt
-	deleteEpisodeByShowIDStmt *sql.Stmt
-	deleteShowByIDStmt        *sql.Stmt
-	getEpisodeByIDStmt        *sql.Stmt
-	getEpisodesByShowIDStmt   *sql.Stmt
-	getShowByIDStmt           *sql.Stmt
-	getShowsStmt              *sql.Stmt
-	getShowsByCategoryStmt    *sql.Stmt
-	updateEpisodeStmt         *sql.Stmt
-	updateShowStmt            *sql.Stmt
+	db                      DBTX
+	tx                      *sql.Tx
+	addEpisodeStmt          *sql.Stmt
+	addShowStmt             *sql.Stmt
+	deleteEpisodeByIDStmt   *sql.Stmt
+	deleteShowByIDStmt      *sql.Stmt
+	getEpisodeByIDStmt      *sql.Stmt
+	getEpisodesByShowIDStmt *sql.Stmt
+	getShowByIDStmt         *sql.Stmt
+	getShowsStmt            *sql.Stmt
+	getShowsByCategoryStmt  *sql.Stmt
+	updateEpisodeStmt       *sql.Stmt
+	updateShowStmt          *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                        tx,
-		tx:                        tx,
-		addEpisodeStmt:            q.addEpisodeStmt,
-		addShowStmt:               q.addShowStmt,
-		deleteEpisodeByIDStmt:     q.deleteEpisodeByIDStmt,
-		deleteEpisodeByShowIDStmt: q.deleteEpisodeByShowIDStmt,
-		deleteShowByIDStmt:        q.deleteShowByIDStmt,
-		getEpisodeByIDStmt:        q.getEpisodeByIDStmt,
-		getEpisodesByShowIDStmt:   q.getEpisodesByShowIDStmt,
-		getShowByIDStmt:           q.getShowByIDStmt,
-		getShowsStmt:              q.getShowsStmt,
-		getShowsByCategoryStmt:    q.getShowsByCategoryStmt,
-		updateEpisodeStmt:         q.updateEpisodeStmt,
-		updateShowStmt:            q.updateShowStmt,
+		db:                      tx,
+		tx:                      tx,
+		addEpisodeStmt:          q.addEpisodeStmt,
+		addShowStmt:             q.addShowStmt,
+		deleteEpisodeByIDStmt:   q.deleteEpisodeByIDStmt,
+		deleteShowByIDStmt:      q.deleteShowByIDStmt,
+		getEpisodeByIDStmt:      q.getEpisodeByIDStmt,
+		getEpisodesByShowIDStmt: q.getEpisodesByShowIDStmt,
+		getShowByIDStmt:         q.getShowByIDStmt,
+		getShowsStmt:            q.getShowsStmt,
+		getShowsByCategoryStmt:  q.getShowsByCategoryStmt,
+		updateEpisodeStmt:       q.updateEpisodeStmt,
+		updateShowStmt:          q.updateShowStmt,
 	}
 }

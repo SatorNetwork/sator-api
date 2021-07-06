@@ -27,6 +27,7 @@ type (
 		Cover         string    `json:"cover"`
 		HasNewEpisode bool      `json:"has_new_episode"`
 		Category      string    `json:"category"`
+		Description   string    `json:"description"`
 	}
 
 	Episode struct {
@@ -48,10 +49,9 @@ type (
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
 		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) error
-		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.Episode, error)
+		GetEpisodeByID(ctx context.Context, arg repository.GetEpisodeByIDParams) (repository.Episode, error)
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
-		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
-		DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error
+		DeleteEpisodeByID(ctx context.Context, arg repository.DeleteEpisodeByIDParams) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
 	}
 
@@ -105,6 +105,8 @@ func castToListShow(source []repository.Show) []Show {
 			Title:         s.Title,
 			Cover:         s.Cover,
 			HasNewEpisode: s.HasNewEpisode,
+			Category:      s.Category.String,
+			Description:   s.Description.String,
 		})
 	}
 	return result
@@ -126,6 +128,8 @@ func castToShow(source repository.Show) Show {
 		Title:         source.Title,
 		Cover:         source.Cover,
 		HasNewEpisode: source.HasNewEpisode,
+		Category:      source.Category.String,
+		Description:   source.Description.String,
 	}
 }
 
@@ -173,11 +177,15 @@ func castToListEpisodes(source []repository.Episode) []Episode {
 }
 
 // GetEpisodeByID returns episode with provided id.
-func (s *Service) GetEpisodeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
-	episode, err := s.sr.GetEpisodeByID(ctx, id)
+func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error) {
+	episode, err := s.sr.GetEpisodeByID(ctx, repository.GetEpisodeByIDParams{
+		ID:     episodeID,
+		ShowID: showID,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("could not get episode with id=%s: %w", id, err)
+		return nil, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
 	}
+
 	return castToEpisode(episode), nil
 }
 
@@ -204,6 +212,10 @@ func (s *Service) AddShow(ctx context.Context, sh Show) error {
 			String: sh.Category,
 			Valid:  true,
 		},
+		Description: sql.NullString{
+			String: sh.Description,
+			Valid:  len(sh.Description) > 0,
+		},
 	}); err != nil {
 		return fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
 	}
@@ -220,6 +232,10 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		Category: sql.NullString{
 			String: sh.Category,
 			Valid:  true,
+		},
+		Description: sql.NullString{
+			String: sh.Description,
+			Valid:  len(sh.Description) > 0,
 		},
 		ID: sh.ID,
 	}); err != nil {
@@ -298,18 +314,12 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 }
 
 // DeleteEpisodeByID ..
-func (s *Service) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
-	if err := s.sr.DeleteEpisodeByID(ctx, id); err != nil {
-		return fmt.Errorf("could not delete episode with id=%s:%w", id, err)
-	}
-
-	return nil
-}
-
-// DeleteEpisodeByShowID ..
-func (s *Service) DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error {
-	if err := s.sr.DeleteEpisodeByShowID(ctx, showID); err != nil {
-		return fmt.Errorf("could not delete episode with show_id=%s:%w", showID, err)
+func (s *Service) DeleteEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) error {
+	if err := s.sr.DeleteEpisodeByID(ctx, repository.DeleteEpisodeByIDParams{
+		ID:     episodeID,
+		ShowID: showID,
+	}); err != nil {
+		return fmt.Errorf("could not delete episode with id=%s:%w", episodeID, err)
 	}
 
 	return nil

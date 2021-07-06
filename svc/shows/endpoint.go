@@ -3,6 +3,7 @@ package shows
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -21,12 +22,11 @@ type (
 		GetShowsByCategory endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
 
-		AddEpisode            endpoint.Endpoint
-		DeleteEpisodeByID     endpoint.Endpoint
-		DeleteEpisodeByShowID endpoint.Endpoint
-		GetEpisodeByID        endpoint.Endpoint
-		GetEpisodesByShowID   endpoint.Endpoint
-		UpdateEpisode         endpoint.Endpoint
+		AddEpisode          endpoint.Endpoint
+		DeleteEpisodeByID   endpoint.Endpoint
+		GetEpisodeByID      endpoint.Endpoint
+		GetEpisodesByShowID endpoint.Endpoint
+		UpdateEpisode       endpoint.Endpoint
 	}
 
 	service interface {
@@ -39,10 +39,9 @@ type (
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddEpisode(ctx context.Context, ep Episode) error
-		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
-		DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error
+		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
 		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetEpisodeByID(ctx context.Context, id uuid.UUID) (interface{}, error)
+		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 	}
 
@@ -68,8 +67,9 @@ type (
 	AddShowRequest struct {
 		Title         string `json:"title" validate:"required, gt=0"`
 		Cover         string `json:"cover" validate:"required, gt=0"`
-		HasNewEpisode bool   `json:"has_new_episode"`
+		HasNewEpisode string `json:"has_new_episode"`
 		Category      string `json:"category"`
+		Description   string `json:"description"`
 	}
 
 	// UpdateShowRequest struct
@@ -77,8 +77,21 @@ type (
 		ID            string `json:"id" validate:"required,uuid"`
 		Title         string `json:"title" validate:"required, gt=0"`
 		Cover         string `json:"cover" validate:"required, gt=0"`
-		HasNewEpisode bool   `json:"has_new_episode"`
+		HasNewEpisode string `json:"has_new_episode"`
 		Category      string `json:"category"`
+		Description   string `json:"description"`
+	}
+
+	// GetEpisodeByIDRequest struct
+	GetEpisodeByIDRequest struct {
+		ShowID    string `json:"show_id" validate:"required,uuid"`
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+	}
+
+	// DeleteEpisodeByIDRequest struct
+	DeleteEpisodeByIDRequest struct {
+		ShowID    string `json:"show_id" validate:"required,uuid"`
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 	}
 
 	// AddEpisodeRequest struct
@@ -138,12 +151,11 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
 
-		AddEpisode:            MakeAddEpisodeEndpoint(s, validateFunc),
-		DeleteEpisodeByID:     MakeDeleteEpisodeByIDEndpoint(s),
-		DeleteEpisodeByShowID: MakeDeleteEpisodeByShowIDEndpoint(s),
-		GetEpisodeByID:        MakeGetEpisodeByIDEndpoint(s),
-		GetEpisodesByShowID:   MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
-		UpdateEpisode:         MakeUpdateEpisodeEndpoint(s, validateFunc),
+		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
+		DeleteEpisodeByID:   MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
+		GetEpisodeByID:      MakeGetEpisodeByIDEndpoint(s, validateFunc),
+		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
+		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -159,7 +171,6 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 			e.AddEpisode = mdw(e.AddEpisode)
 			e.DeleteEpisodeByID = mdw(e.DeleteEpisodeByID)
-			e.DeleteEpisodeByShowID = mdw(e.DeleteEpisodeByShowID)
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
@@ -259,11 +270,17 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		err := s.AddShow(ctx, Show{
+		b, err := strconv.ParseBool(req.HasNewEpisode)
+		if err != nil {
+			return nil, fmt.Errorf("can not parse boolean value from string")
+		}
+
+		err = s.AddShow(ctx, Show{
 			Title:         req.Title,
 			Cover:         req.Cover,
-			HasNewEpisode: req.HasNewEpisode,
+			HasNewEpisode: b,
 			Category:      req.Category,
+			Description:   req.Description,
 		})
 		if err != nil {
 			return nil, err
@@ -283,12 +300,18 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
+		b, err := strconv.ParseBool(req.HasNewEpisode)
+		if err != nil {
+			return nil, fmt.Errorf("can not parse boolean value from string")
+		}
+
 		err = s.UpdateShow(ctx, Show{
 			ID:            id,
 			Title:         req.Title,
 			Cover:         req.Cover,
-			HasNewEpisode: req.HasNewEpisode,
+			HasNewEpisode: b,
 			Category:      req.Category,
+			Description:   req.Description,
 		})
 		if err != nil {
 			return nil, err
@@ -380,31 +403,24 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 }
 
 // MakeDeleteEpisodeByIDEndpoint ...
-func MakeDeleteEpisodeByIDEndpoint(s service) endpoint.Endpoint {
+func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		id, err := uuid.Parse(request.(string))
-		if err != nil {
-			return nil, fmt.Errorf("could not get episode id: %w", err)
-		}
-
-		err = s.DeleteEpisodeByID(ctx, id)
-		if err != nil {
+		req := request.(DeleteEpisodeByIDRequest)
+		if err := v(req); err != nil {
 			return nil, err
 		}
 
-		return true, nil
-	}
-}
-
-// MakeDeleteEpisodeByShowIDEndpoint ...
-func MakeDeleteEpisodeByShowIDEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		id, err := uuid.Parse(request.(string))
+		showID, err := uuid.Parse(req.ShowID)
 		if err != nil {
-			return nil, fmt.Errorf("could not get show id: %w", err)
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		err = s.DeleteEpisodeByShowID(ctx, id)
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		err = s.DeleteEpisodeByID(ctx, showID, episodeID)
 		if err != nil {
 			return nil, err
 		}
@@ -414,14 +430,24 @@ func MakeDeleteEpisodeByShowIDEndpoint(s service) endpoint.Endpoint {
 }
 
 // MakeGetEpisodeByIDEndpoint ...
-func MakeGetEpisodeByIDEndpoint(s service) endpoint.Endpoint {
+func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		id, err := uuid.Parse(request.(string))
+		req := request.(GetEpisodeByIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
 		if err != nil {
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetEpisodeByID(ctx, id)
+		resp, err := s.GetEpisodeByID(ctx, showID, episodeID)
 		if err != nil {
 			return nil, err
 		}
