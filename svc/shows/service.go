@@ -49,9 +49,9 @@ type (
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
 		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) error
-		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.Episode, error)
+		GetEpisodeByID(ctx context.Context, arg repository.GetEpisodeByIDParams) (repository.Episode, error)
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
-		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
+		DeleteEpisodeByID(ctx context.Context, arg repository.DeleteEpisodeByIDParams) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
 	}
 
@@ -177,11 +177,15 @@ func castToListEpisodes(source []repository.Episode) []Episode {
 }
 
 // GetEpisodeByID returns episode with provided id.
-func (s *Service) GetEpisodeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
-	episode, err := s.sr.GetEpisodeByID(ctx, id)
+func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error) {
+	episode, err := s.sr.GetEpisodeByID(ctx, repository.GetEpisodeByIDParams{
+		ID:     episodeID,
+		ShowID: showID,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("could not get episode with id=%s: %w", id, err)
+		return nil, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
 	}
+
 	return castToEpisode(episode), nil
 }
 
@@ -310,9 +314,12 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 }
 
 // DeleteEpisodeByID ..
-func (s *Service) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
-	if err := s.sr.DeleteEpisodeByID(ctx, id); err != nil {
-		return fmt.Errorf("could not delete episode with id=%s:%w", id, err)
+func (s *Service) DeleteEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) error {
+	if err := s.sr.DeleteEpisodeByID(ctx, repository.DeleteEpisodeByIDParams{
+		ID:     episodeID,
+		ShowID: showID,
+	}); err != nil {
+		return fmt.Errorf("could not delete episode with id=%s:%w", episodeID, err)
 	}
 
 	return nil

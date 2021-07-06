@@ -52,22 +52,32 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
 
 const deleteEpisodeByID = `-- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
-WHERE id = $1
+WHERE id = $1 AND show_id = $2
 `
 
-func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteEpisodeByIDStmt, deleteEpisodeByID, id)
+type DeleteEpisodeByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	ShowID uuid.UUID `json:"show_id"`
+}
+
+func (q *Queries) DeleteEpisodeByID(ctx context.Context, arg DeleteEpisodeByIDParams) error {
+	_, err := q.exec(ctx, q.deleteEpisodeByIDStmt, deleteEpisodeByID, arg.ID, arg.ShowID)
 	return err
 }
 
 const getEpisodeByID = `-- name: GetEpisodeByID :one
 SELECT id, show_id, episode_number, cover, title, description, release_date, updated_at, created_at
 FROM episodes
-WHERE id = $1
+WHERE id = $1 AND show_id = $2
 `
 
-func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, error) {
-	row := q.queryRow(ctx, q.getEpisodeByIDStmt, getEpisodeByID, id)
+type GetEpisodeByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	ShowID uuid.UUID `json:"show_id"`
+}
+
+func (q *Queries) GetEpisodeByID(ctx context.Context, arg GetEpisodeByIDParams) (Episode, error) {
+	row := q.queryRow(ctx, q.getEpisodeByIDStmt, getEpisodeByID, arg.ID, arg.ShowID)
 	var i Episode
 	err := row.Scan(
 		&i.ID,
@@ -132,34 +142,33 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 
 const updateEpisode = `-- name: UpdateEpisode :exec
 UPDATE episodes
-SET show_id = $1,
-    episode_number = $2,
-    cover = $3,
-    title = $4,
-    description = $5,
-    release_date = $6
-WHERE id = $7
+SET episode_number = $1,
+    cover = $2,
+    title = $3,
+    description = $4,
+    release_date = $5
+WHERE id = $6 AND show_id = $7
 `
 
 type UpdateEpisodeParams struct {
-	ShowID        uuid.UUID      `json:"show_id"`
 	EpisodeNumber int32          `json:"episode_number"`
 	Cover         sql.NullString `json:"cover"`
 	Title         string         `json:"title"`
 	Description   sql.NullString `json:"description"`
 	ReleaseDate   sql.NullTime   `json:"release_date"`
 	ID            uuid.UUID      `json:"id"`
+	ShowID        uuid.UUID      `json:"show_id"`
 }
 
 func (q *Queries) UpdateEpisode(ctx context.Context, arg UpdateEpisodeParams) error {
 	_, err := q.exec(ctx, q.updateEpisodeStmt, updateEpisode,
-		arg.ShowID,
 		arg.EpisodeNumber,
 		arg.Cover,
 		arg.Title,
 		arg.Description,
 		arg.ReleaseDate,
 		arg.ID,
+		arg.ShowID,
 	)
 	return err
 }
