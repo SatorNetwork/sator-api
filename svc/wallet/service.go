@@ -29,6 +29,10 @@ type (
 		walletTransactionsURL   string // url template to get SOL & SAO wallet types transactions list
 		rewardsWalletDetailsURL string // url template to get rewards wallet type details
 		rewardsTransactionsURL  string // url template to get rewards wallet type transactions list
+
+		feePayerAccountPrivateKey string
+		assetAccountPrivateKey    string
+		issuerAccountPrivateKey   string
 	}
 
 	walletRepository interface {
@@ -39,9 +43,7 @@ type (
 
 		AddSolanaAccount(ctx context.Context, arg repository.AddSolanaAccountParams) (repository.SolanaAccount, error)
 		GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (repository.SolanaAccount, error)
-		GetSolanaAccountByType(ctx context.Context, accountType string) (repository.SolanaAccount, error)
-		GetSolanaAccountTypeByPublicKey(ctx context.Context, publicKey string) (string, error)
-		GetSolanaAccountByUserIDAndType(ctx context.Context, arg repository.GetSolanaAccountByUserIDAndTypeParams) (repository.SolanaAccount, error)
+		GetSolanaAccountByUserID(ctx context.Context, userID uuid.UUID) (repository.SolanaAccount, error)
 	}
 
 	solanaClient interface {
@@ -64,7 +66,7 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solanaClient) *Service {
+func NewService(wr walletRepository, sc solanaClient, feePayerAccountPrivateKey, assetAccountPrivateKey, issuerAccountPrivateKey string) *Service {
 	if wr == nil {
 		log.Fatalln("wallet repository is not set")
 	}
@@ -83,6 +85,10 @@ func NewService(wr walletRepository, sc solanaClient) *Service {
 		walletTransactionsURL:   "wallets/%s/transactions",
 		rewardsWalletDetailsURL: "rewards/wallet/%s",
 		rewardsTransactionsURL:  "rewards/wallet/%s/transactions",
+
+		feePayerAccountPrivateKey: feePayerAccountPrivateKey,
+		assetAccountPrivateKey:    assetAccountPrivateKey,
+		issuerAccountPrivateKey:   issuerAccountPrivateKey,
 	}
 }
 
@@ -101,10 +107,10 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 		wli := WalletsListItem{ID: w.ID.String(), Type: w.WalletType}
 
 		switch w.WalletType {
-		case WalletTypeSolana, WalletTypeSator:
+		case TypePersonal:
 			wli.GetDetailsURL = fmt.Sprintf(s.walletDetailsURL, w.ID.String())
 			wli.GetTransactionsURL = fmt.Sprintf(s.walletTransactionsURL, w.ID.String())
-		case WalletTypeRewards:
+		case TypeRewards:
 			wli.GetDetailsURL = fmt.Sprintf(s.rewardsWalletDetailsURL, w.ID.String())
 			wli.GetTransactionsURL = fmt.Sprintf(s.rewardsTransactionsURL, w.ID.String())
 		}
@@ -139,33 +145,25 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	var balance []Balance
 
-	switch sa.AccountType {
-	case TokenAccount.String():
-		if bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey); err == nil {
-			balance = []Balance{
-				{
-					Currency: s.satorAssetName,
-					Amount:   bal,
-				},
-				{
-					Currency: "USD",
-					Amount:   bal * 1.25, // FIXME: setup currency rate
-				},
-			}
-		}
-	case GeneralAccount.String():
-		if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
-			balance = []Balance{
-				{
-					Currency: s.solanaAssetName,
-					Amount:   bal,
-				},
-				{
-					Currency: "USD",
-					Amount:   bal * 34.5, // FIXME: setup currency rate
-				},
-			}
-		}
+	balanceToken, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey)
+	if err != nil {
+		return Wallet{}, fmt.Errorf("couldn't get token balance for this account: %w", err)
+	}
+
+	balanceSol, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey)
+	if err != nil {
+		return Wallet{}, fmt.Errorf("couldn't get solana balance for this account: %w", err)
+	}
+
+	balance = []Balance{
+		{
+			Currency: s.solanaAssetName,
+			Amount:   balanceSol,
+		},
+		{
+			Currency: "USD",
+			Amount:   balanceSol*34.5 + balanceToken*1.25, // FIXME: setup currency rate
+		},
 	}
 
 	return Wallet{
@@ -189,18 +187,9 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 // CreateWallet creates wallet for user with specified id.
 func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
-	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get fee payer account: %w", err)
-	}
-	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get issuer account: %w", err)
-	}
-	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get asset account: %w", err)
-	}
+	feePayer := types.AccountFromPrivateKeyBytes([]byte(s.feePayerAccountPrivateKey))
+	issuer := types.AccountFromPrivateKeyBytes([]byte(s.issuerAccountPrivateKey))
+	asset := types.AccountFromPrivateKeyBytes([]byte(s.assetAccountPrivateKey))
 
 	acc := s.sc.NewAccount()
 
@@ -217,9 +206,8 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	log.Printf("init token holder account transaction: %s", txHash)
 
 	sacc, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: TokenAccount.String(),
-		PublicKey:   acc.PublicKey.ToBase58(),
-		PrivateKey:  acc.PrivateKey,
+		PublicKey:  acc.PublicKey.ToBase58(),
+		PrivateKey: acc.PrivateKey,
 	})
 	if err != nil {
 		return fmt.Errorf("could not store solana account: %w", err)
@@ -228,7 +216,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
 		UserID:          userID,
 		SolanaAccountID: sacc.ID,
-		WalletType:      WalletTypeSator,
+		WalletType:      TypePersonal,
 		Sort:            1,
 	}); err != nil {
 		return fmt.Errorf("could not new SAO wallet for user with id=%s: %w", userID.String(), err)
@@ -236,7 +224,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
 		UserID:     userID,
-		WalletType: WalletTypeRewards,
+		WalletType: TypeRewards,
 		Sort:       2,
 	}); err != nil {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
@@ -247,22 +235,11 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 
 // WithdrawRewards convert rewards into sator tokens
 func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
-	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
-	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
-	}
-	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
-	if err != nil {
-		return "", fmt.Errorf("could not get issuer account: %w", err)
-	}
-	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return "", fmt.Errorf("could not get asset account: %w", err)
-	}
-	user, err := s.wr.GetSolanaAccountByUserIDAndType(ctx, repository.GetSolanaAccountByUserIDAndTypeParams{
-		UserID:     userID,
-		WalletType: WalletTypeSator,
-	})
+	feePayer := types.AccountFromPrivateKeyBytes([]byte(s.feePayerAccountPrivateKey))
+	issuer := types.AccountFromPrivateKeyBytes([]byte(s.issuerAccountPrivateKey))
+	asset := types.AccountFromPrivateKeyBytes([]byte(s.assetAccountPrivateKey))
+
+	user, err := s.wr.GetSolanaAccountByUserID(ctx, userID)
 	if err != nil {
 		return "", fmt.Errorf("could not get user token account: %w", err)
 	}
@@ -296,9 +273,8 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	asset := s.sc.NewAccount()
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: FeePayerAccount.String(),
-		PublicKey:   feePayer.PublicKey.ToBase58(),
-		PrivateKey:  feePayer.PrivateKey,
+		PublicKey:  feePayer.PublicKey.ToBase58(),
+		PrivateKey: feePayer.PrivateKey,
 	}); err != nil {
 		return fmt.Errorf("could not store issuer solana account: %w", err)
 	}
@@ -317,9 +293,8 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	time.Sleep(time.Second * 15)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: AssetAccount.String(),
-		PublicKey:   asset.PublicKey.ToBase58(),
-		PrivateKey:  asset.PrivateKey,
+		PublicKey:  asset.PublicKey.ToBase58(),
+		PrivateKey: asset.PrivateKey,
 	}); err != nil {
 		return fmt.Errorf("could not store asset solana account: %w", err)
 	}
@@ -338,9 +313,8 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	time.Sleep(time.Second * 15)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: IssuerAccount.String(),
-		PublicKey:   issuer.PublicKey.ToBase58(),
-		PrivateKey:  issuer.PrivateKey,
+		PublicKey:  issuer.PublicKey.ToBase58(),
+		PrivateKey: issuer.PrivateKey,
 	}); err != nil {
 		return fmt.Errorf("could not store issuer solana account: %w", err)
 	}
@@ -419,32 +393,9 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error) {
 	senderAcc := s.sc.AccountFromPrivatekey([]byte(senderPrivateKey))
 
-	senderAccType, err := s.wr.GetSolanaAccountByType(ctx, senderAcc.PublicKey.ToBase58())
-	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
-	}
-
-	recipientAccType, err := s.wr.GetSolanaAccountByType(ctx, recipientPK)
-	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
-	}
-
-	if senderAccType.AccountType != recipientAccType.AccountType {
-		return "", fmt.Errorf("accounts have different types, transaction impossible")
-	}
-
-	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
-	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
-	}
-	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
-	if err != nil {
-		return "", fmt.Errorf("could not get issuer account: %w", err)
-	}
-	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return "", fmt.Errorf("could not get asset account: %w", err)
-	}
+	feePayer := types.AccountFromPrivateKeyBytes([]byte(s.feePayerAccountPrivateKey))
+	issuer := types.AccountFromPrivateKeyBytes([]byte(s.issuerAccountPrivateKey))
+	asset := types.AccountFromPrivateKeyBytes([]byte(s.assetAccountPrivateKey))
 
 	for i := 0; i < 5; i++ {
 		if tx, err = s.sc.SendAssets(

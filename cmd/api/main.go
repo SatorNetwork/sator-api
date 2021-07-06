@@ -81,7 +81,10 @@ var (
 	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
 
 	// Solana
-	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+	solanaApiBaseUrl          = env.MustString("SOLANA_API_BASE_URL")
+	feePayerAccountPrivateKey = env.MustString("FEE_PAYER_ACCOUNT")
+	assetAccountPrivateKey    = env.MustString("ASSET_ACCOUNT")
+	issuerAccountPrivateKey   = env.MustString("ISSUER_ACCOUNT")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -173,7 +176,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl))
+		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), feePayerAccountPrivateKey, assetAccountPrivateKey, issuerAccountPrivateKey)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),

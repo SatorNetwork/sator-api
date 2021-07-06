@@ -51,7 +51,7 @@ func (s *Service) GetAccountBalance(ctx context.Context, uid uuid.UUID) (interfa
 	balance := make([]Balance, 0, len(walletsList))
 	for _, w := range walletsList {
 		switch w.Type {
-		case wallet.WalletTypeSator, wallet.WalletTypeSolana:
+		case wallet.TypePersonal:
 			wlt, err := s.wallets.GetWalletByID(ctx, uid, uuid.MustParse(w.ID))
 			if err != nil {
 				log.Printf("get wallet with id=%s: %v", w.ID, err)
@@ -63,7 +63,7 @@ func (s *Service) GetAccountBalance(ctx context.Context, uid uuid.UUID) (interfa
 					Amount:   wlt.Balance[0].Amount,
 				})
 			}
-		case wallet.WalletTypeRewards:
+		case wallet.TypeRewards:
 			amount, err := s.rewards.GetUserRewards(ctx, uid)
 			if err != nil {
 				log.Printf("get user rewards: %v", err)

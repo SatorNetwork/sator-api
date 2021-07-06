@@ -2,19 +2,8 @@ package wallet
 
 // Predefined wallet types
 const (
-	WalletTypeSolana  string = "sol"
-	WalletTypeSator   string = "sao"
-	WalletTypeRewards string = "rewards"
-)
-
-// Predefined  solana account types
-const (
-	TokenAccount       SolanaAccountType = "token_account"   // custom token account with sator tokens
-	GeneralAccount     SolanaAccountType = "general_account" // general account with SOL
-	FeePayerAccount    SolanaAccountType = "fee_payer"       // general account with SOL to pay transaction comission
-	IssuerAccount      SolanaAccountType = "issuer"          // sator tokens issuer
-	DistributorAccount SolanaAccountType = "distributor"     // sator tokens distributor
-	AssetAccount       SolanaAccountType = "asset"           // sator token account
+	TypePersonal string = "personal"
+	TypeRewards  string = "rewards"
 )
 
 // SolanaAccountType solana account type

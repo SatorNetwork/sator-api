@@ -20,6 +20,11 @@ var (
 	dbConnString   = env.MustString("DATABASE_URL")
 	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 10)
 	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
+
+	// Wallets
+	feePayerAccountPrivateKey = env.MustString("FEE_PAYER_ACCOUNT")
+	assetAccountPrivateKey    = env.MustString("ASSET_ACCOUNT")
+	issuerAccountPrivateKey   = env.MustString("ISSUER_ACCOUNT")
 )
 
 func main() {
@@ -46,7 +51,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint))
+	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint), feePayerAccountPrivateKey, assetAccountPrivateKey, issuerAccountPrivateKey)
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)
