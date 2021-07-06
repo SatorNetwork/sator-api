@@ -60,16 +60,6 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const deleteEpisodeByShowID = `-- name: DeleteEpisodeByShowID :exec
-DELETE FROM episodes
-WHERE show_id = $1
-`
-
-func (q *Queries) DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteEpisodeByShowIDStmt, deleteEpisodeByShowID, showID)
-	return err
-}
-
 const getEpisodeByID = `-- name: GetEpisodeByID :one
 SELECT id, show_id, episode_number, cover, title, description, release_date, updated_at, created_at
 FROM episodes

@@ -2,6 +2,7 @@ package shows
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,14 +20,6 @@ import (
 const (
 	pageParam         = "page"
 	itemsPerPageParam = "items_per_page"
-	title             = "title"
-	cover             = "cover"
-	hasNewEpisode     = "has_new_episode"
-	category          = "category"
-	showId            = "show_id"
-	episodeNumber     = "episode_number"
-	description       = "description"
-	releaseDate       = "release_date"
 )
 
 type (
@@ -129,13 +122,6 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Delete("/{show_id}/episodes", httptransport.NewServer(
-		e.DeleteEpisodeByShowID,
-		decodeDeleteEpisodeByShowIDRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
 	return r
 }
 
@@ -180,6 +166,7 @@ func castStrToInt32(source string) int32 {
 	if err != nil {
 		return 0
 	}
+
 	return int32(res)
 }
 
@@ -188,38 +175,26 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	if errors.Is(err, ErrInvalidParameter) {
 		return http.StatusBadRequest, err.Error()
 	}
+
 	return httpencoder.CodeAndMessageFrom(err)
 }
 
 func decodeAddShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	b, err := strconv.ParseBool(r.URL.Query().Get(hasNewEpisode))
-	if err != nil {
-		return nil, fmt.Errorf("can not parse boolean value from string")
+	var req AddShowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	return AddShowRequest{
-		Title:         r.URL.Query().Get(title),
-		Cover:         r.URL.Query().Get(cover),
-		HasNewEpisode: b,
-		Category:      r.URL.Query().Get(category),
-		Description:   r.URL.Query().Get(description),
-	}, nil
+	return req, nil
 }
 
 func decodeUpdateShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	b, err := strconv.ParseBool(r.URL.Query().Get(hasNewEpisode))
-	if err != nil {
-		return nil, fmt.Errorf("can not parse boolean value from string")
+	var req UpdateShowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	return UpdateShowRequest{
-		ID:            chi.URLParam(r, "show_id"),
-		Title:         r.URL.Query().Get(title),
-		Cover:         r.URL.Query().Get(cover),
-		HasNewEpisode: b,
-		Category:      r.URL.Query().Get(category),
-		Description:   r.URL.Query().Get(description),
-	}, nil
+	return req, nil
 }
 
 func decodeDeleteShowByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -227,30 +202,28 @@ func decodeDeleteShowByIDRequest(_ context.Context, r *http.Request) (interface{
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
 	}
+
 	return id, nil
 }
 
 func decodeAddEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return AddEpisodeRequest{
-		ShowID:        r.URL.Query().Get(showId),
-		EpisodeNumber: castStrToInt32(r.URL.Query().Get(episodeNumber)),
-		Cover:         r.URL.Query().Get(cover),
-		Title:         r.URL.Query().Get(title),
-		Description:   r.URL.Query().Get(description),
-		ReleaseDate:   r.URL.Query().Get(releaseDate),
-	}, nil
+	var req AddEpisodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
 }
 
 func decodeUpdateEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return UpdateEpisodeRequest{
-		ID:            chi.URLParam(r, "id"),
-		ShowID:        r.URL.Query().Get(showId),
-		EpisodeNumber: castStrToInt32(r.URL.Query().Get(episodeNumber)),
-		Cover:         r.URL.Query().Get(cover),
-		Title:         r.URL.Query().Get(title),
-		Description:   r.URL.Query().Get(description),
-		ReleaseDate:   r.URL.Query().Get(releaseDate),
-	}, nil
+	var req UpdateEpisodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	req.ID = chi.URLParam(r, "id")
+
+	return req, nil
 }
 
 func decodeDeleteEpisodeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -258,14 +231,7 @@ func decodeDeleteEpisodeByIDRequest(_ context.Context, r *http.Request) (interfa
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
 	}
-	return id, nil
-}
 
-func decodeDeleteEpisodeByShowIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "show_id")
-	if id == "" {
-		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
-	}
 	return id, nil
 }
 

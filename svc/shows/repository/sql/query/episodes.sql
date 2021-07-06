@@ -37,6 +37,3 @@ WHERE id = @id;
 -- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
 WHERE id = @id;
--- name: DeleteEpisodeByShowID :exec
-DELETE FROM episodes
-WHERE show_id = @show_id;

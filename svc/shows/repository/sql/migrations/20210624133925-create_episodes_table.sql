@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS episodes (
     description VARCHAR DEFAULT NULL,
     release_date TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT now()
-);
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
+    );
 -- +migrate Down
 DROP TABLE IF EXISTS episodes;

@@ -52,7 +52,6 @@ type (
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.Episode, error)
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
-		DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
 	}
 
@@ -211,7 +210,7 @@ func (s *Service) AddShow(ctx context.Context, sh Show) error {
 		},
 		Description: sql.NullString{
 			String: sh.Description,
-			Valid:  true,
+			Valid:  len(sh.Description) > 0,
 		},
 	}); err != nil {
 		return fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
@@ -232,7 +231,7 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		},
 		Description: sql.NullString{
 			String: sh.Description,
-			Valid:  true,
+			Valid:  len(sh.Description) > 0,
 		},
 		ID: sh.ID,
 	}); err != nil {
@@ -314,15 +313,6 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 func (s *Service) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 	if err := s.sr.DeleteEpisodeByID(ctx, id); err != nil {
 		return fmt.Errorf("could not delete episode with id=%s:%w", id, err)
-	}
-
-	return nil
-}
-
-// DeleteEpisodeByShowID ..
-func (s *Service) DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error {
-	if err := s.sr.DeleteEpisodeByShowID(ctx, showID); err != nil {
-		return fmt.Errorf("could not delete episode with show_id=%s:%w", showID, err)
 	}
 
 	return nil
