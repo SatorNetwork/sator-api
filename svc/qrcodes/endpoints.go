@@ -30,21 +30,21 @@ type (
 
 	// AddQRCodeRequest struct
 	AddQRCodeRequest struct {
-		ShowID       string `json:"show_id" validate:"required,uuid"`
-		EpisodeID    string `json:"episode_id" validate:"required, uuid"`
-		StartsAt     string `json:"starts_at" validate:"required, datetime=2006-01-02T15:04:05Z07:00"`
-		ExpiresAt    string `json:"expires_at" validate:"required, datetime=2006-01-02T15:04:05Z07:00"`
-		RewardAmount int    `json:"reward_amount" validate:"required"`
+		ShowID       string  `json:"show_id" validate:"required,uuid"`
+		EpisodeID    string  `json:"episode_id" validate:"required,uuid"`
+		StartsAt     string  `json:"starts_at" validate:"required"`
+		ExpiresAt    string  `json:"expires_at" validate:"required"`
+		RewardAmount float64 `json:"reward_amount" validate:"required"`
 	}
 
 	// UpdateQRCodeRequest struct
 	UpdateQRCodeRequest struct {
-		ID           string `json:"id" validate:"required,uuid"`
-		ShowID       string `json:"show_id" validate:"required,uuid"`
-		EpisodeID    string `json:"episode_id" validate:"required, uuid"`
-		StartsAt     string `json:"starts_at" validate:"required, datetime=2006-01-02T15:04:05Z07:00"`
-		ExpiresAt    string `json:"expires_at" validate:"required, datetime=2006-01-02T15:04:05Z07:00"`
-		RewardAmount int    `json:"reward_amount" validate:"required"`
+		ID           string  `json:"id" validate:"required,uuid"`
+		ShowID       string  `json:"show_id" validate:"required,uuid"`
+		EpisodeID    string  `json:"episode_id" validate:"required,uuid"`
+		StartsAt     string  `json:"starts_at" validate:"required"`
+		ExpiresAt    string  `json:"expires_at" validate:"required"`
+		RewardAmount float64 `json:"reward_amount" validate:"required"`
 	}
 )
 
@@ -126,7 +126,7 @@ func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 			EpisodeID:    episodeID,
 			StartsAt:     startsAt,
 			ExpiresAt:    expiresAt,
-			RewardAmount: float64(req.RewardAmount),
+			RewardAmount: req.RewardAmount,
 		})
 		if err != nil {
 			return nil, err
@@ -192,7 +192,7 @@ func MakeUpdateQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			EpisodeID:    episodeID,
 			StartsAt:     startsAt,
 			ExpiresAt:    expiresAt,
-			RewardAmount: float64(req.RewardAmount),
+			RewardAmount: req.RewardAmount,
 		})
 		if err != nil {
 			return nil, err
