@@ -772,6 +772,53 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /challenges/{episode_id}/validation-question:
+    get:
+      tags:
+        - "Challenges"
+      summary: Get validation question by episode id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns validation question with answer options.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question_text:
+                    type: string
+                    example: "Question text"
+                  time_for_answer:
+                    type: number
+                    example: 8
+                  answer_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        answer_id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        answer_text:
+                          type: string
+                          example: "Answer text"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /qrcodes/{id}:
     get:
       tags:
