@@ -66,7 +66,7 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, arg DeleteEpisodeByIDPa
 }
 
 const getEpisodeByID = `-- name: GetEpisodeByID :one
-SELECT id, show_id, episode_number, cover, title, description, release_date, updated_at, created_at
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at
 FROM episodes
 WHERE id = $1 AND show_id = $2
 `
@@ -82,6 +82,7 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, arg GetEpisodeByIDParams) 
 	err := row.Scan(
 		&i.ID,
 		&i.ShowID,
+		&i.SeasonID,
 		&i.EpisodeNumber,
 		&i.Cover,
 		&i.Title,
@@ -94,7 +95,7 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, arg GetEpisodeByIDParams) 
 }
 
 const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
-SELECT id, show_id, episode_number, cover, title, description, release_date, updated_at, created_at
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at
 FROM episodes
 WHERE show_id = $1
 ORDER BY episode_number DESC
@@ -119,6 +120,7 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShowID,
+			&i.SeasonID,
 			&i.EpisodeNumber,
 			&i.Cover,
 			&i.Title,

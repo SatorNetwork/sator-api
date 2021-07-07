@@ -30,6 +30,13 @@ type (
 		Description   string    `json:"description"`
 	}
 
+	Season struct {
+		ID           uuid.UUID `json:"id"`
+		Title        string    `json:"title"`
+		SeasonNumber int       `json:"season_number"`
+		Episodes     []Episode `json:"episodes"`
+	}
+
 	Episode struct {
 		ID            uuid.UUID `json:"id"`
 		ShowID        uuid.UUID `json:"show_id"`
@@ -53,6 +60,8 @@ type (
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
 		DeleteEpisodeByID(ctx context.Context, arg repository.DeleteEpisodeByIDParams) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
+
+		GetSeasonsByShowID(ctx context.Context, arg repository.GetSeasonsByShowIDParams) ([]repository.Season, error)
 	}
 
 	// Challenges service client
@@ -148,6 +157,15 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit
 
 // GetEpisodesByShowID returns episodes by show id.
 func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
+	seasons, err := s.sr.GetSeasonsByShowID(ctx, repository.GetSeasonsByShowIDParams{
+		ShowID: showID,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get seasons list: %w", err)
+	}
+
 	episodes, err := s.sr.GetEpisodesByShowID(ctx, repository.GetEpisodesByShowIDParams{
 		ShowID: showID,
 		Limit:  limit,
@@ -156,7 +174,29 @@ func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, lim
 	if err != nil {
 		return nil, fmt.Errorf("could not get episodes list: %w", err)
 	}
-	return castToListEpisodes(episodes), nil
+
+	episodesPerSeasons := make(map[string][]Episode)
+	for _, e := range episodes {
+		if _, ok := episodesPerSeasons[e.SeasonID.String()]; ok {
+			episodesPerSeasons[e.SeasonID.String()] = append(episodesPerSeasons[e.SeasonID.String()], castToEpisode(e))
+		}
+	}
+
+	return castToListSeasons(seasons, episodesPerSeasons), nil
+}
+
+// Cast repository.Season to service Season structure
+func castToListSeasons(source []repository.Season, episodes map[string][]Episode) []Season {
+	result := make([]Season, 0, len(source))
+	for _, s := range source {
+		result = append(result, Season{
+			ID:           s.ID,
+			SeasonNumber: int(s.SeasonNumber),
+			Title:        fmt.Sprintf("Season %d", s.SeasonNumber),
+			Episodes:     episodes[s.ID.String()],
+		})
+	}
+	return result
 }
 
 // Cast repository.Episode to service Episode structure

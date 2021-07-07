@@ -38,6 +38,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
+	// shows list
 	r.Get("/", httptransport.NewServer(
 		e.GetShows,
 		decodeGetShowsRequest,
@@ -45,16 +46,17 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/", httptransport.NewServer(
-		e.AddShow,
-		decodeAddShowRequest,
+	r.Get("/filter/{category}", httptransport.NewServer(
+		e.GetShowsByCategory,
+		decodeGetShowsByCategoryRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{show_id}/challenges", httptransport.NewServer(
-		e.GetShowChallenges,
-		decodeGetShowChallengesRequest,
+	// show
+	r.Post("/", httptransport.NewServer(
+		e.AddShow,
+		decodeAddShowRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -80,13 +82,15 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/filter/{category}", httptransport.NewServer(
-		e.GetShowsByCategory,
-		decodeGetShowsByCategoryRequest,
+	// challenges
+	r.Get("/{show_id}/challenges", httptransport.NewServer(
+		e.GetShowChallenges,
+		decodeGetShowChallengesRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
+	// Episodes
 	r.Get("/{show_id}/episodes", httptransport.NewServer(
 		e.GetEpisodesByShowID,
 		decodeGetEpisodesByShowIDRequest,
