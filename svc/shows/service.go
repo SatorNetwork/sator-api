@@ -179,6 +179,8 @@ func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, lim
 	for _, e := range episodes {
 		if _, ok := episodesPerSeasons[e.SeasonID.String()]; ok {
 			episodesPerSeasons[e.SeasonID.String()] = append(episodesPerSeasons[e.SeasonID.String()], castToEpisode(e))
+		} else {
+			episodesPerSeasons[e.SeasonID.String()] = []Episode{castToEpisode(e)}
 		}
 	}
 
