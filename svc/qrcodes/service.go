@@ -2,6 +2,7 @@ package qrcodes
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -26,6 +27,9 @@ type (
 
 	qrcodeRepository interface {
 		GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (repository.Qrcode, error)
+		AddQRCode(ctx context.Context, arg repository.AddQRCodeParams) error
+		DeleteQRCodeByID(ctx context.Context, id uuid.UUID) error
+		UpdateQRCode(ctx context.Context, arg repository.UpdateQRCodeParams) error
 	}
 
 	rewardsClient interface {
@@ -34,10 +38,12 @@ type (
 
 	// Qrcode struct
 	Qrcode struct {
-		ID           string  `json:"id"`
-		ShowID       string  `json:"show_id"`
-		EpisodeID    string  `json:"episode_id"`
-		RewardAmount float64 `json:"reward_amount"`
+		ID           uuid.UUID `json:"id"`
+		ShowID       uuid.UUID `json:"show_id"`
+		EpisodeID    uuid.UUID `json:"episode_id"`
+		StartsAt     time.Time `json:"starts_at"`
+		ExpiresAt    time.Time `json:"expires_at"`
+		RewardAmount float64   `json:"reward_amount"`
 	}
 )
 
@@ -78,11 +84,61 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (
 	}
 
 	qrcode := &Qrcode{
-		ID:           qrcodeData.ID.String(),
-		ShowID:       qrcodeData.ShowID.String(),
-		EpisodeID:    qrcodeData.EpisodeID.String(),
+		ID:           qrcodeData.ID,
+		ShowID:       qrcodeData.ShowID,
+		EpisodeID:    qrcodeData.EpisodeID,
 		RewardAmount: qrcodeData.RewardAmount.Float64,
 	}
 
 	return qrcode, nil
+}
+
+// AddQRCode ..
+func (s *Service) AddQRCode(ctx context.Context, qr Qrcode) error {
+	if err := s.qr.AddQRCode(ctx, repository.AddQRCodeParams{
+		ShowID:    qr.ShowID,
+		EpisodeID: qr.EpisodeID,
+		StartsAt:  qr.StartsAt,
+		ExpiresAt: qr.ExpiresAt,
+		RewardAmount: sql.NullFloat64{
+			Float64: qr.RewardAmount,
+			Valid:   true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not add qrcode with episode id=%s: %w", qr.EpisodeID, err)
+	}
+
+	return nil
+}
+
+// DeleteQRCodeByID ...
+func (s *Service) DeleteQRCodeByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.qr.DeleteQRCodeByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete qrcode with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// UpdateQRCode ..
+func (s *Service) UpdateQRCode(ctx context.Context, qr Qrcode) error {
+	if err := s.qr.UpdateQRCode(ctx, repository.UpdateQRCodeParams{
+		ShowID:    qr.ShowID,
+		EpisodeID: qr.EpisodeID,
+		StartsAt:  qr.StartsAt,
+		ExpiresAt: qr.ExpiresAt,
+		RewardAmount: sql.NullFloat64{
+			Float64: qr.RewardAmount,
+			Valid:   true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		ID: qr.ID,
+	}); err != nil {
+		return fmt.Errorf("could not update qrcode with id=%s:%w", qr.ID, err)
+	}
+
+	return nil
 }
