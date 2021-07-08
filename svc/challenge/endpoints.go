@@ -57,6 +57,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	if len(m) > 0 {
 		for _, mdw := range m {
 			e.GetChallengeById = mdw(e.GetChallengeById)
+			e.GetChallengesByShowId = mdw(e.GetChallengesByShowId)
+			e.GetVerificationQuestionByEpisodeID = mdw(e.GetVerificationQuestionByEpisodeID)
+			e.CheckVerificationQuestionAnswer = mdw(e.CheckVerificationQuestionAnswer)
+			e.VerifyUserAccessToEpisode = mdw(e.VerifyUserAccessToEpisode)
 		}
 	}
 
