@@ -41,6 +41,7 @@ type (
 	challengesRepository interface {
 		GetChallengeByID(ctx context.Context, id uuid.UUID) (repository.Challenge, error)
 		GetChallenges(ctx context.Context, arg repository.GetChallengesParams) ([]repository.Challenge, error)
+		GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UUID) (repository.Challenge, error)
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -63,6 +64,10 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 func NewService(cr challengesRepository, fn playURLGenerator, qs questionsService) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
+	}
+
+	if qs == nil {
+		log.Fatalln("questions service client is not set")
 	}
 
 	return &Service{
@@ -89,7 +94,11 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 
 // GetVerificationQuestionByEpisodeID ...
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error) {
-	return s.qs.GetOneRandomQuestionByChallengeID(ctx, episodeID)
+	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
+	if err != nil {
+		return Challenge{}, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+	return s.qs.GetOneRandomQuestionByChallengeID(ctx, challenge.ID)
 }
 
 // CheckVerificationQuestionAnswer ...
