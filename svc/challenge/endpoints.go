@@ -45,7 +45,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetChallengeById: MakeGetChallengeByIdEndpoint(s, validateFunc),
+		GetChallengeById:      MakeGetChallengeByIdEndpoint(s, validateFunc),
+		GetChallengesByShowId: MakeGetChallengeByIdEndpoint(s, validateFunc),
+
+		GetVerificationQuestionByEpisodeID: MakeGetVerificationQuestionByEpisodeIDEndpoint(s, validateFunc),
+		CheckVerificationQuestionAnswer:    MakeCheckVerificationQuestionAnswerEndpoint(s, validateFunc),
+		VerifyUserAccessToEpisode:          MakeVerifyUserAccessToEpisodeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
