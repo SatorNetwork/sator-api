@@ -31,21 +31,21 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	}
 
 	r.Get("/{episode_id}/validation-question", httptransport.NewServer(
-		e.GetChallengeById,
+		e.GetVerificationQuestionByEpisodeID,
 		decodeGetValidationQuestionRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/{question_id}/check-answer/{answer_id}", httptransport.NewServer(
-		e.GetChallengeById,
+		e.CheckVerificationQuestionAnswer,
 		decodeCheckAnswerRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/{episode_id}/is-activated", httptransport.NewServer(
-		e.GetChallengeById,
+		e.VerifyUserAccessToEpisode,
 		decodeIsEpisodeActivatedRequest,
 		httpencoder.EncodeResponse,
 		options...,
