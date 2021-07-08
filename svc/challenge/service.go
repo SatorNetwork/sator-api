@@ -50,6 +50,20 @@ type (
 		GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*questions.Question, error)
 		CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error)
 	}
+
+	Question struct {
+		QuestionID     string         `json:"question_id"`
+		QuestionText   string         `json:"question_text"`
+		TimeForAnswer  int            `json:"time_for_answer"`
+		TotalQuestions int            `json:"total_questions"`
+		QuestionNumber int            `json:"question_number"`
+		AnswerOptions  []AnswerOption `json:"answer_options"`
+	}
+
+	AnswerOption struct {
+		AnswerID   string `json:"answer_id"`
+		AnswerText string `json:"answer_text"`
+	}
 )
 
 // DefaultPlayURLGenerator ...
@@ -96,9 +110,27 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error) {
 	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
 	if err != nil {
-		return Challenge{}, fmt.Errorf("could not get challenge by id: %w", err)
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
-	return s.qs.GetOneRandomQuestionByChallengeID(ctx, challenge.ID)
+	q, err := s.qs.GetOneRandomQuestionByChallengeID(ctx, challenge.ID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
+	answers := make([]AnswerOption, 0, len(q.AnswerOptions))
+	for _, o := range q.AnswerOptions {
+		answers = append(answers, AnswerOption{
+			AnswerID:   o.ID.String(),
+			AnswerText: o.Option,
+		})
+	}
+
+	return Question{
+		QuestionID:    q.ID.String(),
+		QuestionText:  q.Question,
+		TimeForAnswer: int(challenge.TimePerQuestion.Int32),
+		AnswerOptions: answers,
+	}, nil
 }
 
 // CheckVerificationQuestionAnswer ...
