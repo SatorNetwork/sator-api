@@ -20,6 +20,7 @@ type Episode struct {
 	ReleaseDate   sql.NullTime   `json:"release_date"`
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
+	ChallengeID   uuid.UUID      `json:"challenge_id"`
 }
 
 type Season struct {

@@ -45,6 +45,7 @@ type (
 		Title         string    `json:"title"`
 		Description   string    `json:"description"`
 		ReleaseDate   string    `json:"release_date"`
+		ChallengeID   uuid.UUID `json:"challenge_id"`
 	}
 
 	showsRepository interface {
@@ -213,6 +214,7 @@ func castToListEpisodes(source []repository.Episode) []Episode {
 			Title:         s.Title,
 			Description:   s.Description.String,
 			ReleaseDate:   s.ReleaseDate.Time.String(),
+			ChallengeID:   s.ChallengeID,
 		})
 	}
 	return result
@@ -241,6 +243,7 @@ func castToEpisode(source repository.Episode) Episode {
 		Title:         source.Title,
 		Description:   source.Description.String,
 		ReleaseDate:   source.ReleaseDate.Time.String(),
+		ChallengeID:   source.ChallengeID,
 	}
 }
 

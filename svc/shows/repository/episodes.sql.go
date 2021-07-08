@@ -66,7 +66,7 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, arg DeleteEpisodeByIDPa
 }
 
 const getEpisodeByID = `-- name: GetEpisodeByID :one
-SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id
 FROM episodes
 WHERE id = $1 AND show_id = $2
 `
@@ -90,12 +90,13 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, arg GetEpisodeByIDParams) 
 		&i.ReleaseDate,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.ChallengeID,
 	)
 	return i, err
 }
 
 const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
-SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id
 FROM episodes
 WHERE show_id = $1
 ORDER BY episode_number DESC
@@ -128,6 +129,7 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 			&i.ReleaseDate,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.ChallengeID,
 		); err != nil {
 			return nil, err
 		}
