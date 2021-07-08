@@ -30,6 +30,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
+	r.Get("/{episode_id}/validation-question", httptransport.NewServer(
+		e.GetChallengeById,
+		decodeGetValidationQuestionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{question_id}/check-answer/{answer_id}", httptransport.NewServer(
+		e.GetChallengeById,
+		decodeCheckAnswerRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{episode_id}/is-activated", httptransport.NewServer(
+		e.GetChallengeById,
+		decodeIsEpisodeActivatedRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{id}", httptransport.NewServer(
 		e.GetChallengeById,
 		decodeGetChallengeByIdRequest,
@@ -38,6 +59,37 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	return r
+}
+
+func decodeGetValidationQuestionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "episode_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed episode_id", ErrInvalidParameter)
+	}
+	return id, nil
+}
+
+func decodeCheckAnswerRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	qid := chi.URLParam(r, "question_id")
+	if qid == "" {
+		return nil, fmt.Errorf("%w: missed question_id", ErrInvalidParameter)
+	}
+	aid := chi.URLParam(r, "answer_id")
+	if qid == "" {
+		return nil, fmt.Errorf("%w: missed answer_id", ErrInvalidParameter)
+	}
+	return CheckAnswerRequest{
+		QuestionID: qid,
+		AnswerID:   aid,
+	}, nil
+}
+
+func decodeIsEpisodeActivatedRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "episode_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed episode_id", ErrInvalidParameter)
+	}
+	return id, nil
 }
 
 func decodeGetChallengeByIdRequest(_ context.Context, r *http.Request) (interface{}, error) {

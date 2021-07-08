@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/questions"
 
 	"github.com/google/uuid"
 )
@@ -15,6 +16,7 @@ type (
 	Service struct {
 		cr        challengesRepository
 		playUrlFn playURLGenerator
+		qs        questionsService
 	}
 
 	// ServiceOption function
@@ -42,6 +44,11 @@ type (
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
+
+	questionsService interface {
+		GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*questions.Question, error)
+		CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error)
+	}
 )
 
 // DefaultPlayURLGenerator ...
@@ -53,7 +60,7 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator) *Service {
+func NewService(cr challengesRepository, fn playURLGenerator, qs questionsService) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
@@ -61,6 +68,7 @@ func NewService(cr challengesRepository, fn playURLGenerator) *Service {
 	return &Service{
 		cr:        cr,
 		playUrlFn: fn,
+		qs:        qs,
 	}
 }
 
@@ -77,6 +85,22 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (Challenge, error) 
 // GetChallengeByID ...
 func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	return s.GetByID(ctx, id)
+}
+
+// GetVerificationQuestionByEpisodeID ...
+func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error) {
+	return s.qs.GetOneRandomQuestionByChallengeID(ctx, episodeID)
+}
+
+// CheckVerificationQuestionAnswer ...
+func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, qid, aid uuid.UUID) (interface{}, error) {
+	return s.qs.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
+}
+
+// VerifyUserAccessToEpisode ...
+func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
+	// return s.qs.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
+	return false, nil
 }
 
 // GetChallengesByShowID ...
