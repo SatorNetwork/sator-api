@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 const addQuestion = `-- name: AddQuestion :one
@@ -38,13 +37,12 @@ func (q *Queries) AddQuestion(ctx context.Context, arg AddQuestionParams) (Quest
 const getQuestionByChallengeID = `-- name: GetQuestionByChallengeID :many
 SELECT id, challenge_id, question, question_order, updated_at, created_at
 FROM questions
-WHERE challenge_id =@challenge_id
-    AND id != ANY($1::uuid[])
+WHERE challenge_id = $1
 ORDER BY question_order ASC
 `
 
-func (q *Queries) GetQuestionByChallengeID(ctx context.Context, ids []uuid.UUID) ([]Question, error) {
-	rows, err := q.query(ctx, q.getQuestionByChallengeIDStmt, getQuestionByChallengeID, pq.Array(ids))
+func (q *Queries) GetQuestionByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]Question, error) {
+	rows, err := q.query(ctx, q.getQuestionByChallengeIDStmt, getQuestionByChallengeID, challengeID)
 	if err != nil {
 		return nil, err
 	}
