@@ -771,6 +771,111 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+    put:
+      tags:
+        - "Challenges"
+      summary: Update challenge by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                title:
+                  type: string
+                  example: "title"
+                description:
+                  type: string
+                  example: "description"
+                prize_pool:
+                  type: string
+                  example: "123.456"
+                players_to_start:
+                  type: integer
+                  example: 3
+                time_per_question:
+                  type: string
+                  example: "10"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags:
+        - "Challenges"
+      summary: Delete challenge by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /challenges:
+    post:
+      tags:
+        - "Challenges"
+      summary: Add new challenge.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                title:
+                  type: string
+                  example: "title"
+                description:
+                  type: string
+                  example: "description"
+                prize_pool:
+                  type: string
+                  example: "123.456"
+                players_to_start:
+                  type: integer
+                  example: 3
+                time_per_question:
+                  type: string
+                  example: "10"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /qrcodes/{id}:
     get:

@@ -28,17 +28,13 @@ type (
 		UpdateChallenge(ctx context.Context, ch Challenge) error
 	}
 
-	GetChallengeByIdRequest struct {
-		ID string `json:"id" validate:"required,uuid"`
-	}
-
 	// AddChallengeRequest struct
 	AddChallengeRequest struct {
 		ShowID          string `json:"show_id" validate:"required,uuid"`
-		Title           string `json:"title" validate:"required, gt=0"`
+		Title           string `json:"title" validate:"required,gt=0"`
 		Description     string `json:"description"`
-		PrizePool       string `json:"prize_pool" validate:"required"`
-		PlayersToStart  int    `json:"players_to_start" validate:"required"`
+		PrizePool       string `json:"prize_pool" validate:"required,gt=0"`
+		PlayersToStart  int32  `json:"players_to_start" validate:"required"`
 		TimePerQuestion string `json:"time_per_question"`
 	}
 
@@ -46,10 +42,10 @@ type (
 	UpdateChallengeRequest struct {
 		ID              string `json:"id" validate:"required,uuid"`
 		ShowID          string `json:"show_id" validate:"required,uuid"`
-		Title           string `json:"title" validate:"required, gt=0"`
+		Title           string `json:"title" validate:"required,gt=0"`
 		Description     string `json:"description"`
-		PrizePool       string `json:"prize_pool" validate:"required"`
-		PlayersToStart  int    `json:"players_to_start" validate:"required"`
+		PrizePool       string `json:"prize_pool" validate:"required,gt=0"`
+		PlayersToStart  int32  `json:"players_to_start" validate:"required"`
 		TimePerQuestion string `json:"time_per_question"`
 	}
 )
@@ -58,7 +54,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetChallengeById:    MakeGetChallengeByIdEndpoint(s, validateFunc),
+		GetChallengeById:    MakeGetChallengeByIdEndpoint(s),
 		AddChallenge:        MakeAddChallengeEndpoint(s, validateFunc),
 		DeleteChallengeByID: MakeDeleteChallengeByIDEndpoint(s),
 		UpdateChallenge:     MakeUpdateChallengeEndpoint(s, validateFunc),
@@ -78,7 +74,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 }
 
 // MakeGetChallengeByIdEndpoint ...
-func MakeGetChallengeByIdEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id, err := uuid.Parse(request.(string))
 		if err != nil {

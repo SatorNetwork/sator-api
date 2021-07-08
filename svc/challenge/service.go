@@ -33,7 +33,7 @@ type (
 		Description        string    `json:"description"`
 		PrizePool          string    `json:"prize_pool"`
 		PrizePoolAmount    float64   `json:"-"`
-		Players            int       `json:"players"`
+		Players            int32     `json:"players"`
 		Winners            string    `json:"winners"`
 		TimePerQuestion    string    `json:"time_per_question"`
 		TimePerQuestionSec int64     `json:"-"`
@@ -112,7 +112,7 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challen
 		Description:        c.Description.String,
 		PrizePool:          fmt.Sprintf("%.2f SAO", c.PrizePool),
 		PrizePoolAmount:    c.PrizePool,
-		Players:            int(c.PlayersToStart),
+		Players:            c.PlayersToStart,
 		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
 		TimePerQuestionSec: int64(c.TimePerQuestion.Int32),
 		Play:               playUrlFn(c.ID),
@@ -126,7 +126,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) error {
 		return fmt.Errorf("can not parse TimePerQuestion value from string")
 	}
 
-	prizePool, err := strconv.Atoi(ch.PrizePool)
+	prizePool, err := strconv.ParseFloat(ch.PrizePool, 64)
 	if err != nil {
 		return fmt.Errorf("can not parse PrizePool value from string")
 	}
@@ -138,8 +138,8 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) error {
 			String: ch.Description,
 			Valid:  len(ch.Description) > 0,
 		},
-		PrizePool:      float64(prizePool),
-		PlayersToStart: int32(ch.Players),
+		PrizePool:      prizePool,
+		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
 			Int32: int32(timePerQuestion),
 			Valid: true,
@@ -151,6 +151,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) error {
 	}); err != nil {
 		return fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
+
 	return nil
 }
 
@@ -170,7 +171,7 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		return fmt.Errorf("can not parse TimePerQuestion value from string")
 	}
 
-	prizePool, err := strconv.Atoi(ch.PrizePool)
+	prizePool, err := strconv.ParseFloat(ch.PrizePool, 64)
 	if err != nil {
 		return fmt.Errorf("can not parse PrizePool value from string")
 	}
@@ -182,8 +183,8 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 			String: ch.Title,
 			Valid:  len(ch.Description) > 0,
 		},
-		PrizePool:      float64(prizePool),
-		PlayersToStart: int32(ch.Players),
+		PrizePool:      prizePool,
+		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
 			Int32: int32(timePerQuestion),
 			Valid: false,
@@ -196,5 +197,6 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	}); err != nil {
 		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)
 	}
+
 	return nil
 }
