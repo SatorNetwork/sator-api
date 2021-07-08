@@ -75,7 +75,7 @@ func decodeCheckAnswerRequest(_ context.Context, r *http.Request) (interface{}, 
 		return nil, fmt.Errorf("%w: missed question_id", ErrInvalidParameter)
 	}
 	aid := chi.URLParam(r, "answer_id")
-	if qid == "" {
+	if aid == "" {
 		return nil, fmt.Errorf("%w: missed answer_id", ErrInvalidParameter)
 	}
 	return CheckAnswerRequest{

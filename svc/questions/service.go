@@ -211,7 +211,7 @@ func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 		if !db.IsNotFoundError(err) {
 			return false, fmt.Errorf("could not validate answer: %w", err)
 		}
-		return false, fmt.Errorf("could not found question with id %s: %w", id, err)
+		return false, fmt.Errorf("could not found answer option with id %s: %w", id, err)
 	}
 
 	return answers.Bool, nil

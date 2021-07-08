@@ -94,7 +94,7 @@ func MakeCheckVerificationQuestionAnswerEndpoint(s service, v validator.Validate
 			return nil, fmt.Errorf("%w question id: %v", ErrInvalidParameter, err)
 		}
 
-		aid, err := uuid.Parse(req.QuestionID)
+		aid, err := uuid.Parse(req.AnswerID)
 		if err != nil {
 			return nil, fmt.Errorf("%w answer id: %v", ErrInvalidParameter, err)
 		}
