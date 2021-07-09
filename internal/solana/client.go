@@ -17,16 +17,26 @@ type (
 		endpoint string
 		decimals uint8
 		mltpl    uint64
+		FeePayer types.Account
+		Asset    types.Account
+		Issuer   types.Account
 	}
 )
 
 // New creates new solana client wrapper
-func New(endpoint string) *Client {
+func New(endpoint, feePayerPrivateKey, assetPrivateKey, issuerPrivateKey string) *Client {
+	feePayer := types.AccountFromPrivateKeyBytes([]byte(feePayerPrivateKey))
+	issuer := types.AccountFromPrivateKeyBytes([]byte(assetPrivateKey))
+	asset := types.AccountFromPrivateKeyBytes([]byte(issuerPrivateKey))
+
 	return &Client{
 		solana:   client.NewClient(endpoint),
 		endpoint: endpoint,
 		decimals: 9,
 		mltpl:    1e9,
+		FeePayer: feePayer,
+		Issuer:   issuer,
+		Asset:    asset,
 	}
 }
 
@@ -61,7 +71,7 @@ func (c *Client) RequestAirdrop(ctx context.Context, pubKey string, amount float
 }
 
 // SendTransaction sends transaction ans returns transaction hash
-func (c *Client) SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error) {
+func (c *Client) SendTransaction(ctx context.Context, signer types.Account, instructions ...types.Instruction) (string, error) {
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
 		return "", fmt.Errorf("could not get recent block hash: %w", err)
@@ -69,8 +79,8 @@ func (c *Client) SendTransaction(ctx context.Context, feePayer, signer types.Acc
 
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions:    instructions,
-		Signers:         []types.Account{feePayer, signer},
-		FeePayer:        feePayer.PublicKey,
+		Signers:         []types.Account{c.FeePayer, signer},
+		FeePayer:        c.FeePayer.PublicKey,
 		RecentBlockHash: res.Blockhash,
 	})
 	if err != nil {

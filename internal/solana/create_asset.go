@@ -7,34 +7,32 @@ import (
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/tokenprog"
-	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error) {
+func (c *Client) CreateAsset(ctx context.Context) (string, error) {
 	rentExemptionBalance, err := c.solana.GetMinimumBalanceForRentExemption(context.Background(), tokenprog.MintAccountSize)
 	if err != nil {
 		return "", fmt.Errorf("could not get min balance for rent exemption: %w", err)
 	}
-	// Transform general account to asset
+	// Transform general account to Asset
 	tx, err := c.SendTransaction(
-		ctx,
-		feePayer, asset,
+		ctx, c.Asset,
 		sysprog.CreateAccount(
-			feePayer.PublicKey,
-			asset.PublicKey,
+			c.FeePayer.PublicKey,
+			c.Asset.PublicKey,
 			common.TokenProgramID,
 			rentExemptionBalance,
 			tokenprog.MintAccountSize,
 		),
 		tokenprog.InitializeMint(
 			c.decimals,
-			asset.PublicKey,
-			issuer.PublicKey,
+			c.Asset.PublicKey,
+			c.Issuer.PublicKey,
 			common.PublicKey{},
 		),
 	)
 	if err != nil {
-		return "", fmt.Errorf("could not issue new asset: %w", err)
+		return "", fmt.Errorf("could not issue new Asset: %w", err)
 	}
 
 	return tx, nil

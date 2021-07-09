@@ -1,12 +1,6 @@
 package main
 
 import (
-	"context"
-	"log"
-
-	"github.com/SatorNetwork/sator-api/internal/solana"
-
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -25,19 +19,19 @@ var (
 )
 
 func main() {
-	ctx := context.Background()
+	/*ctx := context.Background()
 	sc := solana.New(client.DevnetRPCEndpoint)
 
 	txList, err := sc.GetTransactions(ctx, "3Z6t2topTRBVeQjbLf8mExLnEvxUz38rMkyiNSnwMkrj")
 	if err != nil {
 		log.Fatalln(err)
-	}
+	}*/
 
 	// log.Printf("txList: %+v\n\n", txList)
 
-	for _, tx := range txList {
+	/*for _, tx := range txList {
 		log.Printf("tx: %+v\n\n", tx)
-	}
+	}*/
 
 	// acc := sc.NewAccount()
 	// log.Printf("account pub key: %#v", acc.PublicKey.ToBase58())

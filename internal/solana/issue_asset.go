@@ -4,28 +4,28 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/portto/solana-go-sdk/types"
+
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/tokenprog"
-	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error) {
+func (c *Client) IssueAsset(ctx context.Context, dest types.Account, amount float64) (string, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
-	// Issue asset
+	// Issue Asset
 	tx, err := c.SendTransaction(
-		ctx,
-		feePayer, issuer,
+		ctx, c.Issuer,
 		tokenprog.MintToChecked(
-			asset.PublicKey,
+			c.Asset.PublicKey,
 			dest.PublicKey,
-			issuer.PublicKey,
+			c.Issuer.PublicKey,
 			[]common.PublicKey{},
 			amountToSend,
 			c.decimals,
 		),
 	)
 	if err != nil {
-		return "", fmt.Errorf("could not issue additional asset amount: %w", err)
+		return "", fmt.Errorf("could not issue additional Asset amount: %w", err)
 	}
 	return tx, nil
 }
