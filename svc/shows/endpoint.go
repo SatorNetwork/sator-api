@@ -3,7 +3,6 @@ package shows
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -65,9 +64,9 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title         string `json:"title" validate:"required, gt=0"`
-		Cover         string `json:"cover" validate:"required, gt=0"`
-		HasNewEpisode string `json:"has_new_episode"`
+		Title         string `json:"title" validate:"required,gt=0"`
+		Cover         string `json:"cover" validate:"required,gt=0"`
+		HasNewEpisode bool   `json:"has_new_episode"`
 		Category      string `json:"category"`
 		Description   string `json:"description"`
 	}
@@ -75,9 +74,9 @@ type (
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
 		ID            string `json:"id" validate:"required,uuid"`
-		Title         string `json:"title" validate:"required, gt=0"`
-		Cover         string `json:"cover" validate:"required, gt=0"`
-		HasNewEpisode string `json:"has_new_episode"`
+		Title         string `json:"title" validate:"required,gt=0"`
+		Cover         string `json:"cover" validate:"required,gt=0"`
+		HasNewEpisode bool   `json:"has_new_episode"`
 		Category      string `json:"category"`
 		Description   string `json:"description"`
 	}
@@ -99,7 +98,7 @@ type (
 		ShowID        string `json:"show_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
 		Cover         string `json:"cover"`
-		Title         string `json:"title" validate:"required, gt=0"`
+		Title         string `json:"title" validate:"required,gt=0"`
 		Description   string `json:"description"`
 		ReleaseDate   string `json:"release_date"`
 	}
@@ -110,9 +109,9 @@ type (
 		ShowID        string `json:"show_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
 		Cover         string `json:"cover"`
-		Title         string `json:"title" validate:"required, gt=0"`
-		Description   string `json:"description" validate:"required, gt=0"`
-		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z07:00"`
+		Title         string `json:"title" validate:"required,gt=0"`
+		Description   string `json:"description" validate:"required,gt=0"`
+		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
@@ -270,15 +269,10 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		b, err := strconv.ParseBool(req.HasNewEpisode)
-		if err != nil {
-			return nil, fmt.Errorf("can not parse boolean value from string")
-		}
-
-		err = s.AddShow(ctx, Show{
+		err := s.AddShow(ctx, Show{
 			Title:         req.Title,
 			Cover:         req.Cover,
-			HasNewEpisode: b,
+			HasNewEpisode: req.HasNewEpisode,
 			Category:      req.Category,
 			Description:   req.Description,
 		})
@@ -300,16 +294,11 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		b, err := strconv.ParseBool(req.HasNewEpisode)
-		if err != nil {
-			return nil, fmt.Errorf("can not parse boolean value from string")
-		}
-
 		err = s.UpdateShow(ctx, Show{
 			ID:            id,
 			Title:         req.Title,
 			Cover:         req.Cover,
-			HasNewEpisode: b,
+			HasNewEpisode: req.HasNewEpisode,
 			Category:      req.Category,
 			Description:   req.Description,
 		})
