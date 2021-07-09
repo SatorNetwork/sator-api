@@ -21,11 +21,17 @@ type (
 
 	questionsRepository interface {
 		AddQuestion(ctx context.Context, arg repository.AddQuestionParams) (repository.Question, error)
+		DeleteQuestionByID(ctx context.Context, id uuid.UUID) error
 		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
+		UpdateQuestion(ctx context.Context, arg repository.UpdateQuestionParams) error
+
+		AddQuestionOption(ctx context.Context, arg repository.AddQuestionOptionParams) (repository.AnswerOption, error)
+		DeleteAnswerByID(ctx context.Context, id uuid.UUID) error
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
 		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
 		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
+		UpdateAnswer(ctx context.Context, arg repository.UpdateAnswerParams) error
 	}
 
 	// Question struct
@@ -75,7 +81,7 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, 
 		return Question{}, fmt.Errorf("could not found any answer options for question with id=%s: %w", id.String(), err)
 	}
 
-	return castToQuestion(question, answers), nil
+	return castToQuestionWithAnswers(question, answers), nil
 }
 
 // GetQuestionsByChallengeID returns questions by challenge id
@@ -154,7 +160,7 @@ func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 	return answers.Bool, nil
 }
 
-func castToQuestion(q repository.Question, a []repository.AnswerOption) Question {
+func castToQuestionWithAnswers(q repository.Question, a []repository.AnswerOption) Question {
 	options := make([]AnswerOption, 0, len(a))
 	for _, ao := range a {
 		options = append(options, AnswerOption{
@@ -172,4 +178,110 @@ func castToQuestion(q repository.Question, a []repository.AnswerOption) Question
 		Order:         q.QuestionOrder,
 		AnswerOptions: options,
 	}
+}
+
+// AddQuestion ..
+func (s *Service) AddQuestion(ctx context.Context, qw Question) (Question, error) {
+	question, err := s.qr.AddQuestion(ctx, repository.AddQuestionParams{
+		ChallengeID:   qw.ChallengeID,
+		Question:      qw.Question,
+		QuestionOrder: qw.Order,
+	})
+	if err != nil {
+		return Question{}, fmt.Errorf("could not add question %s: %v", qw.Question, err)
+	}
+
+	return castToQuestion(question), nil
+}
+
+func castToQuestion(q repository.Question) Question {
+	return Question{
+		ID:          q.ID,
+		ChallengeID: q.ChallengeID,
+		Question:    q.Question,
+		Order:       q.QuestionOrder,
+	}
+}
+
+// AddQuestionOption ..
+func (s *Service) AddQuestionOption(ctx context.Context, ao AnswerOption) (AnswerOption, error) {
+	answer, err := s.qr.AddQuestionOption(ctx, repository.AddQuestionOptionParams{
+		QuestionID:   ao.QuestionID,
+		AnswerOption: ao.Option,
+		IsCorrect: sql.NullBool{
+			Bool:  ao.IsCorrect,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return AnswerOption{}, fmt.Errorf("could not add answer %s: %v", ao.Option, err)
+	}
+
+	return castToAnswerOption(answer), nil
+}
+
+func castToAnswerOption(ao repository.AnswerOption) AnswerOption {
+	return AnswerOption{
+		ID:         ao.ID,
+		QuestionID: ao.QuestionID,
+		Option:     ao.AnswerOption,
+		IsCorrect:  ao.IsCorrect.Bool,
+	}
+}
+
+// DeleteQuestionByID ...
+func (s *Service) DeleteQuestionByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.qr.DeleteQuestionByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete question with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// DeleteAnswerByID ...
+func (s *Service) DeleteAnswerByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.qr.DeleteQuestionByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete answer with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// UpdateQuestion ..
+func (s *Service) UpdateQuestion(ctx context.Context, qw Question) error {
+	if err := s.qr.UpdateQuestion(ctx, repository.UpdateQuestionParams{
+		ID:            qw.ID,
+		ChallengeID:   qw.ChallengeID,
+		Question:      qw.Question,
+		QuestionOrder: qw.Order,
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not update question with id=%s:%w", qw.ID, err)
+	}
+
+	return nil
+}
+
+// UpdateAnswer ..
+func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
+	if err := s.qr.UpdateAnswer(ctx, repository.UpdateAnswerParams{
+		ID:           ao.ID,
+		QuestionID:   ao.QuestionID,
+		AnswerOption: ao.Option,
+		IsCorrect: sql.NullBool{
+			Bool:  ao.IsCorrect,
+			Valid: true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not update answer with id=%s:%w", ao.ID, err)
+	}
+
+	return nil
 }

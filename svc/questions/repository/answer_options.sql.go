@@ -50,6 +50,16 @@ func (q *Queries) CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, 
 	return is_correct, err
 }
 
+const deleteAnswerByID = `-- name: DeleteAnswerByID :exec
+DELETE FROM answer_options
+WHERE id = $1
+`
+
+func (q *Queries) DeleteAnswerByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteAnswerByIDStmt, deleteAnswerByID, id)
+	return err
+}
+
 const getAnswerByID = `-- name: GetAnswerByID :one
 SELECT id, question_id, answer_option, is_correct, updated_at, created_at
 FROM answer_options
@@ -141,4 +151,33 @@ func (q *Queries) GetAnswersByQuestionID(ctx context.Context, questionID uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateAnswer = `-- name: UpdateAnswer :exec
+UPDATE answer_options
+SET id = $1,
+    question_id = $2,
+    answer_option = $3,
+    is_correct = $4,
+    updated_at = $5
+WHERE id = $1
+`
+
+type UpdateAnswerParams struct {
+	ID           uuid.UUID    `json:"id"`
+	QuestionID   uuid.UUID    `json:"question_id"`
+	AnswerOption string       `json:"answer_option"`
+	IsCorrect    sql.NullBool `json:"is_correct"`
+	UpdatedAt    sql.NullTime `json:"updated_at"`
+}
+
+func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) error {
+	_, err := q.exec(ctx, q.updateAnswerStmt, updateAnswer,
+		arg.ID,
+		arg.QuestionID,
+		arg.AnswerOption,
+		arg.IsCorrect,
+		arg.UpdatedAt,
+	)
+	return err
 }

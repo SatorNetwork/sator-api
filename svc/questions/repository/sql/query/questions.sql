@@ -11,3 +11,14 @@ ORDER BY question_order ASC;
 -- name: AddQuestion :one
 INSERT INTO questions (challenge_id, question, question_order)
 VALUES ($1, $2, $3) RETURNING *;
+-- name: DeleteQuestionByID :exec
+DELETE FROM questions
+WHERE id = @id;
+-- name: UpdateQuestion :exec
+UPDATE questions
+SET id = @id,
+    challenge_id = @challenge_id,
+    question = @question,
+    question_order = @question_order,
+    updated_at = @updated_at
+WHERE id = @id;

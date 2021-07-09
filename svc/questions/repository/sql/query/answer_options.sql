@@ -19,3 +19,14 @@ LIMIT 1;
 SELECT *
 FROM answer_options
 WHERE question_id = ANY(@question_ids::uuid[]);
+-- name: DeleteAnswerByID :exec
+DELETE FROM answer_options
+WHERE id = @id;
+-- name: UpdateAnswer :exec
+UPDATE answer_options
+SET id = @id,
+    question_id = @question_id,
+    answer_option = @answer_option,
+    is_correct = @is_correct,
+    updated_at = @updated_at
+WHERE id = @id;

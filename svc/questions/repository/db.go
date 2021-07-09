@@ -31,6 +31,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.checkAnswerStmt, err = db.PrepareContext(ctx, checkAnswer); err != nil {
 		return nil, fmt.Errorf("error preparing query CheckAnswer: %w", err)
 	}
+	if q.deleteAnswerByIDStmt, err = db.PrepareContext(ctx, deleteAnswerByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAnswerByID: %w", err)
+	}
+	if q.deleteQuestionByIDStmt, err = db.PrepareContext(ctx, deleteQuestionByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteQuestionByID: %w", err)
+	}
 	if q.getAnswerByIDStmt, err = db.PrepareContext(ctx, getAnswerByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnswerByID: %w", err)
 	}
@@ -45,6 +51,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getQuestionsByChallengeIDStmt, err = db.PrepareContext(ctx, getQuestionsByChallengeID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetQuestionsByChallengeID: %w", err)
+	}
+	if q.updateAnswerStmt, err = db.PrepareContext(ctx, updateAnswer); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAnswer: %w", err)
+	}
+	if q.updateQuestionStmt, err = db.PrepareContext(ctx, updateQuestion); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateQuestion: %w", err)
 	}
 	return &q, nil
 }
@@ -64,6 +76,16 @@ func (q *Queries) Close() error {
 	if q.checkAnswerStmt != nil {
 		if cerr := q.checkAnswerStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing checkAnswerStmt: %w", cerr)
+		}
+	}
+	if q.deleteAnswerByIDStmt != nil {
+		if cerr := q.deleteAnswerByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAnswerByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteQuestionByIDStmt != nil {
+		if cerr := q.deleteQuestionByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteQuestionByIDStmt: %w", cerr)
 		}
 	}
 	if q.getAnswerByIDStmt != nil {
@@ -89,6 +111,16 @@ func (q *Queries) Close() error {
 	if q.getQuestionsByChallengeIDStmt != nil {
 		if cerr := q.getQuestionsByChallengeIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getQuestionsByChallengeIDStmt: %w", cerr)
+		}
+	}
+	if q.updateAnswerStmt != nil {
+		if cerr := q.updateAnswerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAnswerStmt: %w", cerr)
+		}
+	}
+	if q.updateQuestionStmt != nil {
+		if cerr := q.updateQuestionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateQuestionStmt: %w", cerr)
 		}
 	}
 	return err
@@ -133,11 +165,15 @@ type Queries struct {
 	addQuestionStmt               *sql.Stmt
 	addQuestionOptionStmt         *sql.Stmt
 	checkAnswerStmt               *sql.Stmt
+	deleteAnswerByIDStmt          *sql.Stmt
+	deleteQuestionByIDStmt        *sql.Stmt
 	getAnswerByIDStmt             *sql.Stmt
 	getAnswersByIDsStmt           *sql.Stmt
 	getAnswersByQuestionIDStmt    *sql.Stmt
 	getQuestionByIDStmt           *sql.Stmt
 	getQuestionsByChallengeIDStmt *sql.Stmt
+	updateAnswerStmt              *sql.Stmt
+	updateQuestionStmt            *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -147,10 +183,14 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addQuestionStmt:               q.addQuestionStmt,
 		addQuestionOptionStmt:         q.addQuestionOptionStmt,
 		checkAnswerStmt:               q.checkAnswerStmt,
+		deleteAnswerByIDStmt:          q.deleteAnswerByIDStmt,
+		deleteQuestionByIDStmt:        q.deleteQuestionByIDStmt,
 		getAnswerByIDStmt:             q.getAnswerByIDStmt,
 		getAnswersByIDsStmt:           q.getAnswersByIDsStmt,
 		getAnswersByQuestionIDStmt:    q.getAnswersByQuestionIDStmt,
 		getQuestionByIDStmt:           q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt: q.getQuestionsByChallengeIDStmt,
+		updateAnswerStmt:              q.updateAnswerStmt,
+		updateQuestionStmt:            q.updateQuestionStmt,
 	}
 }
