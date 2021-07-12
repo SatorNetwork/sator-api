@@ -27,7 +27,7 @@ type (
 		UpdateQuestion(ctx context.Context, arg repository.UpdateQuestionParams) error
 
 		AddQuestionOption(ctx context.Context, arg repository.AddQuestionOptionParams) (repository.AnswerOption, error)
-		DeleteAnswerByID(ctx context.Context, id uuid.UUID) error
+		DeleteAnswerByID(ctx context.Context, arg repository.DeleteAnswerByIDParams) error
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
 		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
 		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
@@ -239,8 +239,11 @@ func (s *Service) DeleteQuestionByID(ctx context.Context, id uuid.UUID) error {
 }
 
 // DeleteAnswerByID ...
-func (s *Service) DeleteAnswerByID(ctx context.Context, id uuid.UUID) error {
-	if err := s.qr.DeleteQuestionByID(ctx, id); err != nil {
+func (s *Service) DeleteAnswerByID(ctx context.Context, id, questionID uuid.UUID) error {
+	if err := s.qr.DeleteAnswerByID(ctx, repository.DeleteAnswerByIDParams{
+		ID:         id,
+		QuestionID: questionID,
+	}); err != nil {
 		return fmt.Errorf("could not delete answer with id=%s:%w", id, err)
 	}
 

@@ -52,11 +52,16 @@ func (q *Queries) CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, 
 
 const deleteAnswerByID = `-- name: DeleteAnswerByID :exec
 DELETE FROM answer_options
-WHERE id = $1
+WHERE id = $1 AND question_id = $2
 `
 
-func (q *Queries) DeleteAnswerByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteAnswerByIDStmt, deleteAnswerByID, id)
+type DeleteAnswerByIDParams struct {
+	ID         uuid.UUID `json:"id"`
+	QuestionID uuid.UUID `json:"question_id"`
+}
+
+func (q *Queries) DeleteAnswerByID(ctx context.Context, arg DeleteAnswerByIDParams) error {
+	_, err := q.exec(ctx, q.deleteAnswerByIDStmt, deleteAnswerByID, arg.ID, arg.QuestionID)
 	return err
 }
 
