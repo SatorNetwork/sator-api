@@ -252,6 +252,16 @@ func main() {
 			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
 			logger,
 		))
+
+		// Questions service
+		questionRepo, err := questionsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("questionsRepo error: %v", err)
+		}
+		r.Mount("/questions", questions.MakeHTTPHandler(
+			questions.MakeEndpoints(questions.NewService(questionRepo), jwtMdw),
+			logger,
+		))
 	}
 
 	var rewardsSvcClient *rewardsClient.Client
