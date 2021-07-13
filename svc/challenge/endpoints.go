@@ -16,6 +16,9 @@ type (
 	Endpoints struct {
 		GetChallengesByShowId endpoint.Endpoint
 		GetChallengeById      endpoint.Endpoint
+		AddChallenge          endpoint.Endpoint
+		DeleteChallengeByID   endpoint.Endpoint
+		UpdateChallenge       endpoint.Endpoint
 
 		GetVerificationQuestionByEpisodeID endpoint.Endpoint
 		CheckVerificationQuestionAnswer    endpoint.Endpoint
@@ -25,14 +28,39 @@ type (
 	service interface {
 		GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		AddChallenge(ctx context.Context, ch Challenge) (Challenge, error)
+		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
+		UpdateChallenge(ctx context.Context, ch Challenge) error
+
 		// FIXME: needs refactoring!
 		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error)
 		CheckVerificationQuestionAnswer(ctx context.Context, qid, aid uuid.UUID) (interface{}, error)
 		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error)
 	}
 
-	GetChallengeByIdRequest struct {
-		ID string `json:"id" validate:"required,uuid"`
+	// AddChallengeRequest struct
+	AddChallengeRequest struct {
+		ShowID             string  `json:"show_id" validate:"required,uuid"`
+		Title              string  `json:"title" validate:"required,gt=0"`
+		Description        string  `json:"description"`
+		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
+		PlayersToStart     int32   `json:"players_to_start" validate:"required"`
+		TimePerQuestionSec int64   `json:"time_per_question_sec"`
+		EpisodeID          string  `json:"episode_id" validate:"uuid"`
+		Kind               int32   `json:"kind"`
+	}
+
+	// UpdateChallengeRequest struct
+	UpdateChallengeRequest struct {
+		ID                 string  `json:"id" validate:"required,uuid"`
+		ShowID             string  `json:"show_id" validate:"required,uuid"`
+		Title              string  `json:"title" validate:"required,gt=0"`
+		Description        string  `json:"description"`
+		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
+		PlayersToStart     int32   `json:"players_to_start" validate:"required"`
+		TimePerQuestionSec int64   `json:"time_per_question_sec"`
+		EpisodeID          string  `json:"episode_id" validate:"uuid"`
+		Kind               int32   `json:"kind"`
 	}
 
 	CheckAnswerRequest struct {
@@ -45,12 +73,14 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetChallengeById:      MakeGetChallengeByIdEndpoint(s, validateFunc),
-		GetChallengesByShowId: MakeGetChallengeByIdEndpoint(s, validateFunc),
-
-		GetVerificationQuestionByEpisodeID: MakeGetVerificationQuestionByEpisodeIDEndpoint(s, validateFunc),
+		GetChallengeById:                   MakeGetChallengeByIdEndpoint(s),
+		GetChallengesByShowId:              MakeGetChallengeByIdEndpoint(s),
+		GetVerificationQuestionByEpisodeID: MakeGetVerificationQuestionByEpisodeIDEndpoint(s),
 		CheckVerificationQuestionAnswer:    MakeCheckVerificationQuestionAnswerEndpoint(s, validateFunc),
 		VerifyUserAccessToEpisode:          MakeVerifyUserAccessToEpisodeEndpoint(s, validateFunc),
+		AddChallenge:                       MakeAddChallengeEndpoint(s, validateFunc),
+		DeleteChallengeByID:                MakeDeleteChallengeByIDEndpoint(s),
+		UpdateChallenge:                    MakeUpdateChallengeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -61,6 +91,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetVerificationQuestionByEpisodeID = mdw(e.GetVerificationQuestionByEpisodeID)
 			e.CheckVerificationQuestionAnswer = mdw(e.CheckVerificationQuestionAnswer)
 			e.VerifyUserAccessToEpisode = mdw(e.VerifyUserAccessToEpisode)
+			e.AddChallenge = mdw(e.AddChallenge)
+			e.DeleteChallengeByID = mdw(e.DeleteChallengeByID)
+			e.UpdateChallenge = mdw(e.UpdateChallenge)
 		}
 	}
 
@@ -68,7 +101,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 }
 
 // MakeGetVerificationQuestionByEpisodeIDEndpoint ...
-func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
@@ -88,6 +121,9 @@ func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service, v validator.Valid
 func MakeCheckVerificationQuestionAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(CheckAnswerRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
 
 		qid, err := uuid.Parse(req.QuestionID)
 		if err != nil {
@@ -131,7 +167,7 @@ func MakeVerifyUserAccessToEpisodeEndpoint(s service, v validator.ValidateFunc) 
 }
 
 // MakeGetChallengeByIdEndpoint ...
-func MakeGetChallengeByIdEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
@@ -144,5 +180,100 @@ func MakeGetChallengeByIdEndpoint(s service, v validator.ValidateFunc) endpoint.
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeAddChallengeEndpoint ...
+func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(AddChallengeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get episode id: %w", err)
+		}
+
+		resp, err := s.AddChallenge(ctx, Challenge{
+			ShowID:             showID,
+			Title:              req.Title,
+			Description:        req.Description,
+			PrizePoolAmount:    req.PrizePoolAmount,
+			Players:            req.PlayersToStart,
+			TimePerQuestionSec: req.TimePerQuestionSec,
+			EpisodeID:          episodeID,
+			Kind:               req.Kind,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeDeleteChallengeByIDEndpoint ...
+func MakeDeleteChallengeByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		}
+
+		err = s.DeleteChallengeByID(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("%w challenge id: %v", ErrInvalidParameter, err)
+		}
+
+		return true, nil
+	}
+}
+
+// MakeUpdateChallengeEndpoint ...
+func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateChallengeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(req.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get episode id: %w", err)
+		}
+
+		err = s.UpdateChallenge(ctx, Challenge{
+			ID:                 id,
+			ShowID:             showID,
+			Title:              req.Title,
+			Description:        req.Description,
+			PrizePoolAmount:    req.PrizePoolAmount,
+			Players:            req.PlayersToStart,
+			TimePerQuestionSec: req.TimePerQuestionSec,
+			EpisodeID:          episodeID,
+			Kind:               req.Kind,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }

@@ -65,8 +65,8 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title         string `json:"title" validate:"required, gt=0"`
-		Cover         string `json:"cover" validate:"required, gt=0"`
+		Title         string `json:"title" validate:"required,gt=0"`
+		Cover         string `json:"cover" validate:"required,gt=0"`
 		HasNewEpisode string `json:"has_new_episode"`
 		Category      string `json:"category"`
 		Description   string `json:"description"`
@@ -75,8 +75,8 @@ type (
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
 		ID            string `json:"id" validate:"required,uuid"`
-		Title         string `json:"title" validate:"required, gt=0"`
-		Cover         string `json:"cover" validate:"required, gt=0"`
+		Title         string `json:"title" validate:"required,gt=0"`
+		Cover         string `json:"cover" validate:"required,gt=0"`
 		HasNewEpisode string `json:"has_new_episode"`
 		Category      string `json:"category"`
 		Description   string `json:"description"`
@@ -99,7 +99,7 @@ type (
 		ShowID        string `json:"show_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
 		Cover         string `json:"cover"`
-		Title         string `json:"title" validate:"required, gt=0"`
+		Title         string `json:"title" validate:"required,gt=0"`
 		Description   string `json:"description"`
 		ReleaseDate   string `json:"release_date"`
 	}
@@ -110,9 +110,9 @@ type (
 		ShowID        string `json:"show_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
 		Cover         string `json:"cover"`
-		Title         string `json:"title" validate:"required, gt=0"`
-		Description   string `json:"description" validate:"required, gt=0"`
-		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z07:00"`
+		Title         string `json:"title" validate:"required,gt=0"`
+		Description   string `json:"description" validate:"required,gt=0"`
+		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
