@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/portto/solana-go-sdk/types"
-
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/tokenprog"
+	"github.com/portto/solana-go-sdk/types"
 )
 
 func (c *Client) InitAccountToUseAsset(ctx context.Context, initAcc types.Account) (string, error) {

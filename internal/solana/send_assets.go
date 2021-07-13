@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/portto/solana-go-sdk/types"
-
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/tokenprog"
+	"github.com/portto/solana-go-sdk/types"
 )
 
 func (c *Client) SendAssets(ctx context.Context, sender types.Account, recipientAddr string, amount float64) (string, error) {

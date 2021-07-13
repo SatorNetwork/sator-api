@@ -59,21 +59,17 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	// r.Post("/{wallet_id}/transfer", httptransport.NewServer(
-	// 	e.Transfer,
-	// 	decodeTransferRequest,
-	// 	httpencoder.EncodeResponse,
-	// 	options...,
-	// ).ServeHTTP)
+	r.Post("/{wallet_id}/transfer", httptransport.NewServer(
+		e.Transfer,
+		decodeTransferRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
 
 	return r
 }
 
-func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
-	return nil, nil
-}
-
-func decodeGetWalletsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
+func decodeGetWalletsRequest(_ context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
 }
 
