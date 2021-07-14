@@ -80,6 +80,62 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/questions", httptransport.NewServer(
+		e.AddQuestion,
+		decodeAddQuestionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/questions/{question_id}/answers", httptransport.NewServer(
+		e.AddQuestionOption,
+		decodeAddQuestionOptionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/questions/{question_id}", httptransport.NewServer(
+		e.DeleteQuestionByID,
+		decodeDeleteQuestionByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/questions/{question_id}/answers/{answer_id}", httptransport.NewServer(
+		e.DeleteAnswerByID,
+		decodeDeleteAnswerByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/questions/{question_id}", httptransport.NewServer(
+		e.UpdateQuestion,
+		decodeUpdateQuestionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/questions/{question_id}/answers/{answer_id}", httptransport.NewServer(
+		e.UpdateAnswer,
+		decodeUpdateAnswerRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/questions/{question_id}", httptransport.NewServer(
+		e.GetQuestionByID,
+		decodeGetQuestionByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{id}/questions", httptransport.NewServer(
+		e.GetQuestionsByChallengeID,
+		decodeGetQuestionsByChallengeIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -168,4 +224,110 @@ func decodeUpdateChallengeRequest(_ context.Context, r *http.Request) (interface
 	req.ID = challengeID
 
 	return req, nil
+}
+
+func decodeAddQuestionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AddQuestionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeAddQuestionOptionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AnswerOptionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	questionID := chi.URLParam(r, "question_id")
+	if questionID == "" {
+		return nil, fmt.Errorf("%w: missed question id", ErrInvalidParameter)
+	}
+	req.QuestionID = questionID
+
+	return req, nil
+}
+
+func decodeDeleteQuestionByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "question_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed question id", ErrInvalidParameter)
+	}
+
+	return id, nil
+
+}
+
+func decodeDeleteAnswerByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	questionID := chi.URLParam(r, "question_id")
+	if questionID == "" {
+		return nil, fmt.Errorf("%w: missed question id", ErrInvalidParameter)
+	}
+
+	answerID := chi.URLParam(r, "answer_id")
+	if answerID == "" {
+		return nil, fmt.Errorf("%w: missed answer id", ErrInvalidParameter)
+	}
+
+	return DeleteAnswerByIDRequest{
+		AnswerID:   answerID,
+		QuestionID: questionID,
+	}, nil
+
+}
+
+func decodeUpdateQuestionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateQuestionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	questionID := chi.URLParam(r, "question_id")
+	if questionID == "" {
+		return nil, fmt.Errorf("%w: missed question id", ErrInvalidParameter)
+	}
+	req.ID = questionID
+
+	return req, nil
+}
+
+func decodeUpdateAnswerRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateAnswerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	questionID := chi.URLParam(r, "question_id")
+	if questionID == "" {
+		return nil, fmt.Errorf("%w: missed question id", ErrInvalidParameter)
+	}
+	req.QuestionID = questionID
+
+	answerID := chi.URLParam(r, "answer_id")
+	if answerID == "" {
+		return nil, fmt.Errorf("%w: missed answer id", ErrInvalidParameter)
+	}
+	req.ID = answerID
+
+	return req, nil
+}
+
+func decodeGetQuestionByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "question_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed question id", ErrInvalidParameter)
+	}
+
+	return id, nil
+}
+
+func decodeGetQuestionsByChallengeIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
+	}
+
+	return id, nil
 }

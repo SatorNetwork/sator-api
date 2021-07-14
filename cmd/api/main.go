@@ -26,9 +26,6 @@ import (
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
-	"github.com/SatorNetwork/sator-api/svc/questions"
-	questionsClient "github.com/SatorNetwork/sator-api/svc/questions/client"
-	questionsRepo "github.com/SatorNetwork/sator-api/svc/questions/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -213,13 +210,6 @@ func main() {
 		))
 	}
 
-	// Questions service
-	questionsRepository, err := questionsRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("questionsRepo error: %v", err)
-	}
-	questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
-
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
@@ -235,7 +225,6 @@ func main() {
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
-			questionsSvcClient,
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandler(
@@ -250,16 +239,6 @@ func main() {
 		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
-			logger,
-		))
-
-		// Questions service
-		questionRepo, err := questionsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("questionsRepo error: %v", err)
-		}
-		r.Mount("/questions", questions.MakeHTTPHandler(
-			questions.MakeEndpoints(questions.NewService(questionRepo), jwtMdw),
 			logger,
 		))
 	}
@@ -309,7 +288,6 @@ func main() {
 		quizSvc := quiz.NewService(
 			mutex,
 			quizRepository,
-			questionsSvcClient,
 			rewardsSvcClient,
 			challengeSvcClient,
 			quizWsConnURL,

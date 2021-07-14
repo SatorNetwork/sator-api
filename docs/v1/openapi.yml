@@ -1237,7 +1237,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /questions:
+  /challenges/questions:
     post:
       tags:
         - "Questions"
@@ -1273,15 +1273,12 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    required: true
                   challenge_id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    required: true
                   question:
                     type: string
                     example: "question"
-                    required: true
                   order:
                     type: number
                     example: true
@@ -1292,7 +1289,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /questions/{question_id}:
+  /challenges/questions/{question_id}:
     get:
       tags:
         - "Questions"
@@ -1317,15 +1314,12 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    required: true
                   challenge_id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    required: true
                   question:
                     type: string
                     example: "question"
-                    required: true
                   order:
                     type: number
                     example: true
@@ -1343,7 +1337,6 @@ paths:
                         option:
                           type: string
                           example: "option"
-                          required: true
                         is_correct:
                           type: boolean
                           example: true
@@ -1416,7 +1409,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /questions/challenge/{challenge_id}:
+  /challenges/{id}/questions:
     get:
       tags:
         - "Questions"
@@ -1424,7 +1417,7 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: challenge_id
+        - name: id
           in: path
           description: Challenge ID.
           required: true
@@ -1443,15 +1436,12 @@ paths:
                     id:
                       type: string
                       example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                      required: true
                     challenge_id:
                       type: string
                       example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                      required: true
                     question:
                       type: string
                       example: "question"
-                      required: true
                     order:
                       type: number
                       example: true
@@ -1469,7 +1459,6 @@ paths:
                           option:
                             type: string
                             example: "option"
-                            required: true
                           is_correct:
                             type: boolean
                             example: true
@@ -1478,7 +1467,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /questions/{question_id}/answers:
+  /challenges/questions/{question_id}/answers:
     post:
       tags:
         - "Answers"
@@ -1523,7 +1512,6 @@ paths:
                   option:
                     type: string
                     example: "option"
-                    required: true
                   is_correct:
                     type: boolean
                     example: true
@@ -1534,7 +1522,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /questions/{question_id}/answers/{answer_id}:
+  /challenges/questions/{question_id}/answers/{answer_id}:
     put:
       tags:
         - "Answers"

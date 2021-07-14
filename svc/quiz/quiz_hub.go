@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/questions"
+	"github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz/repository"
 
 	"github.com/dustin/go-broadcast"
@@ -42,7 +42,7 @@ type (
 		startQuiz               broadcast.Broadcaster
 		stopQuiz                broadcast.Broadcaster
 
-		questions       map[string]questions.Question
+		questions       map[string]challenge.Question
 		questionsSentAt map[string]time.Time
 		answers         map[string]uuid.UUID
 
@@ -87,7 +87,7 @@ func (ph *PlayerHub) Close() error {
 }
 
 // NewQuizHub setup new quiz hub
-func NewQuizHub(quiz repository.Quiz, qs map[string]questions.Question) *Hub {
+func NewQuizHub(quiz repository.Quiz, qs map[string]challenge.Question) *Hub {
 	return &Hub{
 		ChallengeID:          quiz.ChallengeID,
 		QuizID:               quiz.ID,
