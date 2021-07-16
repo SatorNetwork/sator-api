@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const addQRCode = `-- name: AddQRCode :exec
+const addQRCode = `-- name: AddQRCode :one
 INSERT INTO qrcodes (
     show_id,
     episode_id,
@@ -25,7 +25,7 @@ VALUES (
            $3,
            $4,
            $5
-       )
+       ) RETURNING id, show_id, episode_id, starts_at, expires_at, updated_at, created_at, reward_amount
 `
 
 type AddQRCodeParams struct {
@@ -36,15 +36,26 @@ type AddQRCodeParams struct {
 	RewardAmount sql.NullFloat64 `json:"reward_amount"`
 }
 
-func (q *Queries) AddQRCode(ctx context.Context, arg AddQRCodeParams) error {
-	_, err := q.exec(ctx, q.addQRCodeStmt, addQRCode,
+func (q *Queries) AddQRCode(ctx context.Context, arg AddQRCodeParams) (Qrcode, error) {
+	row := q.queryRow(ctx, q.addQRCodeStmt, addQRCode,
 		arg.ShowID,
 		arg.EpisodeID,
 		arg.StartsAt,
 		arg.ExpiresAt,
 		arg.RewardAmount,
 	)
-	return err
+	var i Qrcode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.EpisodeID,
+		&i.StartsAt,
+		&i.ExpiresAt,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.RewardAmount,
+	)
+	return i, err
 }
 
 const deleteQRCodeByID = `-- name: DeleteQRCodeByID :exec

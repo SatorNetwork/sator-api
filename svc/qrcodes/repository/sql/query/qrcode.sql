@@ -3,7 +3,7 @@ SELECT *
 FROM qrcodes
 WHERE id = $1
     LIMIT 1;
--- name: AddQRCode :exec
+-- name: AddQRCode :one
 INSERT INTO qrcodes (
     show_id,
     episode_id,
@@ -17,7 +17,7 @@ VALUES (
            @starts_at,
            @expires_at,
            @reward_amount
-       );
+       ) RETURNING *;
 -- name: UpdateQRCode :exec
 UPDATE qrcodes
 SET show_id = @show_id,

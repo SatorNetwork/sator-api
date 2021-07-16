@@ -27,7 +27,7 @@ type (
 
 	qrcodeRepository interface {
 		GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (repository.Qrcode, error)
-		AddQRCode(ctx context.Context, arg repository.AddQRCodeParams) error
+		AddQRCode(ctx context.Context, arg repository.AddQRCodeParams) (repository.Qrcode, error)
 		DeleteQRCodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateQRCode(ctx context.Context, arg repository.UpdateQRCodeParams) error
 	}
@@ -94,8 +94,8 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (
 }
 
 // AddQRCode ..
-func (s *Service) AddQRCode(ctx context.Context, qr Qrcode) error {
-	if err := s.qr.AddQRCode(ctx, repository.AddQRCodeParams{
+func (s *Service) AddQRCode(ctx context.Context, qr Qrcode) (Qrcode, error) {
+	qrCode, err := s.qr.AddQRCode(ctx, repository.AddQRCodeParams{
 		ShowID:    qr.ShowID,
 		EpisodeID: qr.EpisodeID,
 		StartsAt:  qr.StartsAt,
@@ -104,11 +104,23 @@ func (s *Service) AddQRCode(ctx context.Context, qr Qrcode) error {
 			Float64: qr.RewardAmount,
 			Valid:   true,
 		},
-	}); err != nil {
-		return fmt.Errorf("could not add qrcode with episode id=%s: %w", qr.EpisodeID, err)
+	})
+	if err != nil {
+		return Qrcode{}, fmt.Errorf("could not add qrcode with episode id=%s: %w", qr.EpisodeID, err)
 	}
 
-	return nil
+	return castToQrcode(qrCode), nil
+}
+
+func castToQrcode(qr repository.Qrcode) Qrcode {
+	return Qrcode{
+		ID:           qr.ID,
+		ShowID:       qr.ShowID,
+		EpisodeID:    qr.EpisodeID,
+		StartsAt:     qr.StartsAt,
+		ExpiresAt:    qr.ExpiresAt,
+		RewardAmount: qr.RewardAmount.Float64,
+	}
 }
 
 // DeleteQRCodeByID ...

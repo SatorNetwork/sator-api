@@ -23,7 +23,7 @@ type (
 
 	service interface {
 		GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (interface{}, error)
-		AddQRCode(ctx context.Context, qr Qrcode) error
+		AddQRCode(ctx context.Context, qr Qrcode) (Qrcode, error)
 		DeleteQRCodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateQRCode(ctx context.Context, qr Qrcode) error
 	}
@@ -121,7 +121,7 @@ func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 			return nil, fmt.Errorf("could not add parse expire date from string: %w", err)
 		}
 
-		err = s.AddQRCode(ctx, Qrcode{
+		resp, err := s.AddQRCode(ctx, Qrcode{
 			ShowID:       showID,
 			EpisodeID:    episodeID,
 			StartsAt:     startsAt,
@@ -132,7 +132,7 @@ func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 			return nil, err
 		}
 
-		return true, nil
+		return resp, nil
 	}
 }
 

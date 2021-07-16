@@ -904,18 +904,43 @@ paths:
                   example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                 starts_at:
                   type: string
-                  example: "2006-01-02T15:04:05Z07:00"
+                  example: "2006-01-02T15:04:05Z"
                   description: "RFC3339"
                 expires_at:
                   type: string
-                  example: "2006-01-02T15:04:05Z07:00"
+                  example: "2006-01-02T15:04:05Z"
                   description: "RFC3339"
                 reward_amount:
                   type: number
                   example: 123.56
       responses:
         "200":
-          $ref: "#/components/responses/ResultSuccess"
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  starts_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+                  expires_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+                  reward_amount:
+                    type: number
+                    example: 123.56
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
