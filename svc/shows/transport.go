@@ -189,10 +189,16 @@ func decodeAddShowRequest(_ context.Context, r *http.Request) (interface{}, erro
 }
 
 func decodeUpdateShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
 	var req UpdateShowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+	req.ID = id
 
 	return req, nil
 }

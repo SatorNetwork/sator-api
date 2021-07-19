@@ -8,7 +8,7 @@ ORDER BY episode_number DESC
 SELECT *
 FROM episodes
 WHERE id = $1 AND show_id = $2;
--- name: AddEpisode :exec
+-- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,
     episode_number,
@@ -24,7 +24,7 @@ VALUES (
            @title,
            @description,
            @release_date
-       );
+       ) RETURNING *;
 -- name: UpdateEpisode :exec
 UPDATE episodes
 SET episode_number = @episode_number,

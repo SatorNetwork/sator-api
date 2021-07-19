@@ -29,7 +29,7 @@ type (
 	}
 
 	service interface {
-		AddShow(ctx context.Context, sh Show) error
+		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
@@ -37,7 +37,7 @@ type (
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
-		AddEpisode(ctx context.Context, ep Episode) error
+		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
 		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
@@ -269,7 +269,7 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		err := s.AddShow(ctx, Show{
+		resp, err := s.AddShow(ctx, Show{
 			Title:         req.Title,
 			Cover:         req.Cover,
 			HasNewEpisode: req.HasNewEpisode,
@@ -280,7 +280,7 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		return true, nil
+		return resp, nil
 	}
 }
 
@@ -340,7 +340,7 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		err = s.AddEpisode(ctx, Episode{
+		resp, err := s.AddEpisode(ctx, Episode{
 			ShowID:        showID,
 			EpisodeNumber: req.EpisodeNumber,
 			Cover:         req.Cover,
@@ -352,7 +352,7 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, err
 		}
 
-		return true, nil
+		return resp, nil
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const addEpisode = `-- name: AddEpisode :exec
+const addEpisode = `-- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,
     episode_number,
@@ -26,7 +26,7 @@ VALUES (
            $4,
            $5,
            $6
-       )
+       ) RETURNING id, show_id, episode_number, cover, title, description, release_date, updated_at, created_at
 `
 
 type AddEpisodeParams struct {
@@ -38,8 +38,8 @@ type AddEpisodeParams struct {
 	ReleaseDate   sql.NullTime   `json:"release_date"`
 }
 
-func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
-	_, err := q.exec(ctx, q.addEpisodeStmt, addEpisode,
+func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) (Episode, error) {
+	row := q.queryRow(ctx, q.addEpisodeStmt, addEpisode,
 		arg.ShowID,
 		arg.EpisodeNumber,
 		arg.Cover,
@@ -47,7 +47,19 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
 		arg.Description,
 		arg.ReleaseDate,
 	)
-	return err
+	var i Episode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.EpisodeNumber,
+		&i.Cover,
+		&i.Title,
+		&i.Description,
+		&i.ReleaseDate,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const deleteEpisodeByID = `-- name: DeleteEpisodeByID :exec

@@ -594,9 +594,37 @@ paths:
                 category:
                   type: string
                   example: "category"
+                description:
+                  type: string
+                  example: "description"
       responses:
         "200":
-          $ref: "#/components/responses/ResultSuccess"
+          description: Returns shows data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                    required: true
+                  cover:
+                    type: string
+                    example: "cover"
+                    required: true
+                  has_new_episode:
+                    type: boolean
+                    example: true
+                  category:
+                    type: string
+                    example: "category"
+                  description:
+                    type: string
+                    example: "description"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -733,6 +761,9 @@ paths:
                 category:
                   type: string
                   example: "category"
+                description:
+                  type: string
+                  example: "description"
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -957,7 +988,7 @@ paths:
                   example: "description"
                 release_date:
                   type: string
-                  example: "2006-01-02T15:04:05Z07:00"
+                  example: "2006-01-02T15:04:05Z"
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

@@ -17,7 +17,7 @@ ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
     LIMIT $2 OFFSET $3;
--- name: AddShow :exec
+-- name: AddShow :one
 INSERT INTO shows (
     title,
     cover,
@@ -31,7 +31,7 @@ VALUES (
            @has_new_episode,
            @category,
            @description
-       );
+       ) RETURNING *;
 -- name: UpdateShow :exec
 UPDATE shows
 SET title = @title,
