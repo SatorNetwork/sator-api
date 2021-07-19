@@ -40,6 +40,13 @@ type (
 		ReleaseDate   string    `json:"release_date"`
 	}
 
+	ShowCategory struct {
+		ID           uuid.UUID `json:"id"`
+		CategoryName string    `json:"category_name"`
+		Title        string    `json:"title"`
+		Disabled     bool      `json:"disabled"`
+	}
+
 	showsRepository interface {
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
@@ -53,6 +60,14 @@ type (
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.Episode, error)
 		DeleteEpisodeByID(ctx context.Context, arg repository.DeleteEpisodeByIDParams) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
+
+		AddShowCategory(ctx context.Context, arg repository.AddShowCategoryParams) (repository.ShowsCategory, error)
+		DeleteShowCategoryByID(ctx context.Context, id uuid.UUID) error
+		GetShowCategoryByID(ctx context.Context, id uuid.UUID) (repository.ShowsCategory, error)
+		UpdateShowCategory(ctx context.Context, arg repository.UpdateShowCategoryParams) error
+
+		AddShowToCategory(ctx context.Context, arg repository.AddShowToCategoryParams) error
+		DeleteShowToCategory(ctx context.Context, arg repository.DeleteShowToCategoryParams) error
 	}
 
 	// Challenges service client
@@ -323,6 +338,92 @@ func (s *Service) DeleteEpisodeByID(ctx context.Context, showID, episodeID uuid.
 		ShowID: showID,
 	}); err != nil {
 		return fmt.Errorf("could not delete episode with id=%s:%w", episodeID, err)
+	}
+
+	return nil
+}
+
+// AddShowCategories ..
+func (s *Service) AddShowCategories(ctx context.Context, sc ShowCategory) (ShowCategory, error) {
+	category, err := s.sr.AddShowCategory(ctx, repository.AddShowCategoryParams{
+		CategoryName: sc.CategoryName,
+		Title:        sc.Title,
+		Disabled: sql.NullBool{
+			Bool:  sc.Disabled,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return ShowCategory{}, fmt.Errorf("could not add episode with category_name=%s: %w", sc.CategoryName, err)
+	}
+
+	return castToShowCategory(category), nil
+}
+
+// Cast repository.ShowsCategory to service ShowCategory structure
+func castToShowCategory(source repository.ShowsCategory) ShowCategory {
+	return ShowCategory{
+		ID:           source.ID,
+		CategoryName: source.CategoryName,
+		Title:        source.Title,
+		Disabled:     source.Disabled.Bool,
+	}
+}
+
+// DeleteShowCategoryByID ..
+func (s *Service) DeleteShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) error {
+	if err := s.sr.DeleteShowCategoryByID(ctx, showCategoryID); err != nil {
+		return fmt.Errorf("could not delete show category with id=%s:%w", showCategoryID, err)
+	}
+
+	return nil
+}
+
+// UpdateShowCategory ..
+func (s *Service) UpdateShowCategory(ctx context.Context, sc ShowCategory) error {
+	if err := s.sr.UpdateShowCategory(ctx, repository.UpdateShowCategoryParams{
+		ID:           sc.ID,
+		CategoryName: sc.CategoryName,
+		Title:        sc.Title,
+		Disabled: sql.NullBool{
+			Bool:  sc.Disabled,
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not update show category with id=%s:%w", sc.ID, err)
+	}
+	return nil
+}
+
+// GetShowCategoryByID returns show category with provided id.
+func (s *Service) GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error) {
+	category, err := s.sr.GetShowCategoryByID(ctx, showCategoryID)
+	if err != nil {
+		return ShowCategory{}, fmt.Errorf("could not get show category with id=%s: %w", showCategoryID, err)
+	}
+
+	return castToShowCategory(category), nil
+}
+
+// AddShowToCategory ..
+func (s *Service) AddShowToCategory(ctx context.Context, categoryID, showID uuid.UUID) error {
+	if err := s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
+		CategoryID: categoryID,
+		ShowID:     showID,
+	}); err != nil {
+		return fmt.Errorf("could not add show to category with category_id=%s, show_id=%s: %w", categoryID, showID, err)
+	}
+
+	return nil
+}
+
+// DeleteShowToCategory ..
+func (s *Service) DeleteShowToCategory(ctx context.Context, categoryID, showID uuid.UUID) error {
+	if err := s.sr.DeleteShowToCategory(ctx, repository.DeleteShowToCategoryParams{
+		CategoryID: categoryID,
+		ShowID:     showID,
+	}); err != nil {
+		return fmt.Errorf("could not delete show to category with category_id=%s, show_id=%s: %w", categoryID, showID, err)
 	}
 
 	return nil

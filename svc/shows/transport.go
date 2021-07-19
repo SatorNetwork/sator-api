@@ -122,6 +122,34 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/categories/{category_id}", httptransport.NewServer(
+		e.GetShowCategoryByID,
+		decodeGetShowCategoryByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/categories", httptransport.NewServer(
+		e.AddShowCategories,
+		decodeAddShowCategoriesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/categories/{category_id}", httptransport.NewServer(
+		e.UpdateShowCategory,
+		decodeUpdateShowCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/categories/{category_id}", httptransport.NewServer(
+		e.DeleteShowCategoryByID,
+		decodeDeleteShowCategoryByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -290,4 +318,46 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
+}
+
+func decodeDeleteShowCategoryByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+
+	return categoryID, nil
+}
+
+func decodeGetShowCategoryByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+
+	return categoryID, nil
+}
+
+func decodeAddShowCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AddShowsCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeUpdateShowCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateShowCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+	req.ID = categoryID
+
+	return req, nil
 }

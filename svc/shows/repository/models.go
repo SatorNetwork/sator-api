@@ -31,3 +31,15 @@ type Show struct {
 	Category      sql.NullString `json:"category"`
 	Description   sql.NullString `json:"description"`
 }
+
+type ShowsCategory struct {
+	ID           uuid.UUID    `json:"id"`
+	CategoryName string       `json:"category_name"`
+	Title        string       `json:"title"`
+	Disabled     sql.NullBool `json:"disabled"`
+}
+
+type ShowsToCategory struct {
+	CategoryID uuid.UUID `json:"category_id"`
+	ShowID     uuid.UUID `json:"show_id"`
+}
