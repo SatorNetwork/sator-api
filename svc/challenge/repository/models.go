@@ -19,4 +19,6 @@ type Challenge struct {
 	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
 	CreatedAt       time.Time      `json:"created_at"`
+	EpisodeID       uuid.UUID      `json:"episode_id"`
+	Kind            int32          `json:"kind"`
 }

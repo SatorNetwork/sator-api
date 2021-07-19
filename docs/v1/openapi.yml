@@ -772,6 +772,119 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /challenges/{episode_id}/validation-question:
+    get:
+      tags:
+        - "Challenges"
+      summary: Get validation question by episode id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns validation question with answer options.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question_text:
+                    type: string
+                    example: "Question text"
+                  time_for_answer:
+                    type: number
+                    example: 8
+                  answer_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        answer_id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        answer_text:
+                          type: string
+                          example: "Answer text"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /challenges/{question_id}/check-answer/{answer_id}:
+    get:
+      tags:
+        - "Challenges"
+      summary: Check validation question`s answer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+        - name: answer_id
+          in: path
+          description: Answer ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns boolean result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /challenges/{episode_id}/is-activated:
+    get:
+      tags:
+        - "Challenges"
+      summary: Check episode access.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns true if a user have activated realm.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /qrcodes/{id}:
     get:
       tags:

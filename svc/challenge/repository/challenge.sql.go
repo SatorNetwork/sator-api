@@ -9,8 +9,35 @@ import (
 	"github.com/google/uuid"
 )
 
+const getChallengeByEpisodeID = `-- name: GetChallengeByEpisodeID :one
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
+FROM challenges
+WHERE episode_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UUID) (Challenge, error) {
+	row := q.queryRow(ctx, q.getChallengeByEpisodeIDStmt, getChallengeByEpisodeID, episodeID)
+	var i Challenge
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.Title,
+		&i.Description,
+		&i.PrizePool,
+		&i.PlayersToStart,
+		&i.TimePerQuestion,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.EpisodeID,
+		&i.Kind,
+	)
+	return i, err
+}
+
 const getChallengeByID = `-- name: GetChallengeByID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
 FROM challenges
 WHERE id = $1
 ORDER BY created_at DESC
@@ -30,12 +57,14 @@ func (q *Queries) GetChallengeByID(ctx context.Context, id uuid.UUID) (Challenge
 		&i.TimePerQuestion,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.EpisodeID,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getChallenges = `-- name: GetChallenges :many
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
 FROM challenges
 WHERE show_id = $1
 ORDER BY updated_at DESC,
@@ -68,6 +97,8 @@ func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([
 			&i.TimePerQuestion,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.EpisodeID,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
