@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
@@ -24,11 +25,7 @@ type (
 )
 
 // New creates new solana client wrapper
-func New(endpoint, feePayerPrivateKey, assetPrivateKey, issuerPrivateKey string) *Client {
-	feePayer := types.AccountFromPrivateKeyBytes([]byte(feePayerPrivateKey))
-	issuer := types.AccountFromPrivateKeyBytes([]byte(assetPrivateKey))
-	asset := types.AccountFromPrivateKeyBytes([]byte(issuerPrivateKey))
-
+func New(endpoint string, feePayer, asset, issuer types.Account) *Client {
 	return &Client{
 		solana:   client.NewClient(endpoint),
 		endpoint: endpoint,
@@ -49,7 +46,7 @@ func (c *Client) PublicKeyFromString(pk string) common.PublicKey {
 	return common.PublicKeyFromString(pk)
 }
 
-func (c *Client) AccountFromPrivatekey(pk []byte) types.Account {
+func (c *Client) AccountFromPrivateKey(pk []byte) types.Account {
 	return types.AccountFromPrivateKeyBytes(pk)
 }
 
@@ -71,7 +68,7 @@ func (c *Client) RequestAirdrop(ctx context.Context, pubKey string, amount float
 }
 
 // SendTransaction sends transaction ans returns transaction hash
-func (c *Client) SendTransaction(ctx context.Context, signer types.Account, instructions ...types.Instruction) (string, error) {
+func (c *Client) SendTransaction(ctx context.Context, signer types.Account, instructions ...types.Instruction) (txhash string, err error) {
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
 		return "", fmt.Errorf("could not get recent block hash: %w", err)
@@ -87,12 +84,17 @@ func (c *Client) SendTransaction(ctx context.Context, signer types.Account, inst
 		return "", fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
-	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
-	if err != nil {
-		return "", fmt.Errorf("could not send raw transaction: %w", err)
+	for i := 0; i < 3; i++ {
+		txhash, err = c.solana.SendRawTransaction(ctx, rawTx)
+		if err != nil {
+			time.Sleep(10*time.Second)
+			continue
+		} else {
+			break
+		}
 	}
 
-	return txhash, nil
+	return txhash, err
 }
 
 // GetAccountBalanceSOL returns account's SOL balance

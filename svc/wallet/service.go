@@ -211,7 +211,7 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 	for i := 0; i < 5; i++ {
 		if tx, err = s.sc.SendAssets(
 			ctx,
-			s.sc.AccountFromPrivatekey(s.sc.Issuer.PrivateKey),
+			s.sc.AccountFromPrivateKey(s.sc.Issuer.PrivateKey),
 			user.PublicKey,
 			amount,
 		); err != nil {
@@ -272,7 +272,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 
 	if tx, err := s.sc.InitAccountToUseAsset(
 		ctx,
-		s.sc.AccountFromPrivatekey(s.sc.Issuer.PrivateKey),
+		s.sc.AccountFromPrivateKey(s.sc.Issuer.PrivateKey),
 	); err != nil {
 		return err
 	} else {
@@ -283,7 +283,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 
 	if tx, err := s.sc.IssueAsset(
 		ctx,
-		s.sc.AccountFromPrivatekey(s.sc.Issuer.PrivateKey),
+		s.sc.AccountFromPrivateKey(s.sc.Issuer.PrivateKey),
 		1000000,
 	); err != nil {
 		return err
@@ -336,7 +336,7 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 
 // Transfer sends transaction from one account to another.
 func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error) {
-	senderAcc := s.sc.AccountFromPrivatekey([]byte(senderPrivateKey))
+	senderAcc := s.sc.AccountFromPrivateKey([]byte(senderPrivateKey))
 
 	for i := 0; i < 5; i++ {
 		if tx, err = s.sc.SendAssets(

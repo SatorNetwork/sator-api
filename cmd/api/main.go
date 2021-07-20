@@ -50,6 +50,7 @@ import (
 	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
+	"github.com/portto/solana-go-sdk/types"
 	"github.com/rs/cors"
 	"github.com/zeebo/errs"
 )
@@ -176,7 +177,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, *solana.New(solanaApiBaseUrl, feePayerAccountPrivateKey, assetAccountPrivateKey, issuerAccountPrivateKey))
+
+		feePayer := types.AccountFromPrivateKeyBytes([]byte(feePayerAccountPrivateKey))
+		asset := types.AccountFromPrivateKeyBytes([]byte(assetAccountPrivateKey))
+		issuer := types.AccountFromPrivateKeyBytes([]byte(issuerAccountPrivateKey))
+
+		walletService := wallet.NewService(walletRepository, *solana.New(solanaApiBaseUrl, feePayer, asset, issuer))
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
