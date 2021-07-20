@@ -182,7 +182,7 @@ func main() {
 		asset := types.AccountFromPrivateKeyBytes([]byte(assetAccountPrivateKey))
 		issuer := types.AccountFromPrivateKeyBytes([]byte(issuerAccountPrivateKey))
 
-		walletService := wallet.NewService(walletRepository, *solana.New(solanaApiBaseUrl, feePayer, asset, issuer))
+		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl, feePayer, asset, issuer))
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),

@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/portto/solana-go-sdk/types"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
@@ -18,7 +20,7 @@ type (
 	// Service struct
 	Service struct {
 		wr walletRepository
-		sc solana.Client
+		sc solanaClient
 		// rw rewardsService
 
 		satorAssetName  string
@@ -41,6 +43,20 @@ type (
 		GetSolanaAccountByUserID(ctx context.Context, userID uuid.UUID) (repository.SolanaAccount, error)
 	}
 
+	solanaClient interface {
+		GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
+		GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
+		NewAccount() types.Account
+		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
+		AccountFromPrivateKey(pk []byte) types.Account
+		InitAccountToUseAsset(ctx context.Context, initAcc types.Account) (string, error)
+		SendAssets(ctx context.Context, sender types.Account, recipientAddr string, amount float64) (string, error)
+		SendAssetsFromIssuer(ctx context.Context, recipientAddr string, amount float64) (string, error)
+		CreateAsset(ctx context.Context) (string, error)
+		IssueAsset(ctx context.Context, dest types.Account, amount float64) (string, error)
+		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
+	}
+
 	// rewardsService interface {
 	// 	GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	// }
@@ -48,9 +64,12 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solana.Client) *Service {
+func NewService(wr walletRepository, sc solanaClient) *Service {
 	if wr == nil {
 		log.Fatalln("wallet repository is not set")
+	}
+	if sc == nil {
+		log.Fatalln("solana client is not set")
 	}
 	return &Service{
 		wr: wr,
@@ -209,9 +228,8 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 
 	// sends token
 	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.SendAssets(
+		if tx, err = s.sc.SendAssetsFromIssuer(
 			ctx,
-			s.sc.AccountFromPrivateKey(s.sc.Issuer.PrivateKey),
 			user.PublicKey,
 			amount,
 		); err != nil {
@@ -228,29 +246,33 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 
 // Bootstrap for usage in development mode only
 func (s *Service) Bootstrap(ctx context.Context) error {
+	feePayer := s.sc.NewAccount()
+	issuer := s.sc.NewAccount()
+	asset := s.sc.NewAccount()
+
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		PublicKey:  s.sc.FeePayer.PublicKey.ToBase58(),
-		PrivateKey: s.sc.FeePayer.PrivateKey,
+		PublicKey:  feePayer.PublicKey.ToBase58(),
+		PrivateKey: feePayer.PrivateKey,
 	}); err != nil {
 		return fmt.Errorf("could not store issuer solana account: %w", err)
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err := s.sc.RequestAirdrop(ctx, s.sc.FeePayer.PublicKey.ToBase58(), 10)
+		tx, err := s.sc.RequestAirdrop(ctx, feePayer.PublicKey.ToBase58(), 10)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		log.Printf("airdrop for %s: %s", s.sc.FeePayer.PublicKey.ToBase58(), tx)
+		log.Printf("airdrop for %s: %s", feePayer.PublicKey.ToBase58(), tx)
 		break
 	}
 
 	time.Sleep(time.Second * 15)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		PublicKey:  s.sc.Asset.PublicKey.ToBase58(),
-		PrivateKey: s.sc.Asset.PrivateKey,
+		PublicKey:  asset.PublicKey.ToBase58(),
+		PrivateKey: asset.PrivateKey,
 	}); err != nil {
 		return fmt.Errorf("could not store asset solana account: %w", err)
 	}
@@ -258,37 +280,37 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	if tx, err := s.sc.CreateAsset(ctx); err != nil {
 		return err
 	} else {
-		log.Printf("convert account (%s) to asset: %s", s.sc.Asset.PublicKey.ToBase58(), tx)
+		log.Printf("convert account (%s) to asset: %s", asset.PublicKey.ToBase58(), tx)
 	}
 
 	time.Sleep(time.Second * 15)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		PublicKey:  s.sc.Issuer.PublicKey.ToBase58(),
-		PrivateKey: s.sc.Issuer.PrivateKey,
+		PublicKey:  issuer.PublicKey.ToBase58(),
+		PrivateKey: issuer.PrivateKey,
 	}); err != nil {
 		return fmt.Errorf("could not store issuer solana account: %w", err)
 	}
 
 	if tx, err := s.sc.InitAccountToUseAsset(
 		ctx,
-		s.sc.AccountFromPrivateKey(s.sc.Issuer.PrivateKey),
+		s.sc.AccountFromPrivateKey(issuer.PrivateKey),
 	); err != nil {
 		return err
 	} else {
-		log.Printf("init issuer account (%s) to user asset: %s", s.sc.Issuer.PublicKey.ToBase58(), tx)
+		log.Printf("init issuer account (%s) to user asset: %s", issuer.PublicKey.ToBase58(), tx)
 	}
 
 	time.Sleep(time.Second * 15)
 
 	if tx, err := s.sc.IssueAsset(
 		ctx,
-		s.sc.AccountFromPrivateKey(s.sc.Issuer.PrivateKey),
+		s.sc.AccountFromPrivateKey(issuer.PrivateKey),
 		1000000,
 	); err != nil {
 		return err
 	} else {
-		log.Printf("issue asset (%s): %s", s.sc.Issuer.PublicKey.ToBase58(), tx)
+		log.Printf("issue asset (%s): %s", issuer.PublicKey.ToBase58(), tx)
 	}
 
 	return nil

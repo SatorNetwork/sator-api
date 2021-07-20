@@ -56,7 +56,7 @@ func main() {
 	feePayer := types.AccountFromPrivateKeyBytes([]byte(feePayerAccountPrivateKey))
 	asset := types.AccountFromPrivateKeyBytes([]byte(assetAccountPrivateKey))
 	issuer := types.AccountFromPrivateKeyBytes([]byte(issuerAccountPrivateKey))
-	walletService := wallet.NewService(repo, *solana.New(client.DevnetRPCEndpoint, feePayer, asset, issuer))
+	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint, feePayer, asset, issuer))
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)
