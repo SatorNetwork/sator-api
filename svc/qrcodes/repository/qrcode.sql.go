@@ -5,9 +5,68 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const addQRCode = `-- name: AddQRCode :one
+INSERT INTO qrcodes (
+    show_id,
+    episode_id,
+    starts_at,
+    expires_at,
+    reward_amount
+)
+VALUES (
+           $1,
+           $2,
+           $3,
+           $4,
+           $5
+       ) RETURNING id, show_id, episode_id, starts_at, expires_at, updated_at, created_at, reward_amount
+`
+
+type AddQRCodeParams struct {
+	ShowID       uuid.UUID       `json:"show_id"`
+	EpisodeID    uuid.UUID       `json:"episode_id"`
+	StartsAt     time.Time       `json:"starts_at"`
+	ExpiresAt    time.Time       `json:"expires_at"`
+	RewardAmount sql.NullFloat64 `json:"reward_amount"`
+}
+
+func (q *Queries) AddQRCode(ctx context.Context, arg AddQRCodeParams) (Qrcode, error) {
+	row := q.queryRow(ctx, q.addQRCodeStmt, addQRCode,
+		arg.ShowID,
+		arg.EpisodeID,
+		arg.StartsAt,
+		arg.ExpiresAt,
+		arg.RewardAmount,
+	)
+	var i Qrcode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.EpisodeID,
+		&i.StartsAt,
+		&i.ExpiresAt,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.RewardAmount,
+	)
+	return i, err
+}
+
+const deleteQRCodeByID = `-- name: DeleteQRCodeByID :exec
+DELETE FROM qrcodes
+WHERE id = $1
+`
+
+func (q *Queries) DeleteQRCodeByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteQRCodeByIDStmt, deleteQRCodeByID, id)
+	return err
+}
 
 const getDataByQRCodeID = `-- name: GetDataByQRCodeID :one
 SELECT id, show_id, episode_id, starts_at, expires_at, updated_at, created_at, reward_amount
@@ -30,4 +89,38 @@ func (q *Queries) GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (Qrcode, 
 		&i.RewardAmount,
 	)
 	return i, err
+}
+
+const updateQRCode = `-- name: UpdateQRCode :exec
+UPDATE qrcodes
+SET show_id = $1,
+    episode_id = $2,
+    starts_at = $3,
+    expires_at = $4,
+    reward_amount = $5,
+    updated_at = $6
+WHERE id = $7
+`
+
+type UpdateQRCodeParams struct {
+	ShowID       uuid.UUID       `json:"show_id"`
+	EpisodeID    uuid.UUID       `json:"episode_id"`
+	StartsAt     time.Time       `json:"starts_at"`
+	ExpiresAt    time.Time       `json:"expires_at"`
+	RewardAmount sql.NullFloat64 `json:"reward_amount"`
+	UpdatedAt    sql.NullTime    `json:"updated_at"`
+	ID           uuid.UUID       `json:"id"`
+}
+
+func (q *Queries) UpdateQRCode(ctx context.Context, arg UpdateQRCodeParams) error {
+	_, err := q.exec(ctx, q.updateQRCodeStmt, updateQRCode,
+		arg.ShowID,
+		arg.EpisodeID,
+		arg.StartsAt,
+		arg.ExpiresAt,
+		arg.RewardAmount,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	return err
 }
