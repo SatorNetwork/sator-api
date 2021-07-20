@@ -15,23 +15,20 @@ INSERT INTO shows (
     title,
     cover,
     has_new_episode,
-    category,
     description
   )
 VALUES (
            $1,
            $2,
            $3,
-           $4,
-           $5
-       ) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description
+           $4
+       ) RETURNING id, title, cover, has_new_episode, updated_at, created_at, description
 `
 
 type AddShowParams struct {
 	Title         string         `json:"title"`
 	Cover         string         `json:"cover"`
 	HasNewEpisode bool           `json:"has_new_episode"`
-	Category      sql.NullString `json:"category"`
 	Description   sql.NullString `json:"description"`
 }
 
@@ -40,7 +37,6 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 		arg.Title,
 		arg.Cover,
 		arg.HasNewEpisode,
-		arg.Category,
 		arg.Description,
 	)
 	var i Show
@@ -51,7 +47,6 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 		&i.HasNewEpisode,
 		&i.UpdatedAt,
 		&i.CreatedAt,
-		&i.Category,
 		&i.Description,
 	)
 	return i, err
@@ -68,7 +63,7 @@ func (q *Queries) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getShowByID = `-- name: GetShowByID :one
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
+SELECT id, title, cover, has_new_episode, updated_at, created_at, description
 FROM shows
 WHERE id = $1
 `
@@ -83,14 +78,13 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
 		&i.HasNewEpisode,
 		&i.UpdatedAt,
 		&i.CreatedAt,
-		&i.Category,
 		&i.Description,
 	)
 	return i, err
 }
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
+SELECT id, title, cover, has_new_episode, updated_at, created_at, description
 FROM shows
 ORDER BY has_new_episode DESC,
     updated_at DESC,
@@ -119,55 +113,6 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.HasNewEpisode,
 			&i.UpdatedAt,
 			&i.CreatedAt,
-			&i.Category,
-			&i.Description,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getShowsByCategory = `-- name: GetShowsByCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
-FROM shows
-WHERE category = $1
-ORDER BY has_new_episode DESC,
-         updated_at DESC,
-         created_at DESC
-    LIMIT $2 OFFSET $3
-`
-
-type GetShowsByCategoryParams struct {
-	Category sql.NullString `json:"category"`
-	Limit    int32          `json:"limit"`
-	Offset   int32          `json:"offset"`
-}
-
-func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategoryParams) ([]Show, error) {
-	rows, err := q.query(ctx, q.getShowsByCategoryStmt, getShowsByCategory, arg.Category, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Show
-	for rows.Next() {
-		var i Show
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Cover,
-			&i.HasNewEpisode,
-			&i.UpdatedAt,
-			&i.CreatedAt,
-			&i.Category,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -188,16 +133,14 @@ UPDATE shows
 SET title = $1,
     cover = $2,
     has_new_episode = $3,
-    category = $4,
-    description = $5
-WHERE id = $6
+    description = $4
+WHERE id = $5
 `
 
 type UpdateShowParams struct {
 	Title         string         `json:"title"`
 	Cover         string         `json:"cover"`
 	HasNewEpisode bool           `json:"has_new_episode"`
-	Category      sql.NullString `json:"category"`
 	Description   sql.NullString `json:"description"`
 	ID            uuid.UUID      `json:"id"`
 }
@@ -207,7 +150,6 @@ func (q *Queries) UpdateShow(ctx context.Context, arg UpdateShowParams) error {
 		arg.Title,
 		arg.Cover,
 		arg.HasNewEpisode,
-		arg.Category,
 		arg.Description,
 		arg.ID,
 	)

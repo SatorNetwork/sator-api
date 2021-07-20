@@ -591,9 +591,9 @@ paths:
                 has_new_episode:
                   type: boolean
                   example: true
-                category:
+                category_id:
                   type: string
-                  example: "category"
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                 description:
                   type: string
                   example: "description"
@@ -619,9 +619,6 @@ paths:
                   has_new_episode:
                     type: boolean
                     example: true
-                  category:
-                    type: string
-                    example: "category"
                   description:
                     type: string
                     example: "description"
@@ -758,9 +755,9 @@ paths:
                 has_new_episode:
                   type: boolean
                   example: true
-                category:
+                category_id:
                   type: string
-                  example: "category"
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                 description:
                   type: string
                   example: "description"
@@ -1028,63 +1025,271 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /shows/filter/{category}:
-    get:
+#  /shows/filter/{category}:
+#    get:
+#      tags:
+#        - "Shows"
+#      summary: Get shows list by category.
+#      security:
+#        - bearerAuth: []
+#      parameters:
+#        - name: category
+#          in: path
+#          description: Category.
+#          required: true
+#          schema:
+#            type: string
+#        - name: page
+#          in: query
+#          description: |
+#            Set needed page number.
+#
+#            By default, it returns the first page with a set number of items.
+#          required: false
+#          schema:
+#            type: integer
+#        - name: items_per_page
+#          in: query
+#          description: |
+#            Set needed items per page.
+#
+#            By default returns 20 items per page.
+#          required: false
+#          schema:
+#            type: integer
+#
+#      responses:
+#        "200":
+#          description: Returns shows list with pagination.
+#          content:
+#            application/json:
+#              schema:
+#                type: array
+#                items:
+#                  type: object
+#                  properties:
+#                    id:
+#                      type: string
+#                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+#                    title:
+#                      type: string
+#                      example: "Peaky Blinders"
+#                    cover:
+#                      type: string
+#                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+#                    has_new_episode:
+#                      type: boolean
+#                      example: true
+#        "401":
+#          $ref: "#/components/responses/UnauthorizedError"
+
+  /shows/categories:
+    post:
       tags:
-        - "Shows"
-      summary: Get shows list by category.
+        - "Categories"
+      summary: Used for create new category.
       security:
-        - bearerAuth: []
-      parameters:
-        - name: category
-          in: path
-          description: Category.
-          required: true
-          schema:
-            type: string
-        - name: page
-          in: query
-          description: |
-            Set needed page number.
-
-            By default, it returns the first page with a set number of items.
-          required: false
-          schema:
-            type: integer
-        - name: items_per_page
-          in: query
-          description: |
-            Set needed items per page.
-
-            By default returns 20 items per page.
-          required: false
-          schema:
-            type: integer
-
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_name:
+                  type: string
+                  example: "category_name"
+                  required: true
+                title:
+                  type: string
+                  example: "title"
+                  required: true
+                disabled:
+                  type: boolean
+                  example: false
       responses:
         "200":
-          description: Returns shows list with pagination.
+          description: Returns shows data.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    title:
-                      type: string
-                      example: "Peaky Blinders"
-                    cover:
-                      type: string
-                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
-                    has_new_episode:
-                      type: boolean
-                      example: true
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  category_name:
+                    type: string
+                    example: "category_name"
+                  title:
+                    type: string
+                    example: "title"
+                  disabled:
+                    type: boolean
+                    example: false
+        "400":
+          $ref: "#/components/responses/DefaultError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/categories/{category_id}:
+    get:
+      tags:
+        - "Categories"
+      summary: Get category by category id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns category by category id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  category_name:
+                    type: string
+                    example: "category_name"
+                  title:
+                    type: string
+                    example: "title"
+                  disabled:
+                    type: boolean
+                    example: false
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    put:
+      tags:
+        - "Categories"
+      summary: Used for update category.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_name:
+                  type: string
+                  example: "category_name"
+                title:
+                  type: string
+                  example: "title"
+                disabled:
+                  type: boolean
+                  example: false
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Categories"
+      summary: used for delete category by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/to-categories/{show_id}:
+    delete:
+      tags:
+        - "Show to category"
+      summary: used for delete show to category by show id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/to-categories/{category_id}/{show_id}:
+    delete:
+      tags:
+        - "Show to category"
+      summary: used for delete tie show and category by category id and show id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /challenges/{id}:
     get:

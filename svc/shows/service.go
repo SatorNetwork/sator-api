@@ -26,7 +26,7 @@ type (
 		Title         string    `json:"title"`
 		Cover         string    `json:"cover"`
 		HasNewEpisode bool      `json:"has_new_episode"`
-		Category      string    `json:"category"`
+		CategoryID    uuid.UUID `json:"category"`
 		Description   string    `json:"description"`
 	}
 
@@ -52,7 +52,6 @@ type (
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
-		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
 		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) (repository.Episode, error)
@@ -68,6 +67,8 @@ type (
 
 		AddShowToCategory(ctx context.Context, arg repository.AddShowToCategoryParams) error
 		DeleteShowToCategory(ctx context.Context, arg repository.DeleteShowToCategoryParams) error
+		DeleteShowToCategoryByShowID(ctx context.Context, showID uuid.UUID) error
+		UpdateShowToCategory(ctx context.Context, arg repository.UpdateShowToCategoryParams) error
 	}
 
 	// Challenges service client
@@ -98,6 +99,7 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
+
 	return castToListShow(shows), nil
 }
 
@@ -120,10 +122,10 @@ func castToListShow(source []repository.Show) []Show {
 			Title:         s.Title,
 			Cover:         s.Cover,
 			HasNewEpisode: s.HasNewEpisode,
-			Category:      s.Category.String,
 			Description:   s.Description.String,
 		})
 	}
+
 	return result
 }
 
@@ -133,6 +135,7 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
 	}
+
 	return castToShow(show), nil
 }
 
@@ -143,22 +146,8 @@ func castToShow(source repository.Show) Show {
 		Title:         source.Title,
 		Cover:         source.Cover,
 		HasNewEpisode: source.HasNewEpisode,
-		Category:      source.Category.String,
 		Description:   source.Description.String,
 	}
-}
-
-// GetShowsByCategory returns show by provided category.
-func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error) {
-	shows, err := s.sr.GetShowsByCategory(ctx, repository.GetShowsByCategoryParams{
-		Category: sql.NullString{String: category, Valid: true},
-		Limit:    limit,
-		Offset:   offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not get shows list: %w", err)
-	}
-	return castToListShow(shows), nil
 }
 
 // GetEpisodesByShowID returns episodes by show id.
@@ -171,6 +160,7 @@ func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, lim
 	if err != nil {
 		return nil, fmt.Errorf("could not get episodes list: %w", err)
 	}
+
 	return castToListEpisodes(episodes), nil
 }
 
@@ -188,6 +178,7 @@ func castToListEpisodes(source []repository.Episode) []Episode {
 			ReleaseDate:   s.ReleaseDate.Time.String(),
 		})
 	}
+
 	return result
 }
 
@@ -223,18 +214,21 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		Title:         sh.Title,
 		Cover:         sh.Cover,
 		HasNewEpisode: sh.HasNewEpisode,
-		Category: sql.NullString{
-			String: sh.Category,
-			Valid:  true,
-		},
 		Description: sql.NullString{
 			String: sh.Description,
 			Valid:  len(sh.Description) > 0,
 		},
 	})
-
 	if err != nil {
 		return Show{}, fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
+	}
+
+	err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
+		CategoryID: sh.CategoryID,
+		ShowID:     show.ID,
+	})
+	if err != nil {
+		return Show{}, fmt.Errorf("could not add show to category with title=%s: %w", sh.Title, err)
 	}
 
 	return castToShow(show), nil
@@ -242,22 +236,28 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 
 // UpdateShow ..
 func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
-	if err := s.sr.UpdateShow(ctx, repository.UpdateShowParams{
+	err := s.sr.UpdateShow(ctx, repository.UpdateShowParams{
 		Title:         sh.Title,
 		Cover:         sh.Cover,
 		HasNewEpisode: sh.HasNewEpisode,
-		Category: sql.NullString{
-			String: sh.Category,
-			Valid:  true,
-		},
 		Description: sql.NullString{
 			String: sh.Description,
 			Valid:  len(sh.Description) > 0,
 		},
 		ID: sh.ID,
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("could not update show with id=%s:%w", sh.ID, err)
 	}
+
+	err = s.sr.UpdateShowToCategory(ctx, repository.UpdateShowToCategoryParams{
+		CategoryID: sh.CategoryID,
+		ShowID:     sh.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("could not update show to category with title=%s: %w", sh.Title, err)
+	}
+
 	return nil
 }
 
@@ -328,6 +328,7 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 	}); err != nil {
 		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
 	}
+
 	return nil
 }
 
@@ -392,6 +393,7 @@ func (s *Service) UpdateShowCategory(ctx context.Context, sc ShowCategory) error
 	}); err != nil {
 		return fmt.Errorf("could not update show category with id=%s:%w", sc.ID, err)
 	}
+
 	return nil
 }
 
@@ -424,6 +426,15 @@ func (s *Service) DeleteShowToCategory(ctx context.Context, categoryID, showID u
 		ShowID:     showID,
 	}); err != nil {
 		return fmt.Errorf("could not delete show to category with category_id=%s, show_id=%s: %w", categoryID, showID, err)
+	}
+
+	return nil
+}
+
+// DeleteShowToCategoryByShowID ..
+func (s *Service) DeleteShowToCategoryByShowID(ctx context.Context, showID uuid.UUID) error {
+	if err := s.sr.DeleteShowToCategoryByShowID(ctx, showID); err != nil {
+		return fmt.Errorf("could not delete show to categories with show_id=%s: %w", showID, err)
 	}
 
 	return nil

@@ -80,13 +80,6 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/filter/{category}", httptransport.NewServer(
-		e.GetShowsByCategory,
-		decodeGetShowsByCategoryRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
 	r.Get("/{show_id}/episodes", httptransport.NewServer(
 		e.GetEpisodesByShowID,
 		decodeGetEpisodesByShowIDRequest,
@@ -150,6 +143,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Delete("/to-categories/{show_id}", httptransport.NewServer(
+		e.DeleteShowToCategoryByShowID,
+		decodeDeleteShowToCategoryByShowIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/to-categories/{category_id}/{show_id}", httptransport.NewServer(
+		e.DeleteShowToCategory,
+		decodeDeleteShowToCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -177,16 +184,6 @@ func decodeGetShowByIDRequest(_ context.Context, r *http.Request) (interface{}, 
 	}
 
 	return id, nil
-}
-
-func decodeGetShowsByCategoryRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetShowsByCategoryRequest{
-		Category: chi.URLParam(r, "category"),
-		PaginationRequest: PaginationRequest{
-			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
-		},
-	}, nil
 }
 
 func castStrToInt32(source string) int32 {
@@ -360,4 +357,30 @@ func decodeUpdateShowCategoryRequest(_ context.Context, r *http.Request) (interf
 	req.ID = categoryID
 
 	return req, nil
+}
+
+func decodeDeleteShowToCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	return DeleteShowToCategoryRequest{
+		ShowID:     showID,
+		CategoryID: categoryID,
+	}, nil
+}
+
+func decodeDeleteShowToCategoryByShowIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	return showID, nil
 }

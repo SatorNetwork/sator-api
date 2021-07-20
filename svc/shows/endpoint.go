@@ -3,7 +3,6 @@ package shows
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -14,13 +13,12 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		AddShow            endpoint.Endpoint
-		DeleteShowByID     endpoint.Endpoint
-		GetShows           endpoint.Endpoint
-		GetShowChallenges  endpoint.Endpoint
-		GetShowByID        endpoint.Endpoint
-		GetShowsByCategory endpoint.Endpoint
-		UpdateShow         endpoint.Endpoint
+		AddShow           endpoint.Endpoint
+		DeleteShowByID    endpoint.Endpoint
+		GetShows          endpoint.Endpoint
+		GetShowChallenges endpoint.Endpoint
+		GetShowByID       endpoint.Endpoint
+		UpdateShow        endpoint.Endpoint
 
 		AddEpisode          endpoint.Endpoint
 		DeleteEpisodeByID   endpoint.Endpoint
@@ -32,6 +30,9 @@ type (
 		DeleteShowCategoryByID endpoint.Endpoint
 		UpdateShowCategory     endpoint.Endpoint
 		GetShowCategoryByID    endpoint.Endpoint
+
+		DeleteShowToCategory         endpoint.Endpoint
+		DeleteShowToCategoryByShowID endpoint.Endpoint
 	}
 
 	service interface {
@@ -40,7 +41,6 @@ type (
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
@@ -53,6 +53,9 @@ type (
 		DeleteShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) error
 		UpdateShowCategory(ctx context.Context, sc ShowCategory) error
 		GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error)
+
+		DeleteShowToCategory(ctx context.Context, categoryID, showID uuid.UUID) error
+		DeleteShowToCategoryByShowID(ctx context.Context, showID uuid.UUID) error
 	}
 
 	// PaginationRequest struct
@@ -67,18 +70,12 @@ type (
 		PaginationRequest
 	}
 
-	// GetShowsByCategoryRequest struct
-	GetShowsByCategoryRequest struct {
-		Category string `json:"category"`
-		PaginationRequest
-	}
-
 	// AddShowRequest struct
 	AddShowRequest struct {
 		Title         string `json:"title" validate:"required,gt=0"`
 		Cover         string `json:"cover" validate:"required,gt=0"`
 		HasNewEpisode bool   `json:"has_new_episode"`
-		Category      string `json:"category"`
+		CategoryID    string `json:"category_id" validate:"required,uuid"`
 		Description   string `json:"description"`
 	}
 
@@ -88,8 +85,8 @@ type (
 		Title         string `json:"title" validate:"required,gt=0"`
 		Cover         string `json:"cover" validate:"required,gt=0"`
 		HasNewEpisode bool   `json:"has_new_episode"`
-		Category      string `json:"category"`
-		Description   string `json:"description"`
+		CategoryID    string `json:"category_id" validate:"required,uuid"`
+		Description string `json:"description"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -135,7 +132,7 @@ type (
 	AddShowsCategoryRequest struct {
 		CategoryName string `json:"category_name" validate:"required,gt=0"`
 		Title        string `json:"title" validate:"required,gt=0"`
-		Disabled     string `json:"disabled"`
+		Disabled     bool   `json:"disabled"`
 	}
 
 	// UpdateShowCategoryRequest struct
@@ -143,7 +140,13 @@ type (
 		ID           string `json:"id" validate:"required,uuid"`
 		CategoryName string `json:"category_name" validate:"required,gt=0"`
 		Title        string `json:"title" validate:"required,gt=0"`
-		Disabled     string `json:"disabled"`
+		Disabled     bool   `json:"disabled"`
+	}
+
+	// DeleteShowToCategoryRequest struct
+	DeleteShowToCategoryRequest struct {
+		ShowID     string `json:"show_id" validate:"required,uuid"`
+		CategoryID string `json:"category_id" validate:"required,uuid"`
 	}
 )
 
@@ -168,13 +171,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		AddShow:            MakeAddShowEndpoint(s, validateFunc),
-		DeleteShowByID:     MakeDeleteShowByIDEndpoint(s),
-		GetShows:           MakeGetShowsEndpoint(s, validateFunc),
-		GetShowChallenges:  MakeGetShowChallengesEndpoint(s, validateFunc),
-		GetShowByID:        MakeGetShowByIDEndpoint(s),
-		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
-		UpdateShow:         MakeUpdateShowEndpoint(s),
+		AddShow:           MakeAddShowEndpoint(s, validateFunc),
+		DeleteShowByID:    MakeDeleteShowByIDEndpoint(s),
+		GetShows:          MakeGetShowsEndpoint(s, validateFunc),
+		GetShowChallenges: MakeGetShowChallengesEndpoint(s, validateFunc),
+		GetShowByID:       MakeGetShowByIDEndpoint(s),
+		UpdateShow:        MakeUpdateShowEndpoint(s),
 
 		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
 		DeleteEpisodeByID:   MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
@@ -186,6 +188,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		DeleteShowCategoryByID: MakeDeleteShowCategoryByIDEndpoint(s),
 		UpdateShowCategory:     MakeUpdateShowCategoryEndpoint(s, validateFunc),
 		GetShowCategoryByID:    MakeGetShowCategoryByIDEndpoint(s),
+
+		DeleteShowToCategory:         MakeDeleteShowToCategoryEndpoint(s, validateFunc),
+		DeleteShowToCategoryByShowID: MakeDeleteShowToCategoryByShowIDEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -196,7 +201,6 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShows = mdw(e.GetShows)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
 			e.GetShowByID = mdw(e.GetShowByID)
-			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
 
 			e.AddEpisode = mdw(e.AddEpisode)
@@ -209,6 +213,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.DeleteShowCategoryByID = mdw(e.DeleteShowCategoryByID)
 			e.UpdateShowCategory = mdw(e.UpdateShowCategory)
 			e.GetShowCategoryByID = mdw(e.GetShowCategoryByID)
+
+			e.DeleteShowToCategory = mdw(e.DeleteShowToCategory)
+			e.DeleteShowToCategoryByShowID = mdw(e.DeleteShowToCategoryByShowID)
 		}
 	}
 
@@ -271,32 +278,6 @@ func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 	}
 }
 
-// MakeGetShowsByCategoryEndpoint ...
-func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(GetShowsByCategoryRequest)
-		if err := v(req); err != nil {
-			return nil, err
-		}
-
-		if req.Category != "" {
-			resp, err := s.GetShowsByCategory(ctx, req.Category, req.Limit(), req.Offset())
-			if err != nil {
-				return nil, err
-			}
-
-			return resp, nil
-		}
-
-		resp, err := s.GetShows(ctx, req.Limit(), req.Offset())
-		if err != nil {
-			return nil, err
-		}
-
-		return resp, nil
-	}
-}
-
 // MakeAddShowEndpoint ...
 func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -305,11 +286,16 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
+		categoryID, err := uuid.Parse(req.CategoryID)
+		if err != nil {
+			return nil, fmt.Errorf("%w category id: %v", ErrInvalidParameter, err)
+		}
+
 		resp, err := s.AddShow(ctx, Show{
 			Title:         req.Title,
 			Cover:         req.Cover,
 			HasNewEpisode: req.HasNewEpisode,
-			Category:      req.Category,
+			CategoryID:    categoryID,
 			Description:   req.Description,
 		})
 		if err != nil {
@@ -330,12 +316,17 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
+		categoryID, err := uuid.Parse(req.CategoryID)
+		if err != nil {
+			return nil, fmt.Errorf("%w category id: %v", ErrInvalidParameter, err)
+		}
+
 		err = s.UpdateShow(ctx, Show{
 			ID:            id,
 			Title:         req.Title,
 			Cover:         req.Cover,
 			HasNewEpisode: req.HasNewEpisode,
-			Category:      req.Category,
+			CategoryID:    categoryID,
 			Description:   req.Description,
 		})
 		if err != nil {
@@ -511,15 +502,10 @@ func MakeAddShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		parseBool, err := strconv.ParseBool(req.Disabled)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bool from string: %w", err)
-		}
-
 		resp, err := s.AddShowCategories(ctx, ShowCategory{
 			CategoryName: req.CategoryName,
 			Title:        req.Title,
-			Disabled:     parseBool,
+			Disabled:     req.Disabled,
 		})
 		if err != nil {
 			return nil, err
@@ -542,16 +528,11 @@ func MakeUpdateShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		parseBool, err := strconv.ParseBool(req.Disabled)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bool from string: %w", err)
-		}
-
 		err = s.UpdateShowCategory(ctx, ShowCategory{
 			ID:           id,
 			CategoryName: req.CategoryName,
 			Title:        req.Title,
-			Disabled:     parseBool,
+			Disabled:     req.Disabled,
 		})
 		if err != nil {
 			return nil, err
@@ -592,5 +573,49 @@ func MakeGetShowCategoryByIDEndpoint(s service) endpoint.Endpoint {
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeDeleteShowToCategoryEndpoint ...
+func MakeDeleteShowToCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(DeleteShowToCategoryRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		categoryID, err := uuid.Parse(req.CategoryID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get category id: %w", err)
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		err = s.DeleteShowToCategory(ctx, categoryID, showID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDeleteShowToCategoryByShowIDEndpoint ...
+func MakeDeleteShowToCategoryByShowIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		showID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		err = s.DeleteShowToCategoryByShowID(ctx, showID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }

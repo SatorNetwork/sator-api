@@ -46,6 +46,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteShowToCategoryStmt, err = db.PrepareContext(ctx, deleteShowToCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteShowToCategory: %w", err)
 	}
+	if q.deleteShowToCategoryByShowIDStmt, err = db.PrepareContext(ctx, deleteShowToCategoryByShowID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteShowToCategoryByShowID: %w", err)
+	}
 	if q.getEpisodeByIDStmt, err = db.PrepareContext(ctx, getEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeByID: %w", err)
 	}
@@ -58,17 +61,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getShowCategoryByIDStmt, err = db.PrepareContext(ctx, getShowCategoryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShowCategoryByID: %w", err)
 	}
-	if q.getShowToCategoryByCategoryIDStmt, err = db.PrepareContext(ctx, getShowToCategoryByCategoryID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetShowToCategoryByCategoryID: %w", err)
-	}
-	if q.getShowToCategoryByShowIDStmt, err = db.PrepareContext(ctx, getShowToCategoryByShowID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetShowToCategoryByShowID: %w", err)
-	}
 	if q.getShowsStmt, err = db.PrepareContext(ctx, getShows); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShows: %w", err)
-	}
-	if q.getShowsByCategoryStmt, err = db.PrepareContext(ctx, getShowsByCategory); err != nil {
-		return nil, fmt.Errorf("error preparing query GetShowsByCategory: %w", err)
 	}
 	if q.updateEpisodeStmt, err = db.PrepareContext(ctx, updateEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateEpisode: %w", err)
@@ -127,6 +121,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteShowToCategoryStmt: %w", cerr)
 		}
 	}
+	if q.deleteShowToCategoryByShowIDStmt != nil {
+		if cerr := q.deleteShowToCategoryByShowIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteShowToCategoryByShowIDStmt: %w", cerr)
+		}
+	}
 	if q.getEpisodeByIDStmt != nil {
 		if cerr := q.getEpisodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEpisodeByIDStmt: %w", cerr)
@@ -147,24 +146,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getShowCategoryByIDStmt: %w", cerr)
 		}
 	}
-	if q.getShowToCategoryByCategoryIDStmt != nil {
-		if cerr := q.getShowToCategoryByCategoryIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getShowToCategoryByCategoryIDStmt: %w", cerr)
-		}
-	}
-	if q.getShowToCategoryByShowIDStmt != nil {
-		if cerr := q.getShowToCategoryByShowIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getShowToCategoryByShowIDStmt: %w", cerr)
-		}
-	}
 	if q.getShowsStmt != nil {
 		if cerr := q.getShowsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getShowsStmt: %w", cerr)
-		}
-	}
-	if q.getShowsByCategoryStmt != nil {
-		if cerr := q.getShowsByCategoryStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getShowsByCategoryStmt: %w", cerr)
 		}
 	}
 	if q.updateEpisodeStmt != nil {
@@ -224,53 +208,49 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                DBTX
-	tx                                *sql.Tx
-	addEpisodeStmt                    *sql.Stmt
-	addShowStmt                       *sql.Stmt
-	addShowCategoryStmt               *sql.Stmt
-	addShowToCategoryStmt             *sql.Stmt
-	deleteEpisodeByIDStmt             *sql.Stmt
-	deleteShowByIDStmt                *sql.Stmt
-	deleteShowCategoryByIDStmt        *sql.Stmt
-	deleteShowToCategoryStmt          *sql.Stmt
-	getEpisodeByIDStmt                *sql.Stmt
-	getEpisodesByShowIDStmt           *sql.Stmt
-	getShowByIDStmt                   *sql.Stmt
-	getShowCategoryByIDStmt           *sql.Stmt
-	getShowToCategoryByCategoryIDStmt *sql.Stmt
-	getShowToCategoryByShowIDStmt     *sql.Stmt
-	getShowsStmt                      *sql.Stmt
-	getShowsByCategoryStmt            *sql.Stmt
-	updateEpisodeStmt                 *sql.Stmt
-	updateShowStmt                    *sql.Stmt
-	updateShowCategoryStmt            *sql.Stmt
-	updateShowToCategoryStmt          *sql.Stmt
+	db                               DBTX
+	tx                               *sql.Tx
+	addEpisodeStmt                   *sql.Stmt
+	addShowStmt                      *sql.Stmt
+	addShowCategoryStmt              *sql.Stmt
+	addShowToCategoryStmt            *sql.Stmt
+	deleteEpisodeByIDStmt            *sql.Stmt
+	deleteShowByIDStmt               *sql.Stmt
+	deleteShowCategoryByIDStmt       *sql.Stmt
+	deleteShowToCategoryStmt         *sql.Stmt
+	deleteShowToCategoryByShowIDStmt *sql.Stmt
+	getEpisodeByIDStmt               *sql.Stmt
+	getEpisodesByShowIDStmt          *sql.Stmt
+	getShowByIDStmt                  *sql.Stmt
+	getShowCategoryByIDStmt          *sql.Stmt
+	getShowsStmt                     *sql.Stmt
+	updateEpisodeStmt                *sql.Stmt
+	updateShowStmt                   *sql.Stmt
+	updateShowCategoryStmt           *sql.Stmt
+	updateShowToCategoryStmt         *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                tx,
-		tx:                                tx,
-		addEpisodeStmt:                    q.addEpisodeStmt,
-		addShowStmt:                       q.addShowStmt,
-		addShowCategoryStmt:               q.addShowCategoryStmt,
-		addShowToCategoryStmt:             q.addShowToCategoryStmt,
-		deleteEpisodeByIDStmt:             q.deleteEpisodeByIDStmt,
-		deleteShowByIDStmt:                q.deleteShowByIDStmt,
-		deleteShowCategoryByIDStmt:        q.deleteShowCategoryByIDStmt,
-		deleteShowToCategoryStmt:          q.deleteShowToCategoryStmt,
-		getEpisodeByIDStmt:                q.getEpisodeByIDStmt,
-		getEpisodesByShowIDStmt:           q.getEpisodesByShowIDStmt,
-		getShowByIDStmt:                   q.getShowByIDStmt,
-		getShowCategoryByIDStmt:           q.getShowCategoryByIDStmt,
-		getShowToCategoryByCategoryIDStmt: q.getShowToCategoryByCategoryIDStmt,
-		getShowToCategoryByShowIDStmt:     q.getShowToCategoryByShowIDStmt,
-		getShowsStmt:                      q.getShowsStmt,
-		getShowsByCategoryStmt:            q.getShowsByCategoryStmt,
-		updateEpisodeStmt:                 q.updateEpisodeStmt,
-		updateShowStmt:                    q.updateShowStmt,
-		updateShowCategoryStmt:            q.updateShowCategoryStmt,
-		updateShowToCategoryStmt:          q.updateShowToCategoryStmt,
+		db:                               tx,
+		tx:                               tx,
+		addEpisodeStmt:                   q.addEpisodeStmt,
+		addShowStmt:                      q.addShowStmt,
+		addShowCategoryStmt:              q.addShowCategoryStmt,
+		addShowToCategoryStmt:            q.addShowToCategoryStmt,
+		deleteEpisodeByIDStmt:            q.deleteEpisodeByIDStmt,
+		deleteShowByIDStmt:               q.deleteShowByIDStmt,
+		deleteShowCategoryByIDStmt:       q.deleteShowCategoryByIDStmt,
+		deleteShowToCategoryStmt:         q.deleteShowToCategoryStmt,
+		deleteShowToCategoryByShowIDStmt: q.deleteShowToCategoryByShowIDStmt,
+		getEpisodeByIDStmt:               q.getEpisodeByIDStmt,
+		getEpisodesByShowIDStmt:          q.getEpisodesByShowIDStmt,
+		getShowByIDStmt:                  q.getShowByIDStmt,
+		getShowCategoryByIDStmt:          q.getShowCategoryByIDStmt,
+		getShowsStmt:                     q.getShowsStmt,
+		updateEpisodeStmt:                q.updateEpisodeStmt,
+		updateShowStmt:                   q.updateShowStmt,
+		updateShowCategoryStmt:           q.updateShowCategoryStmt,
+		updateShowToCategoryStmt:         q.updateShowToCategoryStmt,
 	}
 }

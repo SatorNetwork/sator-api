@@ -45,62 +45,14 @@ func (q *Queries) DeleteShowToCategory(ctx context.Context, arg DeleteShowToCate
 	return err
 }
 
-const getShowToCategoryByCategoryID = `-- name: GetShowToCategoryByCategoryID :many
-SELECT category_id, show_id
-FROM shows_to_category
-WHERE category_id = $1
-`
-
-func (q *Queries) GetShowToCategoryByCategoryID(ctx context.Context, categoryID uuid.UUID) ([]ShowsToCategory, error) {
-	rows, err := q.query(ctx, q.getShowToCategoryByCategoryIDStmt, getShowToCategoryByCategoryID, categoryID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ShowsToCategory
-	for rows.Next() {
-		var i ShowsToCategory
-		if err := rows.Scan(&i.CategoryID, &i.ShowID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getShowToCategoryByShowID = `-- name: GetShowToCategoryByShowID :many
-SELECT category_id, show_id
-FROM shows_to_category
+const deleteShowToCategoryByShowID = `-- name: DeleteShowToCategoryByShowID :exec
+DELETE FROM shows_to_category
 WHERE show_id = $1
 `
 
-func (q *Queries) GetShowToCategoryByShowID(ctx context.Context, showID uuid.UUID) ([]ShowsToCategory, error) {
-	rows, err := q.query(ctx, q.getShowToCategoryByShowIDStmt, getShowToCategoryByShowID, showID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ShowsToCategory
-	for rows.Next() {
-		var i ShowsToCategory
-		if err := rows.Scan(&i.CategoryID, &i.ShowID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) DeleteShowToCategoryByShowID(ctx context.Context, showID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteShowToCategoryByShowIDStmt, deleteShowToCategoryByShowID, showID)
+	return err
 }
 
 const updateShowToCategory = `-- name: UpdateShowToCategory :exec
