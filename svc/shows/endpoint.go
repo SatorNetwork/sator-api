@@ -18,6 +18,7 @@ type (
 		GetShows          endpoint.Endpoint
 		GetShowChallenges endpoint.Endpoint
 		GetShowByID       endpoint.Endpoint
+		GetShowsHome      endpoint.Endpoint
 		UpdateShow        endpoint.Endpoint
 
 		AddEpisode          endpoint.Endpoint
@@ -38,9 +39,10 @@ type (
 	service interface {
 		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
-		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
+		GetShows(ctx context.Context, page, itemsPerPage int32) ([]Show, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
+		GetShowsHome(ctx context.Context, limit, offset int32) ([]HomePage, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
@@ -86,7 +88,7 @@ type (
 		Cover         string `json:"cover" validate:"required,gt=0"`
 		HasNewEpisode bool   `json:"has_new_episode"`
 		CategoryID    string `json:"category_id" validate:"required,uuid"`
-		Description string `json:"description"`
+		Description   string `json:"description"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -155,6 +157,7 @@ func (r PaginationRequest) Limit() int32 {
 	if r.ItemsPerPage > 0 {
 		return r.ItemsPerPage
 	}
+
 	return 20
 }
 
@@ -163,6 +166,7 @@ func (r PaginationRequest) Offset() int32 {
 	if r.Page > 1 {
 		return (r.Page - 1) * r.Limit()
 	}
+
 	return 0
 }
 
@@ -176,6 +180,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShows:          MakeGetShowsEndpoint(s, validateFunc),
 		GetShowChallenges: MakeGetShowChallengesEndpoint(s, validateFunc),
 		GetShowByID:       MakeGetShowByIDEndpoint(s),
+		GetShowsHome:      MakeGetShowsHomeEndpoint(s, validateFunc),
 		UpdateShow:        MakeUpdateShowEndpoint(s),
 
 		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
@@ -201,6 +206,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShows = mdw(e.GetShows)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
 			e.GetShowByID = mdw(e.GetShowByID)
+			e.GetShowsHome = mdw(e.GetShowsHome)
 			e.UpdateShow = mdw(e.UpdateShow)
 
 			e.AddEpisode = mdw(e.AddEpisode)
@@ -231,6 +237,23 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 		}
 
 		resp, err := s.GetShows(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetShowsHomeEndpoint ...
+func MakeGetShowsHomeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetShowsHome(ctx, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}

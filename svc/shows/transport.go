@@ -45,6 +45,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/home", httptransport.NewServer(
+		e.GetShowsHome,
+		decodeGetShowsHomeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/", httptransport.NewServer(
 		e.AddShow,
 		decodeAddShowRequest,
@@ -161,6 +168,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 }
 
 func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
+}
+
+func decodeGetShowsHomeRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
 		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),

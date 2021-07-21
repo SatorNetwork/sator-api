@@ -22,3 +22,7 @@ WHERE id = @id;
 -- name: DeleteShowCategoryByID :exec
 DELETE FROM shows_categories
 WHERE id = @id;
+-- name: GetShowCategories :many
+SELECT *
+FROM shows_categories
+    LIMIT $1 OFFSET $2;
