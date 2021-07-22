@@ -42,7 +42,7 @@ type (
 		GetShows(ctx context.Context, page, itemsPerPage int32) ([]Show, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-		GetShowsHome(ctx context.Context, limit, offset int32) ([]HomePage, error)
+		GetShowsHome(ctx context.Context) (homePage []HomePage, err error)
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
@@ -180,7 +180,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShows:          MakeGetShowsEndpoint(s, validateFunc),
 		GetShowChallenges: MakeGetShowChallengesEndpoint(s, validateFunc),
 		GetShowByID:       MakeGetShowByIDEndpoint(s),
-		GetShowsHome:      MakeGetShowsHomeEndpoint(s, validateFunc),
+		GetShowsHome:      MakeGetShowsHomeEndpoint(s),
 		UpdateShow:        MakeUpdateShowEndpoint(s),
 
 		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
@@ -246,14 +246,9 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 }
 
 // MakeGetShowsHomeEndpoint ...
-func MakeGetShowsHomeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetShowsHomeEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(PaginationRequest)
-		if err := v(req); err != nil {
-			return nil, err
-		}
-
-		resp, err := s.GetShowsHome(ctx, req.Limit(), req.Offset())
+		resp, err := s.GetShowsHome(ctx)
 		if err != nil {
 			return nil, err
 		}

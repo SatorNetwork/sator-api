@@ -59,7 +59,8 @@ type (
 	showsRepository interface {
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.AddShowRow, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
-		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.GetShowsRow, error)
+		GetShows(ctx context.Context) ([]repository.GetShowsRow, error)
+		GetShowsPaginated(ctx context.Context, arg repository.GetShowsPaginatedParams) ([]repository.GetShowsPaginatedRow, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
@@ -72,7 +73,7 @@ type (
 		AddShowCategory(ctx context.Context, arg repository.AddShowCategoryParams) (repository.ShowsCategory, error)
 		DeleteShowCategoryByID(ctx context.Context, id uuid.UUID) error
 		GetShowCategoryByID(ctx context.Context, id uuid.UUID) (repository.ShowsCategory, error)
-		GetShowCategories(ctx context.Context, arg repository.GetShowCategoriesParams) ([]repository.ShowsCategory, error)
+		GetShowCategories(ctx context.Context) ([]repository.ShowsCategory, error)
 		UpdateShowCategory(ctx context.Context, arg repository.UpdateShowCategoryParams) error
 
 		AddShowToCategory(ctx context.Context, arg repository.AddShowToCategoryParams) error
@@ -102,7 +103,7 @@ func NewService(sr showsRepository, chc challengesClient) *Service {
 
 // GetShows returns shows.
 func (s *Service) GetShows(ctx context.Context, limit, offset int32) ([]Show, error) {
-	shows, err := s.sr.GetShows(ctx, repository.GetShowsParams{
+	shows, err := s.sr.GetShowsPaginated(ctx, repository.GetShowsPaginatedParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -114,61 +115,69 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) ([]Show, er
 }
 
 // GetShowsHome returns shows.
-func (s *Service) GetShowsHome(ctx context.Context, limit, offset int32) ([]HomePage, error) {
-	shows, err := s.sr.GetShows(ctx, repository.GetShowsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
+func (s *Service) GetShowsHome(ctx context.Context) (homePage []HomePage, err error) {
+	shows, err := s.sr.GetShows(ctx)
 	if err != nil {
 		return []HomePage{}, fmt.Errorf("could not get shows list: %w", err)
 	}
 
-	categories, err := s.sr.GetShowCategories(ctx, repository.GetShowCategoriesParams{
-		Limit:  limit,
-		Offset: offset,
+	categories, err := s.sr.GetShowCategories(ctx)
+	if err != nil {
+		return []HomePage{}, fmt.Errorf("could not get categories list: %w", err)
+	}
+
+	homePage = append(homePage, HomePage{
+		CategoryName: "All",
+		Title:        "All",
+		URL:          "/categories/all",
+		ListShows:    castGetShowsRowToShow(shows),
 	})
 
-	var uniqueCategories []repository.ShowsCategory
-
-	for _, val := range categories {
-		skip := false
-		for _, u := range uniqueCategories {
-			if val == u {
-				skip = true
-				break
+	for _, category := range categories {
+		var listShows []Show
+		for _, show := range shows {
+			if show.CategoryID == category.ID {
+				listShows = append(listShows, castGetShowRowToShow(show))
 			}
 		}
-		if !skip {
-			uniqueCategories = append(uniqueCategories, val)
-		}
+		homePage = append(homePage, HomePage{
+			CategoryName: category.CategoryName,
+			Title:        category.Title,
+			URL:          "/category/" + category.Title,
+			ListShows:    listShows,
+		})
 	}
 
-	resp := make([]HomePage, 0, len(uniqueCategories))
+	return homePage, nil
+}
 
-	for i, val := range uniqueCategories {
-		if i == 0 {
-			resp[i].CategoryName = "All"
-			resp[i].Title = "All"
-			resp[i].URL = "/shows"
-			resp[i].ListShows = castToListShow(shows)
+// castGetShowsRowToShow cast repository.GetShowsRow to service Show structure
+func castGetShowRowToShow(s repository.GetShowsRow) Show {
+	return Show{
+		ID:            s.ID,
+		Title:         s.Title,
+		Cover:         s.Cover,
+		HasNewEpisode: s.HasNewEpisode,
+		Description:   s.Description.String,
+		CategoryID:    s.CategoryID,
+	}
+}
 
-			continue
-		}
-
-		resp[i].Title = val.Title
-		resp[i].CategoryName = val.CategoryName
-		resp[i].URL = "/shows/filter/" + val.CategoryName // TODO: TEST IT!!! If it isn't works create method for get URL and add here.
-		var s2 []repository.GetShowsRow
-		for _, s := range shows {
-			if s.CategoryID == val.ID {
-				s2 = append(s2, s)
-
-			}
-		}
-		resp[i].ListShows = castToListShow(s2)
+// castGetShowsRowToShow cast repository.GetShowsRow to service []Show structure
+func castGetShowsRowToShow(source []repository.GetShowsRow) []Show {
+	result := make([]Show, 0, len(source))
+	for _, s := range source {
+		result = append(result, Show{
+			ID:            s.ID,
+			Title:         s.Title,
+			Cover:         s.Cover,
+			HasNewEpisode: s.HasNewEpisode,
+			Description:   s.Description.String,
+			CategoryID:    s.CategoryID,
+		})
 	}
 
-	return resp, nil
+	return result
 }
 
 // GetShowChallenges returns challenges by show id.
@@ -182,7 +191,7 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit
 }
 
 // Cast repository.Show to service Show structure
-func castToListShow(source []repository.GetShowsRow) []Show {
+func castToListShow(source []repository.GetShowsPaginatedRow) []Show {
 	result := make([]Show, 0, len(source))
 	for _, s := range source {
 		result = append(result, Show{
@@ -490,11 +499,8 @@ func (s *Service) GetShowCategoryByID(ctx context.Context, showCategoryID uuid.U
 }
 
 // GetShowCategories returns categories.
-func (s *Service) GetShowCategories(ctx context.Context, limit, offset int32) ([]ShowCategory, error) {
-	categories, err := s.sr.GetShowCategories(ctx, repository.GetShowCategoriesParams{
-		Limit:  limit,
-		Offset: offset,
-	})
+func (s *Service) GetShowCategories(ctx context.Context) ([]ShowCategory, error) {
+	categories, err := s.sr.GetShowCategories(ctx)
 	if err != nil {
 		return []ShowCategory{}, fmt.Errorf("could not get categories list: %w", err)
 	}

@@ -24,5 +24,4 @@ DELETE FROM shows_categories
 WHERE id = @id;
 -- name: GetShowCategories :many
 SELECT *
-FROM shows_categories
-    LIMIT $1 OFFSET $2;
+FROM shows_categories;

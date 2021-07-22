@@ -54,16 +54,10 @@ func (q *Queries) DeleteShowCategoryByID(ctx context.Context, id uuid.UUID) erro
 const getShowCategories = `-- name: GetShowCategories :many
 SELECT id, category_name, title, disabled
 FROM shows_categories
-    LIMIT $1 OFFSET $2
 `
 
-type GetShowCategoriesParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-func (q *Queries) GetShowCategories(ctx context.Context, arg GetShowCategoriesParams) ([]ShowsCategory, error) {
-	rows, err := q.query(ctx, q.getShowCategoriesStmt, getShowCategories, arg.Limit, arg.Offset)
+func (q *Queries) GetShowCategories(ctx context.Context) ([]ShowsCategory, error) {
+	rows, err := q.query(ctx, q.getShowCategoriesStmt, getShowCategories)
 	if err != nil {
 		return nil, err
 	}

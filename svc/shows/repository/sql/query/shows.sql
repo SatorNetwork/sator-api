@@ -1,4 +1,4 @@
--- name: GetShows :many
+-- name: GetShowsPaginated :many
 SELECT *
 FROM shows
 LEFT JOIN shows_to_category
@@ -30,7 +30,7 @@ VALUES (
        ) RETURNING * )
 SELECT * FROM inserted_shows
 LEFT JOIN shows_to_category
-ON shows_to_category.id = shows_to_category.show_id;
+ON inserted_shows.id = shows_to_category.show_id;
 -- name: UpdateShow :exec
 UPDATE shows
 SET title = @title,
@@ -41,3 +41,11 @@ WHERE id = @id;
 -- name: DeleteShowByID :exec
 DELETE FROM shows
 WHERE id = @id;
+-- name: GetShows :many
+SELECT *
+FROM shows
+         LEFT JOIN shows_to_category
+                   ON id = show_id
+ORDER BY has_new_episode DESC,
+         updated_at DESC,
+         created_at DESC;

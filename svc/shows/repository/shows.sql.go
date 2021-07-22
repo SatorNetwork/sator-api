@@ -28,7 +28,7 @@ VALUES (
        ) RETURNING id, title, cover, has_new_episode, updated_at, created_at, description )
 SELECT id, title, cover, has_new_episode, updated_at, created_at, description, category_id, show_id FROM inserted_shows
 LEFT JOIN shows_to_category
-ON shows_to_category.id = shows_to_category.show_id
+ON inserted_shows.id = shows_to_category.show_id
 `
 
 type AddShowParams struct {
@@ -122,18 +122,12 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow
 const getShows = `-- name: GetShows :many
 SELECT id, title, cover, has_new_episode, updated_at, created_at, description, category_id, show_id
 FROM shows
-LEFT JOIN shows_to_category
-ON id = show_id
+         LEFT JOIN shows_to_category
+                   ON id = show_id
 ORDER BY has_new_episode DESC,
-    updated_at DESC,
-    created_at DESC
-LIMIT $1 OFFSET $2
+         updated_at DESC,
+         created_at DESC
 `
-
-type GetShowsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type GetShowsRow struct {
 	ID            uuid.UUID      `json:"id"`
@@ -147,8 +141,8 @@ type GetShowsRow struct {
 	ShowID        uuid.UUID      `json:"show_id"`
 }
 
-func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]GetShowsRow, error) {
-	rows, err := q.query(ctx, q.getShowsStmt, getShows, arg.Limit, arg.Offset)
+func (q *Queries) GetShows(ctx context.Context) ([]GetShowsRow, error) {
+	rows, err := q.query(ctx, q.getShowsStmt, getShows)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +150,67 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]GetShowsR
 	var items []GetShowsRow
 	for rows.Next() {
 		var i GetShowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Cover,
+			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Description,
+			&i.CategoryID,
+			&i.ShowID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getShowsPaginated = `-- name: GetShowsPaginated :many
+SELECT id, title, cover, has_new_episode, updated_at, created_at, description, category_id, show_id
+FROM shows
+LEFT JOIN shows_to_category
+ON id = show_id
+ORDER BY has_new_episode DESC,
+    updated_at DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetShowsPaginatedParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetShowsPaginatedRow struct {
+	ID            uuid.UUID      `json:"id"`
+	Title         string         `json:"title"`
+	Cover         string         `json:"cover"`
+	HasNewEpisode bool           `json:"has_new_episode"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	Description   sql.NullString `json:"description"`
+	CategoryID    uuid.UUID      `json:"category_id"`
+	ShowID        uuid.UUID      `json:"show_id"`
+}
+
+func (q *Queries) GetShowsPaginated(ctx context.Context, arg GetShowsPaginatedParams) ([]GetShowsPaginatedRow, error) {
+	rows, err := q.query(ctx, q.getShowsPaginatedStmt, getShowsPaginated, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetShowsPaginatedRow
+	for rows.Next() {
+		var i GetShowsPaginatedRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
