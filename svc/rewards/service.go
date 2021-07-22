@@ -159,7 +159,7 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, e
 }
 
 // GetTransactions returns list of transactions from rewards wallet.
-func (s *Service) GetTransactions(ctx context.Context, userID uuid.UUID, limit, offset int32) (wallet.Transactions, error) {
+func (s *Service) GetTransactions(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (wallet.Transactions, error) {
 	txList, err := s.repo.GetTransactionsByUserIDPaginated(ctx, repository.GetTransactionsByUserIDPaginatedParams{
 		UserID: userID,
 		Limit:  limit,
@@ -182,6 +182,8 @@ func (s *Service) GetTransactions(ctx context.Context, userID uuid.UUID, limit, 
 			desc = "claim rewards"
 		}
 		result = append(result, wallet.Transaction{
+			ID:        tx.ID.String(),
+			WalletID:  walletID.String(),
 			TxHash:    desc,
 			Amount:    amount,
 			CreatedAt: tx.CreatedAt.Format(time.RFC3339),
