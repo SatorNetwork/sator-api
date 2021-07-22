@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -69,9 +68,10 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
-	return nil, nil
-}
+// not used
+// func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
+// 	return nil, nil
+// }
 
 func decodeGetWalletsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
@@ -95,14 +95,15 @@ func decodeGetListTransactionsByWalletIDRequest(_ context.Context, r *http.Reque
 	}, nil
 }
 
-func decodeTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req TransferRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, fmt.Errorf("could not decode request body: %w", err)
-	}
+// not used
+// func decodeTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
+// 	var req TransferRequest
+// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+// 		return nil, fmt.Errorf("could not decode request body: %w", err)
+// 	}
 
-	return req, nil
-}
+// 	return req, nil
+// }
 
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {

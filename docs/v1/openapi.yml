@@ -499,6 +499,12 @@ paths:
                 items:
                   type: object
                   properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    wallet_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3122"
                     tx_hash:
                       type: string
                       example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
@@ -1207,6 +1213,12 @@ paths:
                 items:
                   type: object
                   properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    wallet_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3122"
                     tx_hash:
                       type: string
                       example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
