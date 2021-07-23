@@ -22,17 +22,25 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.getDataByQRCodeIDStmt, err = db.PrepareContext(ctx, getDataByQRCodeID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetDataByQRCodeID: %w", err)
+	if q.getQRCodeDataByIDStmt, err = db.PrepareContext(ctx, getQRCodeDataByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetQRCodeDataByID: %w", err)
+	}
+	if q.getQRCodesDataStmt, err = db.PrepareContext(ctx, getQRCodesData); err != nil {
+		return nil, fmt.Errorf("error preparing query GetQRCodesData: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.getDataByQRCodeIDStmt != nil {
-		if cerr := q.getDataByQRCodeIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getDataByQRCodeIDStmt: %w", cerr)
+	if q.getQRCodeDataByIDStmt != nil {
+		if cerr := q.getQRCodeDataByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getQRCodeDataByIDStmt: %w", cerr)
+		}
+	}
+	if q.getQRCodesDataStmt != nil {
+		if cerr := q.getQRCodesDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getQRCodesDataStmt: %w", cerr)
 		}
 	}
 	return err
@@ -74,13 +82,15 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                    DBTX
 	tx                    *sql.Tx
-	getDataByQRCodeIDStmt *sql.Stmt
+	getQRCodeDataByIDStmt *sql.Stmt
+	getQRCodesDataStmt    *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                    tx,
 		tx:                    tx,
-		getDataByQRCodeIDStmt: q.getDataByQRCodeIDStmt,
+		getQRCodeDataByIDStmt: q.getQRCodeDataByIDStmt,
+		getQRCodesDataStmt:    q.getQRCodesDataStmt,
 	}
 }

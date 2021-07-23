@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 
@@ -12,6 +13,12 @@ import (
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+)
+
+// Predefined request query keys
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -32,7 +39,14 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 
 	r.Get("/{id}", httptransport.NewServer(
 		e.GetDataByQRCodeID,
-		decodeGetDataRequest,
+		decodeGetDataByQRCodeIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/", httptransport.NewServer(
+		e.GetQRCodesData,
+		decodeGetQRCodesDataRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -40,11 +54,12 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetDataRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeGetDataByQRCodeIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
 	}
+
 	return id, nil
 }
 
@@ -55,4 +70,19 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func decodeGetQRCodesDataRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
+}
+
+func castStrToInt32(source string) int32 {
+	res, err := strconv.Atoi(source)
+	if err != nil {
+		return 0
+	}
+	return int32(res)
 }

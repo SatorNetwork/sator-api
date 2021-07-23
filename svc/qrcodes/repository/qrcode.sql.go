@@ -9,15 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
-const getDataByQRCodeID = `-- name: GetDataByQRCodeID :one
+const getQRCodeDataByID = `-- name: GetQRCodeDataByID :one
 SELECT id, show_id, episode_id, starts_at, expires_at, updated_at, created_at, reward_amount
 FROM qrcodes
 WHERE id = $1
     LIMIT 1
 `
 
-func (q *Queries) GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (Qrcode, error) {
-	row := q.queryRow(ctx, q.getDataByQRCodeIDStmt, getDataByQRCodeID, id)
+func (q *Queries) GetQRCodeDataByID(ctx context.Context, id uuid.UUID) (Qrcode, error) {
+	row := q.queryRow(ctx, q.getQRCodeDataByIDStmt, getQRCodeDataByID, id)
 	var i Qrcode
 	err := row.Scan(
 		&i.ID,
@@ -30,4 +30,49 @@ func (q *Queries) GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (Qrcode, 
 		&i.RewardAmount,
 	)
 	return i, err
+}
+
+const getQRCodesData = `-- name: GetQRCodesData :many
+SELECT id, show_id, episode_id, starts_at, expires_at, updated_at, created_at, reward_amount
+FROM qrcodes
+ORDER BY updated_at DESC,
+         created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetQRCodesDataParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetQRCodesData(ctx context.Context, arg GetQRCodesDataParams) ([]Qrcode, error) {
+	rows, err := q.query(ctx, q.getQRCodesDataStmt, getQRCodesData, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Qrcode
+	for rows.Next() {
+		var i Qrcode
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.EpisodeID,
+			&i.StartsAt,
+			&i.ExpiresAt,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.RewardAmount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -25,7 +25,8 @@ type (
 	}
 
 	qrcodeRepository interface {
-		GetDataByQRCodeID(ctx context.Context, id uuid.UUID) (repository.Qrcode, error)
+		GetQRCodeDataByID(ctx context.Context, id uuid.UUID) (repository.Qrcode, error)
+		GetQRCodesData(ctx context.Context, arg repository.GetQRCodesDataParams) ([]repository.Qrcode, error)
 	}
 
 	rewardsClient interface {
@@ -54,30 +55,30 @@ func NewService(qr qrcodeRepository, rc rewardsClient) *Service {
 }
 
 // GetDataByQRCodeID returns show id and episode id by qrcode id
-func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (interface{}, error) {
-	qrcodeData, err := s.qr.GetDataByQRCodeID(ctx, id)
+func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (Qrcode, error) {
+	qrcodeData, err := s.qr.GetQRCodeDataByID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get qrcode by id: %w", err)
+			return Qrcode{}, fmt.Errorf("could not get qrcode by id: %w", err)
 		}
-		return nil, fmt.Errorf("no qrcode with such id:%s, error:%w", id, err)
+		return Qrcode{}, fmt.Errorf("no qrcode with such id:%s, error:%w", id, err)
 	}
 
 	now := time.Now()
 	if now.Before(qrcodeData.StartsAt) {
-		return nil, ErrQRCodeInvalid
+		return Qrcode{}, ErrQRCodeInvalid
 	}
 	if now.After(qrcodeData.ExpiresAt) {
-		return nil, ErrQRCodeExpired
+		return Qrcode{}, ErrQRCodeExpired
 	}
 	if qrcodeData.RewardAmount.Float64 > 0 {
 		err := s.rc.AddDepositTransaction(ctx, userID, id, RelationTypeQRcodes, qrcodeData.RewardAmount.Float64)
 		if err != nil {
-			return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), id.String(), err)
+			return Qrcode{}, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), id.String(), err)
 		}
 	}
 
-	qrcode := &Qrcode{
+	qrcode := Qrcode{
 		ID:           qrcodeData.ID.String(),
 		ShowID:       qrcodeData.ShowID.String(),
 		EpisodeID:    qrcodeData.EpisodeID.String(),
@@ -85,4 +86,32 @@ func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (
 	}
 
 	return qrcode, nil
+}
+
+// GetQRCodesData returns list qrcodes.
+func (s *Service) GetQRCodesData(ctx context.Context, limit, offset int32) ([]Qrcode, error) {
+	list, err := s.qr.GetQRCodesData(ctx, repository.GetQRCodesDataParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return []Qrcode{}, fmt.Errorf("could not get qrcodes data list: %w", err)
+	}
+
+	return castToListQRCodes(list), nil
+}
+
+// castToListQRCodes cast []repository.Qrcode to service []Qrcode structure
+func castToListQRCodes(source []repository.Qrcode) []Qrcode {
+	result := make([]Qrcode, 0, len(source))
+	for _, s := range source {
+		result = append(result, Qrcode{
+			ID:           s.ID.String(),
+			ShowID:       s.ShowID.String(),
+			EpisodeID:    s.EpisodeID.String(),
+			RewardAmount: s.RewardAmount.Float64,
+		})
+	}
+
+	return result
 }

@@ -813,6 +813,61 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /qrcodes:
+    get:
+      tags:
+        - "QR code"
+      summary: Get list qrcodes data.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    show_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    episode_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    reward_amount:
+                      type: number
+                      example: 123.56
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /quiz/{challenge_id}/play:
     get:
       tags:
