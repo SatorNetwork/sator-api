@@ -13,6 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/invitations"
+
+	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
+
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -265,6 +269,19 @@ func main() {
 	{
 		r.Mount("/balance", balance.MakeHTTPHandler(
 			balance.MakeEndpoints(balance.NewService(walletSvcClient, rewardsSvcClient), jwtMdw),
+			logger,
+		))
+	}
+
+	// Invitation service
+	{
+		invitationsRepository, err := invitationsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("invitationsRepo error: %v", err)
+		}
+		invitationsService := invitations.NewService(invitationsRepository, mailer)
+		r.Mount("/invitations", invitations.MakeHTTPHandler(
+			invitations.MakeEndpoints(invitationsService, jwtMdw),
 			logger,
 		))
 	}
