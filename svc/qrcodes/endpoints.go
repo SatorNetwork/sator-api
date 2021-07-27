@@ -24,7 +24,7 @@ type (
 		GetQRCodesData(ctx context.Context, limit, offset int32) ([]Qrcode, error)
 	}
 
-	// PaginationRequest struct
+	// PaginationRequest struct.
 	PaginationRequest struct {
 		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
 		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
