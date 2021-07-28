@@ -15,8 +15,6 @@ import (
 
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 
-	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
-
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -26,6 +24,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
+	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -185,6 +185,39 @@ func main() {
 		))
 	}
 
+	//// Questions service
+	//questionsRepository, err := questionsRepo.Prepare(ctx, db)
+	//if err != nil {
+	//	log.Fatalf("questionsRepo error: %v", err)
+	//}
+	//questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
+
+	var rewardsSvcClient *rewardsClient.Client
+	// Rewards service
+
+	rewardsRepository, err := rewardsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("rewardsRepo error: %v", err)
+	}
+	rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
+	rewardsSvcClient = rewardsClient.New(rewardService)
+	r.Mount("/rewards", rewards.MakeHTTPHandler(
+		rewards.MakeEndpoints(rewardService, jwtMdw),
+		logger,
+	))
+
+	// Invitation service
+	invitationsRepository, err := invitationsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("invitationsRepo error: %v", err)
+	}
+	invitationsClient := invitationsClient.New(invitations.NewService(invitationsRepository, mailer, rewardsSvcClient))
+	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient)
+	r.Mount("/invitations", invitations.MakeHTTPHandler(
+		invitations.MakeEndpoints(invitationsService, jwtMdw),
+		logger,
+	))
+
 	// Auth service
 	{
 		// auth
@@ -197,6 +230,7 @@ func main() {
 				jwtInteractor,
 				authRepository,
 				walletSvcClient,
+				invitationsClient,
 				auth.WithMasterOTPCode(masterOTPHash),
 				auth.WithCustomOTPLength(otpLength),
 				auth.WithMailService(mailer),
@@ -250,38 +284,12 @@ func main() {
 		))
 	}
 
-	var rewardsSvcClient *rewardsClient.Client
-	// Rewards service
-	{
-		rewardsRepository, err := rewardsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("rewardsRepo error: %v", err)
-		}
-		rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
-		rewardsSvcClient = rewardsClient.New(rewardService)
-		r.Mount("/rewards", rewards.MakeHTTPHandler(
-			rewards.MakeEndpoints(rewardService, jwtMdw),
-			logger,
-		))
-	}
+
 
 	// Balance service
 	{
 		r.Mount("/balance", balance.MakeHTTPHandler(
 			balance.MakeEndpoints(balance.NewService(walletSvcClient, rewardsSvcClient), jwtMdw),
-			logger,
-		))
-	}
-
-	// Invitation service
-	{
-		invitationsRepository, err := invitationsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("invitationsRepo error: %v", err)
-		}
-		invitationsService := invitations.NewService(invitationsRepository, mailer)
-		r.Mount("/invitations", invitations.MakeHTTPHandler(
-			invitations.MakeEndpoints(invitationsService, jwtMdw),
 			logger,
 		))
 	}
@@ -325,7 +333,7 @@ func main() {
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,
-			quiz.QuizWsHandler(quizSvc),
+			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction)),
 		))
 
 		// run quiz service

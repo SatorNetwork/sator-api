@@ -76,6 +76,28 @@ func (q *Queries) GetInvitationByInviteeEmail(ctx context.Context, normalizedInv
 	return i, err
 }
 
+const getInvitationByInviteeID = `-- name: GetInvitationByInviteeID :one
+SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by
+FROM invitations
+WHERE accepted_by = $1
+    LIMIT 1
+`
+
+func (q *Queries) GetInvitationByInviteeID(ctx context.Context, acceptedBy uuid.UUID) (Invitation, error) {
+	row := q.queryRow(ctx, q.getInvitationByInviteeIDStmt, getInvitationByInviteeID, acceptedBy)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.InviteeEmail,
+		&i.NormalizedInviteeEmail,
+		&i.InvitedAt,
+		&i.InvitedBy,
+		&i.AcceptedAt,
+		&i.AcceptedBy,
+	)
+	return i, err
+}
+
 const getInvitations = `-- name: GetInvitations :many
 SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by
 FROM invitations

@@ -3,6 +3,11 @@ SELECT *
 FROM invitations
 WHERE normalized_invitee_email = $1
     LIMIT 1;
+-- name: GetInvitationByInviteeID :one
+SELECT *
+FROM invitations
+WHERE accepted_by = $1
+    LIMIT 1;
 -- name: GetInvitations :many
 SELECT *
 FROM invitations

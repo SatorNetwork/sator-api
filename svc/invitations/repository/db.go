@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getInvitationByInviteeEmailStmt, err = db.PrepareContext(ctx, getInvitationByInviteeEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetInvitationByInviteeEmail: %w", err)
 	}
+	if q.getInvitationByInviteeIDStmt, err = db.PrepareContext(ctx, getInvitationByInviteeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetInvitationByInviteeID: %w", err)
+	}
 	if q.getInvitationsStmt, err = db.PrepareContext(ctx, getInvitations); err != nil {
 		return nil, fmt.Errorf("error preparing query GetInvitations: %w", err)
 	}
@@ -58,6 +61,11 @@ func (q *Queries) Close() error {
 	if q.getInvitationByInviteeEmailStmt != nil {
 		if cerr := q.getInvitationByInviteeEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getInvitationByInviteeEmailStmt: %w", cerr)
+		}
+	}
+	if q.getInvitationByInviteeIDStmt != nil {
+		if cerr := q.getInvitationByInviteeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getInvitationByInviteeIDStmt: %w", cerr)
 		}
 	}
 	if q.getInvitationsStmt != nil {
@@ -117,6 +125,7 @@ type Queries struct {
 	acceptInvitationByInviteeEmailStmt *sql.Stmt
 	createInvitationStmt               *sql.Stmt
 	getInvitationByInviteeEmailStmt    *sql.Stmt
+	getInvitationByInviteeIDStmt       *sql.Stmt
 	getInvitationsStmt                 *sql.Stmt
 	getInvitationsByInvitedByIDStmt    *sql.Stmt
 	getInvitationsPaginatedStmt        *sql.Stmt
@@ -129,6 +138,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		acceptInvitationByInviteeEmailStmt: q.acceptInvitationByInviteeEmailStmt,
 		createInvitationStmt:               q.createInvitationStmt,
 		getInvitationByInviteeEmailStmt:    q.getInvitationByInviteeEmailStmt,
+		getInvitationByInviteeIDStmt:       q.getInvitationByInviteeIDStmt,
 		getInvitationsStmt:                 q.getInvitationsStmt,
 		getInvitationsByInvitedByIDStmt:    q.getInvitationsByInvitedByIDStmt,
 		getInvitationsPaginatedStmt:        q.getInvitationsPaginatedStmt,
