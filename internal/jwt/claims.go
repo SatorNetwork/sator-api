@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dgrijalva/jwt-go"
 	kitjwt "github.com/go-kit/kit/auth/jwt"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
