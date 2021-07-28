@@ -16,7 +16,7 @@ require (
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/uuid v1.1.2
-	github.com/gorilla/websocket v1.4.0
+	github.com/gorilla/websocket v1.4.1
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
 	github.com/oklog/run v1.0.0
