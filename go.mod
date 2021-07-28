@@ -3,7 +3,6 @@ module github.com/SatorNetwork/sator-api
 go 1.16
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dmitrymomot/distlock v0.1.1
 	github.com/dmitrymomot/go-env v0.1.0
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
@@ -13,10 +12,11 @@ require (
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/validator/v10 v10.6.1
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/uuid v1.1.2
-	github.com/gorilla/websocket v1.4.1
+	github.com/gorilla/websocket v1.4.2
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
 	github.com/oklog/run v1.0.0
