@@ -17,4 +17,5 @@ type Invitation struct {
 	InvitedBy              uuid.UUID    `json:"invited_by"`
 	AcceptedAt             sql.NullTime `json:"accepted_at"`
 	AcceptedBy             uuid.UUID    `json:"accepted_by"`
+	RewardReceived         sql.NullBool `json:"reward_received"`
 }

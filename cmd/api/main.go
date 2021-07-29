@@ -100,6 +100,10 @@ var (
 	supportEmail   = env.GetString("SUPPORT_EMAIL", "support@sator.io")
 	companyName    = env.GetString("COMPANY_NAME", "Sator")
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
+
+	//	 Invitation
+	invitationReward = env.GetInt("INVITATION_REWARD", 0)
+	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
 )
 
 func main() {
@@ -192,8 +196,8 @@ func main() {
 	//}
 	//questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
 
-	var rewardsSvcClient *rewardsClient.Client
 	// Rewards service
+	var rewardsSvcClient *rewardsClient.Client
 
 	rewardsRepository, err := rewardsRepo.Prepare(ctx, db)
 	if err != nil {
@@ -211,8 +215,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("invitationsRepo error: %v", err)
 	}
-	invitationsClient := invitationsClient.New(invitations.NewService(invitationsRepository, mailer, rewardsSvcClient))
-	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient)
+	invitationsClient := invitationsClient.New(invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
+		InvitationReward: float64(invitationReward),
+		InvitationURL:    invitationURL,
+	}))
+	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
+		InvitationReward: float64(invitationReward),
+		InvitationURL:    invitationURL,
+	})
 	r.Mount("/invitations", invitations.MakeHTTPHandler(
 		invitations.MakeEndpoints(invitationsService, jwtMdw),
 		logger,
@@ -283,8 +293,6 @@ func main() {
 			logger,
 		))
 	}
-
-
 
 	// Balance service
 	{

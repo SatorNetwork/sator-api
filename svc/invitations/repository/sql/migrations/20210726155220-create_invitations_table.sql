@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS invitations (
     invited_at TIMESTAMP NOT NULL DEFAULT now(),
     invited_by uuid NOT NULL,
     accepted_at TIMESTAMP DEFAULT NULL,
-    accepted_by uuid NOT NULL
+    accepted_by uuid NOT NULL,
+    reward_received BOOLEAN
     );
 -- +migrate Down

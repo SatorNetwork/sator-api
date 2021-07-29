@@ -43,6 +43,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getInvitationsPaginatedStmt, err = db.PrepareContext(ctx, getInvitationsPaginated); err != nil {
 		return nil, fmt.Errorf("error preparing query GetInvitationsPaginated: %w", err)
 	}
+	if q.setRewardReceivedStmt, err = db.PrepareContext(ctx, setRewardReceived); err != nil {
+		return nil, fmt.Errorf("error preparing query SetRewardReceived: %w", err)
+	}
 	return &q, nil
 }
 
@@ -81,6 +84,11 @@ func (q *Queries) Close() error {
 	if q.getInvitationsPaginatedStmt != nil {
 		if cerr := q.getInvitationsPaginatedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getInvitationsPaginatedStmt: %w", cerr)
+		}
+	}
+	if q.setRewardReceivedStmt != nil {
+		if cerr := q.setRewardReceivedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setRewardReceivedStmt: %w", cerr)
 		}
 	}
 	return err
@@ -129,6 +137,7 @@ type Queries struct {
 	getInvitationsStmt                 *sql.Stmt
 	getInvitationsByInvitedByIDStmt    *sql.Stmt
 	getInvitationsPaginatedStmt        *sql.Stmt
+	setRewardReceivedStmt              *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -142,5 +151,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getInvitationsStmt:                 q.getInvitationsStmt,
 		getInvitationsByInvitedByIDStmt:    q.getInvitationsByInvitedByIDStmt,
 		getInvitationsPaginatedStmt:        q.getInvitationsPaginatedStmt,
+		setRewardReceivedStmt:              q.setRewardReceivedStmt,
 	}
 }

@@ -30,3 +30,7 @@ UPDATE invitations
 SET accepted_by = @accepted_by,
     accepted_at = @accepted_at
 WHERE invitee_email = @invitee_email;
+-- name: SetRewardReceived :exec
+UPDATE invitations
+SET reward_received = @reward_received
+WHERE invited_by = @invited_by;

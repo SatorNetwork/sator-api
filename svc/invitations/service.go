@@ -8,18 +8,32 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/rewards"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/invitations/repository"
 
 	"github.com/google/uuid"
 )
 
+const (
+	// RelationTypeInvitation indicates that relation type is "invitation".
+	RelationTypeInvitation = "invitation"
+)
+
 type (
 	// Service struct
 	Service struct {
-		ir invitationsRepository
-		m  mailer
-		rc rewardsClient
+		ir     invitationsRepository
+		m      mailer
+		rc     rewardsClient
+		config Config
+	}
+
+	// Config struct
+	Config struct {
+		InvitationReward float64
+		InvitationURL    string
 	}
 
 	// Invitation struct
@@ -32,6 +46,7 @@ type (
 		InvitedBy              uuid.UUID `json:"invited_by"`
 		AcceptedAt             time.Time `json:"accepted_at"`
 		AcceptedBy             uuid.UUID `json:"accepted_by"`
+		RewardReceived         bool      `json:"reward_received"`
 	}
 
 	invitationsRepository interface {
@@ -42,6 +57,7 @@ type (
 		GetInvitationByInviteeEmail(ctx context.Context, normalizedInviteeEmail string) (repository.Invitation, error)
 		GetInvitationByInviteeID(ctx context.Context, acceptedBy uuid.UUID) (repository.Invitation, error)
 		GetInvitationsByInvitedByID(ctx context.Context, invitedBy uuid.UUID) ([]repository.Invitation, error)
+		SetRewardReceived(ctx context.Context, arg repository.SetRewardReceivedParams) error
 	}
 
 	mailer interface {
@@ -55,7 +71,7 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(ir invitationsRepository, m mailer, rc rewardsClient) *Service {
+func NewService(ir invitationsRepository, m mailer, rc rewardsClient, config Config) *Service {
 	if ir == nil {
 		log.Fatalln("invitations repository is not set")
 	}
@@ -66,24 +82,40 @@ func NewService(ir invitationsRepository, m mailer, rc rewardsClient) *Service {
 		log.Fatalln("rewards client is not set")
 	}
 
-	return &Service{ir: ir, m: m, rc: rc}
+	return &Service{ir: ir, m: m, rc: rc, config: config}
 }
 
 // SendReward ...
 func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error) func(userID, quizID uuid.UUID) {
 	return func(userID, quizID uuid.UUID) {
-		// invited?
-		//_, err := s.ir.GetInvitationByInviteeID(ctx, userID)
-		//if err != nil {
-		//	if !db.IsNotFoundError(err) {
-		//
-		//	}
-		//}
+		var ctx context.Context
 
-		// TODO: add check is get reward per referral
+		invitationData, err := s.ir.GetInvitationByInviteeID(ctx, userID)
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return // user isn't invited.
+			}
+		}
+		if invitationData.RewardReceived.Bool == true {
+			return // reward received.
+		}
 
 		// sendRewards
+		err = sendRewards(ctx, invitationData.InvitedBy, quizID, RelationTypeInvitation, s.config.InvitationReward, rewards.TransactionTypeDeposit)
+		if err != nil {
+			return // fmt.Errorf("could not send invitation reward: %w", err)
+		}
 
+		err = s.ir.SetRewardReceived(ctx, repository.SetRewardReceivedParams{
+			RewardReceived: sql.NullBool{
+				Bool:  true,
+				Valid: true,
+			},
+			InvitedBy: invitationData.InvitedBy,
+		})
+		//if err != nil {
+		//	return fmt.Errorf("could not set invitation reward received: %w", err)
+		//}
 	}
 }
 
@@ -103,7 +135,7 @@ func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, inv
 				return fmt.Errorf("could not create invitation: %w", err)
 			}
 
-			err = s.m.SendInvitationCode(ctx, inv.InviteeEmail, "STRING?")
+			err = s.m.SendInvitationCode(ctx, inv.InviteeEmail, s.config.InvitationURL)
 			if err != nil {
 
 				return fmt.Errorf("could not send invitation: %w", err)
@@ -141,6 +173,7 @@ func castToListInvitations(source []repository.Invitation) []Invitation {
 			InvitedBy:              s.InvitedBy,
 			AcceptedAt:             s.AcceptedAt.Time,
 			AcceptedBy:             s.AcceptedBy,
+			RewardReceived:         s.RewardReceived.Bool,
 		})
 	}
 
