@@ -141,6 +141,69 @@ func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (
 	return qlist, nil
 }
 
+// GetOneRandomQuestionByChallengeID returns one random question by challenge id
+func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
+	questions, err := s.qr.GetQuestionsByChallengeID(ctx, id)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+		}
+		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
+	}
+
+	idsSlice := make([]uuid.UUID, 0, len(questions))
+	for _, v := range questions {
+		idsSlice = append(idsSlice, v.ID)
+	}
+
+	answers, err := s.qr.GetAnswersByIDs(ctx, idsSlice)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get answers: %w", err)
+		}
+		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
+
+	answMap := make(map[string][]AnswerOption)
+	for _, v := range answers {
+		if _, ok := answMap[v.QuestionID.String()]; ok {
+			answMap[v.QuestionID.String()] = append(answMap[v.QuestionID.String()], AnswerOption{
+				ID:         v.ID,
+				QuestionID: v.QuestionID,
+				Option:     v.AnswerOption,
+				IsCorrect:  v.IsCorrect.Bool,
+			})
+		} else {
+			answMap[v.QuestionID.String()] = []AnswerOption{
+				{
+					ID:         v.ID,
+					QuestionID: v.QuestionID,
+					Option:     v.AnswerOption,
+					IsCorrect:  v.IsCorrect.Bool,
+				},
+			}
+		}
+	}
+
+	qlist := make([]Question, 0, len(questions))
+	for _, v := range questions {
+		if opt, ok := answMap[v.ID.String()]; ok {
+			qlist = append(qlist, Question{
+				ID:            v.ID,
+				ChallengeID:   v.ChallengeID,
+				Question:      v.Question,
+				Order:         v.QuestionOrder,
+				AnswerOptions: opt,
+			})
+		}
+	}
+
+	return &qlist[rand.Intn(len(qlist)-1)], nil
+}
+
 // CheckAnswer checks answer
 func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 	answers, err := s.qr.CheckAnswer(ctx, id)
@@ -148,7 +211,7 @@ func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
 		if !db.IsNotFoundError(err) {
 			return false, fmt.Errorf("could not validate answer: %w", err)
 		}
-		return false, fmt.Errorf("could not found question with id %s: %w", id, err)
+		return false, fmt.Errorf("could not found answer option with id %s: %w", id, err)
 	}
 
 	return answers.Bool, nil
