@@ -43,6 +43,28 @@ func (q *Queries) AddSolanaAccount(ctx context.Context, arg AddSolanaAccountPara
 	return i, err
 }
 
+const getSolanaAccountByID = `-- name: GetSolanaAccountByID :one
+SELECT id, account_type, public_key, private_key, status, updated_at, created_at
+FROM solana_accounts
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (SolanaAccount, error) {
+	row := q.queryRow(ctx, q.getSolanaAccountByIDStmt, getSolanaAccountByID, id)
+	var i SolanaAccount
+	err := row.Scan(
+		&i.ID,
+		&i.AccountType,
+		&i.PublicKey,
+		&i.PrivateKey,
+		&i.Status,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSolanaAccountByType = `-- name: GetSolanaAccountByType :one
 SELECT id, account_type, public_key, private_key, status, updated_at, created_at
 FROM solana_accounts

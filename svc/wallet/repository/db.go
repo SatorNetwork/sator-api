@@ -37,6 +37,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEthereumAccountByUserIDAndTypeStmt, err = db.PrepareContext(ctx, getEthereumAccountByUserIDAndType); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEthereumAccountByUserIDAndType: %w", err)
 	}
+	if q.getSolanaAccountByIDStmt, err = db.PrepareContext(ctx, getSolanaAccountByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSolanaAccountByID: %w", err)
+	}
 	if q.getSolanaAccountByTypeStmt, err = db.PrepareContext(ctx, getSolanaAccountByType); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSolanaAccountByType: %w", err)
 	}
@@ -86,6 +89,11 @@ func (q *Queries) Close() error {
 	if q.getEthereumAccountByUserIDAndTypeStmt != nil {
 		if cerr := q.getEthereumAccountByUserIDAndTypeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEthereumAccountByUserIDAndTypeStmt: %w", cerr)
+		}
+	}
+	if q.getSolanaAccountByIDStmt != nil {
+		if cerr := q.getSolanaAccountByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSolanaAccountByIDStmt: %w", cerr)
 		}
 	}
 	if q.getSolanaAccountByTypeStmt != nil {
@@ -167,6 +175,7 @@ type Queries struct {
 	createWalletStmt                      *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
 	getEthereumAccountByUserIDAndTypeStmt *sql.Stmt
+	getSolanaAccountByIDStmt              *sql.Stmt
 	getSolanaAccountByTypeStmt            *sql.Stmt
 	getSolanaAccountByUserIDAndTypeStmt   *sql.Stmt
 	getSolanaAccountTypeByPublicKeyStmt   *sql.Stmt
@@ -185,6 +194,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createWalletStmt:                      q.createWalletStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,
 		getEthereumAccountByUserIDAndTypeStmt: q.getEthereumAccountByUserIDAndTypeStmt,
+		getSolanaAccountByIDStmt:              q.getSolanaAccountByIDStmt,
 		getSolanaAccountByTypeStmt:            q.getSolanaAccountByTypeStmt,
 		getSolanaAccountByUserIDAndTypeStmt:   q.getSolanaAccountByUserIDAndTypeStmt,
 		getSolanaAccountTypeByPublicKeyStmt:   q.getSolanaAccountTypeByPublicKeyStmt,
