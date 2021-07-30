@@ -12,6 +12,7 @@ import (
 type Episode struct {
 	ID            uuid.UUID      `json:"id"`
 	ShowID        uuid.UUID      `json:"show_id"`
+	SeasonID      uuid.UUID      `json:"season_id"`
 	EpisodeNumber int32          `json:"episode_number"`
 	Cover         sql.NullString `json:"cover"`
 	Title         string         `json:"title"`
@@ -19,6 +20,13 @@ type Episode struct {
 	ReleaseDate   sql.NullTime   `json:"release_date"`
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
+	ChallengeID   uuid.UUID      `json:"challenge_id"`
+}
+
+type Season struct {
+	ID           uuid.UUID `json:"id"`
+	ShowID       uuid.UUID `json:"show_id"`
+	SeasonNumber int32     `json:"season_number"`
 }
 
 type Show struct {
@@ -29,4 +37,5 @@ type Show struct {
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
 	Category      sql.NullString `json:"category"`
+	Description   sql.NullString `json:"description"`
 }
