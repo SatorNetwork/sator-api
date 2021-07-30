@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/zeebo/errs"
+
+	//token "./contracts_erc20"
 )
 
 func (c *Client) Transfer(ctx context.Context, senderPrivateKey *ecdsa.PrivateKey, recipientAddress string, amount int64) (string, error) {
@@ -59,3 +61,51 @@ func (c *Client) Transfer(ctx context.Context, senderPrivateKey *ecdsa.PrivateKe
 
 	return signedTx.Hash().Hex(), nil
 }
+
+// GetEthBalance returns ethereum balance in wei.
+func (c *Client) GetEthBalance(ctx context.Context, address string) (*big.Int, error) {
+	account := common.HexToAddress(address)
+	balance, err := c.client.BalanceAt(ctx, account, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return balance, nil
+}
+
+/*// GetTokenBalance returns token balance.
+func (c *Client) GetTokenBalance(ctx context.Context) {
+	client, err := ethclient.Dial("https://mainnet.infura.io")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// token address
+	tokenAddress := common.HexToAddress("")
+	// smart contract import
+	instance, err := token.NewToken(tokenAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	address := common.HexToAddress("0x0536806df512d6cdde913cf95c9886")
+
+	bal, err := instance.BalanceOf(&bind.CallOpts{}, address)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	name, err := instance.Name(&bind.CallOpts{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	symbol, err := instance.Symbol(&bind.CallOpts{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	decimals, err := instance.Decimals(&bind.CallOpts{})
+	if err != nil {
+		log.Fatal(err)
+	}
+}*/
