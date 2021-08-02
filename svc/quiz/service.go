@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
@@ -238,6 +239,9 @@ func (s *Service) SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, err
 	if err != nil {
 		return nil, fmt.Errorf("could not get questions list for quiz with id=%s: %w", qid.String(), err)
 	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(qlist), func(i, j int) { qlist[i], qlist[j] = qlist[j], qlist[i] })
 
 	ql := qlist
 	if len(qlist) > s.numberOfQuestions {
