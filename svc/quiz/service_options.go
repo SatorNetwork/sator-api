@@ -21,6 +21,14 @@ func WithCustomTokenParseFunction(fn tokenParseFunc) ServiceOption {
 	}
 }
 
+// WithCustomNumberOfQuestions service option
+// Default value is 5
+func WithCustomNumberOfQuestions(n int) ServiceOption {
+	return func(s *Service) {
+		s.numberOfQuestions = n
+	}
+}
+
 // // WithCountdown service option
 // func WithCountdown(n int) ServiceOption {
 // 	return func(s *Service) {
