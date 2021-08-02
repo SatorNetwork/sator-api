@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/SatorNetwork/sator-api/internal/storage"
+	"github.com/SatorNetwork/sator-api/internal/mediaservice/storage"
 	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
 
 	"github.com/google/uuid"
@@ -33,16 +33,23 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 	}
 	query := h.query.WithTx(tx)
 
-	oid := uuid.New()
-	fname := fmt.Sprintf("%s%s", oid.String(), path.Ext(header.Filename))
+	relationID := r.Header.Get("RelationID")
+
+	relID, err := uuid.Parse(relationID)
+	if err != nil {
+		return fmt.Errorf("could not get relation id: %w", err)
+	}
+
+	id := uuid.New()
+	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(header.Filename))
 	ct := header.Header.Get("Content-Type")
 	item, err := query.CreateItem(r.Context(), repository.CreateItemParams{
-		ID:         oid,
+		ID:         id,
 		Filename:   header.Filename,
-		Filepath:   h.storage.FileURL(h.storage.FilePath(fname)),
-		RelationID: oid, // TODO: add relation data.
-		RelationType: sql.NullString{ // TODO: add relation data.
-			String: "",
+		Filepath:   h.storage.FileURL(h.storage.FilePath(fileName)),
+		RelationID: relID,
+		RelationType: sql.NullString{
+			String: r.Header.Get("RelationType"),
 			Valid:  true,
 		},
 	})
@@ -61,6 +68,5 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) error {
 
 	return jsonResponse(w, http.StatusOK, data{
 		"item": item,
-		//"resized":  resizedItem,
 	})
 }

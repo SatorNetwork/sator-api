@@ -11,32 +11,40 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dmitrymomot/media-srv/repository"
-	"github.com/dmitrymomot/media-srv/resizer"
-	"github.com/dmitrymomot/media-srv/storage"
+	"github.com/SatorNetwork/sator-api/internal/mediaservice/storage"
+	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
+
 	"github.com/google/uuid"
 )
 
-func TestHandler_GetOriginalItemsList(t *testing.T) {
+func TestHandler_GetItemsList(t *testing.T) {
 	createdAt, _ := time.Parse("Mon Jan 2 15:04:05 -0700 MST 2006", "Mon Jan 2 15:04:05 -0700 MST 2006")
-	arg := repository.GetOriginalItemsListParams{
+	arg := repository.GetItemsListParams{
 		Limit:  10,
 		Offset: 0,
 	}
-	items := []repository.OriginalItem{
+	items := []repository.Item{
 		{
-			ID:        uuid.New(),
-			Name:      "image.png",
-			Path:      "uploads/image.png",
-			URL:       "http://test/uploads/image.png",
-			CreatedAt: createdAt,
+			ID:       uuid.New(),
+			Filename: "image.png",
+			Filepath: "http://test/uploads/image.png",
+			RelationType: sql.NullString{
+				String: "RelationType",
+				Valid:  true,
+			},
+			RelationID: uuid.New(),
+			CreatedAt:  createdAt,
 		},
 		{
-			ID:        uuid.New(),
-			Name:      "image.png",
-			Path:      "uploads/image.png",
-			URL:       "http://test/uploads/image.png",
-			CreatedAt: createdAt,
+			ID:       uuid.New(),
+			Filename: "image.png",
+			Filepath: "http://test/uploads/image.png",
+			RelationType: sql.NullString{
+				String: "RelationType",
+				Valid:  true,
+			},
+			RelationID: uuid.New(),
+			CreatedAt:  createdAt,
 		},
 	}
 	db, mock, err := repository.NewSQLMock()
@@ -44,7 +52,7 @@ func TestHandler_GetOriginalItemsList(t *testing.T) {
 		panic(err)
 	}
 	defer db.Close()
-	repository.GetOriginalItemsListMock(mock, arg, items, nil)
+	repository.GetItemsListMock(mock, arg, items, nil)
 
 	repo := repository.New(db)
 
@@ -56,7 +64,7 @@ func TestHandler_GetOriginalItemsList(t *testing.T) {
 	}
 	stor := storage.New(s3mock, opt)
 
-	r, err := http.NewRequest("GET", "/origin?limit=10", nil)
+	r, err := http.NewRequest("GET", "/item?limit=10", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +73,6 @@ func TestHandler_GetOriginalItemsList(t *testing.T) {
 		db      *sql.DB
 		query   *repository.Queries
 		storage *storage.Interactor
-		resize  resizerFunc
 	}
 	type args struct {
 		w http.ResponseWriter
@@ -76,16 +83,15 @@ func TestHandler_GetOriginalItemsList(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr bool
-	}{"success", fields{db, repo, stor, resizer.Resize}, args{httptest.NewRecorder(), r}, false}
+	}{"success", fields{db, repo, stor}, args{httptest.NewRecorder(), r}, false}
 	t.Run(tt.name, func(t *testing.T) {
 		h := &Handler{
 			db:      tt.fields.db,
 			query:   tt.fields.query,
 			storage: tt.fields.storage,
-			resize:  tt.fields.resize,
 		}
-		if err := h.GetOriginalItemsList(tt.args.w, tt.args.r); (err != nil) != tt.wantErr {
-			t.Errorf("Handler.GetOriginalItemsList() error = %v, wantErr %v", err, tt.wantErr)
+		if err := h.GetItemsList(tt.args.w, tt.args.r); (err != nil) != tt.wantErr {
+			t.Errorf("Handler.GetItemsList() error = %v, wantErr %v", err, tt.wantErr)
 		}
 
 		resp, ok := tt.args.w.(*httptest.ResponseRecorder)
@@ -98,12 +104,12 @@ func TestHandler_GetOriginalItemsList(t *testing.T) {
 		assert.Equal(t, result.StatusCode, http.StatusOK)
 
 		expected, _ := json.Marshal(items)
-		assert.JSONEqf(t, string(expected), string(body), "response does not match to expected jsonn string")
+		assert.JSONEqf(t, string(expected), string(body), "response does not match to expected json string")
 	})
 }
 
-func TestHandler_GetOriginalItemsList_NotFound(t *testing.T) {
-	arg := repository.GetOriginalItemsListParams{
+func TestHandler_GetItemsList_NotFound(t *testing.T) {
+	arg := repository.GetItemsListParams{
 		Limit:  10,
 		Offset: 0,
 	}
@@ -112,7 +118,7 @@ func TestHandler_GetOriginalItemsList_NotFound(t *testing.T) {
 		panic(err)
 	}
 	defer db.Close()
-	repository.GetOriginalItemsListMock(mock, arg, nil, sql.ErrNoRows)
+	repository.GetItemsListMock(mock, arg, nil, sql.ErrNoRows)
 
 	repo := repository.New(db)
 
@@ -124,7 +130,7 @@ func TestHandler_GetOriginalItemsList_NotFound(t *testing.T) {
 	}
 	stor := storage.New(s3mock, opt)
 
-	r, err := http.NewRequest("GET", "/origin?limit=10", nil)
+	r, err := http.NewRequest("GET", "/item?limit=10", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +139,6 @@ func TestHandler_GetOriginalItemsList_NotFound(t *testing.T) {
 		db      *sql.DB
 		query   *repository.Queries
 		storage *storage.Interactor
-		resize  resizerFunc
 	}
 	type args struct {
 		w http.ResponseWriter
@@ -144,40 +149,47 @@ func TestHandler_GetOriginalItemsList_NotFound(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr bool
-	}{"not found", fields{db, repo, stor, resizer.Resize}, args{httptest.NewRecorder(), r}, true}
+	}{"not found", fields{db, repo, stor}, args{httptest.NewRecorder(), r}, true}
 	t.Run(tt.name, func(t *testing.T) {
 		h := &Handler{
 			db:      tt.fields.db,
 			query:   tt.fields.query,
 			storage: tt.fields.storage,
-			resize:  tt.fields.resize,
 		}
-		if err := h.GetOriginalItemsList(tt.args.w, tt.args.r); (err != nil) != tt.wantErr {
-			t.Errorf("Handler.GetOriginalItemsList() error = %v, wantErr %v", err, tt.wantErr)
+		if err := h.GetItemsList(tt.args.w, tt.args.r); (err != nil) != tt.wantErr {
+			t.Errorf("Handler.GetItemsList() error = %v, wantErr %v", err, tt.wantErr)
 		}
 	})
 }
 
-func TestHandler_GetOriginalItemsList_LimitNotSet(t *testing.T) {
+func TestHandler_GetItemsList_LimitNotSet(t *testing.T) {
 	createdAt, _ := time.Parse("Mon Jan 2 15:04:05 -0700 MST 2006", "Mon Jan 2 15:04:05 -0700 MST 2006")
-	arg := repository.GetOriginalItemsListParams{
+	arg := repository.GetItemsListParams{
 		Limit:  10,
 		Offset: 0,
 	}
-	items := []repository.OriginalItem{
+	items := []repository.Item{
 		{
-			ID:        uuid.New(),
-			Name:      "image.png",
-			Path:      "uploads/image.png",
-			URL:       "http://test/uploads/image.png",
-			CreatedAt: createdAt,
+			ID:       uuid.New(),
+			Filename: "image.png",
+			Filepath: "http://test/uploads/image.png",
+			RelationType: sql.NullString{
+				String: "RelationType",
+				Valid:  true,
+			},
+			RelationID: uuid.New(),
+			CreatedAt:  createdAt,
 		},
 		{
-			ID:        uuid.New(),
-			Name:      "image.png",
-			Path:      "uploads/image.png",
-			URL:       "http://test/uploads/image.png",
-			CreatedAt: createdAt,
+			ID:       uuid.New(),
+			Filename: "image.png",
+			Filepath: "http://test/uploads/image.png",
+			RelationType: sql.NullString{
+				String: "RelationType",
+				Valid:  true,
+			},
+			RelationID: uuid.New(),
+			CreatedAt:  createdAt,
 		},
 	}
 	db, mock, err := repository.NewSQLMock()
@@ -185,7 +197,7 @@ func TestHandler_GetOriginalItemsList_LimitNotSet(t *testing.T) {
 		panic(err)
 	}
 	defer db.Close()
-	repository.GetOriginalItemsListMock(mock, arg, items, nil)
+	repository.GetItemsListMock(mock, arg, items, nil)
 
 	repo := repository.New(db)
 
@@ -197,7 +209,7 @@ func TestHandler_GetOriginalItemsList_LimitNotSet(t *testing.T) {
 	}
 	stor := storage.New(s3mock, opt)
 
-	r, err := http.NewRequest("GET", "/origin", nil)
+	r, err := http.NewRequest("GET", "/item", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +218,6 @@ func TestHandler_GetOriginalItemsList_LimitNotSet(t *testing.T) {
 		db      *sql.DB
 		query   *repository.Queries
 		storage *storage.Interactor
-		resize  resizerFunc
 	}
 	type args struct {
 		w http.ResponseWriter
@@ -217,16 +228,15 @@ func TestHandler_GetOriginalItemsList_LimitNotSet(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr bool
-	}{"limit not set", fields{db, repo, stor, resizer.Resize}, args{httptest.NewRecorder(), r}, false}
+	}{"limit not set", fields{db, repo, stor}, args{httptest.NewRecorder(), r}, false}
 	t.Run(tt.name, func(t *testing.T) {
 		h := &Handler{
 			db:      tt.fields.db,
 			query:   tt.fields.query,
 			storage: tt.fields.storage,
-			resize:  tt.fields.resize,
 		}
-		if err := h.GetOriginalItemsList(tt.args.w, tt.args.r); (err != nil) != tt.wantErr {
-			t.Errorf("Handler.GetOriginalItemsList() error = %v, wantErr %v", err, tt.wantErr)
+		if err := h.GetItemsList(tt.args.w, tt.args.r); (err != nil) != tt.wantErr {
+			t.Errorf("Handler.GetItemsList() error = %v, wantErr %v", err, tt.wantErr)
 		}
 
 		resp, ok := tt.args.w.(*httptest.ResponseRecorder)
@@ -239,6 +249,6 @@ func TestHandler_GetOriginalItemsList_LimitNotSet(t *testing.T) {
 		assert.Equal(t, result.StatusCode, http.StatusOK)
 
 		expected, _ := json.Marshal(items)
-		assert.JSONEqf(t, string(expected), string(body), "response does not match to expected jsonn string")
+		assert.JSONEqf(t, string(expected), string(body), "response does not match to expected json string")
 	})
 }

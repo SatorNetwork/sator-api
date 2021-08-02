@@ -7,8 +7,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
 )
 
-// GetOriginalItemsList http handler
-func (h *Handler) GetOriginalItemsList(w http.ResponseWriter, r *http.Request) error {
+// GetItemsList http handler
+func (h *Handler) GetItemsList(w http.ResponseWriter, r *http.Request) error {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit <= 0 {
 		limit = 10

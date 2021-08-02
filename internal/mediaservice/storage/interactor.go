@@ -22,8 +22,8 @@ type (
 
 	// Interactor struct
 	Interactor struct {
-		client         Client
-		bucket         string
+		client Client
+		bucket string
 		url            string
 		forcePathStyle bool
 	}

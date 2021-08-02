@@ -7,13 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// GetOriginalItem http handler
-func (h *Handler) GetOriginalItem(w http.ResponseWriter, r *http.Request) error {
-	oid, err := uuid.Parse(chi.URLParam(r, "oid"))
+// GetItem http handler
+func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) error {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		return NewHTTPError(http.StatusBadRequest, "wrong id format")
 	}
-	item, err := h.query.GetItemByID(r.Context(), oid)
+	item, err := h.query.GetItemByID(r.Context(), id)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-// NewS3Client returns connfigured AWS S3 client
+// NewS3Client returns configured AWS S3 client
 func NewS3Client(opt Options) *s3.S3 {
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(opt.Key, opt.Secret, ""),

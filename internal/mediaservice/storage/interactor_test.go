@@ -61,8 +61,8 @@ func TestInteractor_Upload(t *testing.T) {
 		ForcePathStyle: false,
 	}
 	type fields struct {
-		client         Client
-		bucket         string
+		client Client
+		bucket string
 		url            string
 		forcePathStyle bool
 	}
@@ -105,8 +105,8 @@ func TestInteractor_Download(t *testing.T) {
 	}
 	obj := &s3.GetObjectOutput{}
 	type fields struct {
-		client         Client
-		bucket         string
+		client Client
+		bucket string
 		url            string
 		forcePathStyle bool
 	}
@@ -153,8 +153,8 @@ func TestInteractor_Remove(t *testing.T) {
 	}
 
 	type fields struct {
-		client         Client
-		bucket         string
+		client Client
+		bucket string
 		url            string
 		forcePathStyle bool
 	}

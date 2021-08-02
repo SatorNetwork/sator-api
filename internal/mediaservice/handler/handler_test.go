@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dmitrymomot/media-srv/repository"
-	"github.com/dmitrymomot/media-srv/resizer"
-	"github.com/dmitrymomot/media-srv/storage"
+	"github.com/SatorNetwork/sator-api/internal/mediaservice/storage"
+	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
+
 	"gotest.tools/assert"
 )
 
@@ -157,7 +157,7 @@ func TestWrap_ServeHTTP(t *testing.T) {
 			return errors.New("error")
 		}), args{httptest.NewRecorder(), r}, http.StatusInternalServerError, "{\"error\":\"Internal Server Error\"}\n", true},
 
-		{"ont founnd error", Wrap(func(w http.ResponseWriter, r *http.Request) error {
+		{"ont found error", Wrap(func(w http.ResponseWriter, r *http.Request) error {
 			return sql.ErrNoRows
 		}), args{httptest.NewRecorder(), r}, http.StatusNotFound, "{\"error\":\"Not Found\"}\n", true},
 	}
@@ -195,24 +195,23 @@ func TestNew(t *testing.T) {
 	}
 	stor := storage.New(s3mock, opt)
 
-	h := &Handler{db: db, query: repo, storage: stor, resize: resizer.Resize}
+	h := &Handler{db: db, query: repo, storage: stor}
 
 	type args struct {
 		db *sql.DB
 		q  *repository.Queries
 		s  *storage.Interactor
-		rf resizerFunc
 	}
 	tests := []struct {
 		name string
 		args args
 		want *Handler
 	}{
-		{"success", args{db, repo, stor, resizer.Resize}, h},
+		{"success", args{db, repo, stor}, h},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.db, tt.args.q, tt.args.s, tt.args.rf); reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
+			if got := New(tt.args.db, tt.args.q, tt.args.s); reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
 				t.Errorf("New() = %+v, want %+v", got, tt.want)
 			}
 		})

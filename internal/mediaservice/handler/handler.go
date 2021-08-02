@@ -3,13 +3,12 @@ package handler
 import (
 	"database/sql"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
 
-	"github.com/SatorNetwork/sator-api/internal/storage"
+	"github.com/SatorNetwork/sator-api/internal/mediaservice/storage"
+	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
 
 	"github.com/pkg/errors"
 )
@@ -29,14 +28,11 @@ type (
 		Message interface{} `json:"message"`
 	}
 
-	resizerFunc func(f io.ReadCloser, w, h int) (io.ReadSeeker, error)
-
 	// Handler struct
 	Handler struct {
 		db      *sql.DB
 		query   *repository.Queries
 		storage *storage.Interactor
-		resize  resizerFunc
 	}
 )
 
@@ -106,11 +102,10 @@ func (h Wrap) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // New is a factory function,
 // returns a new instance of the HTTP handler interactor
-func New(db *sql.DB, q *repository.Queries, s *storage.Interactor, rf resizerFunc) *Handler {
+func New(db *sql.DB, q *repository.Queries, s *storage.Interactor) *Handler {
 	return &Handler{
 		db:      db,
 		query:   q,
 		storage: s,
-		resize:  rf,
 	}
 }
