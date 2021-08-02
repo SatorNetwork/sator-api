@@ -24,11 +24,6 @@ const (
 	maxMessageSize = 512
 )
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
-
 type (
 	WsClient struct {
 		conn    *websocket.Conn
