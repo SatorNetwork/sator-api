@@ -4,13 +4,13 @@ import "time"
 
 // Predefined message types
 const (
-	UserConnectedMessage   = "player_connected"
+	UserConnectedMessage    = "player_connected"
 	UserDisconnectedMessage = "player_disconnected"
-	CountdownMessage       = "countdown"
-	QuestionMessage        = "question"
-	AnswerMessage          = "answer"
-	QuestionResultMessage  = "question_result"
-	ChallengeResultMessage = "challenge_result"
+	CountdownMessage        = "countdown"
+	QuestionMessage         = "question"
+	AnswerMessage           = "answer"
+	QuestionResultMessage   = "question_result"
+	ChallengeResultMessage  = "challenge_result"
 )
 
 type (
@@ -37,7 +37,6 @@ type (
 		TotalQuestions int            `json:"total_questions"`
 		QuestionNumber int            `json:"question_number"`
 		AnswerOptions  []AnswerOption `json:"answer_options"`
-		correctID      string
 	}
 
 	AnswerOption struct {
