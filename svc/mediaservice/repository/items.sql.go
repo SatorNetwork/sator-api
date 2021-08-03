@@ -5,47 +5,46 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
 
-const createItem = `-- name: CreateItem :one
-INSERT INTO items (id, filename, filepath, relation_type, relation_id)
-VALUES ($1, $2, $3, $4, $5)
-    RETURNING id, filename, filepath, relation_type, relation_id, created_at
+const addItem = `-- name: AddItem :one
+INSERT INTO items (id, filename, filepath)
+VALUES ($1, $2, $3)
+    RETURNING id, filename, filepath, created_at
 `
 
-type CreateItemParams struct {
-	ID           uuid.UUID      `json:"id"`
-	Filename     string         `json:"filename"`
-	Filepath     string         `json:"filepath"`
-	RelationType sql.NullString `json:"relation_type"`
-	RelationID   uuid.UUID      `json:"relation_id"`
+type AddItemParams struct {
+	ID       uuid.UUID `json:"id"`
+	Filename string    `json:"filename"`
+	Filepath string    `json:"filepath"`
 }
 
-func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, error) {
-	row := q.queryRow(ctx, q.createItemStmt, createItem,
-		arg.ID,
-		arg.Filename,
-		arg.Filepath,
-		arg.RelationType,
-		arg.RelationID,
-	)
+func (q *Queries) AddItem(ctx context.Context, arg AddItemParams) (Item, error) {
+	row := q.queryRow(ctx, q.addItemStmt, addItem, arg.ID, arg.Filename, arg.Filepath)
 	var i Item
 	err := row.Scan(
 		&i.ID,
 		&i.Filename,
 		&i.Filepath,
-		&i.RelationType,
-		&i.RelationID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const deleteItemByID = `-- name: DeleteItemByID :exec
+DELETE FROM items
+WHERE id = $1
+`
+
+func (q *Queries) DeleteItemByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteItemByIDStmt, deleteItemByID, id)
+	return err
+}
+
 const getItemByID = `-- name: GetItemByID :one
-SELECT id, filename, filepath, relation_type, relation_id, created_at FROM items
+SELECT id, filename, filepath, created_at FROM items
 WHERE id = $1
     LIMIT 1
 `
@@ -57,15 +56,13 @@ func (q *Queries) GetItemByID(ctx context.Context, id uuid.UUID) (Item, error) {
 		&i.ID,
 		&i.Filename,
 		&i.Filepath,
-		&i.RelationType,
-		&i.RelationID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getItemsList = `-- name: GetItemsList :many
-SELECT id, filename, filepath, relation_type, relation_id, created_at FROM items
+SELECT id, filename, filepath, created_at FROM items
 LIMIT $1 OFFSET $2
 `
 
@@ -87,8 +84,6 @@ func (q *Queries) GetItemsList(ctx context.Context, arg GetItemsListParams) ([]I
 			&i.ID,
 			&i.Filename,
 			&i.Filepath,
-			&i.RelationType,
-			&i.RelationID,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

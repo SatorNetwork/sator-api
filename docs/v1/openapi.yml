@@ -1235,3 +1235,147 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+  /images/{id}:
+    get:
+      tags:
+        - "Images"
+      summary: Get item by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Item ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns item data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  filename:
+                    type: string
+                    example: "filename"
+                  filepath:
+                    type: string
+                    example: "filepath"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Images"
+      summary: used for delete from storages item by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Item ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /images:
+    post:
+      tags:
+        - "Images"
+      summary: used to store new item.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  filename:
+                    type: string
+                    example: "filename"
+                  filepath:
+                    type: string
+                    example: "filepath"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Images"
+      summary: Get items list.
+      security:
+        - bearerAuth: [ ]
+
+      responses:
+        "200":
+          description: Returns item data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    filename:
+                      type: string
+                      example: "filename"
+                    filepath:
+                      type: string
+                      example: "filepath"
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"

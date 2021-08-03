@@ -9,9 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/SatorNetwork/sator-api/svc/mediaservice"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
@@ -21,7 +24,9 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
+	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	mediaServicesRepo "github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -253,6 +258,30 @@ func main() {
 			logger,
 		))
 	}
+
+	// media service
+	disableSSL, _ := strconv.ParseBool(os.Getenv("STORAGE_DISABLE_SSL"))
+	forcePathStyle, _ := strconv.ParseBool(os.Getenv("STORAGE_FORCE_PATH_STYLE"))
+	opt := storage.Options{
+		Key:            os.Getenv("STORAGE_KEY"),
+		Secret:         os.Getenv("STORAGE_SECRET"),
+		Endpoint:       os.Getenv("STORAGE_ENDPOINT"),
+		Region:         os.Getenv("STORAGE_REGION"),
+		Bucket:         os.Getenv("STORAGE_BUCKET"),
+		URL:            os.Getenv("STORAGE_URL"),
+		DisableSSL:     disableSSL,
+		ForcePathStyle: forcePathStyle,
+	}
+	stor := storage.New(storage.NewS3Client(opt), opt)
+
+	mediaServiceRepo, err := mediaServicesRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("mediaServiceRepo error: %v", err)
+	}
+	r.Mount("/images", mediaservice.MakeHTTPHandler(
+		mediaservice.MakeEndpoints(mediaservice.NewService(mediaServiceRepo, db, stor), jwtMdw),
+		logger,
+	))
 
 	var rewardsSvcClient *rewardsClient.Client
 	// Rewards service

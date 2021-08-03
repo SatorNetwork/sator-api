@@ -3,17 +3,14 @@
 package repository
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type Item struct {
-	ID           uuid.UUID      `json:"id"`
-	Filename     string         `json:"filename"`
-	Filepath     string         `json:"filepath"`
-	RelationType sql.NullString `json:"relation_type"`
-	RelationID   uuid.UUID      `json:"relation_id"`
-	CreatedAt    time.Time      `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	Filename  string    `json:"filename"`
+	Filepath  string    `json:"filepath"`
+	CreatedAt time.Time `json:"created_at"`
 }
