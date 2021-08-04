@@ -28,6 +28,7 @@ type (
 		ID        uuid.UUID `json:"id"`
 		Filename  string    `json:"filename"`
 		Filepath  string    `json:"filepath"`
+		FileUrl   string    `json:"file_url"`
 		CreatedAt string    `json:"created_at"`
 	}
 
@@ -68,9 +69,11 @@ func (s *Service) AddItem(ctx context.Context, it Item, file io.ReadSeeker, file
 
 	item, err := s.msr.AddItem(ctx, repository.AddItemParams{
 		ID:       id,
-		Filename: fileHeader.Filename,
-		Filepath: s.storage.FileURL(s.storage.FilePath(fileName)),
+		FileName: fileHeader.Filename,
+		FilePath: s.storage.FilePath(fileName),
+		FileUrl:  s.storage.FileURL(s.storage.FilePath(fileName)),
 	})
+
 	if err != nil {
 		return Item{}, fmt.Errorf("could not add item with file name=%s: %w", it.Filename, err)
 	}
@@ -79,7 +82,7 @@ func (s *Service) AddItem(ctx context.Context, it Item, file io.ReadSeeker, file
 		tx.Rollback()
 		return Item{}, errors.Wrap(err, "store item to db")
 	}
-	if err := s.storage.Upload(file, item.Filepath, storage.Public, ct); err != nil {
+	if err := s.storage.Upload(file, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
 		tx.Rollback()
 		return Item{}, errors.Wrap(err, "upload image")
 	}
@@ -98,7 +101,8 @@ func (s *Service) DeleteItemByID(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("could not get item with id=%s: %w", id, err)
 	}
 
-	err = s.storage.Remove(item.Filepath)
+	//fileName := fmt.Sprintf("%s%s", item.ID, path.Ext(".png"))
+	err = s.storage.Remove(item.FilePath)
 	if err != nil {
 		return errors.Wrap(err, "could not delete item from storage")
 	}
@@ -137,8 +141,9 @@ func (s *Service) GetItemsList(ctx context.Context, limit, offset int32) ([]Item
 func castToItem(source repository.Item) Item {
 	return Item{
 		ID:        source.ID,
-		Filename:  source.Filename,
-		Filepath:  source.Filepath,
+		Filename:  source.FileName,
+		Filepath:  source.FilePath,
+		FileUrl:   source.FileUrl,
 		CreatedAt: source.CreatedAt.String(),
 	}
 }
@@ -149,8 +154,9 @@ func castToListItems(source []repository.Item) []Item {
 	for _, s := range source {
 		result = append(result, Item{
 			ID:        s.ID,
-			Filename:  s.Filename,
-			Filepath:  s.Filepath,
+			Filename:  s.FileName,
+			Filepath:  s.FilePath,
+			FileUrl:   s.FileUrl,
 			CreatedAt: s.CreatedAt.String(),
 		})
 	}

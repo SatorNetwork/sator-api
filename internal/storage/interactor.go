@@ -109,5 +109,6 @@ func (i *Interactor) FileURL(filepath string) string {
 	if i.forcePathStyle {
 		return fmt.Sprintf("%s/%s/%s", i.url, i.bucket, filepath)
 	}
+
 	return fmt.Sprintf("%s/%s", i.url, filepath)
 }

@@ -120,7 +120,6 @@ func decodeAddItemRequest(_ context.Context, r *http.Request) (interface{}, erro
 	defer file.Close()
 
 	var req AddItemRequest
-
 	req.File = file
 	req.FileHeader = header
 

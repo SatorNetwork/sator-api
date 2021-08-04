@@ -6,8 +6,8 @@ WHERE id = $1
 SELECT * FROM items
 LIMIT $1 OFFSET $2;
 -- name: AddItem :one
-INSERT INTO items (id, filename, filepath)
-VALUES ($1, $2, $3)
+INSERT INTO items (id, file_name, file_path, file_url)
+VALUES ($1, $2, $3, $4)
     RETURNING *;
 -- name: DeleteItemByID :exec
 DELETE FROM items

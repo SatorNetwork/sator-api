@@ -10,7 +10,8 @@ import (
 
 type Item struct {
 	ID        uuid.UUID `json:"id"`
-	Filename  string    `json:"filename"`
-	Filepath  string    `json:"filepath"`
+	FileName  string    `json:"file_name"`
+	FilePath  string    `json:"file_path"`
+	FileUrl   string    `json:"file_url"`
 	CreatedAt time.Time `json:"created_at"`
 }

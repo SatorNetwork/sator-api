@@ -10,24 +10,31 @@ import (
 )
 
 const addItem = `-- name: AddItem :one
-INSERT INTO items (id, filename, filepath)
-VALUES ($1, $2, $3)
-    RETURNING id, filename, filepath, created_at
+INSERT INTO items (id, file_name, file_path, file_url)
+VALUES ($1, $2, $3, $4)
+    RETURNING id, file_name, file_path, file_url, created_at
 `
 
 type AddItemParams struct {
 	ID       uuid.UUID `json:"id"`
-	Filename string    `json:"filename"`
-	Filepath string    `json:"filepath"`
+	FileName string    `json:"file_name"`
+	FilePath string    `json:"file_path"`
+	FileUrl  string    `json:"file_url"`
 }
 
 func (q *Queries) AddItem(ctx context.Context, arg AddItemParams) (Item, error) {
-	row := q.queryRow(ctx, q.addItemStmt, addItem, arg.ID, arg.Filename, arg.Filepath)
+	row := q.queryRow(ctx, q.addItemStmt, addItem,
+		arg.ID,
+		arg.FileName,
+		arg.FilePath,
+		arg.FileUrl,
+	)
 	var i Item
 	err := row.Scan(
 		&i.ID,
-		&i.Filename,
-		&i.Filepath,
+		&i.FileName,
+		&i.FilePath,
+		&i.FileUrl,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -44,7 +51,7 @@ func (q *Queries) DeleteItemByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getItemByID = `-- name: GetItemByID :one
-SELECT id, filename, filepath, created_at FROM items
+SELECT id, file_name, file_path, file_url, created_at FROM items
 WHERE id = $1
     LIMIT 1
 `
@@ -54,15 +61,16 @@ func (q *Queries) GetItemByID(ctx context.Context, id uuid.UUID) (Item, error) {
 	var i Item
 	err := row.Scan(
 		&i.ID,
-		&i.Filename,
-		&i.Filepath,
+		&i.FileName,
+		&i.FilePath,
+		&i.FileUrl,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getItemsList = `-- name: GetItemsList :many
-SELECT id, filename, filepath, created_at FROM items
+SELECT id, file_name, file_path, file_url, created_at FROM items
 LIMIT $1 OFFSET $2
 `
 
@@ -82,8 +90,9 @@ func (q *Queries) GetItemsList(ctx context.Context, arg GetItemsListParams) ([]I
 		var i Item
 		if err := rows.Scan(
 			&i.ID,
-			&i.Filename,
-			&i.Filepath,
+			&i.FileName,
+			&i.FilePath,
+			&i.FileUrl,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
