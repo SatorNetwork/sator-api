@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -24,11 +23,11 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/files"
+	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
-	"github.com/SatorNetwork/sator-api/svc/mediaservice"
-	mediaServicesRepo "github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -107,6 +106,16 @@ var (
 	//	 Invitation
 	invitationReward = env.GetInt("INVITATION_REWARD", 0)
 	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
+
+	// File Storage
+	fileStorageKey            = env.MustString("STORAGE_KEY")
+	fileStorageSecret         = env.MustString("STORAGE_SECRET")
+	fileStorageEndpoint       = env.MustString("STORAGE_ENDPOINT")
+	fileStorageRegion         = env.MustString("STORAGE_REGION")
+	fileStorageBucket         = env.MustString("STORAGE_BUCKET")
+	fileStorageUrl            = env.MustString("STORAGE_URL")
+	fileStorageDisableSsl     = env.GetBool("STORAGE_DISABLE_SSL", true)
+	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
 )
 
 func main() {
@@ -191,13 +200,6 @@ func main() {
 			logger,
 		))
 	}
-
-	//// Questions service
-	//questionsRepository, err := questionsRepo.Prepare(ctx, db)
-	//if err != nil {
-	//	log.Fatalf("questionsRepo error: %v", err)
-	//}
-	//questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
 
 	// Rewards service
 	var rewardsSvcClient *rewardsClient.Client
@@ -302,29 +304,29 @@ func main() {
 		))
 	}
 
-	// media service
-	disableSSL, _ := strconv.ParseBool(os.Getenv("STORAGE_DISABLE_SSL"))
-	forcePathStyle, _ := strconv.ParseBool(os.Getenv("STORAGE_FORCE_PATH_STYLE"))
-	opt := storage.Options{
-		Key:            os.Getenv("STORAGE_KEY"),
-		Secret:         os.Getenv("STORAGE_SECRET"),
-		Endpoint:       os.Getenv("STORAGE_ENDPOINT"),
-		Region:         os.Getenv("STORAGE_REGION"),
-		Bucket:         os.Getenv("STORAGE_BUCKET"),
-		URL:            os.Getenv("STORAGE_URL"),
-		DisableSSL:     disableSSL,
-		ForcePathStyle: forcePathStyle,
-	}
-	stor := storage.New(storage.NewS3Client(opt), opt)
+	// files service
+	{
+		opt := storage.Options{
+			Key:            fileStorageKey,
+			Secret:         fileStorageSecret,
+			Endpoint:       fileStorageEndpoint,
+			Region:         fileStorageRegion,
+			Bucket:         fileStorageBucket,
+			URL:            fileStorageUrl,
+			DisableSSL:     fileStorageDisableSsl,
+			ForcePathStyle: fileStorageForcePathStyle,
+		}
+		stor := storage.New(storage.NewS3Client(opt), opt)
 
-	mediaServiceRepo, err := mediaServicesRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("mediaServiceRepo error: %v", err)
+		mediaServiceRepo, err := filesRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("mediaServiceRepo error: %v", err)
+		}
+		r.Mount("/files", files.MakeHTTPHandler(
+			files.MakeEndpoints(files.NewService(mediaServiceRepo, db, stor), jwtMdw),
+			logger,
+		))
 	}
-	r.Mount("/images", mediaservice.MakeHTTPHandler(
-		mediaservice.MakeEndpoints(mediaservice.NewService(mediaServiceRepo, db, stor), jwtMdw),
-		logger,
-	))
 
 	// Balance service
 	{
@@ -402,14 +404,6 @@ func main() {
 			return fmt.Errorf("terminated with sig %q", c)
 		}, func(err error) {})
 	}
-
-	// Init and run http server
-	// httpServer := &http.Server{
-	// 	Handler: r,
-	// 	Addr:    fmt.Sprintf(":%d", appPort),
-	// }
-	// httpServer.RegisterOnShutdown(cancel)
-	// graceful.LogListenAndServe(httpServer, log.Default())
 
 	if err := g.Run(); err != nil {
 		log.Println("API terminated with error:", err)

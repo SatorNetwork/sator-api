@@ -1,4 +1,4 @@
-package mediaservice
+package files
 
 import "errors"
 

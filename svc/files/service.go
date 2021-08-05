@@ -1,4 +1,4 @@
-package mediaservice
+package files
 
 import (
 	"context"
@@ -10,8 +10,7 @@ import (
 	"path"
 
 	"github.com/SatorNetwork/sator-api/internal/storage"
-	"github.com/SatorNetwork/sator-api/svc/mediaservice/repository"
-
+	"github.com/SatorNetwork/sator-api/svc/files/repository"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -33,10 +32,10 @@ type (
 	}
 
 	mediaServiceRepository interface {
-		AddImage(ctx context.Context, arg repository.AddImageParams) (repository.Image, error)
-		GetImageByID(ctx context.Context, id uuid.UUID) (repository.Image, error)
-		GetImagesList(ctx context.Context, arg repository.GetImagesListParams) ([]repository.Image, error)
-		DeleteImageByID(ctx context.Context, id uuid.UUID) error
+		AddFile(ctx context.Context, arg repository.AddFileParams) (repository.File, error)
+		GetFileByID(ctx context.Context, id uuid.UUID) (repository.File, error)
+		GetFilesList(ctx context.Context, arg repository.GetFilesListParams) ([]repository.File, error)
+		DeleteFileByID(ctx context.Context, id uuid.UUID) error
 	}
 )
 
@@ -67,7 +66,7 @@ func (s *Service) AddImage(ctx context.Context, it Image, file io.ReadSeeker, fi
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	ct := fileHeader.Header.Get("Content-Type")
 
-	image, err := s.msr.AddImage(ctx, repository.AddImageParams{
+	image, err := s.msr.AddFile(ctx, repository.AddFileParams{
 		ID:       id,
 		FileName: fileHeader.Filename,
 		FilePath: s.storage.FilePath(fileName),
@@ -91,12 +90,12 @@ func (s *Service) AddImage(ctx context.Context, it Image, file io.ReadSeeker, fi
 		return Image{}, errors.Wrap(err, "commit image")
 	}
 
-	return castToImage(image), nil
+	return castToFile(image), nil
 }
 
-// DeleteImageByID used to delete Image by provided id.
+// DeleteImageByID used to delete File by provided id.
 func (s *Service) DeleteImageByID(ctx context.Context, id uuid.UUID) error {
-	image, err := s.msr.GetImageByID(ctx, id)
+	image, err := s.msr.GetFileByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("could not get image with id=%s: %w", id, err)
 	}
@@ -107,7 +106,7 @@ func (s *Service) DeleteImageByID(ctx context.Context, id uuid.UUID) error {
 		return errors.Wrap(err, "could not delete image from storage")
 	}
 
-	err = s.msr.DeleteImageByID(ctx, id)
+	err = s.msr.DeleteFileByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("could not delete image with id=%s:%w", id, err)
 	}
@@ -117,28 +116,28 @@ func (s *Service) DeleteImageByID(ctx context.Context, id uuid.UUID) error {
 
 // GetImageByID returns image with provided id.
 func (s *Service) GetImageByID(ctx context.Context, id uuid.UUID) (Image, error) {
-	image, err := s.msr.GetImageByID(ctx, id)
+	image, err := s.msr.GetFileByID(ctx, id)
 	if err != nil {
 		return Image{}, fmt.Errorf("could not get image with id=%s: %w", id, err)
 	}
 
-	return castToImage(image), nil
+	return castToFile(image), nil
 }
 
 // GetImagesList returns list images.
 func (s *Service) GetImagesList(ctx context.Context, limit, offset int32) ([]Image, error) {
-	images, err := s.msr.GetImagesList(ctx, repository.GetImagesListParams{
+	images, err := s.msr.GetFilesList(ctx, repository.GetFilesListParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return []Image{}, fmt.Errorf("could not get images list: %w", err)
+		return nil, fmt.Errorf("could not get images list: %w", err)
 	}
-	return castToListImages(images), nil
+	return castToListFiles(images), nil
 }
 
-// Cast repository.Image to service Image structure
-func castToImage(source repository.Image) Image {
+// Cast repository.File to service File structure
+func castToFile(source repository.File) Image {
 	return Image{
 		ID:        source.ID,
 		Filename:  source.FileName,
@@ -148,8 +147,8 @@ func castToImage(source repository.Image) Image {
 	}
 }
 
-// Cast repository.Image to service Image structure
-func castToListImages(source []repository.Image) []Image {
+// Cast repository.File to service File structure
+func castToListFiles(source []repository.File) []Image {
 	result := make([]Image, 0, len(source))
 	for _, s := range source {
 		result = append(result, Image{

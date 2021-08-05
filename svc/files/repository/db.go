@@ -22,41 +22,41 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addImageStmt, err = db.PrepareContext(ctx, addImage); err != nil {
-		return nil, fmt.Errorf("error preparing query AddImage: %w", err)
+	if q.addFileStmt, err = db.PrepareContext(ctx, addFile); err != nil {
+		return nil, fmt.Errorf("error preparing query AddFile: %w", err)
 	}
-	if q.deleteImageByIDStmt, err = db.PrepareContext(ctx, deleteImageByID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteImageByID: %w", err)
+	if q.deleteFileByIDStmt, err = db.PrepareContext(ctx, deleteFileByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteFileByID: %w", err)
 	}
-	if q.getImageByIDStmt, err = db.PrepareContext(ctx, getImageByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetImageByID: %w", err)
+	if q.getFileByIDStmt, err = db.PrepareContext(ctx, getFileByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetFileByID: %w", err)
 	}
-	if q.getImagesListStmt, err = db.PrepareContext(ctx, getImagesList); err != nil {
-		return nil, fmt.Errorf("error preparing query GetImagesList: %w", err)
+	if q.getFilesListStmt, err = db.PrepareContext(ctx, getFilesList); err != nil {
+		return nil, fmt.Errorf("error preparing query GetFilesList: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addImageStmt != nil {
-		if cerr := q.addImageStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addImageStmt: %w", cerr)
+	if q.addFileStmt != nil {
+		if cerr := q.addFileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addFileStmt: %w", cerr)
 		}
 	}
-	if q.deleteImageByIDStmt != nil {
-		if cerr := q.deleteImageByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteImageByIDStmt: %w", cerr)
+	if q.deleteFileByIDStmt != nil {
+		if cerr := q.deleteFileByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteFileByIDStmt: %w", cerr)
 		}
 	}
-	if q.getImageByIDStmt != nil {
-		if cerr := q.getImageByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getImageByIDStmt: %w", cerr)
+	if q.getFileByIDStmt != nil {
+		if cerr := q.getFileByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getFileByIDStmt: %w", cerr)
 		}
 	}
-	if q.getImagesListStmt != nil {
-		if cerr := q.getImagesListStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getImagesListStmt: %w", cerr)
+	if q.getFilesListStmt != nil {
+		if cerr := q.getFilesListStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getFilesListStmt: %w", cerr)
 		}
 	}
 	return err
@@ -96,21 +96,21 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                  DBTX
-	tx                  *sql.Tx
-	addImageStmt        *sql.Stmt
-	deleteImageByIDStmt *sql.Stmt
-	getImageByIDStmt    *sql.Stmt
-	getImagesListStmt   *sql.Stmt
+	db                 DBTX
+	tx                 *sql.Tx
+	addFileStmt        *sql.Stmt
+	deleteFileByIDStmt *sql.Stmt
+	getFileByIDStmt    *sql.Stmt
+	getFilesListStmt   *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                  tx,
-		tx:                  tx,
-		addImageStmt:        q.addImageStmt,
-		deleteImageByIDStmt: q.deleteImageByIDStmt,
-		getImageByIDStmt:    q.getImageByIDStmt,
-		getImagesListStmt:   q.getImagesListStmt,
+		db:                 tx,
+		tx:                 tx,
+		addFileStmt:        q.addFileStmt,
+		deleteFileByIDStmt: q.deleteFileByIDStmt,
+		getFileByIDStmt:    q.getFileByIDStmt,
+		getFilesListStmt:   q.getFilesListStmt,
 	}
 }

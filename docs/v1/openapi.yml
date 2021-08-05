@@ -1261,10 +1261,10 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
-  /images/{id}:
+  /files/images/{id}:
     get:
       tags:
-        - "Images"
+        - "File Storage / Images"
       summary: Get image by id.
       security:
         - bearerAuth: [ ]
@@ -1308,7 +1308,7 @@ paths:
 
     delete:
       tags:
-        - "Images"
+        - "File Storage / Images"
       summary: used for delete from storages image by id.
       security:
         - bearerAuth: [ ]
@@ -1329,10 +1329,10 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /images:
+  /files/images:
     post:
       tags:
-        - "Images"
+        - "File Storage / Images"
       summary: used to store new image.
       security:
         - bearerAuth: [ ]
@@ -1376,7 +1376,7 @@ paths:
 
     get:
       tags:
-        - "Images"
+        - "File Storage / Images"
       summary: Get images list.
       security:
         - bearerAuth: [ ]

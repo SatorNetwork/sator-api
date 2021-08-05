@@ -1,4 +1,4 @@
-package mediaservice
+package files
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"mime/multipart"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -30,8 +29,8 @@ type (
 
 	// PaginationRequest struct
 	PaginationRequest struct {
-		Page         int32 `json:"page,omimagepty" validate:"number,gte=0"`
-		ImagesPerPage int32 `json:"images_per_page,omimagepty" validate:"number,gte=0"`
+		Page          int32 `json:"page,omitempty" validate:"number,gte=0"`
+		ImagesPerPage int32 `json:"images_per_page,omitempty" validate:"number,gte=0"`
 	}
 
 	// AddImageRequest struct

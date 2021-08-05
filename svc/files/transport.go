@@ -1,4 +1,4 @@
-package mediaservice
+package files
 
 import (
 	"context"
@@ -39,33 +39,35 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Post("/", httptransport.NewServer(
-		e.AddImage,
-		decodeAddImageRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+	r.Route("/images", func(r chi.Router) {
+		r.Post("/", httptransport.NewServer(
+			e.AddImage,
+			decodeAddImageRequest,
+			httpencoder.EncodeResponse,
+			options...,
+		).ServeHTTP)
 
-	r.Get("/", httptransport.NewServer(
-		e.GetImagesList,
-		decodeGetImagesListRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+		r.Get("/", httptransport.NewServer(
+			e.GetImagesList,
+			decodeGetImagesListRequest,
+			httpencoder.EncodeResponse,
+			options...,
+		).ServeHTTP)
 
-	r.Get("/{id}", httptransport.NewServer(
-		e.GetImageByID,
-		decodeGetImageByIDRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+		r.Get("/{id}", httptransport.NewServer(
+			e.GetImageByID,
+			decodeGetImageByIDRequest,
+			httpencoder.EncodeResponse,
+			options...,
+		).ServeHTTP)
 
-	r.Delete("/{id}", httptransport.NewServer(
-		e.DeleteImageByID,
-		decodeDeleteImageByIDRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+		r.Delete("/{id}", httptransport.NewServer(
+			e.DeleteImageByID,
+			decodeDeleteImageByIDRequest,
+			httpencoder.EncodeResponse,
+			options...,
+		).ServeHTTP)
+	})
 
 	return r
 }
