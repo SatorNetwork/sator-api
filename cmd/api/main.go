@@ -215,14 +215,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("invitationsRepo error: %v", err)
 	}
-	invitationsClient := invitationsClient.New(invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
-		InvitationReward: float64(invitationReward),
-		InvitationURL:    invitationURL,
-	}))
 	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
 		InvitationReward: float64(invitationReward),
 		InvitationURL:    invitationURL,
 	})
+	invitationsClient := invitationsClient.New(invitationsService)
 	r.Mount("/invitations", invitations.MakeHTTPHandler(
 		invitations.MakeEndpoints(invitationsService, jwtMdw),
 		logger,

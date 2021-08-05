@@ -197,13 +197,9 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
 
-	normalizedEmail := strings.ToUpper(email)
-
-	isInvited, err := s.ic.IsEmailInvited(ctx, normalizedEmail)
-	if isInvited == true {
-		err = s.ic.AcceptInvitation(ctx, u.ID, normalizedEmail)
-		if err != nil {
-			return "", fmt.Errorf("could not accept invitation for user id = %s: %w", u.ID, err)
+	if isInvited, _ := s.ic.IsEmailInvited(ctx, email); isInvited {
+		if err := s.ic.AcceptInvitation(ctx, u.ID, email); err != nil {
+			log.Printf("could not accept invitation for user id = %s: %v", u.ID, err)
 		}
 	}
 
