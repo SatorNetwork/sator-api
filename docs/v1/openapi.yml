@@ -1237,59 +1237,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /challenges/questions:
-    post:
-      tags:
-        - "Questions"
-      summary: Used for create new question.
-      security:
-        - bearerAuth: [ ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                challenge_id:
-                  type: string
-                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                  required: true
-                question:
-                  type: string
-                  example: "question"
-                  required: true
-                order:
-                  type: integer
-                  example: 1
-      responses:
-        "200":
-          description: Returns question details.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                  challenge_id:
-                    type: string
-                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                  question:
-                    type: string
-                    example: "question"
-                  order:
-                    type: number
-                    example: true
-        "400":
-          $ref: "#/components/responses/DefaultError"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          $ref: "#/components/responses/DefaultError"
-
-  /challenges/questions/{question_id}:
+  /challenges/{challenge_id}/questions/{question_id}:
     get:
       tags:
         - "Questions"
@@ -1297,6 +1245,12 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
+        - name: challenge_id
+          in: path
+          description: Challenge ID.
+          required: true
+          schema:
+            type: string
         - name: question_id
           in: path
           description: Question ID.
@@ -1368,11 +1322,9 @@ paths:
                 challenge_id:
                   type: string
                   example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                  required: true
                 question:
                   type: string
                   example: "question"
-                  required: true
                 order:
                   type: integer
                   example: 2
@@ -1466,6 +1418,62 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+    post:
+      tags:
+        - "Questions"
+      summary: Used for create new question.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Challenge ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                challenge_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                question:
+                  type: string
+                  example: "question"
+                order:
+                  type: integer
+                  example: 1
+      responses:
+        "200":
+          description: Returns question details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  challenge_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question:
+                    type: string
+                    example: "question"
+                  order:
+                    type: number
+                    example: true
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /challenges/questions/{question_id}/answers:
     post:
@@ -1475,6 +1483,12 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
+        - name: id
+          in: path
+          description: Challenge ID.
+          required: true
+          schema:
+            type: string
         - name: question_id
           in: path
           description: Question ID.
@@ -1491,7 +1505,6 @@ paths:
                 option:
                   type: string
                   example: "option"
-                  required: true
                 is_correct:
                   type: string
                   example: "true"
@@ -1552,7 +1565,6 @@ paths:
                 option:
                   type: string
                   example: "option"
-                  required: true
                 is_correct:
                   type: string
                   example: "true"
