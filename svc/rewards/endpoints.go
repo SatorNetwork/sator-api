@@ -23,11 +23,12 @@ type (
 	service interface {
 		ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error)
 		GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error)
-		GetTransactions(ctx context.Context, userID uuid.UUID, limit, offset int32) (wallet.Transactions, error)
+		GetTransactions(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (wallet.Transactions, error)
 	}
 
 	// GetTransactionsRequest struct
 	GetTransactionsRequest struct {
+		WalletID string
 		PaginationRequest
 	}
 
@@ -127,7 +128,12 @@ func MakeGetTransactionsEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			return nil, err
 		}
 
-		transactions, err := s.GetTransactions(ctx, uid, req.Limit(), req.Offset())
+		walletID, err := uuid.Parse(req.WalletID)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse wallet id: %w", err)
+		}
+
+		transactions, err := s.GetTransactions(ctx, uid, walletID, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}

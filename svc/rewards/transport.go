@@ -73,6 +73,7 @@ func decodeGetRewardsWalletRequest(_ context.Context, r *http.Request) (interfac
 
 func decodeGetTransactionsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetTransactionsRequest{
+		WalletID: chi.URLParam(r, "wallet_id"),
 		PaginationRequest: PaginationRequest{
 			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
@@ -86,7 +87,7 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 }
 
 func castStrToInt32(source string) int32 {
-	res, err := strconv.Atoi(source)
+	res, err := strconv.ParseInt(source, 10, 32)
 	if err != nil {
 		return 0
 	}

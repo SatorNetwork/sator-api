@@ -10,8 +10,54 @@ import (
 	"github.com/google/uuid"
 )
 
+const addShow = `-- name: AddShow :exec
+INSERT INTO shows (
+    title,
+    cover,
+    has_new_episode,
+    category,
+    description
+  )
+VALUES (
+           $1,
+           $2,
+           $3,
+           $4,
+           $5
+       )
+`
+
+type AddShowParams struct {
+	Title         string         `json:"title"`
+	Cover         string         `json:"cover"`
+	HasNewEpisode bool           `json:"has_new_episode"`
+	Category      sql.NullString `json:"category"`
+	Description   sql.NullString `json:"description"`
+}
+
+func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) error {
+	_, err := q.exec(ctx, q.addShowStmt, addShow,
+		arg.Title,
+		arg.Cover,
+		arg.HasNewEpisode,
+		arg.Category,
+		arg.Description,
+	)
+	return err
+}
+
+const deleteShowByID = `-- name: DeleteShowByID :exec
+DELETE FROM shows
+WHERE id = $1
+`
+
+func (q *Queries) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteShowByIDStmt, deleteShowByID, id)
+	return err
+}
+
 const getShowByID = `-- name: GetShowByID :one
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
 FROM shows
 WHERE id = $1
 `
@@ -27,12 +73,13 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.Category,
+		&i.Description,
 	)
 	return i, err
 }
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
 FROM shows
 ORDER BY has_new_episode DESC,
     updated_at DESC,
@@ -62,6 +109,7 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.Category,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -77,7 +125,7 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
 FROM shows
 WHERE category = $1
 ORDER BY has_new_episode DESC,
@@ -109,6 +157,7 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.Category,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -121,4 +170,35 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateShow = `-- name: UpdateShow :exec
+UPDATE shows
+SET title = $1,
+    cover = $2,
+    has_new_episode = $3,
+    category = $4,
+    description = $5
+WHERE id = $6
+`
+
+type UpdateShowParams struct {
+	Title         string         `json:"title"`
+	Cover         string         `json:"cover"`
+	HasNewEpisode bool           `json:"has_new_episode"`
+	Category      sql.NullString `json:"category"`
+	Description   sql.NullString `json:"description"`
+	ID            uuid.UUID      `json:"id"`
+}
+
+func (q *Queries) UpdateShow(ctx context.Context, arg UpdateShowParams) error {
+	_, err := q.exec(ctx, q.updateShowStmt, updateShow,
+		arg.Title,
+		arg.Cover,
+		arg.HasNewEpisode,
+		arg.Category,
+		arg.Description,
+		arg.ID,
+	)
+	return err
 }
