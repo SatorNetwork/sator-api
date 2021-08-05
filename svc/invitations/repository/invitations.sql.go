@@ -14,72 +14,69 @@ const acceptInvitationByInviteeEmail = `-- name: AcceptInvitationByInviteeEmail 
 UPDATE invitations
 SET accepted_by = $1,
     accepted_at = $2
-WHERE invitee_email = $3
+WHERE id = $3
 `
 
 type AcceptInvitationByInviteeEmailParams struct {
-	AcceptedBy   uuid.UUID    `json:"accepted_by"`
-	AcceptedAt   sql.NullTime `json:"accepted_at"`
-	InviteeEmail string       `json:"invitee_email"`
+	AcceptedBy uuid.UUID    `json:"accepted_by"`
+	AcceptedAt sql.NullTime `json:"accepted_at"`
+	ID         uuid.UUID    `json:"id"`
 }
 
 func (q *Queries) AcceptInvitationByInviteeEmail(ctx context.Context, arg AcceptInvitationByInviteeEmailParams) error {
-	_, err := q.exec(ctx, q.acceptInvitationByInviteeEmailStmt, acceptInvitationByInviteeEmail, arg.AcceptedBy, arg.AcceptedAt, arg.InviteeEmail)
+	_, err := q.exec(ctx, q.acceptInvitationByInviteeEmailStmt, acceptInvitationByInviteeEmail, arg.AcceptedBy, arg.AcceptedAt, arg.ID)
 	return err
 }
 
 const createInvitation = `-- name: CreateInvitation :one
-INSERT INTO invitations (invitee_email, normalized_invitee_email, invited_by, accepted_by)
-VALUES ($1, $2, $3, uuid_nil()) RETURNING id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by, reward_received
+INSERT INTO invitations (email, invited_by)
+VALUES ($1, $2) RETURNING id, email, invited_by, invited_at, accepted_by, accepted_at, reward_received
 `
 
 type CreateInvitationParams struct {
-	InviteeEmail           string    `json:"invitee_email"`
-	NormalizedInviteeEmail string    `json:"normalized_invitee_email"`
-	InvitedBy              uuid.UUID `json:"invited_by"`
+	Email     string    `json:"email"`
+	InvitedBy uuid.UUID `json:"invited_by"`
 }
 
 func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error) {
-	row := q.queryRow(ctx, q.createInvitationStmt, createInvitation, arg.InviteeEmail, arg.NormalizedInviteeEmail, arg.InvitedBy)
+	row := q.queryRow(ctx, q.createInvitationStmt, createInvitation, arg.Email, arg.InvitedBy)
 	var i Invitation
 	err := row.Scan(
 		&i.ID,
-		&i.InviteeEmail,
-		&i.NormalizedInviteeEmail,
-		&i.InvitedAt,
+		&i.Email,
 		&i.InvitedBy,
-		&i.AcceptedAt,
+		&i.InvitedAt,
 		&i.AcceptedBy,
+		&i.AcceptedAt,
 		&i.RewardReceived,
 	)
 	return i, err
 }
 
 const getInvitationByInviteeEmail = `-- name: GetInvitationByInviteeEmail :one
-SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by, reward_received
+SELECT id, email, invited_by, invited_at, accepted_by, accepted_at, reward_received
 FROM invitations
-WHERE normalized_invitee_email = $1
+WHERE email = $1
     LIMIT 1
 `
 
-func (q *Queries) GetInvitationByInviteeEmail(ctx context.Context, normalizedInviteeEmail string) (Invitation, error) {
-	row := q.queryRow(ctx, q.getInvitationByInviteeEmailStmt, getInvitationByInviteeEmail, normalizedInviteeEmail)
+func (q *Queries) GetInvitationByInviteeEmail(ctx context.Context, email string) (Invitation, error) {
+	row := q.queryRow(ctx, q.getInvitationByInviteeEmailStmt, getInvitationByInviteeEmail, email)
 	var i Invitation
 	err := row.Scan(
 		&i.ID,
-		&i.InviteeEmail,
-		&i.NormalizedInviteeEmail,
-		&i.InvitedAt,
+		&i.Email,
 		&i.InvitedBy,
-		&i.AcceptedAt,
+		&i.InvitedAt,
 		&i.AcceptedBy,
+		&i.AcceptedAt,
 		&i.RewardReceived,
 	)
 	return i, err
 }
 
 const getInvitationByInviteeID = `-- name: GetInvitationByInviteeID :one
-SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by, reward_received
+SELECT id, email, invited_by, invited_at, accepted_by, accepted_at, reward_received
 FROM invitations
 WHERE accepted_by = $1
     LIMIT 1
@@ -90,19 +87,18 @@ func (q *Queries) GetInvitationByInviteeID(ctx context.Context, acceptedBy uuid.
 	var i Invitation
 	err := row.Scan(
 		&i.ID,
-		&i.InviteeEmail,
-		&i.NormalizedInviteeEmail,
-		&i.InvitedAt,
+		&i.Email,
 		&i.InvitedBy,
-		&i.AcceptedAt,
+		&i.InvitedAt,
 		&i.AcceptedBy,
+		&i.AcceptedAt,
 		&i.RewardReceived,
 	)
 	return i, err
 }
 
 const getInvitations = `-- name: GetInvitations :many
-SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by, reward_received
+SELECT id, email, invited_by, invited_at, accepted_by, accepted_at, reward_received
 FROM invitations
 ORDER BY invited_at DESC
 `
@@ -118,12 +114,11 @@ func (q *Queries) GetInvitations(ctx context.Context) ([]Invitation, error) {
 		var i Invitation
 		if err := rows.Scan(
 			&i.ID,
-			&i.InviteeEmail,
-			&i.NormalizedInviteeEmail,
-			&i.InvitedAt,
+			&i.Email,
 			&i.InvitedBy,
-			&i.AcceptedAt,
+			&i.InvitedAt,
 			&i.AcceptedBy,
+			&i.AcceptedAt,
 			&i.RewardReceived,
 		); err != nil {
 			return nil, err
@@ -139,15 +134,15 @@ func (q *Queries) GetInvitations(ctx context.Context) ([]Invitation, error) {
 	return items, nil
 }
 
-const getInvitationsByInvitedByID = `-- name: GetInvitationsByInvitedByID :many
-SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by, reward_received
+const getInvitationsByInviterID = `-- name: GetInvitationsByInviterID :many
+SELECT id, email, invited_by, invited_at, accepted_by, accepted_at, reward_received
 FROM invitations
 WHERE invited_by = $1
 ORDER BY invited_at DESC
 `
 
-func (q *Queries) GetInvitationsByInvitedByID(ctx context.Context, invitedBy uuid.UUID) ([]Invitation, error) {
-	rows, err := q.query(ctx, q.getInvitationsByInvitedByIDStmt, getInvitationsByInvitedByID, invitedBy)
+func (q *Queries) GetInvitationsByInviterID(ctx context.Context, invitedBy uuid.UUID) ([]Invitation, error) {
+	rows, err := q.query(ctx, q.getInvitationsByInviterIDStmt, getInvitationsByInviterID, invitedBy)
 	if err != nil {
 		return nil, err
 	}
@@ -157,12 +152,11 @@ func (q *Queries) GetInvitationsByInvitedByID(ctx context.Context, invitedBy uui
 		var i Invitation
 		if err := rows.Scan(
 			&i.ID,
-			&i.InviteeEmail,
-			&i.NormalizedInviteeEmail,
-			&i.InvitedAt,
+			&i.Email,
 			&i.InvitedBy,
-			&i.AcceptedAt,
+			&i.InvitedAt,
 			&i.AcceptedBy,
+			&i.AcceptedAt,
 			&i.RewardReceived,
 		); err != nil {
 			return nil, err
@@ -179,7 +173,7 @@ func (q *Queries) GetInvitationsByInvitedByID(ctx context.Context, invitedBy uui
 }
 
 const getInvitationsPaginated = `-- name: GetInvitationsPaginated :many
-SELECT id, invitee_email, normalized_invitee_email, invited_at, invited_by, accepted_at, accepted_by, reward_received
+SELECT id, email, invited_by, invited_at, accepted_by, accepted_at, reward_received
 FROM invitations
 ORDER BY invited_at DESC
 LIMIT $1 OFFSET $2
@@ -201,12 +195,11 @@ func (q *Queries) GetInvitationsPaginated(ctx context.Context, arg GetInvitation
 		var i Invitation
 		if err := rows.Scan(
 			&i.ID,
-			&i.InviteeEmail,
-			&i.NormalizedInviteeEmail,
-			&i.InvitedAt,
+			&i.Email,
 			&i.InvitedBy,
-			&i.AcceptedAt,
+			&i.InvitedAt,
 			&i.AcceptedBy,
+			&i.AcceptedAt,
 			&i.RewardReceived,
 		); err != nil {
 			return nil, err
@@ -225,15 +218,15 @@ func (q *Queries) GetInvitationsPaginated(ctx context.Context, arg GetInvitation
 const setRewardReceived = `-- name: SetRewardReceived :exec
 UPDATE invitations
 SET reward_received = $1
-WHERE invited_by = $2
+WHERE id = $2
 `
 
 type SetRewardReceivedParams struct {
 	RewardReceived sql.NullBool `json:"reward_received"`
-	InvitedBy      uuid.UUID    `json:"invited_by"`
+	ID             uuid.UUID    `json:"id"`
 }
 
 func (q *Queries) SetRewardReceived(ctx context.Context, arg SetRewardReceivedParams) error {
-	_, err := q.exec(ctx, q.setRewardReceivedStmt, setRewardReceived, arg.RewardReceived, arg.InvitedBy)
+	_, err := q.exec(ctx, q.setRewardReceivedStmt, setRewardReceived, arg.RewardReceived, arg.ID)
 	return err
 }

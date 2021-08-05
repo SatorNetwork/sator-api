@@ -37,8 +37,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getInvitationsStmt, err = db.PrepareContext(ctx, getInvitations); err != nil {
 		return nil, fmt.Errorf("error preparing query GetInvitations: %w", err)
 	}
-	if q.getInvitationsByInvitedByIDStmt, err = db.PrepareContext(ctx, getInvitationsByInvitedByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetInvitationsByInvitedByID: %w", err)
+	if q.getInvitationsByInviterIDStmt, err = db.PrepareContext(ctx, getInvitationsByInviterID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetInvitationsByInviterID: %w", err)
 	}
 	if q.getInvitationsPaginatedStmt, err = db.PrepareContext(ctx, getInvitationsPaginated); err != nil {
 		return nil, fmt.Errorf("error preparing query GetInvitationsPaginated: %w", err)
@@ -76,9 +76,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getInvitationsStmt: %w", cerr)
 		}
 	}
-	if q.getInvitationsByInvitedByIDStmt != nil {
-		if cerr := q.getInvitationsByInvitedByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getInvitationsByInvitedByIDStmt: %w", cerr)
+	if q.getInvitationsByInviterIDStmt != nil {
+		if cerr := q.getInvitationsByInviterIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getInvitationsByInviterIDStmt: %w", cerr)
 		}
 	}
 	if q.getInvitationsPaginatedStmt != nil {
@@ -135,7 +135,7 @@ type Queries struct {
 	getInvitationByInviteeEmailStmt    *sql.Stmt
 	getInvitationByInviteeIDStmt       *sql.Stmt
 	getInvitationsStmt                 *sql.Stmt
-	getInvitationsByInvitedByIDStmt    *sql.Stmt
+	getInvitationsByInviterIDStmt      *sql.Stmt
 	getInvitationsPaginatedStmt        *sql.Stmt
 	setRewardReceivedStmt              *sql.Stmt
 }
@@ -149,7 +149,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getInvitationByInviteeEmailStmt:    q.getInvitationByInviteeEmailStmt,
 		getInvitationByInviteeIDStmt:       q.getInvitationByInviteeIDStmt,
 		getInvitationsStmt:                 q.getInvitationsStmt,
-		getInvitationsByInvitedByIDStmt:    q.getInvitationsByInvitedByIDStmt,
+		getInvitationsByInviterIDStmt:      q.getInvitationsByInviterIDStmt,
 		getInvitationsPaginatedStmt:        q.getInvitationsPaginatedStmt,
 		setRewardReceivedStmt:              q.setRewardReceivedStmt,
 	}

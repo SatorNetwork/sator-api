@@ -5,13 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 	"time"
-
-	"github.com/SatorNetwork/sator-api/svc/rewards"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/invitations/repository"
+	"github.com/SatorNetwork/sator-api/svc/rewards"
 
 	"github.com/google/uuid"
 )
@@ -39,14 +37,13 @@ type (
 	// Invitation struct
 	// Fields were rearranged to optimize memory usage.
 	Invitation struct {
-		ID                     uuid.UUID `json:"id"`
-		InviteeEmail           string    `json:"invitee_email"`
-		NormalizedInviteeEmail string    `json:"normalized_invitee_email"`
-		InvitedAt              time.Time `json:"invited_at"`
-		InvitedBy              uuid.UUID `json:"invited_by"`
-		AcceptedAt             time.Time `json:"accepted_at"`
-		AcceptedBy             uuid.UUID `json:"accepted_by"`
-		RewardReceived         bool      `json:"reward_received"`
+		ID             uuid.UUID `json:"id"`
+		Email          string    `json:"email"`
+		InvitedBy      uuid.UUID `json:"invited_by"`
+		InvitedAt      time.Time `json:"invited_at"`
+		AcceptedBy     uuid.UUID `json:"accepted_by"`
+		AcceptedAt     time.Time `json:"accepted_at"`
+		RewardReceived bool      `json:"reward_received"`
 	}
 
 	invitationsRepository interface {
@@ -56,12 +53,12 @@ type (
 		GetInvitationsPaginated(ctx context.Context, arg repository.GetInvitationsPaginatedParams) ([]repository.Invitation, error)
 		GetInvitationByInviteeEmail(ctx context.Context, normalizedInviteeEmail string) (repository.Invitation, error)
 		GetInvitationByInviteeID(ctx context.Context, acceptedBy uuid.UUID) (repository.Invitation, error)
-		GetInvitationsByInvitedByID(ctx context.Context, invitedBy uuid.UUID) ([]repository.Invitation, error)
+		GetInvitationsByInviterID(ctx context.Context, invitedBy uuid.UUID) ([]repository.Invitation, error)
 		SetRewardReceived(ctx context.Context, arg repository.SetRewardReceivedParams) error
 	}
 
 	mailer interface {
-		SendInvitationCode(ctx context.Context, email, otp string) error
+		SendInvitation(_ context.Context, email, invitedBy string) error
 	}
 
 	rewardsClient interface {
@@ -90,52 +87,55 @@ func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relation
 	return func(userID, quizID uuid.UUID) {
 		var ctx context.Context
 
-		invitationData, err := s.ir.GetInvitationByInviteeID(ctx, userID)
+		invitation, err := s.ir.GetInvitationByInviteeID(ctx, userID)
 		if err != nil {
 			if !db.IsNotFoundError(err) {
 				return // user isn't invited.
 			}
 		}
-		if invitationData.RewardReceived.Bool == true {
+		if invitation.RewardReceived.Bool {
 			return // reward received.
 		}
 
 		// sendRewards
-		err = sendRewards(ctx, invitationData.InvitedBy, quizID, RelationTypeInvitation, s.config.InvitationReward, rewards.TransactionTypeDeposit)
-		if err != nil {
-			return // fmt.Errorf("could not send invitation reward: %w", err)
+		if err := sendRewards(
+			ctx,
+			invitation.InvitedBy,
+			quizID,
+			RelationTypeInvitation,
+			s.config.InvitationReward,
+			rewards.TransactionTypeDeposit,
+		); err != nil {
+			log.Printf("could not send invitation reward: %v", err)
+			return
 		}
 
-		err = s.ir.SetRewardReceived(ctx, repository.SetRewardReceivedParams{
+		if err := s.ir.SetRewardReceived(ctx, repository.SetRewardReceivedParams{
+			ID: invitation.ID,
 			RewardReceived: sql.NullBool{
 				Bool:  true,
 				Valid: true,
 			},
-			InvitedBy: invitationData.InvitedBy,
-		})
-		//if err != nil {
-		//	return fmt.Errorf("could not set invitation reward received: %w", err)
-		//}
+		}); err != nil {
+			log.Printf("could not set invitation reward received: %v", err)
+			return
+		}
 	}
 }
 
 // SendInvitation used to send invitation if person doesn't exist in invitation table.
-func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, inviteeEmail string) error {
-	normalizedEmail := strings.ToUpper(inviteeEmail)
-
-	invitation, err := s.ir.GetInvitationByInviteeEmail(ctx, normalizedEmail)
-	if err != nil {
-		if !db.IsNotFoundError(err) {
-			inv, err := s.ir.CreateInvitation(ctx, repository.CreateInvitationParams{
-				InviteeEmail:           inviteeEmail,
-				NormalizedInviteeEmail: normalizedEmail,
-				InvitedBy:              invitedByID,
+func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, invitedByUsername, inviteeEmail string) error {
+	if invitation, err := s.ir.GetInvitationByInviteeEmail(ctx, inviteeEmail); err != nil {
+		if db.IsNotFoundError(err) {
+			invitation, err = s.ir.CreateInvitation(ctx, repository.CreateInvitationParams{
+				Email:     inviteeEmail,
+				InvitedBy: invitedByID,
 			})
 			if err != nil {
 				return fmt.Errorf("could not create invitation: %w", err)
 			}
 
-			err = s.m.SendInvitationCode(ctx, inv.InviteeEmail, s.config.InvitationURL)
+			err = s.m.SendInvitation(ctx, invitation.Email, invitedByUsername)
 			if err != nil {
 
 				return fmt.Errorf("could not send invitation: %w", err)
@@ -145,7 +145,7 @@ func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, inv
 		return fmt.Errorf("could not get invitation by invitee email: %w", err)
 	}
 
-	return fmt.Errorf("user with email = %s, alredy invited: %w", invitation.InviteeEmail, err)
+	return fmt.Errorf("user with email %s, alredy invited", inviteeEmail)
 }
 
 // GetInvitationsPaginated returns list invitations with pagination.
@@ -166,14 +166,13 @@ func castToListInvitations(source []repository.Invitation) []Invitation {
 	result := make([]Invitation, 0, len(source))
 	for _, s := range source {
 		result = append(result, Invitation{
-			ID:                     s.ID,
-			InviteeEmail:           s.InviteeEmail,
-			NormalizedInviteeEmail: s.NormalizedInviteeEmail,
-			InvitedAt:              s.InvitedAt,
-			InvitedBy:              s.InvitedBy,
-			AcceptedAt:             s.AcceptedAt.Time,
-			AcceptedBy:             s.AcceptedBy,
-			RewardReceived:         s.RewardReceived.Bool,
+			ID:             s.ID,
+			Email:          s.Email,
+			InvitedAt:      s.InvitedAt,
+			InvitedBy:      s.InvitedBy,
+			AcceptedAt:     s.AcceptedAt.Time,
+			AcceptedBy:     s.AcceptedBy,
+			RewardReceived: s.RewardReceived.Bool,
 		})
 	}
 
@@ -192,15 +191,26 @@ func (s *Service) GetInvitations(ctx context.Context) ([]Invitation, error) {
 
 // AcceptInvitation used to accept invitation and store invitee ID and email.
 func (s *Service) AcceptInvitation(ctx context.Context, inviteeID uuid.UUID, inviteeEmail string) error {
-	err := s.ir.AcceptInvitationByInviteeEmail(ctx, repository.AcceptInvitationByInviteeEmailParams{
+	invitation, err := s.ir.GetInvitationByInviteeEmail(ctx, inviteeEmail)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("could not find invitation by email %s", inviteeEmail)
+		}
+		return fmt.Errorf("could not get invitation by email %s: %w", inviteeEmail, err)
+	}
+
+	if invitation.AcceptedAt.Valid {
+		return fmt.Errorf("invitation is already accepted")
+	}
+
+	if err := s.ir.AcceptInvitationByInviteeEmail(ctx, repository.AcceptInvitationByInviteeEmailParams{
+		ID:         invitation.ID,
 		AcceptedBy: inviteeID,
 		AcceptedAt: sql.NullTime{
 			Time:  time.Now().UTC(),
 			Valid: true,
 		},
-		InviteeEmail: inviteeEmail,
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("could not accept invitation for user id = %s: %w", inviteeID, err)
 	}
 
@@ -209,8 +219,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, inviteeID uuid.UUID, inv
 
 // IsEmailInvited returns true if email invited, false if not.
 func (s *Service) IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error) {
-	_, err := s.ir.GetInvitationByInviteeEmail(ctx, inviteeEmail)
-	if err != nil {
+	if _, err := s.ir.GetInvitationByInviteeEmail(ctx, inviteeEmail); err != nil {
 		if !db.IsNotFoundError(err) {
 			return false, nil
 		}

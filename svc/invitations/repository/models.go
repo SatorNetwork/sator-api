@@ -10,12 +10,11 @@ import (
 )
 
 type Invitation struct {
-	ID                     uuid.UUID    `json:"id"`
-	InviteeEmail           string       `json:"invitee_email"`
-	NormalizedInviteeEmail string       `json:"normalized_invitee_email"`
-	InvitedAt              time.Time    `json:"invited_at"`
-	InvitedBy              uuid.UUID    `json:"invited_by"`
-	AcceptedAt             sql.NullTime `json:"accepted_at"`
-	AcceptedBy             uuid.UUID    `json:"accepted_by"`
-	RewardReceived         sql.NullBool `json:"reward_received"`
+	ID             uuid.UUID    `json:"id"`
+	Email          string       `json:"email"`
+	InvitedBy      uuid.UUID    `json:"invited_by"`
+	InvitedAt      time.Time    `json:"invited_at"`
+	AcceptedBy     uuid.UUID    `json:"accepted_by"`
+	AcceptedAt     sql.NullTime `json:"accepted_at"`
+	RewardReceived sql.NullBool `json:"reward_received"`
 }

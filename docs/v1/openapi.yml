@@ -989,14 +989,9 @@ paths:
             schema:
               type: object
               properties:
-                invited_by_id:
-                  type: string
-                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                  required: true
-                invitee_email:
+                email:
                   type: string
                   example: "qwerty@gmail.com"
-                  required: true
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

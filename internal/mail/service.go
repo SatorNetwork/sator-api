@@ -74,12 +74,12 @@ func (s *Service) SendDestroyAccountCode(_ context.Context, email, otp string) e
 	return nil
 }
 
-// SendInvitationCode ...
-func (s *Service) SendInvitationCode(_ context.Context, email, otp string) error {
+// SendInvitation ...
+func (s *Service) SendInvitation(_ context.Context, email, invitedBy string) error {
 	if err := s.send(InvitationCodeTmpl, "invitation", email, map[string]interface{}{
-		"otp": otp,
+		"invited_by": invitedBy,
 	}); err != nil {
-		return fmt.Errorf("could not send invitation code: %w", err)
+		return fmt.Errorf("could not send invitation to email %s: %w", email, err)
 	}
 	return nil
 }

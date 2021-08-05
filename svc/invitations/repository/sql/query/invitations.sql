@@ -1,7 +1,7 @@
 -- name: GetInvitationByInviteeEmail :one
 SELECT *
 FROM invitations
-WHERE normalized_invitee_email = $1
+WHERE email = $1
     LIMIT 1;
 -- name: GetInvitationByInviteeID :one
 SELECT *
@@ -17,20 +17,20 @@ SELECT *
 FROM invitations
 ORDER BY invited_at DESC
 LIMIT $1 OFFSET $2;
--- name: GetInvitationsByInvitedByID :many
+-- name: GetInvitationsByInviterID :many
 SELECT *
 FROM invitations
 WHERE invited_by = $1
 ORDER BY invited_at DESC;
 -- name: CreateInvitation :one
-INSERT INTO invitations (invitee_email, normalized_invitee_email, invited_by, accepted_by)
-VALUES ($1, $2, $3, uuid_nil()) RETURNING *;
+INSERT INTO invitations (email, invited_by)
+VALUES ($1, $2) RETURNING *;
 -- name: AcceptInvitationByInviteeEmail :exec
 UPDATE invitations
 SET accepted_by = @accepted_by,
     accepted_at = @accepted_at
-WHERE invitee_email = @invitee_email;
+WHERE id = @id;
 -- name: SetRewardReceived :exec
 UPDATE invitations
 SET reward_received = @reward_received
-WHERE invited_by = @invited_by;
+WHERE id = @id;

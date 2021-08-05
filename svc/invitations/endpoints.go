@@ -3,7 +3,9 @@ package invitations
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -17,13 +19,12 @@ type (
 	}
 
 	service interface {
-		SendInvitation(ctx context.Context, invitedByID uuid.UUID, inviteeEmail string) error
+		SendInvitation(ctx context.Context, invitedByID uuid.UUID, invitedByUsername, inviteeEmail string) error
 	}
 
 	// SendInvitationRequest struct
 	SendInvitationRequest struct {
-		InvitedByID  string `json:"invited_by_id" validate:"required,uuid"`
-		InviteeEmail string `json:"invitee_email" validate:"required,gt=0"`
+		InviteeEmail string `json:"email" validate:"required,email"`
 	}
 )
 
@@ -52,13 +53,20 @@ func MakeSendInvitationEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, err
 		}
 
-		invitedByID, err := uuid.Parse(req.InvitedByID)
+		// normalize email address
+		req.InviteeEmail = strings.ToLower(req.InviteeEmail)
+
+		// invited by current user
+		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("could not get invited by id: %w", err)
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+		username, err := jwt.UsernameFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get username: %w", err)
 		}
 
-		err = s.SendInvitation(ctx, invitedByID, req.InviteeEmail)
-		if err != nil {
+		if err := s.SendInvitation(ctx, uid, username, req.InviteeEmail); err != nil {
 			return nil, err
 		}
 

@@ -15,12 +15,6 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-// Predefined request query keys
-const (
-	pageParam         = "page"
-	itemsPerPageParam = "items_per_page"
-)
-
 type (
 	logger interface {
 		Log(keyvals ...interface{}) error
@@ -39,7 +33,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 
 	r.Post("/", httptransport.NewServer(
 		e.SendInvitation,
-		decodeGetShowsRequest,
+		decodeSendInvitationRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -47,12 +41,11 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeSendInvitationRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req SendInvitationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
-
 	return req, nil
 }
 
