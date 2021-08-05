@@ -15,42 +15,42 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		AddItem        endpoint.Endpoint
-		GetItemByID    endpoint.Endpoint
-		GetItemsList   endpoint.Endpoint
-		DeleteItemByID endpoint.Endpoint
+		AddImage        endpoint.Endpoint
+		GetImageByID    endpoint.Endpoint
+		GetImagesList   endpoint.Endpoint
+		DeleteImageByID endpoint.Endpoint
 	}
 
 	service interface {
-		AddItem(ctx context.Context, it Item, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Item, error)
-		GetItemByID(ctx context.Context, id uuid.UUID) (Item, error)
-		GetItemsList(ctx context.Context, limit, offset int32) ([]Item, error)
-		DeleteItemByID(ctx context.Context, id uuid.UUID) error
+		AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error)
+		GetImageByID(ctx context.Context, id uuid.UUID) (Image, error)
+		GetImagesList(ctx context.Context, limit, offset int32) ([]Image, error)
+		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 	}
 
 	// PaginationRequest struct
 	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
+		Page         int32 `json:"page,omimagepty" validate:"number,gte=0"`
+		ImagesPerPage int32 `json:"images_per_page,omimagepty" validate:"number,gte=0"`
 	}
 
-	// AddItemRequest struct
-	AddItemRequest struct {
+	// AddImageRequest struct
+	AddImageRequest struct {
 		File       io.ReadSeeker
 		FileHeader *multipart.FileHeader
 	}
 )
 
-// Limit of items
+// Limit of images
 func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
+	if r.ImagesPerPage > 0 {
+		return r.ImagesPerPage
 	}
 
 	return 20
 }
 
-// Offset items
+// Offset images
 func (r PaginationRequest) Offset() int32 {
 	if r.Page > 1 {
 		return (r.Page - 1) * r.Limit()
@@ -63,34 +63,34 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		AddItem:        MakeAddItemEndpoint(s, validateFunc),
-		GetItemByID:    MakeGetItemByIDEndpoint(s),
-		GetItemsList:   MakeGetItemsListEndpoint(s, validateFunc),
-		DeleteItemByID: MakeDeleteItemByIDEndpoint(s),
+		AddImage:        MakeAddImageEndpoint(s, validateFunc),
+		GetImageByID:    MakeGetImageByIDEndpoint(s),
+		GetImagesList:   MakeGetImagesListEndpoint(s, validateFunc),
+		DeleteImageByID: MakeDeleteImageByIDEndpoint(s),
 	}
 
 	// setup middlewares for each endpoint
 	if len(m) > 0 {
 		for _, mdw := range m {
-			e.AddItem = mdw(e.AddItem)
-			e.GetItemByID = mdw(e.GetItemByID)
-			e.GetItemsList = mdw(e.GetItemsList)
-			e.DeleteItemByID = mdw(e.DeleteItemByID)
+			e.AddImage = mdw(e.AddImage)
+			e.GetImageByID = mdw(e.GetImageByID)
+			e.GetImagesList = mdw(e.GetImagesList)
+			e.DeleteImageByID = mdw(e.DeleteImageByID)
 		}
 	}
 
 	return e
 }
 
-// MakeGetItemsListEndpoint ...
-func MakeGetItemsListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+// MakeGetImagesListEndpoint ...
+func MakeGetImagesListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
 
-		resp, err := s.GetItemsList(ctx, req.Limit(), req.Offset())
+		resp, err := s.GetImagesList(ctx, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
@@ -99,15 +99,15 @@ func MakeGetItemsListEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 	}
 }
 
-// MakeAddItemEndpoint ...
-func MakeAddItemEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+// MakeAddImageEndpoint ...
+func MakeAddImageEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(AddItemRequest)
+		req := request.(AddImageRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
 
-		resp, err := s.AddItem(ctx, Item{
+		resp, err := s.AddImage(ctx, Image{
 			Filename: req.FileHeader.Filename,
 		}, req.File, req.FileHeader)
 		if err != nil {
@@ -118,15 +118,15 @@ func MakeAddItemEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 	}
 }
 
-// MakeGetItemByIDEndpoint ...
-func MakeGetItemByIDEndpoint(s service) endpoint.Endpoint {
+// MakeGetImageByIDEndpoint ...
+func MakeGetImageByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
-			return nil, fmt.Errorf("%w item id: %v", ErrInvalidParameter, err)
+			return nil, fmt.Errorf("%w image id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetItemByID(ctx, id)
+		resp, err := s.GetImageByID(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -135,15 +135,15 @@ func MakeGetItemByIDEndpoint(s service) endpoint.Endpoint {
 	}
 }
 
-// MakeDeleteItemByIDEndpoint ...
-func MakeDeleteItemByIDEndpoint(s service) endpoint.Endpoint {
+// MakeDeleteImageByIDEndpoint ...
+func MakeDeleteImageByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
-			return nil, fmt.Errorf("could not get item id: %w", err)
+			return nil, fmt.Errorf("could not get image id: %w", err)
 		}
 
-		err = s.DeleteItemByID(ctx, id)
+		err = s.DeleteImageByID(ctx, id)
 		if err != nil {
 			return nil, err
 		}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/thedevsaddam/govalidator"
@@ -41,29 +40,29 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	}
 
 	r.Post("/", httptransport.NewServer(
-		e.AddItem,
-		decodeAddItemRequest,
+		e.AddImage,
+		decodeAddImageRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/", httptransport.NewServer(
-		e.GetItemsList,
-		decodeGetItemsListRequest,
+		e.GetImagesList,
+		decodeGetImagesListRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/{id}", httptransport.NewServer(
-		e.GetItemByID,
-		decodeGetItemByIDRequest,
+		e.GetImageByID,
+		decodeGetImageByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Delete("/{id}", httptransport.NewServer(
-		e.DeleteItemByID,
-		decodeDeleteItemByIDRequest,
+		e.DeleteImageByID,
+		decodeDeleteImageByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -71,20 +70,11 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetItemsListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeGetImagesListRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
-		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		Page:          utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ImagesPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
-}
-
-func castStrToInt32(source string) int32 {
-	res, err := strconv.Atoi(source)
-	if err != nil {
-		return 0
-	}
-
-	return int32(res)
 }
 
 // returns http error code by error type
@@ -96,16 +86,16 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	return httpencoder.CodeAndMessageFrom(err)
 }
 
-func decodeGetItemByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeGetImageByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		return nil, fmt.Errorf("%w: missed item id", ErrInvalidParameter)
+		return nil, fmt.Errorf("%w: missed image id", ErrInvalidParameter)
 	}
 
 	return id, nil
 }
 
-func decodeAddItemRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	rules := govalidator.MapData{
 		"file:image": []string{"required", "ext:png", "size:2097152", "mime:image/png"},
 	}
@@ -119,17 +109,17 @@ func decodeAddItemRequest(_ context.Context, r *http.Request) (interface{}, erro
 	}
 	defer file.Close()
 
-	var req AddItemRequest
+	var req AddImageRequest
 	req.File = file
 	req.FileHeader = header
 
 	return req, nil
 }
 
-func decodeDeleteItemByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeDeleteImageByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		return nil, fmt.Errorf("%w: missed item id", ErrInvalidParameter)
+		return nil, fmt.Errorf("%w: missed image id", ErrInvalidParameter)
 	}
 
 	return id, nil

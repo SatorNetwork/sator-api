@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Item struct {
+type Image struct {
 	ID        uuid.UUID `json:"id"`
 	FileName  string    `json:"file_name"`
 	FilePath  string    `json:"file_path"`

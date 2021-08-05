@@ -22,41 +22,41 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addItemStmt, err = db.PrepareContext(ctx, addItem); err != nil {
-		return nil, fmt.Errorf("error preparing query AddItem: %w", err)
+	if q.addImageStmt, err = db.PrepareContext(ctx, addImage); err != nil {
+		return nil, fmt.Errorf("error preparing query AddImage: %w", err)
 	}
-	if q.deleteItemByIDStmt, err = db.PrepareContext(ctx, deleteItemByID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteItemByID: %w", err)
+	if q.deleteImageByIDStmt, err = db.PrepareContext(ctx, deleteImageByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteImageByID: %w", err)
 	}
-	if q.getItemByIDStmt, err = db.PrepareContext(ctx, getItemByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetItemByID: %w", err)
+	if q.getImageByIDStmt, err = db.PrepareContext(ctx, getImageByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetImageByID: %w", err)
 	}
-	if q.getItemsListStmt, err = db.PrepareContext(ctx, getItemsList); err != nil {
-		return nil, fmt.Errorf("error preparing query GetItemsList: %w", err)
+	if q.getImagesListStmt, err = db.PrepareContext(ctx, getImagesList); err != nil {
+		return nil, fmt.Errorf("error preparing query GetImagesList: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addItemStmt != nil {
-		if cerr := q.addItemStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addItemStmt: %w", cerr)
+	if q.addImageStmt != nil {
+		if cerr := q.addImageStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addImageStmt: %w", cerr)
 		}
 	}
-	if q.deleteItemByIDStmt != nil {
-		if cerr := q.deleteItemByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteItemByIDStmt: %w", cerr)
+	if q.deleteImageByIDStmt != nil {
+		if cerr := q.deleteImageByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteImageByIDStmt: %w", cerr)
 		}
 	}
-	if q.getItemByIDStmt != nil {
-		if cerr := q.getItemByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getItemByIDStmt: %w", cerr)
+	if q.getImageByIDStmt != nil {
+		if cerr := q.getImageByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getImageByIDStmt: %w", cerr)
 		}
 	}
-	if q.getItemsListStmt != nil {
-		if cerr := q.getItemsListStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getItemsListStmt: %w", cerr)
+	if q.getImagesListStmt != nil {
+		if cerr := q.getImagesListStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getImagesListStmt: %w", cerr)
 		}
 	}
 	return err
@@ -96,21 +96,21 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                 DBTX
-	tx                 *sql.Tx
-	addItemStmt        *sql.Stmt
-	deleteItemByIDStmt *sql.Stmt
-	getItemByIDStmt    *sql.Stmt
-	getItemsListStmt   *sql.Stmt
+	db                  DBTX
+	tx                  *sql.Tx
+	addImageStmt        *sql.Stmt
+	deleteImageByIDStmt *sql.Stmt
+	getImageByIDStmt    *sql.Stmt
+	getImagesListStmt   *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                 tx,
-		tx:                 tx,
-		addItemStmt:        q.addItemStmt,
-		deleteItemByIDStmt: q.deleteItemByIDStmt,
-		getItemByIDStmt:    q.getItemByIDStmt,
-		getItemsListStmt:   q.getItemsListStmt,
+		db:                  tx,
+		tx:                  tx,
+		addImageStmt:        q.addImageStmt,
+		deleteImageByIDStmt: q.deleteImageByIDStmt,
+		getImageByIDStmt:    q.getImageByIDStmt,
+		getImagesListStmt:   q.getImagesListStmt,
 	}
 }

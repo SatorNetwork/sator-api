@@ -24,7 +24,7 @@ type (
 		storage *storage.Interactor
 	}
 
-	Item struct {
+	Image struct {
 		ID        uuid.UUID `json:"id"`
 		Filename  string    `json:"filename"`
 		Filepath  string    `json:"filepath"`
@@ -33,10 +33,10 @@ type (
 	}
 
 	mediaServiceRepository interface {
-		AddItem(ctx context.Context, arg repository.AddItemParams) (repository.Item, error)
-		GetItemByID(ctx context.Context, id uuid.UUID) (repository.Item, error)
-		GetItemsList(ctx context.Context, arg repository.GetItemsListParams) ([]repository.Item, error)
-		DeleteItemByID(ctx context.Context, id uuid.UUID) error
+		AddImage(ctx context.Context, arg repository.AddImageParams) (repository.Image, error)
+		GetImageByID(ctx context.Context, id uuid.UUID) (repository.Image, error)
+		GetImagesList(ctx context.Context, arg repository.GetImagesListParams) ([]repository.Image, error)
+		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 	}
 )
 
@@ -56,18 +56,18 @@ func NewService(msr mediaServiceRepository, db *sql.DB, storage *storage.Interac
 	return &Service{msr: msr, db: db, storage: storage}
 }
 
-// AddItem used to create new item.
-func (s *Service) AddItem(ctx context.Context, it Item, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Item, error) {
+// AddImage used to create new image.
+func (s *Service) AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return Item{}, errors.Wrap(err, "begin db transaction")
+		return Image{}, errors.Wrap(err, "begin db transaction")
 	}
 
 	id := uuid.New()
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	ct := fileHeader.Header.Get("Content-Type")
 
-	item, err := s.msr.AddItem(ctx, repository.AddItemParams{
+	image, err := s.msr.AddImage(ctx, repository.AddImageParams{
 		ID:       id,
 		FileName: fileHeader.Filename,
 		FilePath: s.storage.FilePath(fileName),
@@ -75,71 +75,71 @@ func (s *Service) AddItem(ctx context.Context, it Item, file io.ReadSeeker, file
 	})
 
 	if err != nil {
-		return Item{}, fmt.Errorf("could not add item with file name=%s: %w", it.Filename, err)
+		return Image{}, fmt.Errorf("could not add image with file name=%s: %w", it.Filename, err)
 	}
 
 	if err != nil {
 		tx.Rollback()
-		return Item{}, errors.Wrap(err, "store item to db")
+		return Image{}, errors.Wrap(err, "store image to db")
 	}
 	if err := s.storage.Upload(file, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
 		tx.Rollback()
-		return Item{}, errors.Wrap(err, "upload image")
+		return Image{}, errors.Wrap(err, "upload image")
 	}
 
 	if err := tx.Commit(); err != nil {
-		return Item{}, errors.Wrap(err, "commit item")
+		return Image{}, errors.Wrap(err, "commit image")
 	}
 
-	return castToItem(item), nil
+	return castToImage(image), nil
 }
 
-// DeleteItemByID used to delete Item by provided id.
-func (s *Service) DeleteItemByID(ctx context.Context, id uuid.UUID) error {
-	item, err := s.msr.GetItemByID(ctx, id)
+// DeleteImageByID used to delete Image by provided id.
+func (s *Service) DeleteImageByID(ctx context.Context, id uuid.UUID) error {
+	image, err := s.msr.GetImageByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("could not get item with id=%s: %w", id, err)
+		return fmt.Errorf("could not get image with id=%s: %w", id, err)
 	}
 
-	//fileName := fmt.Sprintf("%s%s", item.ID, path.Ext(".png"))
-	err = s.storage.Remove(item.FilePath)
+	//fileName := fmt.Sprintf("%s%s", image.ID, path.Ext(".png"))
+	err = s.storage.Remove(image.FilePath)
 	if err != nil {
-		return errors.Wrap(err, "could not delete item from storage")
+		return errors.Wrap(err, "could not delete image from storage")
 	}
 
-	err = s.msr.DeleteItemByID(ctx, id)
+	err = s.msr.DeleteImageByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("could not delete item with id=%s:%w", id, err)
+		return fmt.Errorf("could not delete image with id=%s:%w", id, err)
 	}
 
 	return nil
 }
 
-// GetItemByID returns item with provided id.
-func (s *Service) GetItemByID(ctx context.Context, id uuid.UUID) (Item, error) {
-	item, err := s.msr.GetItemByID(ctx, id)
+// GetImageByID returns image with provided id.
+func (s *Service) GetImageByID(ctx context.Context, id uuid.UUID) (Image, error) {
+	image, err := s.msr.GetImageByID(ctx, id)
 	if err != nil {
-		return Item{}, fmt.Errorf("could not get item with id=%s: %w", id, err)
+		return Image{}, fmt.Errorf("could not get image with id=%s: %w", id, err)
 	}
 
-	return castToItem(item), nil
+	return castToImage(image), nil
 }
 
-// GetItemsList returns list items.
-func (s *Service) GetItemsList(ctx context.Context, limit, offset int32) ([]Item, error) {
-	items, err := s.msr.GetItemsList(ctx, repository.GetItemsListParams{
+// GetImagesList returns list images.
+func (s *Service) GetImagesList(ctx context.Context, limit, offset int32) ([]Image, error) {
+	images, err := s.msr.GetImagesList(ctx, repository.GetImagesListParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return []Item{}, fmt.Errorf("could not get items list: %w", err)
+		return []Image{}, fmt.Errorf("could not get images list: %w", err)
 	}
-	return castToListItems(items), nil
+	return castToListImages(images), nil
 }
 
-// Cast repository.Item to service Item structure
-func castToItem(source repository.Item) Item {
-	return Item{
+// Cast repository.Image to service Image structure
+func castToImage(source repository.Image) Image {
+	return Image{
 		ID:        source.ID,
 		Filename:  source.FileName,
 		Filepath:  source.FilePath,
@@ -148,11 +148,11 @@ func castToItem(source repository.Item) Item {
 	}
 }
 
-// Cast repository.Item to service Item structure
-func castToListItems(source []repository.Item) []Item {
-	result := make([]Item, 0, len(source))
+// Cast repository.Image to service Image structure
+func castToListImages(source []repository.Image) []Image {
+	result := make([]Image, 0, len(source))
 	for _, s := range source {
-		result = append(result, Item{
+		result = append(result, Image{
 			ID:        s.ID,
 			Filename:  s.FileName,
 			Filepath:  s.FilePath,
