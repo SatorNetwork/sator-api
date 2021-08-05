@@ -86,7 +86,7 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 		log.Fatalln("invitations client is not set")
 	}
 
-	s := &Service{jwt: ji, ur: ur, ws: ws, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ic: ic, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
