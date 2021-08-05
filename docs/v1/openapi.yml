@@ -1236,6 +1236,31 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /invitations:
+    post:
+      tags:
+        - "Invitations"
+      summary: Sends invitation if person doesn't exist in invitation table.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "qwerty@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /images/{id}:
     get:
       tags:

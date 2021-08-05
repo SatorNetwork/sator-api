@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
@@ -182,6 +183,9 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 			return nil, err
 		}
 
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
+
 		token, err := s.Login(ctx, req.Email, req.Password)
 		if err != nil {
 			return nil, err
@@ -212,6 +216,9 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 		if err := v(req); err != nil {
 			return nil, err
 		}
+
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
 
 		token, err := s.SignUp(ctx, req.Email, req.Password, req.Username)
 		if err != nil {
@@ -257,6 +264,9 @@ func MakeForgotPasswordEndpoint(s authService, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
+
 		if err := s.ForgotPassword(ctx, req.Email); err != nil {
 			return nil, err
 		}
@@ -273,6 +283,9 @@ func MakeValidateResetPasswordCodeEndpoint(s authService, v validator.ValidateFu
 			return nil, err
 		}
 
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
+
 		if _, err := s.ValidateResetPasswordCode(ctx, req.Email, req.OTP); err != nil {
 			return nil, err
 		}
@@ -288,6 +301,9 @@ func MakeResetPasswordEndpoint(s authService, v validator.ValidateFunc) endpoint
 		if err := v(req); err != nil {
 			return nil, err
 		}
+
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
 
 		if err := s.ResetPassword(ctx, req.Email, req.Password, req.OTP); err != nil {
 			return nil, err
@@ -326,6 +342,9 @@ func MakeRequestChangeEmailEndpoint(s authService, v validator.ValidateFunc) end
 			return nil, err
 		}
 
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
@@ -347,6 +366,9 @@ func MakeValidateChangeEmailCodeEndpoint(s authService, v validator.ValidateFunc
 			return nil, err
 		}
 
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
@@ -367,6 +389,9 @@ func MakeUpdateEmailEndpoint(s authService, v validator.ValidateFunc) endpoint.E
 		if err := v(req); err != nil {
 			return nil, err
 		}
+
+		// normalize email address
+		req.Email = strings.ToLower(req.Email)
 
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {

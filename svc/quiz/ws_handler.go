@@ -24,7 +24,7 @@ type (
 )
 
 // QuizWsHandler handles websocket connections
-func QuizWsHandler(s quizService) http.HandlerFunc {
+func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := chi.URLParam(r, "token")
 		tokenPayload, err := s.ParseQuizToken(r.Context(), token)
@@ -63,6 +63,7 @@ func QuizWsHandler(s quizService) http.HandlerFunc {
 		}
 		defer func() {
 			quizHub.RemovePlayer(uid)
+			callback(uid, quizID)
 		}()
 
 		fakePlayers := make([]struct {
