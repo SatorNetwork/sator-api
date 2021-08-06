@@ -219,6 +219,13 @@ func main() {
 		))
 	}
 
+	// Questions service
+	questionsRepository, err := questionsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("questionsRepo error: %v", err)
+	}
+	questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
+
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
@@ -234,6 +241,7 @@ func main() {
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
+			questionsSvcClient,
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandler(
@@ -289,13 +297,6 @@ func main() {
 
 	// Quiz service
 	{
-		// Questions service
-		questionsRepository, err := questionsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("questionsRepo error: %v", err)
-		}
-		questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
-
 		// Quiz service
 		quizRepository, err := quizRepo.Prepare(ctx, db)
 		if err != nil {

@@ -2,6 +2,7 @@ package qrcodes
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,6 +38,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/", httptransport.NewServer(
+		e.AddQRCode,
+		decodeAddQRCodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{id}", httptransport.NewServer(
+		e.DeleteQRCodeByID,
+		decodeDeleteQRCodeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/{id}", httptransport.NewServer(
+		e.UpdateQRCode,
+		decodeUpdateQRCodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -55,4 +77,38 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func decodeAddQRCodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AddQRCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeDeleteQRCodeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
+	}
+
+	return id, nil
+
+}
+
+func decodeUpdateQRCodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateQRCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	qrcodeID := chi.URLParam(r, "id")
+	if qrcodeID == "" {
+		return nil, fmt.Errorf("%w: missed qrcode id", ErrInvalidParameter)
+	}
+	req.ID = qrcodeID
+
+	return req, nil
 }

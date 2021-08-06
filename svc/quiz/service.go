@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
@@ -12,7 +13,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/questions"
 	"github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/dmitrymomot/go-signature"
-	"github.com/dustin/go-broadcast"
 	"github.com/google/uuid"
 )
 
@@ -41,10 +41,10 @@ type (
 
 		hub map[string]*Hub
 
-		startQuiz      broadcast.Broadcaster
-		stopQuiz       broadcast.Broadcaster
 		startQuizEvent chan interface{}
 		stopQuizEvent  chan interface{}
+
+		numberOfQuestions int
 	}
 
 	quizRepository interface {
@@ -102,16 +102,17 @@ func NewService(
 ) *Service {
 
 	s := &Service{
-		mutex:           m,
-		repo:            repo,
-		questions:       questions,
-		rewards:         rewards,
-		challenges:      challenges,
-		tokenGenFunc:    signature.NewTemporary,
-		tokenParseFunc:  signature.Parse,
-		tokenTTL:        900,
-		baseQuizURL:     baseQuizURL,
-		rewardAssetName: "SAO",
+		mutex:             m,
+		repo:              repo,
+		questions:         questions,
+		rewards:           rewards,
+		challenges:        challenges,
+		tokenGenFunc:      signature.NewTemporary,
+		tokenParseFunc:    signature.Parse,
+		tokenTTL:          900,
+		baseQuizURL:       baseQuizURL,
+		rewardAssetName:   "SAO",
+		numberOfQuestions: 5,
 
 		hub: make(map[string]*Hub),
 	}
@@ -239,8 +240,16 @@ func (s *Service) SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, err
 		return nil, fmt.Errorf("could not get questions list for quiz with id=%s: %w", qid.String(), err)
 	}
 
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(qlist), func(i, j int) { qlist[i], qlist[j] = qlist[j], qlist[i] })
+
+	ql := qlist
+	if len(qlist) > s.numberOfQuestions {
+		ql = qlist[:s.numberOfQuestions]
+	}
+
 	qlmap := make(map[string]questions.Question)
-	for _, item := range qlist {
+	for _, item := range ql {
 		qlmap[item.ID.String()] = item
 	}
 
@@ -447,15 +456,4 @@ func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, totalR
 	winnerPoints := totalQuestions + pts + rate
 
 	return (prizePool / float64(totalPoints)) * float64(winnerPoints)
-}
-
-func castAnswerOptions(source []questions.AnswerOption) []AnswerOption {
-	result := make([]AnswerOption, 0, len(source))
-	for _, a := range source {
-		result = append(result, AnswerOption{
-			AnswerID:   a.ID.String(),
-			AnswerText: a.Option,
-		})
-	}
-	return result
 }
