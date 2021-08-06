@@ -5,8 +5,10 @@ info:
 servers:
   - url: http://localhost:8080/
     description: Local server
+  - url: https://api.dev.sator.io/
+    description: Development server
   - url: https://api.stage.sator.io/
-    description: Development / Staging server
+    description: Staging server
 components:
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
