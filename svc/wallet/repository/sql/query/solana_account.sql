@@ -14,7 +14,6 @@ SELECT *
 FROM solana_accounts
 WHERE account_type = @account_type
 LIMIT 1;
--- name: GetSolanaAccountByID :one
 SELECT *
 FROM solana_accounts
 WHERE id = @id
@@ -34,4 +33,9 @@ LIMIT 1;
 SELECT account_type
 FROM solana_accounts
 WHERE public_key = $1
+LIMIT 1;
+-- name: GetSolanaAccountByID :one
+SELECT *
+FROM solana_accounts
+WHERE id = $1
 LIMIT 1;
