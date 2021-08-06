@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"log"
 	"net/http"
 	"os"
@@ -186,6 +187,11 @@ func main() {
 	jwtMdw := jwt.NewParser(jwtSigningKey)
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
+	ethereumClient, err := ethereum.NewClient()
+	if err != nil {
+		log.Fatalf("failed to init eth client: %v", err)
+	}
+
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
@@ -193,7 +199,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl))
+		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), ethereumClient)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
