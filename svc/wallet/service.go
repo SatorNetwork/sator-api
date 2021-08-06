@@ -2,9 +2,12 @@ package wallet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -19,6 +22,7 @@ type (
 	Service struct {
 		wr walletRepository
 		sc solanaClient
+		ec ethereumClient
 		// rw rewardsService
 
 		satorAssetName  string
@@ -41,6 +45,10 @@ type (
 		GetSolanaAccountByType(ctx context.Context, accountType string) (repository.SolanaAccount, error)
 		GetSolanaAccountTypeByPublicKey(ctx context.Context, publicKey string) (string, error)
 		GetSolanaAccountByUserIDAndType(ctx context.Context, arg repository.GetSolanaAccountByUserIDAndTypeParams) (repository.SolanaAccount, error)
+
+		AddEthereumAccount(ctx context.Context, arg repository.AddEthereumAccountParams) (repository.EthereumAccount, error)
+		GetEthereumAccountByID(ctx context.Context, id uuid.UUID) (repository.EthereumAccount, error)
+		GetEthereumAccountByUserIDAndType(ctx context.Context, arg repository.GetEthereumAccountByUserIDAndTypeParams) (repository.EthereumAccount, error)
 	}
 
 	solanaClient interface {
@@ -56,6 +64,10 @@ type (
 		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
+	ethereumClient interface {
+		CreateAccount() (ethereum.Wallet, error)
+	}
+
 	// rewardsService interface {
 	// 	GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	// }
@@ -63,16 +75,20 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solanaClient) *Service {
+func NewService(wr walletRepository, sc solanaClient, ec ethereumClient) *Service {
 	if wr == nil {
 		log.Fatalln("wallet repository is not set")
 	}
 	if sc == nil {
 		log.Fatalln("solana client is not set")
 	}
+	if ec == nil {
+		log.Fatalln("ethereum client in not set")
+	}
 	return &Service{
 		wr: wr,
 		sc: sc,
+		ec: ec,
 		// rw: rw,
 
 		solanaAssetName: "SOL",
@@ -230,7 +246,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		WalletType:      WalletTypeSator,
 		Sort:            1,
 	}); err != nil {
-		return fmt.Errorf("could not new SAO wallet for user with id=%s: %w", userID.String(), err)
+		return fmt.Errorf("could not create new SAO wallet for user with id=%s: %w", userID.String(), err)
 	}
 
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
@@ -239,6 +255,38 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		Sort:       2,
 	}); err != nil {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
+	}
+
+	ethAccount, err := s.ec.CreateAccount()
+	if err != nil {
+		return fmt.Errorf("could not create new eth account for user with id=%s: %w", userID.String(), err)
+	}
+
+	ethPrivateBytes, err := json.Marshal(ethAccount.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("could not marshal eth private key for user=%s: %w", userID.String(), err)
+	}
+
+	ethPublicBytes, err := json.Marshal(ethAccount.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not marshal eth private key for user=%s: %w", userID.String(), err)
+	}
+
+	eacc, err := s.wr.AddEthereumAccount(ctx, repository.AddEthereumAccountParams{
+		PublicKey:  ethPublicBytes,
+		PrivateKey: ethPrivateBytes,
+		Address:    ethAccount.Address,
+	})
+	if err != nil {
+		return fmt.Errorf("could not store ethereum account: %w", err)
+	}
+
+	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
+		UserID:            userID,
+		WalletType:        WalletTypeEthereum,
+		EthereumAccountID: eacc.ID,
+	}); err != nil {
+		return fmt.Errorf("could not create new ethereum wallet for user with id=%s: %w", userID.String(), err)
 	}
 
 	return nil
