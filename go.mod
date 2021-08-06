@@ -9,7 +9,7 @@ require (
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
-	github.com/ethereum/go-ethereum v1.10.5 // indirect
+	github.com/ethereum/go-ethereum v1.10.5
 	github.com/go-chi/chi v1.5.4
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/validator/v10 v10.6.1
