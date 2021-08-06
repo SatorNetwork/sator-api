@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"time"
 
 	"github.com/portto/solana-go-sdk/types"
@@ -323,8 +322,17 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 		return Transactions{}, err
 	}
 
-	transactionsPaginated := paginateTransactions(transactions, int(offset), int(limit))
-	return transactionsPaginated, nil
+	notEmptyTransactions := make(Transactions, 0, len(transactions))
+	for _, transaction := range transactions {
+		if transaction.Amount != 0 {
+			notEmptyTransactions = append(notEmptyTransactions, transaction)
+		}
+	}
+
+	// pagination for solana trannsactions is disabled
+	// transactionsPaginated := paginateTransactions(notEmptyTransactions, int(offset), int(limit))
+	// return transactionsPaginated, nil
+	return notEmptyTransactions, nil
 }
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
@@ -350,7 +358,7 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 
 	txList := make(Transactions, 0, len(transactions))
 	for _, tx := range transactions {
-		txList = append(txList, castSolanaTxToTransaction(tx))
+		txList = append(txList, castSolanaTxToTransaction(tx, walletID))
 	}
 
 	return txList, nil
@@ -378,27 +386,29 @@ func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK st
 	return tx, nil
 }
 
-func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse) Transaction {
+func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
 	return Transaction{
+		ID:        tx.TxHash,
+		WalletID:  walletID.String(),
 		TxHash:    tx.TxHash,
 		Amount:    tx.Amount,
 		CreatedAt: tx.CreatedAt.Format(time.RFC3339),
 	}
 }
 
-func paginateTransactions(transactions Transactions, offset, limit int) Transactions {
-	sort.Slice(transactions, func(i, j int) bool {
-		return transactions[i].CreatedAt < (transactions[j].CreatedAt)
-	})
+// func paginateTransactions(transactions Transactions, offset, limit int) Transactions {
+// 	sort.Slice(transactions, func(i, j int) bool {
+// 		return transactions[i].CreatedAt < (transactions[j].CreatedAt)
+// 	})
 
-	if offset > len(transactions) {
-		offset = len(transactions)
-	}
+// 	if offset > len(transactions) {
+// 		offset = len(transactions)
+// 	}
 
-	end := offset + limit
-	if end > len(transactions) {
-		end = len(transactions)
-	}
+// 	end := offset + limit
+// 	if end > len(transactions) {
+// 		end = len(transactions)
+// 	}
 
-	return transactions[offset:end]
-}
+// 	return transactions[offset:end]
+// }

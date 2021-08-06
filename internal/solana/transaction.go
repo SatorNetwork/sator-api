@@ -121,7 +121,7 @@ func getTransactionAmountForAccountIdx(pre, post []TokenBalance, accountIndex in
 
 	for _, b := range post {
 		if b.AccountIndex == accountIndex {
-			a, err :=  strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
+			a, err := strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
 			if err != nil {
 				return 0, err
 			}
@@ -131,5 +131,5 @@ func getTransactionAmountForAccountIdx(pre, post []TokenBalance, accountIndex in
 		}
 	}
 
-	return float64(postTokenBalance - preTokenBalance)/100000000, nil
+	return float64(postTokenBalance-preTokenBalance) / 1e9, nil
 }

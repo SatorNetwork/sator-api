@@ -5,8 +5,8 @@ info:
 servers:
   - url: http://localhost:8080/
     description: Local server
-  - url: https://sator-api-stage-93k39.ondigitalocean.app/
-    description: Development server
+  - url: https://api.stage.sator.io/
+    description: Development / Staging server
 components:
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
@@ -499,6 +499,12 @@ paths:
                 items:
                   type: object
                   properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    wallet_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3122"
                     tx_hash:
                       type: string
                       example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
@@ -772,6 +778,119 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /challenges/{episode_id}/validation-question:
+    get:
+      tags:
+        - "Challenges"
+      summary: Get validation question by episode id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns validation question with answer options.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question_text:
+                    type: string
+                    example: "Question text"
+                  time_for_answer:
+                    type: number
+                    example: 8
+                  answer_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        answer_id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        answer_text:
+                          type: string
+                          example: "Answer text"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /challenges/{question_id}/check-answer/{answer_id}:
+    get:
+      tags:
+        - "Challenges"
+      summary: Check validation question`s answer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+        - name: answer_id
+          in: path
+          description: Answer ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns boolean result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /challenges/{episode_id}/is-activated:
+    get:
+      tags:
+        - "Challenges"
+      summary: Check episode access.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns true if a user have activated realm.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /qrcodes/{id}:
     get:
       tags:
@@ -782,7 +901,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Сhallenge ID.
+          description: QRcode ID.
           required: true
           schema:
             type: string
@@ -812,6 +931,142 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+    put:
+      tags:
+        - "QR code"
+      summary: used for update qrcode by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: QRcode ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                episode_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                starts_at:
+                  type: string
+                  example: "2006-01-02T15:04:05Z"
+                  description: "RFC3339"
+                expires_at:
+                  type: string
+                  example: "2006-01-02T15:04:05Z"
+                  description: "RFC3339"
+                reward_amount:
+                  type: number
+                  example: 123.56
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "QR code"
+      summary: used for delete qrcode by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: QRcode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /qrcodes:
+    post:
+      tags:
+        - "QR code"
+      summary: used for create new qrcode.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                episode_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                starts_at:
+                  type: string
+                  example: "2006-01-02T15:04:05Z"
+                  description: "RFC3339"
+                expires_at:
+                  type: string
+                  example: "2006-01-02T15:04:05Z"
+                  description: "RFC3339"
+                reward_amount:
+                  type: number
+                  example: 123.56
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  starts_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+                  expires_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+                  reward_amount:
+                    type: number
+                    example: 123.56
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /quiz/{challenge_id}/play:
     get:
@@ -958,12 +1213,196 @@ paths:
                 items:
                   type: object
                   properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    wallet_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3122"
                     tx_hash:
                       type: string
                       example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
                     amount:
                       type: number
                       example: 123.45
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /invitations:
+    post:
+      tags:
+        - "Invitations"
+      summary: Sends invitation if person doesn't exist in invitation table.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "qwerty@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /files/images/{id}:
+    get:
+      tags:
+        - "File Storage / Images"
+      summary: Get image by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Image ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns image data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  file_name:
+                    type: string
+                    example: "filename"
+                  file_path:
+                    type: string
+                    example: "filepath"
+                  file_url:
+                    type: string
+                    example: "file_url"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "File Storage / Images"
+      summary: used for delete from storages image by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Image ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /files/images:
+    post:
+      tags:
+        - "File Storage / Images"
+      summary: used to store new image.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  file_name:
+                    type: string
+                    example: "filename"
+                  file_path:
+                    type: string
+                    example: "filepath"
+                  file_url:
+                    type: string
+                    example: "file_url"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "File Storage / Images"
+      summary: Get images list.
+      security:
+        - bearerAuth: [ ]
+
+      responses:
+        "200":
+          description: Returns image data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    file_name:
+                      type: string
+                      example: "filename"
+                    file_path:
+                      type: string
+                      example: "filepath"
+                    file_url:
+                      type: string
+                      example: "file_url"
                     created_at:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"

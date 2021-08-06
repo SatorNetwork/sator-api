@@ -59,6 +59,8 @@ type (
 
 	// Transaction ...
 	Transaction struct {
+		ID        string  `json:"id"`
+		WalletID  string  `json:"wallet_id"`
 		TxHash    string  `json:"tx_hash"`
 		Amount    float64 `json:"amount"`
 		CreatedAt string  `json:"created_at"`

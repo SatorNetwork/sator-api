@@ -16,6 +16,7 @@ type (
 
 	service interface {
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error)
+		GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*questions.Question, error)
 		CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error)
 	}
 )
@@ -48,4 +49,9 @@ func (c *Client) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([
 // CheckAnswer ...
 func (c *Client) CheckAnswer(ctx context.Context, aid uuid.UUID) (bool, error) {
 	return c.s.CheckAnswer(ctx, aid)
+}
+
+// GetOneRandomQuestionByChallengeID ...
+func (c *Client) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*questions.Question, error) {
+	return c.s.GetOneRandomQuestionByChallengeID(ctx, id, excludeIDs...)
 }

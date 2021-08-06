@@ -16,12 +16,18 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
+	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/files"
+	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	"github.com/SatorNetwork/sator-api/svc/invitations"
+	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
+	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -100,6 +106,20 @@ var (
 	supportEmail   = env.GetString("SUPPORT_EMAIL", "support@sator.io")
 	companyName    = env.GetString("COMPANY_NAME", "Sator")
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
+
+	//	 Invitation
+	invitationReward = env.GetInt("INVITATION_REWARD", 0)
+	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
+
+	// File Storage
+	fileStorageKey            = env.MustString("STORAGE_KEY")
+	fileStorageSecret         = env.MustString("STORAGE_SECRET")
+	fileStorageEndpoint       = env.MustString("STORAGE_ENDPOINT")
+	fileStorageRegion         = env.MustString("STORAGE_REGION")
+	fileStorageBucket         = env.MustString("STORAGE_BUCKET")
+	fileStorageUrl            = env.MustString("STORAGE_URL")
+	fileStorageDisableSsl     = env.GetBool("STORAGE_DISABLE_SSL", true)
+	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
 )
 
 func main() {
@@ -190,6 +210,35 @@ func main() {
 		))
 	}
 
+	// Rewards service
+	var rewardsSvcClient *rewardsClient.Client
+
+	rewardsRepository, err := rewardsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("rewardsRepo error: %v", err)
+	}
+	rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
+	rewardsSvcClient = rewardsClient.New(rewardService)
+	r.Mount("/rewards", rewards.MakeHTTPHandler(
+		rewards.MakeEndpoints(rewardService, jwtMdw),
+		logger,
+	))
+
+	// Invitation service
+	invitationsRepository, err := invitationsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("invitationsRepo error: %v", err)
+	}
+	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
+		InvitationReward: float64(invitationReward),
+		InvitationURL:    invitationURL,
+	})
+	invitationsClient := invitationsClient.New(invitationsService)
+	r.Mount("/invitations", invitations.MakeHTTPHandler(
+		invitations.MakeEndpoints(invitationsService, jwtMdw),
+		logger,
+	))
+
 	// Auth service
 	{
 		// auth
@@ -202,6 +251,7 @@ func main() {
 				jwtInteractor,
 				authRepository,
 				walletSvcClient,
+				invitationsClient,
 				auth.WithMasterOTPCode(masterOTPHash),
 				auth.WithCustomOTPLength(otpLength),
 				auth.WithMailService(mailer),
@@ -222,6 +272,13 @@ func main() {
 		))
 	}
 
+	// Questions service
+	questionsRepository, err := questionsRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("questionsRepo error: %v", err)
+	}
+	questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
+
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
@@ -237,6 +294,7 @@ func main() {
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
+			questionsSvcClient,
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandler(
@@ -255,17 +313,26 @@ func main() {
 		))
 	}
 
-	var rewardsSvcClient *rewardsClient.Client
-	// Rewards service
+	// files service
 	{
-		rewardsRepository, err := rewardsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("rewardsRepo error: %v", err)
+		opt := storage.Options{
+			Key:            fileStorageKey,
+			Secret:         fileStorageSecret,
+			Endpoint:       fileStorageEndpoint,
+			Region:         fileStorageRegion,
+			Bucket:         fileStorageBucket,
+			URL:            fileStorageUrl,
+			DisableSSL:     fileStorageDisableSsl,
+			ForcePathStyle: fileStorageForcePathStyle,
 		}
-		rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
-		rewardsSvcClient = rewardsClient.New(rewardService)
-		r.Mount("/rewards", rewards.MakeHTTPHandler(
-			rewards.MakeEndpoints(rewardService, jwtMdw),
+		stor := storage.New(storage.NewS3Client(opt), opt)
+
+		mediaServiceRepo, err := filesRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("mediaServiceRepo error: %v", err)
+		}
+		r.Mount("/files", files.MakeHTTPHandler(
+			files.MakeEndpoints(files.NewService(mediaServiceRepo, db, stor), jwtMdw),
 			logger,
 		))
 	}
@@ -292,13 +359,6 @@ func main() {
 
 	// Quiz service
 	{
-		// Questions service
-		questionsRepository, err := questionsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("questionsRepo error: %v", err)
-		}
-		questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
-
 		// Quiz service
 		quizRepository, err := quizRepo.Prepare(ctx, db)
 		if err != nil {
@@ -317,7 +377,7 @@ func main() {
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,
-			quiz.QuizWsHandler(quizSvc),
+			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction)),
 		))
 
 		// run quiz service
@@ -353,14 +413,6 @@ func main() {
 			return fmt.Errorf("terminated with sig %q", c)
 		}, func(err error) {})
 	}
-
-	// Init and run http server
-	// httpServer := &http.Server{
-	// 	Handler: r,
-	// 	Addr:    fmt.Sprintf(":%d", appPort),
-	// }
-	// httpServer.RegisterOnShutdown(cancel)
-	// graceful.LogListenAndServe(httpServer, log.Default())
 
 	if err := g.Run(); err != nil {
 		log.Println("API terminated with error:", err)
