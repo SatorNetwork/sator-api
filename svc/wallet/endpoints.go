@@ -14,7 +14,10 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		Transfer                      endpoint.Endpoint
+		Transfer        endpoint.Endpoint
+		CreateTransfer  endpoint.Endpoint
+		ConfirmTransfer endpoint.Endpoint
+
 		GetWallets                    endpoint.Endpoint
 		GetWalletByID                 endpoint.Endpoint
 		GetListTransactionsByWalletID endpoint.Endpoint
@@ -24,7 +27,21 @@ type (
 		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ Transactions, err error)
 		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
+
 		Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error)
+		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr string, amount float64) (PreparedTransaction, error)
+		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
+	}
+
+	CreateTransferRequest struct {
+		SenderWalletID   string  `json:"-"`
+		RecipientAddress string  `json:"recipient_address" validate:"required"`
+		Amount           float64 `json:"amount" validate:"required,number,gt=0"`
+	}
+
+	ConfirmTransferRequest struct {
+		SenderWalletID  string `json:"-"`
+		TransactionHash string `json:"tx_hash"`
 	}
 
 	TransferRequest struct {
@@ -69,7 +86,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetWallets:                    MakeGetWalletsEndpoint(s),
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
-		Transfer:                      MakeTransferEndpoint(s, validateFunc),
+
+		Transfer:        MakeTransferEndpoint(s, validateFunc),
+		CreateTransfer:  MakeCreateTransferRequestEndpoint(s, validateFunc),
+		ConfirmTransfer: MakeConfirmTransferRequestEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -145,6 +165,47 @@ func MakeGetWalletByIDEndpoint(s service) endpoint.Endpoint {
 		}
 
 		return w, nil
+	}
+}
+
+func MakeCreateTransferRequestEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(CreateTransferRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		walletID, err := uuid.Parse(req.SenderWalletID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid sender wallet id: %w", err)
+		}
+
+		txInfo, err := s.CreateTransfer(ctx, walletID, req.RecipientAddress, req.Amount)
+		if err != nil {
+			return nil, err
+		}
+
+		return txInfo, nil
+	}
+}
+
+func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(ConfirmTransferRequest)
+		if err := v(req); err != nil {
+			return false, err
+		}
+
+		walletID, err := uuid.Parse(req.SenderWalletID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid sender wallet id: %w", err)
+		}
+
+		if err := s.ConfirmTransfer(ctx, walletID, req.TransactionHash); err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 }
 
