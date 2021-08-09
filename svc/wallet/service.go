@@ -71,6 +71,16 @@ type (
 	// rewardsService interface {
 	// 	GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	// }
+
+	// PreparedTransaction ...
+	PreparedTransaction struct {
+		AssetName       string  `json:"asset_name,omitempty"`
+		Amount          float64 `json:"amount,omitempty"`
+		RecipientAddr   string  `json:"recipient_address,omitempty"`
+		Fee             float64 `json:"fee,omitempty"`
+		TransactionHash string  `json:"tx_hash,omitempty"`
+		SenderWalletID  string  `json:"sender_wallet_id,omitempty"`
+	}
 )
 
 // NewService is a factory function,
@@ -549,3 +559,22 @@ func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID 
 
 // 	return transactions[offset:end]
 // }
+
+// CreateTransfer ...
+// TODO: implement method
+func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64) (PreparedTransaction, error) {
+	return PreparedTransaction{
+		AssetName:       "SAO",
+		Amount:          amount,
+		RecipientAddr:   fmt.Sprintf("@%s", recipientAddr[:8]),
+		Fee:             amount * 0.025,
+		SenderWalletID:  walletID.String(),
+		TransactionHash: recipientAddr + recipientAddr,
+	}, nil
+}
+
+// ConfirmTransfer ...
+// TODO: implement method
+func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, tx string) error {
+	return nil
+}
