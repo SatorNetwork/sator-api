@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
@@ -61,11 +62,13 @@ import (
 	"github.com/zeebo/errs"
 )
 
-// Build tag is set up while compiling
 var buildTag string
 
 // Application environment variables
 var (
+	// Build tag is set up while deployment
+	buildTagDO = env.GetString("COMMIT_HASH", "")
+
 	// General
 	appPort            = env.MustInt("APP_PORT")
 	appBaseURL         = env.MustString("APP_BASE_URL")
@@ -418,6 +421,9 @@ func main() {
 
 // returns current build tag
 func rootHandler(w http.ResponseWriter, _ *http.Request) {
+	if buildTag == "" {
+		buildTag = buildTagDO
+	}
 	defaultResponse(w, http.StatusOK, map[string]interface{}{"build_tag": buildTag})
 }
 
