@@ -80,7 +80,8 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 	}
 
 	return wallet.Wallet{
-		ID: walletID.String(),
+		ID:    walletID.String(),
+		Order: 99,
 		Balance: []wallet.Balance{{
 			Currency: "UNCLAIMED",
 			Amount:   amount,

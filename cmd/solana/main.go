@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
@@ -42,11 +43,16 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	ethereumClient, err := ethereum.NewClient()
+	if err != nil {
+		log.Fatalf("failed to init eth client: %v", err)
+	}
+
 	repo, err := repository.Prepare(ctx, db)
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint), nil)
+	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint), ethereumClient)
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)
