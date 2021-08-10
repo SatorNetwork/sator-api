@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS invitations (
     email VARCHAR NOT NULL,
     invited_by uuid NOT NULL,
     invited_at TIMESTAMP NOT NULL DEFAULT now(),
-    accepted_by uuid NOT NULL,
+    accepted_by uuid DEFAULT NULL,
     accepted_at TIMESTAMP DEFAULT NULL,
     reward_received BOOLEAN
 );

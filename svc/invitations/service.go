@@ -125,19 +125,16 @@ func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relation
 
 // SendInvitation used to send invitation if person doesn't exist in invitation table.
 func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, invitedByUsername, inviteeEmail string) error {
-	if invitation, err := s.ir.GetInvitationByInviteeEmail(ctx, inviteeEmail); err != nil {
+	if _, err := s.ir.GetInvitationByInviteeEmail(ctx, inviteeEmail); err != nil {
 		if db.IsNotFoundError(err) {
-			invitation, err = s.ir.CreateInvitation(ctx, repository.CreateInvitationParams{
+			if _, err = s.ir.CreateInvitation(ctx, repository.CreateInvitationParams{
 				Email:     inviteeEmail,
 				InvitedBy: invitedByID,
-			})
-			if err != nil {
+			}); err != nil {
 				return fmt.Errorf("could not create invitation: %w", err)
 			}
 
-			err = s.m.SendInvitation(ctx, invitation.Email, invitedByUsername)
-			if err != nil {
-
+			if err := s.m.SendInvitation(ctx, inviteeEmail, invitedByUsername); err != nil {
 				return fmt.Errorf("could not send invitation: %w", err)
 			}
 		}
