@@ -168,6 +168,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 		}
 		return Wallet{
 			ID:                     w.ID.String(),
+			Order:                  w.Sort,
 			EthereumAccountAddress: ea.Address,
 			Actions: []Action{
 				{
@@ -235,6 +236,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	return Wallet{
 		ID:                   w.ID.String(),
+		Order:                w.Sort,
 		SolanaAccountAddress: sa.PublicKey,
 		Actions: []Action{
 			{

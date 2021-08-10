@@ -95,6 +95,7 @@ type (
 	// Wallet ...
 	Wallet struct {
 		ID                     string    `json:"id"`
+		Order                  int32     `json:"order"`
 		SolanaAccountAddress   string    `json:"solana_account_address"`
 		EthereumAccountAddress string    `json:"ethereum_account_address"`
 		Balance                []Balance `json:"balance"`

@@ -444,7 +444,14 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  order:
+                    type: number
+                    example: 1
+                    description: "Wallet order in list"
                   solana_account_address:
+                    type: string
+                    example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+                  ethereum_account_address:
                     type: string
                     example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
                   balance:
