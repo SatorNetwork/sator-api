@@ -137,6 +137,8 @@ func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, inv
 			if err := s.m.SendInvitation(ctx, inviteeEmail, invitedByUsername); err != nil {
 				return fmt.Errorf("could not send invitation: %w", err)
 			}
+
+			return nil
 		}
 
 		return fmt.Errorf("could not get invitation by invitee email: %w", err)
