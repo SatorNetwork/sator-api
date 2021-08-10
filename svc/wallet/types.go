@@ -93,10 +93,11 @@ type (
 type (
 	// Wallet ...
 	Wallet struct {
-		ID                   string    `json:"id"`
-		SolanaAccountAddress string    `json:"solana_account_address"`
-		Balance              []Balance `json:"balance"`
-		Actions              []Action  `json:"actions"`
+		ID                     string    `json:"id"`
+		SolanaAccountAddress   string    `json:"solana_account_address"`
+		EthereumAccountAddress string    `json:"ethereum_account_address"`
+		Balance                []Balance `json:"balance"`
+		Actions                []Action  `json:"actions"`
 	}
 
 	// Action ...

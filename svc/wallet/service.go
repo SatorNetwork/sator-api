@@ -126,7 +126,7 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 		wli := WalletsListItem{ID: w.ID.String(), Type: w.WalletType}
 
 		switch w.WalletType {
-		case WalletTypeSolana, WalletTypeSator:
+		case WalletTypeSolana, WalletTypeSator, WalletTypeEthereum:
 			wli.GetDetailsURL = fmt.Sprintf(s.walletDetailsURL, w.ID.String())
 			wli.GetTransactionsURL = fmt.Sprintf(s.walletTransactionsURL, w.ID.String())
 		case WalletTypeRewards:
@@ -152,6 +152,42 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	if w.UserID != userID {
 		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
+	}
+
+	if w.EthereumAccountID != uuid.Nil {
+		ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID)
+		if err != nil {
+			if db.IsNotFoundError(err) {
+				return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
+			}
+			return Wallet{}, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
+		}
+		return Wallet{
+			ID:                     w.ID.String(),
+			EthereumAccountAddress: ea.Address,
+			Actions: []Action{
+				{
+					Type: ActionSendTokens.String(),
+					Name: ActionSendTokens.Name(),
+					URL:  "",
+				},
+				{
+					Type: ActionReceiveTokens.String(),
+					Name: ActionReceiveTokens.Name(),
+					URL:  "",
+				},
+			},
+			Balance: []Balance{
+				{
+					Currency: "SAOE",
+					Amount:   0,
+				},
+				{
+					Currency: "USD",
+					Amount:   0,
+				},
+			},
+		}, nil
 	}
 
 	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
