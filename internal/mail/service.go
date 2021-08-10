@@ -12,6 +12,7 @@ var (
 	VerificationCodeTmpl   = "verification_code"
 	PasswordResetTmpl      = "password_reset"
 	DestroyAccountCodeTmpl = "destroy_account"
+	InvitationCodeTmpl     = "invitation"
 )
 
 type (
@@ -69,6 +70,16 @@ func (s *Service) SendDestroyAccountCode(_ context.Context, email, otp string) e
 		"otp": otp,
 	}); err != nil {
 		return fmt.Errorf("could not send verification code: %w", err)
+	}
+	return nil
+}
+
+// SendInvitation ...
+func (s *Service) SendInvitation(_ context.Context, email, invitedBy string) error {
+	if err := s.send(InvitationCodeTmpl, "invitation", email, map[string]interface{}{
+		"invited_by": invitedBy,
+	}); err != nil {
+		return fmt.Errorf("could not send invitation to email %s: %w", email, err)
 	}
 	return nil
 }

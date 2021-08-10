@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
+
 	"github.com/dmitrymomot/random"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type (
@@ -25,6 +25,7 @@ type (
 		ws         walletService
 		jwt        jwtInteractor
 		mail       mailer
+		ic         invitationsClient
 		otpLen     int
 		masterCode string
 	}
@@ -63,10 +64,15 @@ type (
 	walletService interface {
 		CreateWallet(ctx context.Context, userID uuid.UUID) error
 	}
+
+	invitationsClient interface {
+		AcceptInvitation(ctx context.Context, inviteeID uuid.UUID, inviteeEmail string) error
+		IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error)
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -76,8 +82,11 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, opt ...Se
 	if ws == nil {
 		log.Fatalln("wallet service is not set")
 	}
+	if ic == nil {
+		log.Fatalln("invitations client is not set")
+	}
 
-	s := &Service{jwt: ji, ur: ur, ws: ws, otpLen: 5}
+	s := &Service{ur: ur, ws: ws, jwt: ji, ic: ic, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -186,6 +195,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
+	}
+
+	if isInvited, _ := s.ic.IsEmailInvited(ctx, email); isInvited {
+		if err := s.ic.AcceptInvitation(ctx, u.ID, email); err != nil {
+			log.Printf("could not accept invitation for user id = %s: %v", u.ID, err)
+		}
 	}
 
 	return token, nil
