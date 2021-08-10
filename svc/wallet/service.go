@@ -7,15 +7,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/mr-tron/base58"
-
-	"github.com/SatorNetwork/sator-api/internal/ethereum"
-
 	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 
 	"github.com/google/uuid"
+	"github.com/mr-tron/base58"
 	"github.com/portto/solana-go-sdk/types"
 )
 
