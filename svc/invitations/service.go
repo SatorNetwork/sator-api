@@ -58,7 +58,7 @@ type (
 	}
 
 	mailer interface {
-		SendInvitation(_ context.Context, email, invitedBy string) error
+		SendInvitation(ctx context.Context, email, invitedBy string) error
 	}
 
 	rewardsClient interface {

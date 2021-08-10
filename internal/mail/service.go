@@ -3,6 +3,7 @@ package mail
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/keighl/postmark"
 )
@@ -101,7 +102,7 @@ func (s *Service) send(tpl, tag, email string, data map[string]interface{}) erro
 		payload[k] = v
 	}
 
-	if _, err := s.client.SendTemplatedEmail(postmark.TemplatedEmail{
+	if resp, err := s.client.SendTemplatedEmail(postmark.TemplatedEmail{
 		TemplateAlias: VerificationCodeTmpl,
 		InlineCss:     true,
 		TrackOpens:    true,
@@ -112,6 +113,8 @@ func (s *Service) send(tpl, tag, email string, data map[string]interface{}) erro
 		TemplateModel: payload,
 	}); err != nil {
 		return fmt.Errorf("could not send email: %w", err)
+	} else {
+		log.Printf("send email response: %v", resp)
 	}
 
 	return nil

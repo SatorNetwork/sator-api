@@ -108,7 +108,7 @@ var (
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
 
 	//	 Invitation
-	invitationReward = env.GetInt("INVITATION_REWARD", 0)
+	invitationReward = env.GetFloat("INVITATION_REWARD", 0)
 	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
 
 	// File Storage
@@ -230,7 +230,7 @@ func main() {
 		log.Fatalf("invitationsRepo error: %v", err)
 	}
 	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
-		InvitationReward: float64(invitationReward),
+		InvitationReward: invitationReward,
 		InvitationURL:    invitationURL,
 	})
 	invitationsClient := invitationsClient.New(invitationsService)
