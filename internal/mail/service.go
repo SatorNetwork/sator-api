@@ -103,7 +103,7 @@ func (s *Service) send(tpl, tag, email string, data map[string]interface{}) erro
 	}
 
 	if resp, err := s.client.SendTemplatedEmail(postmark.TemplatedEmail{
-		TemplateAlias: VerificationCodeTmpl,
+		TemplateAlias: tpl,
 		InlineCss:     true,
 		TrackOpens:    true,
 		From:          s.config.FromEmail,
