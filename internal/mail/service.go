@@ -3,6 +3,7 @@ package mail
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/keighl/postmark"
 )
@@ -12,6 +13,7 @@ var (
 	VerificationCodeTmpl   = "verification_code"
 	PasswordResetTmpl      = "password_reset"
 	DestroyAccountCodeTmpl = "destroy_account"
+	InvitationCodeTmpl     = "invitation"
 )
 
 type (
@@ -73,6 +75,16 @@ func (s *Service) SendDestroyAccountCode(_ context.Context, email, otp string) e
 	return nil
 }
 
+// SendInvitation ...
+func (s *Service) SendInvitation(_ context.Context, email, invitedBy string) error {
+	if err := s.send(InvitationCodeTmpl, "invitation", email, map[string]interface{}{
+		"invited_by": invitedBy,
+	}); err != nil {
+		return fmt.Errorf("could not send invitation to email %s: %w", email, err)
+	}
+	return nil
+}
+
 // send email
 func (s *Service) send(tpl, tag, email string, data map[string]interface{}) error {
 	// Default model data
@@ -90,8 +102,8 @@ func (s *Service) send(tpl, tag, email string, data map[string]interface{}) erro
 		payload[k] = v
 	}
 
-	if _, err := s.client.SendTemplatedEmail(postmark.TemplatedEmail{
-		TemplateAlias: VerificationCodeTmpl,
+	if resp, err := s.client.SendTemplatedEmail(postmark.TemplatedEmail{
+		TemplateAlias: tpl,
 		InlineCss:     true,
 		TrackOpens:    true,
 		From:          s.config.FromEmail,
@@ -101,6 +113,8 @@ func (s *Service) send(tpl, tag, email string, data map[string]interface{}) erro
 		TemplateModel: payload,
 	}); err != nil {
 		return fmt.Errorf("could not send email: %w", err)
+	} else {
+		log.Printf("send email response: %v", resp)
 	}
 
 	return nil

@@ -5,8 +5,10 @@ info:
 servers:
   - url: http://localhost:8080/
     description: Local server
+  - url: https://api.dev.sator.io/
+    description: Development server
   - url: https://api.stage.sator.io/
-    description: Development / Staging server
+    description: Staging server
 components:
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
@@ -515,6 +517,114 @@ paths:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
                       description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /wallets/{wallet_id}/create-transfer:
+    post:
+      tags:
+        - "Wallet"
+      summary: Create transfer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipient_address:
+                  type: string
+                  example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexF"
+                amount:
+                  type: number
+                  example: 123.45
+      responses:
+        "200":
+          description: Prepared transaction data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    asset_name:
+                      type: string
+                      example: "SAO"
+                    amount:
+                      type: number
+                      example: 123.45
+                    fee:
+                      type: number
+                      example: 3.15
+                    recipient_address:
+                      type: string
+                      example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+                    sender_wallet_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3122"
+                    tx_hash:
+                      type: string
+                      example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /wallets/{wallet_id}/confirm-transfer:
+    post:
+      tags:
+        - "Wallet"
+      summary: Confirm transfer (sending of signed transaction).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tx_hash:
+                  type: string
+                  example: "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexFB2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9B2KhBdBCcKWexF"
+      responses:
+        "200":
+          description: Send signed transaction.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    result:
+                      type: boolean
+                      example: true
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -1225,6 +1335,184 @@ paths:
                     amount:
                       type: number
                       example: 123.45
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /invitations:
+    post:
+      tags:
+        - "Invitations"
+      summary: Sends invitation if person doesn't exist in invitation table.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "qwerty@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /files/images/{id}:
+    get:
+      tags:
+        - "File Storage / Images"
+      summary: Get image by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Image ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns image data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  file_name:
+                    type: string
+                    example: "filename"
+                  file_path:
+                    type: string
+                    example: "filepath"
+                  file_url:
+                    type: string
+                    example: "file_url"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "File Storage / Images"
+      summary: used for delete from storages image by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Image ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /files/images:
+    post:
+      tags:
+        - "File Storage / Images"
+      summary: used to store new image.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  file_name:
+                    type: string
+                    example: "filename"
+                  file_path:
+                    type: string
+                    example: "filepath"
+                  file_url:
+                    type: string
+                    example: "file_url"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "File Storage / Images"
+      summary: Get images list.
+      security:
+        - bearerAuth: [ ]
+
+      responses:
+        "200":
+          description: Returns image data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    file_name:
+                      type: string
+                      example: "filename"
+                    file_path:
+                      type: string
+                      example: "filepath"
+                    file_url:
+                      type: string
+                      example: "file_url"
                     created_at:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
