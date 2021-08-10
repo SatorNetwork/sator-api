@@ -62,6 +62,7 @@ type (
 		Type               string `json:"type"`
 		GetDetailsURL      string `json:"get_details_url"`      // url to get wallet details
 		GetTransactionsURL string `json:"get_transactions_url"` // url to get transactions list
+		Order              int32  `json:"order"`
 	}
 )
 
@@ -77,16 +78,28 @@ type (
 		Amount    float64 `json:"amount"`
 		CreatedAt string  `json:"created_at"`
 	}
+
+	// PreparedTransferTransaction struct
+	PreparedTransferTransaction struct {
+		AssetName       string  `json:"asset_name,omitempty"`
+		Amount          float64 `json:"amount,omitempty"`
+		RecipientAddr   string  `json:"recipient_address,omitempty"`
+		Fee             float64 `json:"fee,omitempty"`
+		TransactionHash string  `json:"tx_hash,omitempty"`
+		SenderWalletID  string  `json:"sender_wallet_id,omitempty"`
+	}
 )
 
 // Wallet details
 type (
 	// Wallet ...
 	Wallet struct {
-		ID                   string    `json:"id"`
-		SolanaAccountAddress string    `json:"solana_account_address"`
-		Balance              []Balance `json:"balance"`
-		Actions              []Action  `json:"actions"`
+		ID                     string    `json:"id"`
+		Order                  int32     `json:"order"`
+		SolanaAccountAddress   string    `json:"solana_account_address"`
+		EthereumAccountAddress string    `json:"ethereum_account_address"`
+		Balance                []Balance `json:"balance"`
+		Actions                []Action  `json:"actions"`
 	}
 
 	// Action ...

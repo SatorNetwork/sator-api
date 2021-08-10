@@ -166,7 +166,7 @@ func decodeGetShowsByCategoryRequest(ctx context.Context, r *http.Request) (inte
 }
 
 func castStrToInt32(source string) int32 {
-	res, err := strconv.Atoi(source)
+	res, err := strconv.ParseInt(source, 10, 32)
 	if err != nil {
 		return 0
 	}

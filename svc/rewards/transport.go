@@ -87,7 +87,7 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 }
 
 func castStrToInt32(source string) int32 {
-	res, err := strconv.Atoi(source)
+	res, err := strconv.ParseInt(source, 10, 32)
 	if err != nil {
 		return 0
 	}
