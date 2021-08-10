@@ -594,22 +594,3 @@ func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID 
 
 // 	return transactions[offset:end]
 // }
-
-// CreateTransfer ...
-// TODO: implement method
-func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64) (PreparedTransaction, error) {
-	return PreparedTransaction{
-		AssetName:       "SAO",
-		Amount:          amount,
-		RecipientAddr:   fmt.Sprintf("@%s", recipientAddr[:8]),
-		Fee:             amount * 0.025,
-		SenderWalletID:  walletID.String(),
-		TransactionHash: recipientAddr + recipientAddr,
-	}, nil
-}
-
-// ConfirmTransfer ...
-// TODO: implement method
-func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, tx string) error {
-	return nil
-}
