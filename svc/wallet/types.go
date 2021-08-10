@@ -77,16 +77,27 @@ type (
 		Amount    float64 `json:"amount"`
 		CreatedAt string  `json:"created_at"`
 	}
+
+	// PreparedTransferTransaction struct
+	PreparedTransferTransaction struct {
+		AssetName       string  `json:"asset_name,omitempty"`
+		Amount          float64 `json:"amount,omitempty"`
+		RecipientAddr   string  `json:"recipient_address,omitempty"`
+		Fee             float64 `json:"fee,omitempty"`
+		TransactionHash string  `json:"tx_hash,omitempty"`
+		SenderWalletID  string  `json:"sender_wallet_id,omitempty"`
+	}
 )
 
 // Wallet details
 type (
 	// Wallet ...
 	Wallet struct {
-		ID                   string    `json:"id"`
-		SolanaAccountAddress string    `json:"solana_account_address"`
-		Balance              []Balance `json:"balance"`
-		Actions              []Action  `json:"actions"`
+		ID                     string    `json:"id"`
+		SolanaAccountAddress   string    `json:"solana_account_address"`
+		EthereumAccountAddress string    `json:"ethereum_account_address"`
+		Balance                []Balance `json:"balance"`
+		Actions                []Action  `json:"actions"`
 	}
 
 	// Action ...

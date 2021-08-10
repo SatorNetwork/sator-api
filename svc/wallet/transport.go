@@ -60,14 +60,14 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Post("/{wallet_id}/create-transfer", httptransport.NewServer(
-		e.Transfer,
+		e.CreateTransfer,
 		decodeCreateTransferRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/{wallet_id}/confirm-transfer", httptransport.NewServer(
-		e.Transfer,
+		e.ConfirmTransfer,
 		decodeConfirmTransferRequest,
 		httpencoder.EncodeResponse,
 		options...,
@@ -104,6 +104,7 @@ func decodeCreateTransferRequest(_ context.Context, r *http.Request) (interface{
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 	req.SenderWalletID = chi.URLParam(r, "wallet_id")
+	req.Asset = "SAO" // FIXME: remove hardcode
 
 	return req, nil
 }

@@ -20,6 +20,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
+	github.com/mr-tron/base58 v1.2.0
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/portto/solana-go-sdk v0.1.0
