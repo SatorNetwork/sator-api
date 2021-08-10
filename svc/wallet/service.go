@@ -7,6 +7,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/mr-tron/base58"
+
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
@@ -471,46 +473,93 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 	return txList, nil
 }
 
-// Transfer sends transaction from one account to another.
-func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error) {
-	senderAcc := s.sc.AccountFromPrivatekey([]byte(senderPrivateKey))
-
-	senderAccType, err := s.wr.GetSolanaAccountByType(ctx, senderAcc.PublicKey.ToBase58())
+// CreateTransfer crates transaction from one account to another.
+func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipientPK, asset string, amount float64) (tx PreparedTransferTransaction, err error) {
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
+		return PreparedTransferTransaction{}, fmt.Errorf("could not get wallet: %w", err)
 	}
 
-	recipientAccType, err := s.wr.GetSolanaAccountByType(ctx, recipientPK)
+	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
 	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
+		return PreparedTransferTransaction{}, fmt.Errorf("could not get solana account: %w", err)
 	}
 
-	if senderAccType.AccountType != recipientAccType.AccountType {
-		return "", fmt.Errorf("accounts have different types, transaction impossible")
+	senderAcc := s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey)
+
+	var toEncode struct {
+		Amount        float64
+		Asset         string
+		RecipientAddr string
+	}
+
+	toEncode.Asset = asset
+	toEncode.Amount = amount
+	toEncode.RecipientAddr = recipientPK
+
+	bytes, err := json.Marshal(toEncode)
+	if err != nil {
+		return PreparedTransferTransaction{}, fmt.Errorf("could not marshal amount and recipient pk: %w", err)
+	}
+
+	return PreparedTransferTransaction{
+		AssetName:       asset,
+		Amount:          amount,
+		RecipientAddr:   recipientPK,
+		Fee:             1488,
+		TransactionHash: base58.Encode(bytes),
+		SenderWalletID:  senderAcc.PublicKey.ToBase58(),
+	}, nil
+}
+
+func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encodedData string) error {
+	decoded, err := base58.Decode(encodedData)
+	if err != nil {
+		return fmt.Errorf("could not decode from base58: %w", err)
+	}
+
+	var toDecode struct {
+		Amount        float64
+		RecipientAddr string
+	}
+
+	err = json.Unmarshal(decoded, &toDecode)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return fmt.Errorf("could not get solana account: %w", err)
 	}
 
 	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
 	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
+		return fmt.Errorf("could not get fee payer account: %w", err)
 	}
 	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
 	if err != nil {
-		return "", fmt.Errorf("could not get issuer account: %w", err)
+		return fmt.Errorf("could not get issuer account: %w", err)
 	}
 	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
 	if err != nil {
-		return "", fmt.Errorf("could not get asset account: %w", err)
+		return fmt.Errorf("could not get asset account: %w", err)
 	}
 
 	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.SendAssets(
+		if tx, err := s.sc.SendAssets(
 			ctx,
 			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
-			senderAcc,
-			recipientPK,
-			amount,
+			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
+			toDecode.RecipientAddr,
+			toDecode.Amount,
 		); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 10)
@@ -520,7 +569,7 @@ func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK st
 		}
 	}
 
-	return tx, nil
+	return err
 }
 
 func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {

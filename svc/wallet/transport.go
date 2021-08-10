@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -58,20 +59,22 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	// r.Post("/{wallet_id}/transfer", httptransport.NewServer(
-	// 	e.Transfer,
-	// 	decodeTransferRequest,
-	// 	httpencoder.EncodeResponse,
-	// 	options...,
-	// ).ServeHTTP)
+	r.Post("/{wallet_id}/create-transfer", httptransport.NewServer(
+		e.CreateTransfer,
+		decodeCreateTransferRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/{wallet_id}/confirm-transfer", httptransport.NewServer(
+		e.ConfirmTransfer,
+		decodeConfirmTransferRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
 
 	return r
 }
-
-// not used
-// func decodeGetBalanceRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
-// 	return nil, nil
-// }
 
 func decodeGetWalletsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
@@ -95,15 +98,25 @@ func decodeGetListTransactionsByWalletIDRequest(_ context.Context, r *http.Reque
 	}, nil
 }
 
-// not used
-// func decodeTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
-// 	var req TransferRequest
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		return nil, fmt.Errorf("could not decode request body: %w", err)
-// 	}
+func decodeCreateTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req CreateTransferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	req.SenderWalletID = chi.URLParam(r, "wallet_id")
 
-// 	return req, nil
-// }
+	return req, nil
+}
+
+func decodeConfirmTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req ConfirmTransferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	req.SenderWalletID = chi.URLParam(r, "wallet_id")
+
+	return req, nil
+}
 
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
