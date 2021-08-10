@@ -499,6 +499,10 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 		return nil, ErrForbidden
 	}
 
+	if wallet.SolanaAccountID == uuid.Nil {
+		return Transactions{}, nil
+	}
+
 	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
 	if err != nil {
 		return nil, err
