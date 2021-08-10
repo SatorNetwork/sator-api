@@ -33,7 +33,7 @@ type (
 		SenderWalletID   string  `json:"-"`
 		RecipientAddress string  `json:"recipient_address" validate:"required"`
 		Amount           float64 `json:"amount" validate:"required,number,gt=0"`
-		Asset            string  `json:"asset"`
+		Asset            string  `json:"asset,omitempty"`
 	}
 
 	ConfirmTransferRequest struct {

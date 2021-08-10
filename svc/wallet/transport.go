@@ -104,6 +104,7 @@ func decodeCreateTransferRequest(_ context.Context, r *http.Request) (interface{
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 	req.SenderWalletID = chi.URLParam(r, "wallet_id")
+	req.Asset = "SAO" // FIXME: remove hardcode
 
 	return req, nil
 }
