@@ -123,7 +123,11 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
-		wli := WalletsListItem{ID: w.ID.String(), Type: w.WalletType}
+		wli := WalletsListItem{
+			ID:    w.ID.String(),
+			Type:  w.WalletType,
+			Order: w.Sort,
+		}
 
 		switch w.WalletType {
 		case WalletTypeSolana, WalletTypeSator, WalletTypeEthereum:

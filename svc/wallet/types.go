@@ -62,6 +62,7 @@ type (
 		Type               string `json:"type"`
 		GetDetailsURL      string `json:"get_details_url"`      // url to get wallet details
 		GetTransactionsURL string `json:"get_transactions_url"` // url to get transactions list
+		Order              int32  `json:"order"`
 	}
 )
 

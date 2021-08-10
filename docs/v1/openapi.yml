@@ -410,6 +410,10 @@ paths:
                     get_transactions_url:
                       type: string
                       example: "/wallets/f4f78cac-5db6-4ecc-ad13-5877705f3126/transactions"
+                    order:
+                      type: number
+                      example: 1
+                      description: "Wallet order in list"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
