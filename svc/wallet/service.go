@@ -473,18 +473,6 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 
 // CreateTransfer crates transaction from one account to another.
 func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipientPK, asset string, amount float64) (tx PreparedTransferTransaction, err error) {
-	wallet, err := s.wr.GetWalletByID(ctx, walletID)
-	if err != nil {
-		return PreparedTransferTransaction{}, fmt.Errorf("could not get wallet: %w", err)
-	}
-
-	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
-	if err != nil {
-		return PreparedTransferTransaction{}, fmt.Errorf("could not get solana account: %w", err)
-	}
-
-	senderAcc := s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey)
-
 	var toEncode struct {
 		Amount        float64
 		Asset         string
@@ -506,7 +494,7 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 		RecipientAddr:   recipientPK,
 		Fee:             1488,
 		TransactionHash: base58.Encode(bytes),
-		SenderWalletID:  senderAcc.PublicKey.ToBase58(),
+		SenderWalletID:  walletID.String(),
 	}, nil
 }
 
