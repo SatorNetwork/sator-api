@@ -359,7 +359,6 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 	}
 }
 
-
 // MakeAddQuestionEndpoint ...
 func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {

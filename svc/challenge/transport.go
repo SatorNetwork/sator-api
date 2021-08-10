@@ -21,8 +21,8 @@ type (
 	}
 )
 
-// MakeHTTPHandler ...
-func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
+// MakeHTTPHandlerChallenges ...
+func MakeHTTPHandlerChallenges(e Endpoints, log logger) http.Handler {
 	r := chi.NewRouter()
 
 	options := []httptransport.ServerOption{
@@ -52,7 +52,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{id}", httptransport.NewServer(
+	r.Get("/{challenge_id}", httptransport.NewServer(
 		e.GetChallengeById,
 		decodeGetChallengeByIdRequest,
 		httpencoder.EncodeResponse,
@@ -66,72 +66,85 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Delete("/{id}", httptransport.NewServer(
+	r.Delete("/{challenge_id}", httptransport.NewServer(
 		e.DeleteChallengeByID,
 		decodeDeleteChallengeByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Put("/{id}", httptransport.NewServer(
+	r.Put("/{challenge_id}", httptransport.NewServer(
 		e.UpdateChallenge,
 		decodeUpdateChallengeRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Post("/questions", httptransport.NewServer(
+	r.Post("/{challenge_id}/questions", httptransport.NewServer(
 		e.AddQuestion,
 		decodeAddQuestionRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Post("/questions/{question_id}/answers", httptransport.NewServer(
-		e.AddQuestionOption,
-		decodeAddQuestionOptionRequest,
+	r.Get("/{challenge_id}/questions", httptransport.NewServer(
+		e.GetQuestionsByChallengeID,
+		decodeGetQuestionsByChallengeIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Delete("/questions/{question_id}", httptransport.NewServer(
-		e.DeleteQuestionByID,
-		decodeDeleteQuestionByIDRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+	return r
+}
 
-	r.Delete("/questions/{question_id}/answers/{answer_id}", httptransport.NewServer(
-		e.DeleteAnswerByID,
-		decodeDeleteAnswerByIDRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+// MakeHTTPHandlerQuestions ...
+func MakeHTTPHandlerQuestions(e Endpoints, log logger) http.Handler {
+	r := chi.NewRouter()
 
-	r.Put("/questions/{question_id}", httptransport.NewServer(
-		e.UpdateQuestion,
-		decodeUpdateQuestionRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(log)),
+		httptransport.ServerErrorEncoder(httpencoder.EncodeError(log, codeAndMessageFrom)),
+		httptransport.ServerBefore(jwtkit.HTTPToContext()),
+	}
 
-	r.Put("/questions/{question_id}/answers/{answer_id}", httptransport.NewServer(
-		e.UpdateAnswer,
-		decodeUpdateAnswerRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
-	r.Get("/questions/{question_id}", httptransport.NewServer(
+	r.Get("/{question_id}", httptransport.NewServer(
 		e.GetQuestionByID,
 		decodeGetQuestionByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{id}/questions", httptransport.NewServer(
-		e.GetQuestionsByChallengeID,
-		decodeGetQuestionsByChallengeIDRequest,
+	r.Put("/{question_id}", httptransport.NewServer(
+		e.UpdateQuestion,
+		decodeUpdateQuestionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{question_id}", httptransport.NewServer(
+		e.DeleteQuestionByID,
+		decodeDeleteQuestionByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/{question_id}/answers", httptransport.NewServer(
+		e.AddQuestionOption,
+		decodeAddQuestionOptionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{question_id}/answers/{answer_id}", httptransport.NewServer(
+		e.DeleteAnswerByID,
+		decodeDeleteAnswerByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/{question_id}/answers/{answer_id}", httptransport.NewServer(
+		e.UpdateAnswer,
+		decodeUpdateAnswerRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -175,7 +188,7 @@ func decodeIsEpisodeActivatedRequest(_ context.Context, r *http.Request) (interf
 }
 
 func decodeGetChallengeByIdRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "challenge_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}
@@ -202,7 +215,7 @@ func decodeAddChallengeRequest(_ context.Context, r *http.Request) (interface{},
 }
 
 func decodeDeleteChallengeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "challenge_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}
@@ -217,7 +230,7 @@ func decodeUpdateChallengeRequest(_ context.Context, r *http.Request) (interface
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	challengeID := chi.URLParam(r, "id")
+	challengeID := chi.URLParam(r, "challenge_id")
 	if challengeID == "" {
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}
@@ -231,6 +244,12 @@ func decodeAddQuestionRequest(_ context.Context, r *http.Request) (interface{}, 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
+	challengeID := chi.URLParam(r, "challenge_id")
+	if challengeID == "" {
+		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
+	}
+	req.ChallengeID = challengeID
 
 	return req, nil
 }
@@ -324,7 +343,7 @@ func decodeGetQuestionByIDRequest(_ context.Context, r *http.Request) (interface
 }
 
 func decodeGetQuestionsByChallengeIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "challenge_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}

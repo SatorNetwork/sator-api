@@ -227,7 +227,12 @@ func main() {
 			),
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
-		r.Mount("/challenges", challenge.MakeHTTPHandler(
+		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(
+			challenge.MakeEndpoints(challengeSvc, jwtMdw),
+			logger,
+		))
+
+		r.Mount("/questions", challenge.MakeHTTPHandlerQuestions(
 			challenge.MakeEndpoints(challengeSvc, jwtMdw),
 			logger,
 		))

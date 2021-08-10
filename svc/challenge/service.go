@@ -69,19 +69,19 @@ type (
 
 	// Question struct
 	Question struct {
-		ID             uuid.UUID      `json:"id"` // OLD NAME: QuestionID     string         `json:"question_id"`
+		ID             uuid.UUID      `json:"id"`
 		ChallengeID    uuid.UUID      `json:"challenge_id"`
-		Question       string         `json:"question"` // OLD NAME: QuestionText   string         `json:"question_text"`
+		Question       string         `json:"question"`
 		TimeForAnswer  int            `json:"time_for_answer"`
 		TotalQuestions int            `json:"total_questions"` // TODO: Do we need this field?
-		Order          int32          `json:"order"`           // OLD NAME: QuestionNumber int            `json:"question_number"`
+		Order          int32          `json:"order"`
 		AnswerOptions  []AnswerOption `json:"answer_options"`
 	}
 
 	AnswerOption struct {
-		ID         uuid.UUID `json:"id"` //  OLD NAME: AnswerID   string `json:"answer_id"`
+		ID         uuid.UUID `json:"id"`
 		QuestionID uuid.UUID `json:"question_id"`
-		Option     string    `json:"option"` // OLD NAME: AnswerText string `json:"answer_text"`
+		Option     string    `json:"option"`
 		IsCorrect  bool      `json:"is_correct"`
 	}
 )

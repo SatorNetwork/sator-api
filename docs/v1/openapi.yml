@@ -720,7 +720,7 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
-  /challenges/{id}:
+  /challenges/{challenge_id}:
     get:
       tags:
         - "Challenges"
@@ -728,7 +728,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: challenge_id
           in: path
           description: Сhallenge ID.
           required: true
@@ -778,7 +778,7 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: id
+        - name: challenge_id
           in: path
           description: Сhallenge ID.
           required: true
@@ -829,7 +829,7 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: id
+        - name: challenge_id
           in: path
           description: Сhallenge ID.
           required: true
@@ -1237,7 +1237,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /challenges/{challenge_id}/questions/{question_id}:
+  /questions/{question_id}:
     get:
       tags:
         - "Questions"
@@ -1245,12 +1245,6 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: challenge_id
-          in: path
-          description: Challenge ID.
-          required: true
-          schema:
-            type: string
         - name: question_id
           in: path
           description: Question ID.
@@ -1361,7 +1355,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /challenges/{id}/questions:
+  /challenges/{challenge_id}/questions:
     get:
       tags:
         - "Questions"
@@ -1369,7 +1363,7 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: id
+        - name: challenge_id
           in: path
           description: Challenge ID.
           required: true
@@ -1425,7 +1419,7 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: id
+        - name: challenge_id
           in: path
           description: Challenge ID.
           required: true
@@ -1475,7 +1469,7 @@ paths:
           $ref: "#/components/responses/DefaultError"
 
 
-  /challenges/questions/{question_id}/answers:
+  /questions/{question_id}/answers:
     post:
       tags:
         - "Answers"
@@ -1483,12 +1477,6 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: id
-          in: path
-          description: Challenge ID.
-          required: true
-          schema:
-            type: string
         - name: question_id
           in: path
           description: Question ID.
@@ -1535,7 +1523,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /challenges/questions/{question_id}/answers/{answer_id}:
+  /questions/{question_id}/answers/{answer_id}:
     put:
       tags:
         - "Answers"
