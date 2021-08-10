@@ -7,6 +7,6 @@ CREATE TABLE IF NOT EXISTS files (
     file_url VARCHAR NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
-CREATE INDEX files_created_at ON files USING BTREE (created_at);
+CREATE INDEX IF NOT EXISTS files_created_at ON files USING BTREE (created_at);
 -- +migrate Down
 DROP TABLE IF EXISTS files;
