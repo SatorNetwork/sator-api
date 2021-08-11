@@ -57,7 +57,7 @@ type (
 
 		AddQuestionOption(ctx context.Context, ao AnswerOption) (AnswerOption, error)
 		DeleteAnswerByID(ctx context.Context, id, questionID uuid.UUID) error
-		CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error)
+		CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error)
 		UpdateAnswer(ctx context.Context, ao AnswerOption) error
 	}
 
@@ -149,7 +149,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 		AddQuestionOption: MakeAddQuestionOptionEndpoint(s, validateFunc),
 		DeleteAnswerByID:  MakeDeleteAnswerByIDEndpoint(s, validateFunc),
-		CheckAnswer:       MakeCheckAnswerEndpoint(s),
+		CheckAnswer:       MakeCheckAnswerEndpoint(s, validateFunc),
 		UpdateAnswer:      MakeUpdateAnswerEndpoint(s, validateFunc),
 	}
 
@@ -562,14 +562,24 @@ func MakeGetQuestionsByChallengeIDEndpoint(s service) endpoint.Endpoint {
 }
 
 // MakeCheckAnswerEndpoint ...
-func MakeCheckAnswerEndpoint(s service) endpoint.Endpoint {
+func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		answerID, err := uuid.Parse(request.(string))
+		req := request.(CheckAnswerRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		answerID, err := uuid.Parse(req.AnswerID)
 		if err != nil {
 			return nil, fmt.Errorf("could not get answer id: %w", err)
 		}
 
-		resp, err := s.CheckAnswer(ctx, answerID)
+		questionID, err := uuid.Parse(req.QuestionID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get question id: %w", err)
+		}
+
+		resp, err := s.CheckAnswer(ctx, answerID, questionID)
 		if err != nil {
 			return nil, err
 		}

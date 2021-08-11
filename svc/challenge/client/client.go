@@ -20,7 +20,7 @@ type (
 
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*challenge.Question, error)
-		CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error)
+		CheckAnswer(ctx context.Context, aid, uid uuid.UUID) (bool, error)
 	}
 )
 
@@ -63,8 +63,8 @@ func (c *Client) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([
 }
 
 // CheckAnswer ...
-func (c *Client) CheckAnswer(ctx context.Context, aid uuid.UUID) (bool, error) {
-	return c.s.CheckAnswer(ctx, aid)
+func (c *Client) CheckAnswer(ctx context.Context, aid, uid uuid.UUID) (bool, error) {
+	return c.s.CheckAnswer(ctx, aid, uid)
 }
 
 // GetOneRandomQuestionByChallengeID ...

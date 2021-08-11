@@ -31,21 +31,21 @@ func MakeHTTPHandlerChallenges(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Get("/{episode_id}/validation-question", httptransport.NewServer(
+	r.Get("/{episode_id}/validation-question", httptransport.NewServer( // TODO: THIS METHOD - DONE
 		e.GetVerificationQuestionByEpisodeID,
 		decodeGetValidationQuestionRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{question_id}/check-answer/{answer_id}", httptransport.NewServer(
+	r.Get("/{question_id}/check-answer/{answer_id}", httptransport.NewServer( // TODO: THIS METHOD - DONE
 		e.CheckVerificationQuestionAnswer,
 		decodeCheckAnswerRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{episode_id}/is-activated", httptransport.NewServer(
+	r.Get("/{episode_id}/is-activated", httptransport.NewServer( // TODO: THIS METHOD
 		e.VerifyUserAccessToEpisode,
 		decodeIsEpisodeActivatedRequest,
 		httpencoder.EncodeResponse,

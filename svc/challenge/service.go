@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
-
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
+
 	"github.com/google/uuid"
 )
 
@@ -43,7 +43,7 @@ type (
 		DeleteAnswerByID(ctx context.Context, arg repository.DeleteAnswerByIDParams) error
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
 		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
-		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
+		CheckAnswer(ctx context.Context, arg repository.CheckAnswerParams) (sql.NullBool, error)
 		UpdateAnswer(ctx context.Context, arg repository.UpdateAnswerParams) error
 	}
 
@@ -122,7 +122,10 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 }
 
 // GetVerificationQuestionByEpisodeID ...
+// TODO: THIS METHOD
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error) {
+	// TODO: How many attempt
+
 	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
@@ -154,11 +157,25 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 }
 
 // CheckVerificationQuestionAnswer ...
+// TODO: THIS METHOD
 func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, qid, aid uuid.UUID) (interface{}, error) {
-	return s.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
+
+	// TODO: Check how many attempts made
+	// attempt, err := GetAttemptAmount
+	// if attempt >= 2{return nil, errors.New("user has no more attempts to pass verification question")
+	isValid, err := s.CheckAnswer(ctx, aid, qid)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
+	}
+	if isValid == false {
+		// TODO: store failed attempt
+	}
+
+	return isValid, nil
 }
 
 // VerifyUserAccessToEpisode ...
+// TODO: THIS METHOD
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
 	// return s.qs.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
 	return false, nil
@@ -416,13 +433,16 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid
 }
 
 // CheckAnswer checks answer
-func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
-	answers, err := s.cr.CheckAnswer(ctx, id)
+func (s *Service) CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error) {
+	answers, err := s.cr.CheckAnswer(ctx, repository.CheckAnswerParams{
+		ID:         aid,
+		QuestionID: qid,
+	})
 	if err != nil {
 		if !db.IsNotFoundError(err) {
 			return false, fmt.Errorf("could not validate answer: %w", err)
 		}
-		return false, fmt.Errorf("could not found answer option with id %s: %w", id, err)
+		return false, fmt.Errorf("could not found answer option with id %s: %w", aid, err)
 	}
 
 	return answers.Bool, nil

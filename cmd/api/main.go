@@ -205,7 +205,7 @@ func main() {
 			logger,
 		))
 	}
-  
+
 	// Rewards service
 	var rewardsSvcClient *rewardsClient.Client
 
