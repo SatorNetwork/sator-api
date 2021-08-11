@@ -548,7 +548,7 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 		AssetName:       asset,
 		Amount:          amount,
 		RecipientAddr:   recipientPK,
-		Fee:             1488,
+		Fee:             amount * 0.025,
 		TransactionHash: base58.Encode(bytes),
 		SenderWalletID:  walletID.String(),
 	}, nil
