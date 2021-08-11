@@ -18,7 +18,11 @@ build: ## Build the app
 	-ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" \
 	-o ./app ./cmd/api/main.go
 
-run-local:
+docker: ## Build docker image
+	rm -Rvf migrations/*.sql && cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ \
+	&& docker build -f Dockerfile --build-arg LATEST_COMMIT=$(LATEST_COMMIT) -t satorapi:latest .
+
+run-local: ## Run api via `go run`
 	@APP_PORT=8080 \
 	APP_BASE_URL=https://aec45cb3e117.ngrok.io/ \
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
