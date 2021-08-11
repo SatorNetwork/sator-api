@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -106,6 +107,8 @@ func decodeCreateTransferRequest(_ context.Context, r *http.Request) (interface{
 	req.SenderWalletID = chi.URLParam(r, "wallet_id")
 	req.Asset = "SAO" // FIXME: remove hardcode
 
+	log.Printf("\n\nCreateTransferRequest: \n%#v\n\n", req)
+
 	return req, nil
 }
 
@@ -115,6 +118,7 @@ func decodeConfirmTransferRequest(_ context.Context, r *http.Request) (interface
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 	req.SenderWalletID = chi.URLParam(r, "wallet_id")
+	log.Printf("\n\nConfirmTransferRequest: \n%#v\n\n", req)
 
 	return req, nil
 }
