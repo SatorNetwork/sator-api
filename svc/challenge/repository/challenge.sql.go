@@ -5,16 +5,93 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
+
+const addChallenge = `-- name: AddChallenge :one
+INSERT INTO challenges (
+    show_id,
+    title,
+    description,
+    prize_pool,
+    players_to_start,
+    time_per_question,
+    updated_at,
+    episode_id,
+    kind
+)
+VALUES (
+           $1,
+           $2,
+           $3,
+           $4,
+           $5,
+           $6,
+           $7,
+           $8,
+           $9
+       ) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
+`
+
+type AddChallengeParams struct {
+	ShowID          uuid.UUID      `json:"show_id"`
+	Title           string         `json:"title"`
+	Description     sql.NullString `json:"description"`
+	PrizePool       float64        `json:"prize_pool"`
+	PlayersToStart  int32          `json:"players_to_start"`
+	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
+	EpisodeID       uuid.UUID      `json:"episode_id"`
+	Kind            int32          `json:"kind"`
+}
+
+func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Challenge, error) {
+	row := q.queryRow(ctx, q.addChallengeStmt, addChallenge,
+		arg.ShowID,
+		arg.Title,
+		arg.Description,
+		arg.PrizePool,
+		arg.PlayersToStart,
+		arg.TimePerQuestion,
+		arg.UpdatedAt,
+		arg.EpisodeID,
+		arg.Kind,
+	)
+	var i Challenge
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.Title,
+		&i.Description,
+		&i.PrizePool,
+		&i.PlayersToStart,
+		&i.TimePerQuestion,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.EpisodeID,
+		&i.Kind,
+	)
+	return i, err
+}
+
+const deleteChallengeByID = `-- name: DeleteChallengeByID :exec
+DELETE FROM challenges
+WHERE id = $1
+`
+
+func (q *Queries) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteChallengeByIDStmt, deleteChallengeByID, id)
+	return err
+}
 
 const getChallengeByEpisodeID = `-- name: GetChallengeByEpisodeID :one
 SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
 FROM challenges
 WHERE episode_id = $1
 ORDER BY created_at DESC
-LIMIT 1
+    LIMIT 1
 `
 
 func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UUID) (Challenge, error) {
@@ -111,4 +188,47 @@ func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateChallenge = `-- name: UpdateChallenge :exec
+UPDATE challenges
+SET show_id = $1,
+    title = $2,
+    description = $3,
+    prize_pool = $4,
+    players_to_start = $5,
+    time_per_question = $6,
+    updated_at = $7,
+    episode_id = $8,
+    kind = $9
+WHERE id = $10
+`
+
+type UpdateChallengeParams struct {
+	ShowID          uuid.UUID      `json:"show_id"`
+	Title           string         `json:"title"`
+	Description     sql.NullString `json:"description"`
+	PrizePool       float64        `json:"prize_pool"`
+	PlayersToStart  int32          `json:"players_to_start"`
+	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt       sql.NullTime   `json:"updated_at"`
+	EpisodeID       uuid.UUID      `json:"episode_id"`
+	Kind            int32          `json:"kind"`
+	ID              uuid.UUID      `json:"id"`
+}
+
+func (q *Queries) UpdateChallenge(ctx context.Context, arg UpdateChallengeParams) error {
+	_, err := q.exec(ctx, q.updateChallengeStmt, updateChallenge,
+		arg.ShowID,
+		arg.Title,
+		arg.Description,
+		arg.PrizePool,
+		arg.PlayersToStart,
+		arg.TimePerQuestion,
+		arg.UpdatedAt,
+		arg.EpisodeID,
+		arg.Kind,
+		arg.ID,
+	)
+	return err
 }

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
-
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -34,9 +33,6 @@ import (
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
-	"github.com/SatorNetwork/sator-api/svc/questions"
-	questionsClient "github.com/SatorNetwork/sator-api/svc/questions/client"
-	questionsRepo "github.com/SatorNetwork/sator-api/svc/questions/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -209,7 +205,7 @@ func main() {
 			logger,
 		))
 	}
-
+  
 	// Rewards service
 	var rewardsSvcClient *rewardsClient.Client
 
@@ -272,13 +268,6 @@ func main() {
 		))
 	}
 
-	// Questions service
-	questionsRepository, err := questionsRepo.Prepare(ctx, db)
-	if err != nil {
-		log.Fatalf("questionsRepo error: %v", err)
-	}
-	questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
-
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
@@ -294,10 +283,14 @@ func main() {
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
-			questionsSvcClient,
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
-		r.Mount("/challenges", challenge.MakeHTTPHandler(
+		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(
+			challenge.MakeEndpoints(challengeSvc, jwtMdw),
+			logger,
+		))
+
+		r.Mount("/questions", challenge.MakeHTTPHandlerQuestions(
 			challenge.MakeEndpoints(challengeSvc, jwtMdw),
 			logger,
 		))
@@ -367,7 +360,6 @@ func main() {
 		quizSvc := quiz.NewService(
 			mutex,
 			quizRepository,
-			questionsSvcClient,
 			rewardsSvcClient,
 			challengeSvcClient,
 			quizWsConnURL,

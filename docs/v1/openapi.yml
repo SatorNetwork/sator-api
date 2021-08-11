@@ -847,7 +847,7 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
-  /challenges/{id}:
+  /challenges/{challenge_id}:
     get:
       tags:
         - "Challenges"
@@ -855,7 +855,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
+        - name: challenge_id
           in: path
           description: Сhallenge ID.
           required: true
@@ -898,6 +898,155 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+    put:
+      tags:
+        - "Challenges"
+      summary: Update challenge by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                title:
+                  type: string
+                  example: "title"
+                description:
+                  type: string
+                  example: "description"
+                prize_pool_amount:
+                  type: number
+                  example: 123.456
+                players_to_start:
+                  type: integer
+                  example: 3
+                time_per_question_sec:
+                  type: integer
+                  example: 10
+                episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                kind:
+                  type: integer
+                  example: 10
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags:
+        - "Challenges"
+      summary: Delete challenge by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /challenges:
+    post:
+      tags:
+        - "Challenges"
+      summary: Add new challenge.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                title:
+                  type: string
+                  example: "title"
+                description:
+                  type: string
+                  example: "description"
+                prize_pool_amount:
+                  type: number
+                  example: 123.456
+                players_to_start:
+                  type: integer
+                  example: 3
+                time_per_question_sec:
+                  type: integer
+                  example: 10
+                episode_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                kind:
+                  type: integer
+                  example: 10
+      responses:
+        "200":
+          description: Returns challenge details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  description:
+                    type: string
+                    example: "description"
+                  prize_pool_amount:
+                    type: number
+                    example: 123.456
+                  players_to_start:
+                    type: integer
+                    example: 3
+                  time_per_question_sec:
+                    type: integer
+                    example: 10
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  kind:
+                    type: integer
+                    example: 10
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /challenges/{episode_id}/validation-question:
     get:
@@ -1188,7 +1337,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /quiz/{challenge_id}/play:
     get:
       tags:
@@ -1381,6 +1529,365 @@ paths:
           $ref: "#/components/responses/DefaultError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+
+  /questions/{question_id}:
+    get:
+      tags:
+        - "Questions"
+      summary: Used for get question by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns question details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  challenge_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question:
+                    type: string
+                    example: "question"
+                  order:
+                    type: number
+                    example: true
+                  question_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        question_id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        option:
+                          type: string
+                          example: "option"
+                        is_correct:
+                          type: boolean
+                          example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    put:
+      tags:
+        - "Questions"
+      summary: Used for update question by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                challenge_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                question:
+                  type: string
+                  example: "question"
+                order:
+                  type: integer
+                  example: 2
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Questions"
+      summary: Used for delete question by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /challenges/{challenge_id}/questions:
+    get:
+      tags:
+        - "Questions"
+      summary: Used for get questions by challenge id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Challenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns array of questions details.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    challenge_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    question:
+                      type: string
+                      example: "question"
+                    order:
+                      type: number
+                      example: true
+                    question_options:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                          question_id:
+                            type: string
+                            example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                          option:
+                            type: string
+                            example: "option"
+                          is_correct:
+                            type: boolean
+                            example: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    post:
+      tags:
+        - "Questions"
+      summary: Used for create new question.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Challenge ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                challenge_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                question:
+                  type: string
+                  example: "question"
+                order:
+                  type: integer
+                  example: 1
+      responses:
+        "200":
+          description: Returns question details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  challenge_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question:
+                    type: string
+                    example: "question"
+                  order:
+                    type: number
+                    example: true
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /questions/{question_id}/answers:
+    post:
+      tags:
+        - "Answers"
+      summary: Used for create new answer.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                option:
+                  type: string
+                  example: "option"
+                is_correct:
+                  type: string
+                  example: "true"
+      responses:
+        "200":
+          description: Returns answer details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  question_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  option:
+                    type: string
+                    example: "option"
+                  is_correct:
+                    type: boolean
+                    example: true
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /questions/{question_id}/answers/{answer_id}:
+    put:
+      tags:
+        - "Answers"
+      summary: Used for update answer by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+        - name: answer_id
+          in: path
+          description: Answer ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                option:
+                  type: string
+                  example: "option"
+                is_correct:
+                  type: string
+                  example: "true"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Answers"
+      summary: Used for delete answer by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: question_id
+          in: path
+          description: Question ID.
+          required: true
+          schema:
+            type: string
+        - name: answer_id
+          in: path
+          description: Answer ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /files/images/{id}:
     get:

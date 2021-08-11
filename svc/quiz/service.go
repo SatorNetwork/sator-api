@@ -10,7 +10,6 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	"github.com/SatorNetwork/sator-api/svc/questions"
 	"github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/dmitrymomot/go-signature"
 	"github.com/google/uuid"
@@ -30,7 +29,6 @@ type (
 	Service struct {
 		mutex           mutex
 		repo            quizRepository
-		questions       questionService
 		rewards         rewardsService
 		challenges      challengesService
 		tokenGenFunc    tokenGenFunc
@@ -61,10 +59,8 @@ type (
 
 	challengesService interface {
 		GetChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.Challenge, error)
-	}
 
-	questionService interface {
-		GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]questions.Question, error)
+		GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
 		CheckAnswer(ctx context.Context, answerID uuid.UUID) (bool, error)
 	}
 
@@ -94,7 +90,6 @@ type (
 func NewService(
 	m mutex,
 	repo quizRepository,
-	questions questionService,
 	rewards rewardsService,
 	challenges challengesService,
 	baseQuizURL string,
@@ -235,7 +230,7 @@ func (s *Service) SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, err
 		return nil, fmt.Errorf("could not get quiz with id=%s: %w", qid.String(), err)
 	}
 
-	qlist, err := s.questions.GetQuestionsByChallengeID(ctx, quiz.ChallengeID)
+	qlist, err := s.challenges.GetQuestionsByChallengeID(ctx, quiz.ChallengeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get questions list for quiz with id=%s: %w", qid.String(), err)
 	}
@@ -265,7 +260,7 @@ func (s *Service) StoreAnswer(ctx context.Context, userID, quizID, questionID, a
 		return fmt.Errorf("could not found quiz with id=%s", quizID.String())
 	}
 
-	isCorrect, err := s.questions.CheckAnswer(ctx, answerID)
+	isCorrect, err := s.challenges.CheckAnswer(ctx, answerID)
 	if err != nil {
 		return fmt.Errorf("could not check answer: %w", err)
 	}
@@ -456,4 +451,15 @@ func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, totalR
 	winnerPoints := totalQuestions + pts + rate
 
 	return (prizePool / float64(totalPoints)) * float64(winnerPoints)
+}
+
+func castAnswerOptions(source []challenge.AnswerOption) []AnswerOption {
+	result := make([]AnswerOption, 0, len(source))
+	for _, a := range source {
+		result = append(result, AnswerOption{
+			AnswerID:   a.ID.String(),
+			AnswerText: a.Option,
+		})
+	}
+	return result
 }
