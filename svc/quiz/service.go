@@ -99,7 +99,6 @@ func NewService(
 	s := &Service{
 		mutex:             m,
 		repo:              repo,
-		questions:         questions,
 		rewards:           rewards,
 		challenges:        challenges,
 		tokenGenFunc:      signature.NewTemporary,
@@ -243,7 +242,7 @@ func (s *Service) SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, err
 		ql = qlist[:s.numberOfQuestions]
 	}
 
-	qlmap := make(map[string]questions.Question)
+	qlmap := make(map[string]challenge.Question)
 	for _, item := range ql {
 		qlmap[item.ID.String()] = item
 	}
@@ -451,15 +450,4 @@ func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, totalR
 	winnerPoints := totalQuestions + pts + rate
 
 	return (prizePool / float64(totalPoints)) * float64(winnerPoints)
-}
-
-func castAnswerOptions(source []challenge.AnswerOption) []AnswerOption {
-	result := make([]AnswerOption, 0, len(source))
-	for _, a := range source {
-		result = append(result, AnswerOption{
-			AnswerID:   a.ID.String(),
-			AnswerText: a.Option,
-		})
-	}
-	return result
 }
