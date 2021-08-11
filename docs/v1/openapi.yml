@@ -1533,6 +1533,7 @@ paths:
   /questions/{question_id}:
     get:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for get question by id.
       security:
@@ -1588,6 +1589,7 @@ paths:
 
     put:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for update question by id.
       security:
@@ -1627,6 +1629,7 @@ paths:
 
     delete:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for delete question by id.
       security:
@@ -1651,6 +1654,7 @@ paths:
   /challenges/{challenge_id}/questions:
     get:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for get questions by challenge id.
       security:
@@ -1707,6 +1711,7 @@ paths:
           $ref: "#/components/responses/DefaultError"
     post:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for create new question.
       security:
@@ -1765,6 +1770,8 @@ paths:
   /questions/{question_id}/answers:
     post:
       tags:
+        - "Challenges"
+        - "Questions"
         - "Answers"
       summary: Used for create new answer.
       security:
@@ -1819,6 +1826,8 @@ paths:
   /questions/{question_id}/answers/{answer_id}:
     put:
       tags:
+        - "Challenges"
+        - "Questions"
         - "Answers"
       summary: Used for update answer by id.
       security:
@@ -1861,6 +1870,8 @@ paths:
 
     delete:
       tags:
+        - "Challenges"
+        - "Questions"
         - "Answers"
       summary: Used for delete answer by id.
       security:
