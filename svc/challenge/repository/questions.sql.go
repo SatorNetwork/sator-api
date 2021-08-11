@@ -5,6 +5,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -34,41 +35,14 @@ func (q *Queries) AddQuestion(ctx context.Context, arg AddQuestionParams) (Quest
 	return i, err
 }
 
-const getQuestionByChallengeID = `-- name: GetQuestionByChallengeID :many
-SELECT id, challenge_id, question, question_order, updated_at, created_at
-FROM questions
-WHERE challenge_id = $1
-ORDER BY question_order ASC
+const deleteQuestionByID = `-- name: DeleteQuestionByID :exec
+DELETE FROM questions
+WHERE id = $1
 `
 
-func (q *Queries) GetQuestionByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]Question, error) {
-	rows, err := q.query(ctx, q.getQuestionByChallengeIDStmt, getQuestionByChallengeID, challengeID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Question
-	for rows.Next() {
-		var i Question
-		if err := rows.Scan(
-			&i.ID,
-			&i.ChallengeID,
-			&i.Question,
-			&i.QuestionOrder,
-			&i.UpdatedAt,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) DeleteQuestionByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteQuestionByIDStmt, deleteQuestionByID, id)
+	return err
 }
 
 const getQuestionByID = `-- name: GetQuestionByID :one
@@ -127,4 +101,33 @@ func (q *Queries) GetQuestionsByChallengeID(ctx context.Context, challengeID uui
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateQuestion = `-- name: UpdateQuestion :exec
+UPDATE questions
+SET id = $1,
+    challenge_id = $2,
+    question = $3,
+    question_order = $4,
+    updated_at = $5
+WHERE id = $1
+`
+
+type UpdateQuestionParams struct {
+	ID            uuid.UUID    `json:"id"`
+	ChallengeID   uuid.UUID    `json:"challenge_id"`
+	Question      string       `json:"question"`
+	QuestionOrder int32        `json:"question_order"`
+	UpdatedAt     sql.NullTime `json:"updated_at"`
+}
+
+func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) error {
+	_, err := q.exec(ctx, q.updateQuestionStmt, updateQuestion,
+		arg.ID,
+		arg.ChallengeID,
+		arg.Question,
+		arg.QuestionOrder,
+		arg.UpdatedAt,
+	)
+	return err
 }

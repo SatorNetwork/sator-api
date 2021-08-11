@@ -112,7 +112,7 @@ type (
 		Cover         string `json:"cover"`
 		Title         string `json:"title" validate:"required,gt=0"`
 		Description   string `json:"description" validate:"required,gt=0"`
-		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z07:00"`
+		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
