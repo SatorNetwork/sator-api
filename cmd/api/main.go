@@ -13,17 +13,20 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/invitations"
-
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
+	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/files"
+	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
@@ -55,11 +58,13 @@ import (
 	"github.com/zeebo/errs"
 )
 
-// Build tag is set up while compiling
 var buildTag string
 
 // Application environment variables
 var (
+	// Build tag is set up while deployment
+	buildTagDO = env.GetString("COMMIT_HASH", "")
+
 	// General
 	appPort            = env.MustInt("APP_PORT")
 	appBaseURL         = env.MustString("APP_BASE_URL")
@@ -99,8 +104,18 @@ var (
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
 
 	//	 Invitation
-	invitationReward = env.GetInt("INVITATION_REWARD", 0)
+	invitationReward = env.GetFloat("INVITATION_REWARD", 0)
 	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
+
+	// File Storage
+	fileStorageKey            = env.MustString("STORAGE_KEY")
+	fileStorageSecret         = env.MustString("STORAGE_SECRET")
+	fileStorageEndpoint       = env.MustString("STORAGE_ENDPOINT")
+	fileStorageRegion         = env.MustString("STORAGE_REGION")
+	fileStorageBucket         = env.MustString("STORAGE_BUCKET")
+	fileStorageUrl            = env.MustString("STORAGE_URL")
+	fileStorageDisableSsl     = env.GetBool("STORAGE_DISABLE_SSL", true)
+	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
 )
 
 func main() {
@@ -171,6 +186,11 @@ func main() {
 	jwtMdw := jwt.NewParser(jwtSigningKey)
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
+	ethereumClient, err := ethereum.NewClient()
+	if err != nil {
+		log.Fatalf("failed to init eth client: %v", err)
+	}
+
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
@@ -178,21 +198,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl))
+		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), ethereumClient)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
 			logger,
 		))
 	}
-
-	//// Questions service
-	//questionsRepository, err := questionsRepo.Prepare(ctx, db)
-	//if err != nil {
-	//	log.Fatalf("questionsRepo error: %v", err)
-	//}
-	//questionsSvcClient := questionsClient.New(questions.NewService(questionsRepository))
-
+  
 	// Rewards service
 	var rewardsSvcClient *rewardsClient.Client
 
@@ -213,7 +226,7 @@ func main() {
 		log.Fatalf("invitationsRepo error: %v", err)
 	}
 	invitationsService := invitations.NewService(invitationsRepository, mailer, rewardsSvcClient, invitations.Config{
-		InvitationReward: float64(invitationReward),
+		InvitationReward: invitationReward,
 		InvitationURL:    invitationURL,
 	})
 	invitationsClient := invitationsClient.New(invitationsService)
@@ -289,6 +302,30 @@ func main() {
 		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
+			logger,
+		))
+	}
+
+	// files service
+	{
+		opt := storage.Options{
+			Key:            fileStorageKey,
+			Secret:         fileStorageSecret,
+			Endpoint:       fileStorageEndpoint,
+			Region:         fileStorageRegion,
+			Bucket:         fileStorageBucket,
+			URL:            fileStorageUrl,
+			DisableSSL:     fileStorageDisableSsl,
+			ForcePathStyle: fileStorageForcePathStyle,
+		}
+		stor := storage.New(storage.NewS3Client(opt), opt)
+
+		mediaServiceRepo, err := filesRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("mediaServiceRepo error: %v", err)
+		}
+		r.Mount("/files", files.MakeHTTPHandler(
+			files.MakeEndpoints(files.NewService(mediaServiceRepo, db, stor), jwtMdw),
 			logger,
 		))
 	}
@@ -369,14 +406,6 @@ func main() {
 		}, func(err error) {})
 	}
 
-	// Init and run http server
-	// httpServer := &http.Server{
-	// 	Handler: r,
-	// 	Addr:    fmt.Sprintf(":%d", appPort),
-	// }
-	// httpServer.RegisterOnShutdown(cancel)
-	// graceful.LogListenAndServe(httpServer, log.Default())
-
 	if err := g.Run(); err != nil {
 		log.Println("API terminated with error:", err)
 	}
@@ -384,6 +413,9 @@ func main() {
 
 // returns current build tag
 func rootHandler(w http.ResponseWriter, _ *http.Request) {
+	if buildTag == "" {
+		buildTag = buildTagDO
+	}
 	defaultResponse(w, http.StatusOK, map[string]interface{}{"build_tag": buildTag})
 }
 

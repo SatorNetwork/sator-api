@@ -2,15 +2,18 @@ package wallet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 
 	"github.com/google/uuid"
+	"github.com/mr-tron/base58"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -19,6 +22,7 @@ type (
 	Service struct {
 		wr walletRepository
 		sc solanaClient
+		ec ethereumClient
 		// rw rewardsService
 
 		satorAssetName  string
@@ -41,6 +45,10 @@ type (
 		GetSolanaAccountByType(ctx context.Context, accountType string) (repository.SolanaAccount, error)
 		GetSolanaAccountTypeByPublicKey(ctx context.Context, publicKey string) (string, error)
 		GetSolanaAccountByUserIDAndType(ctx context.Context, arg repository.GetSolanaAccountByUserIDAndTypeParams) (repository.SolanaAccount, error)
+
+		AddEthereumAccount(ctx context.Context, arg repository.AddEthereumAccountParams) (repository.EthereumAccount, error)
+		GetEthereumAccountByID(ctx context.Context, id uuid.UUID) (repository.EthereumAccount, error)
+		GetEthereumAccountByUserIDAndType(ctx context.Context, arg repository.GetEthereumAccountByUserIDAndTypeParams) (repository.EthereumAccount, error)
 	}
 
 	solanaClient interface {
@@ -56,23 +64,41 @@ type (
 		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
+	ethereumClient interface {
+		CreateAccount() (ethereum.Wallet, error)
+	}
+
 	// rewardsService interface {
 	// 	GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 	// }
+
+	// PreparedTransaction ...
+	PreparedTransaction struct {
+		AssetName       string  `json:"asset_name,omitempty"`
+		Amount          float64 `json:"amount,omitempty"`
+		RecipientAddr   string  `json:"recipient_address,omitempty"`
+		Fee             float64 `json:"fee,omitempty"`
+		TransactionHash string  `json:"tx_hash,omitempty"`
+		SenderWalletID  string  `json:"sender_wallet_id,omitempty"`
+	}
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solanaClient) *Service {
+func NewService(wr walletRepository, sc solanaClient, ec ethereumClient) *Service {
 	if wr == nil {
 		log.Fatalln("wallet repository is not set")
 	}
 	if sc == nil {
 		log.Fatalln("solana client is not set")
 	}
+	if ec == nil {
+		log.Fatalln("ethereum client in not set")
+	}
 	return &Service{
 		wr: wr,
 		sc: sc,
+		ec: ec,
 		// rw: rw,
 
 		solanaAssetName: "SOL",
@@ -97,10 +123,14 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
-		wli := WalletsListItem{ID: w.ID.String(), Type: w.WalletType}
+		wli := WalletsListItem{
+			ID:    w.ID.String(),
+			Type:  w.WalletType,
+			Order: w.Sort,
+		}
 
 		switch w.WalletType {
-		case WalletTypeSolana, WalletTypeSator:
+		case WalletTypeSolana, WalletTypeSator, WalletTypeEthereum:
 			wli.GetDetailsURL = fmt.Sprintf(s.walletDetailsURL, w.ID.String())
 			wli.GetTransactionsURL = fmt.Sprintf(s.walletTransactionsURL, w.ID.String())
 		case WalletTypeRewards:
@@ -126,6 +156,43 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	if w.UserID != userID {
 		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
+	}
+
+	if w.EthereumAccountID != uuid.Nil {
+		ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID)
+		if err != nil {
+			if db.IsNotFoundError(err) {
+				return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
+			}
+			return Wallet{}, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
+		}
+		return Wallet{
+			ID:                     w.ID.String(),
+			Order:                  w.Sort,
+			EthereumAccountAddress: ea.Address,
+			Actions: []Action{
+				{
+					Type: ActionSendTokens.String(),
+					Name: ActionSendTokens.Name(),
+					URL:  "",
+				},
+				{
+					Type: ActionReceiveTokens.String(),
+					Name: ActionReceiveTokens.Name(),
+					URL:  "",
+				},
+			},
+			Balance: []Balance{
+				{
+					Currency: "SAOE",
+					Amount:   0,
+				},
+				{
+					Currency: "USD",
+					Amount:   0,
+				},
+			},
+		}, nil
 	}
 
 	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
@@ -169,6 +236,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	return Wallet{
 		ID:                   w.ID.String(),
+		Order:                w.Sort,
 		SolanaAccountAddress: sa.PublicKey,
 		Actions: []Action{
 			{
@@ -230,7 +298,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		WalletType:      WalletTypeSator,
 		Sort:            1,
 	}); err != nil {
-		return fmt.Errorf("could not new SAO wallet for user with id=%s: %w", userID.String(), err)
+		return fmt.Errorf("could not create new SAO wallet for user with id=%s: %w", userID.String(), err)
 	}
 
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
@@ -239,6 +307,38 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		Sort:       2,
 	}); err != nil {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
+	}
+
+	ethAccount, err := s.ec.CreateAccount()
+	if err != nil {
+		return fmt.Errorf("could not create new eth account for user with id=%s: %w", userID.String(), err)
+	}
+
+	ethPrivateBytes, err := json.Marshal(ethAccount.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("could not marshal eth private key for user=%s: %w", userID.String(), err)
+	}
+
+	ethPublicBytes, err := json.Marshal(ethAccount.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not marshal eth private key for user=%s: %w", userID.String(), err)
+	}
+
+	eacc, err := s.wr.AddEthereumAccount(ctx, repository.AddEthereumAccountParams{
+		PublicKey:  ethPublicBytes,
+		PrivateKey: ethPrivateBytes,
+		Address:    ethAccount.Address,
+	})
+	if err != nil {
+		return fmt.Errorf("could not store ethereum account: %w", err)
+	}
+
+	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
+		UserID:            userID,
+		WalletType:        WalletTypeEthereum,
+		EthereumAccountID: eacc.ID,
+	}); err != nil {
+		return fmt.Errorf("could not create new ethereum wallet for user with id=%s: %w", userID.String(), err)
 	}
 
 	return nil
@@ -405,6 +505,10 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 		return nil, ErrForbidden
 	}
 
+	if wallet.SolanaAccountID == uuid.Nil {
+		return Transactions{}, nil
+	}
+
 	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
 	if err != nil {
 		return nil, err
@@ -423,46 +527,81 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 	return txList, nil
 }
 
-// Transfer sends transaction from one account to another.
-func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK string, amount float64) (tx string, err error) {
-	senderAcc := s.sc.AccountFromPrivatekey([]byte(senderPrivateKey))
-
-	senderAccType, err := s.wr.GetSolanaAccountByType(ctx, senderAcc.PublicKey.ToBase58())
-	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
+// CreateTransfer crates transaction from one account to another.
+func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipientPK, asset string, amount float64) (tx PreparedTransferTransaction, err error) {
+	var toEncode struct {
+		Amount        float64
+		Asset         string
+		RecipientAddr string
 	}
 
-	recipientAccType, err := s.wr.GetSolanaAccountByType(ctx, recipientPK)
+	toEncode.Asset = asset
+	toEncode.Amount = amount
+	toEncode.RecipientAddr = recipientPK
+
+	bytes, err := json.Marshal(toEncode)
 	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
+		return PreparedTransferTransaction{}, fmt.Errorf("could not marshal amount and recipient pk: %w", err)
 	}
 
-	if senderAccType.AccountType != recipientAccType.AccountType {
-		return "", fmt.Errorf("accounts have different types, transaction impossible")
+	return PreparedTransferTransaction{
+		AssetName:       asset,
+		Amount:          amount,
+		RecipientAddr:   recipientPK,
+		Fee:             1488,
+		TransactionHash: base58.Encode(bytes),
+		SenderWalletID:  walletID.String(),
+	}, nil
+}
+
+func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encodedData string) error {
+	decoded, err := base58.Decode(encodedData)
+	if err != nil {
+		return fmt.Errorf("could not decode from base58: %w", err)
+	}
+
+	var toDecode struct {
+		Amount        float64
+		RecipientAddr string
+	}
+
+	err = json.Unmarshal(decoded, &toDecode)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return fmt.Errorf("could not get solana account: %w", err)
 	}
 
 	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
 	if err != nil {
-		return "", fmt.Errorf("could not get fee payer account: %w", err)
+		return fmt.Errorf("could not get fee payer account: %w", err)
 	}
 	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
 	if err != nil {
-		return "", fmt.Errorf("could not get issuer account: %w", err)
+		return fmt.Errorf("could not get issuer account: %w", err)
 	}
 	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
 	if err != nil {
-		return "", fmt.Errorf("could not get asset account: %w", err)
+		return fmt.Errorf("could not get asset account: %w", err)
 	}
 
 	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.SendAssets(
+		if tx, err := s.sc.SendAssets(
 			ctx,
 			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
-			senderAcc,
-			recipientPK,
-			amount,
+			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
+			toDecode.RecipientAddr,
+			toDecode.Amount,
 		); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 10)
@@ -472,7 +611,7 @@ func (s *Service) Transfer(ctx context.Context, senderPrivateKey, recipientPK st
 		}
 	}
 
-	return tx, nil
+	return err
 }
 
 func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {

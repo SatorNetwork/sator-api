@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func (s *Client) request(ctx context.Context, method string, params []interface{}, response interface{}) error {
+func (c *Client) request(ctx context.Context, method string, params []interface{}, response interface{}) error {
 	// post data
 	j, err := json.Marshal(map[string]interface{}{
 		"jsonrpc": "2.0",
@@ -22,7 +22,7 @@ func (s *Client) request(ctx context.Context, method string, params []interface{
 	}
 
 	// post request
-	req, err := http.NewRequestWithContext(ctx, "POST", s.endpoint, bytes.NewBuffer(j))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.endpoint, bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
