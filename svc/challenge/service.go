@@ -84,6 +84,20 @@ type (
 		Option     string    `json:"option"`
 		IsCorrect  bool      `json:"is_correct"`
 	}
+
+	QuizQuestion struct {
+		QuestionID     string             `json:"question_id"`
+		QuestionText   string             `json:"question_text"`
+		TimeForAnswer  int                `json:"time_for_answer"`
+		TotalQuestions int                `json:"total_questions"`
+		QuestionNumber int                `json:"question_number"`
+		AnswerOptions  []QuizAnswerOption `json:"answer_options"`
+	}
+
+	QuizAnswerOption struct {
+		AnswerID   string `json:"answer_id"`
+		AnswerText string `json:"answer_text"`
+	}
 )
 
 // DefaultPlayURLGenerator ...
@@ -133,22 +147,18 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	answers := make([]AnswerOption, 0, len(q.AnswerOptions))
+	answers := make([]QuizAnswerOption, 0, len(q.AnswerOptions))
 	for _, o := range q.AnswerOptions {
-		answers = append(answers, AnswerOption{
-			ID:         o.ID,
-			QuestionID: o.QuestionID,
-			Option:     o.Option,
-			IsCorrect:  o.IsCorrect,
+		answers = append(answers, QuizAnswerOption{
+			AnswerID:   o.ID.String(),
+			AnswerText: o.Option,
 		})
 	}
 
-	return Question{
-		ID:            q.ID,
-		ChallengeID:   q.ChallengeID,
-		Question:      q.Question,
+	return QuizQuestion{
+		QuestionID:    q.ID.String(),
+		QuestionText:  q.Question,
 		TimeForAnswer: int(challenge.TimePerQuestion.Int32),
-		Order:         q.Order,
 		AnswerOptions: answers,
 	}, nil
 }
