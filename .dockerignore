@@ -22,3 +22,11 @@ cmd/quiz/
 .github
 .idea
 .vscode
+./Dockerfile
+./Makefile
+./Buildfile
+./Procfile
+./build.sh
+docker-compose.*
+svc/example
+docs/

@@ -20,7 +20,8 @@ build: ## Build the app
 
 docker: ## Build docker image
 	rm -Rvf migrations/*.sql && cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ \
-	&& docker build -f Dockerfile --build-arg LATEST_COMMIT=$(LATEST_COMMIT) -t satorapi:latest .
+	&& docker build -f Dockerfile --build-arg LATEST_COMMIT=$(LATEST_COMMIT) -t satorapi:latest . \
+	&& docker scan satorapi:latest
 
 run-local: ## Run api via `go run`
 	@APP_PORT=8080 \
