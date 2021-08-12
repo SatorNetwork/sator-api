@@ -45,8 +45,8 @@ type (
 		UpdateChallenge(ctx context.Context, ch Challenge) error
 
 		// FIXME: needs refactoring!
-		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error)
-		CheckVerificationQuestionAnswer(ctx context.Context, qid, aid uuid.UUID) (interface{}, error)
+		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error)
+		CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error)
 		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error)
 
 		AddQuestion(ctx context.Context, qw Question) (Question, error)
@@ -184,12 +184,17 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetVerificationQuestionByEpisodeIDEndpoint ...
 func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetVerificationQuestionByEpisodeID(ctx, id)
+		resp, err := s.GetVerificationQuestionByEpisodeID(ctx, id, uid)
 		if err != nil {
 			return nil, err
 		}
@@ -201,6 +206,11 @@ func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint
 // MakeCheckVerificationQuestionAnswerEndpoint ...
 func MakeCheckVerificationQuestionAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(CheckAnswerRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -216,7 +226,7 @@ func MakeCheckVerificationQuestionAnswerEndpoint(s service, v validator.Validate
 			return nil, fmt.Errorf("%w answer id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.CheckVerificationQuestionAnswer(ctx, qid, aid)
+		resp, err := s.CheckVerificationQuestionAnswer(ctx, qid, aid, uid)
 		if err != nil {
 			return nil, err
 		}

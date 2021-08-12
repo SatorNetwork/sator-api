@@ -22,8 +22,14 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addAttemptStmt, err = db.PrepareContext(ctx, addAttempt); err != nil {
+		return nil, fmt.Errorf("error preparing query AddAttempt: %w", err)
+	}
 	if q.addChallengeStmt, err = db.PrepareContext(ctx, addChallenge); err != nil {
 		return nil, fmt.Errorf("error preparing query AddChallenge: %w", err)
+	}
+	if q.addEpisodeAccessDataStmt, err = db.PrepareContext(ctx, addEpisodeAccessData); err != nil {
+		return nil, fmt.Errorf("error preparing query AddEpisodeAccessData: %w", err)
 	}
 	if q.addQuestionStmt, err = db.PrepareContext(ctx, addQuestion); err != nil {
 		return nil, fmt.Errorf("error preparing query AddQuestion: %w", err)
@@ -34,11 +40,20 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.checkAnswerStmt, err = db.PrepareContext(ctx, checkAnswer); err != nil {
 		return nil, fmt.Errorf("error preparing query CheckAnswer: %w", err)
 	}
+	if q.countAttemptsStmt, err = db.PrepareContext(ctx, countAttempts); err != nil {
+		return nil, fmt.Errorf("error preparing query CountAttempts: %w", err)
+	}
 	if q.deleteAnswerByIDStmt, err = db.PrepareContext(ctx, deleteAnswerByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteAnswerByID: %w", err)
 	}
+	if q.deleteAttemptStmt, err = db.PrepareContext(ctx, deleteAttempt); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAttempt: %w", err)
+	}
 	if q.deleteChallengeByIDStmt, err = db.PrepareContext(ctx, deleteChallengeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteChallengeByID: %w", err)
+	}
+	if q.deleteEpisodeAccessDataStmt, err = db.PrepareContext(ctx, deleteEpisodeAccessData); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteEpisodeAccessData: %w", err)
 	}
 	if q.deleteQuestionByIDStmt, err = db.PrepareContext(ctx, deleteQuestionByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteQuestionByID: %w", err)
@@ -52,6 +67,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAnswersByQuestionIDStmt, err = db.PrepareContext(ctx, getAnswersByQuestionID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnswersByQuestionID: %w", err)
 	}
+	if q.getAttemptByEpisodeIDStmt, err = db.PrepareContext(ctx, getAttemptByEpisodeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAttemptByEpisodeID: %w", err)
+	}
+	if q.getAttemptByQuestionIDStmt, err = db.PrepareContext(ctx, getAttemptByQuestionID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAttemptByQuestionID: %w", err)
+	}
 	if q.getChallengeByEpisodeIDStmt, err = db.PrepareContext(ctx, getChallengeByEpisodeID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallengeByEpisodeID: %w", err)
 	}
@@ -60,6 +81,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getChallengesStmt, err = db.PrepareContext(ctx, getChallenges); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallenges: %w", err)
+	}
+	if q.getEpisodeAccessDataStmt, err = db.PrepareContext(ctx, getEpisodeAccessData); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEpisodeAccessData: %w", err)
 	}
 	if q.getQuestionByIDStmt, err = db.PrepareContext(ctx, getQuestionByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetQuestionByID: %w", err)
@@ -70,8 +94,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateAnswerStmt, err = db.PrepareContext(ctx, updateAnswer); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAnswer: %w", err)
 	}
+	if q.updateAttemptStmt, err = db.PrepareContext(ctx, updateAttempt); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAttempt: %w", err)
+	}
 	if q.updateChallengeStmt, err = db.PrepareContext(ctx, updateChallenge); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateChallenge: %w", err)
+	}
+	if q.updateEpisodeAccessDataStmt, err = db.PrepareContext(ctx, updateEpisodeAccessData); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateEpisodeAccessData: %w", err)
 	}
 	if q.updateQuestionStmt, err = db.PrepareContext(ctx, updateQuestion); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateQuestion: %w", err)
@@ -81,9 +111,19 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addAttemptStmt != nil {
+		if cerr := q.addAttemptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addAttemptStmt: %w", cerr)
+		}
+	}
 	if q.addChallengeStmt != nil {
 		if cerr := q.addChallengeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addChallengeStmt: %w", cerr)
+		}
+	}
+	if q.addEpisodeAccessDataStmt != nil {
+		if cerr := q.addEpisodeAccessDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addEpisodeAccessDataStmt: %w", cerr)
 		}
 	}
 	if q.addQuestionStmt != nil {
@@ -101,14 +141,29 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing checkAnswerStmt: %w", cerr)
 		}
 	}
+	if q.countAttemptsStmt != nil {
+		if cerr := q.countAttemptsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countAttemptsStmt: %w", cerr)
+		}
+	}
 	if q.deleteAnswerByIDStmt != nil {
 		if cerr := q.deleteAnswerByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteAnswerByIDStmt: %w", cerr)
 		}
 	}
+	if q.deleteAttemptStmt != nil {
+		if cerr := q.deleteAttemptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAttemptStmt: %w", cerr)
+		}
+	}
 	if q.deleteChallengeByIDStmt != nil {
 		if cerr := q.deleteChallengeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteChallengeByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteEpisodeAccessDataStmt != nil {
+		if cerr := q.deleteEpisodeAccessDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteEpisodeAccessDataStmt: %w", cerr)
 		}
 	}
 	if q.deleteQuestionByIDStmt != nil {
@@ -131,6 +186,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getAnswersByQuestionIDStmt: %w", cerr)
 		}
 	}
+	if q.getAttemptByEpisodeIDStmt != nil {
+		if cerr := q.getAttemptByEpisodeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAttemptByEpisodeIDStmt: %w", cerr)
+		}
+	}
+	if q.getAttemptByQuestionIDStmt != nil {
+		if cerr := q.getAttemptByQuestionIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAttemptByQuestionIDStmt: %w", cerr)
+		}
+	}
 	if q.getChallengeByEpisodeIDStmt != nil {
 		if cerr := q.getChallengeByEpisodeIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getChallengeByEpisodeIDStmt: %w", cerr)
@@ -144,6 +209,11 @@ func (q *Queries) Close() error {
 	if q.getChallengesStmt != nil {
 		if cerr := q.getChallengesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getChallengesStmt: %w", cerr)
+		}
+	}
+	if q.getEpisodeAccessDataStmt != nil {
+		if cerr := q.getEpisodeAccessDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEpisodeAccessDataStmt: %w", cerr)
 		}
 	}
 	if q.getQuestionByIDStmt != nil {
@@ -161,9 +231,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateAnswerStmt: %w", cerr)
 		}
 	}
+	if q.updateAttemptStmt != nil {
+		if cerr := q.updateAttemptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAttemptStmt: %w", cerr)
+		}
+	}
 	if q.updateChallengeStmt != nil {
 		if cerr := q.updateChallengeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateChallengeStmt: %w", cerr)
+		}
+	}
+	if q.updateEpisodeAccessDataStmt != nil {
+		if cerr := q.updateEpisodeAccessDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateEpisodeAccessDataStmt: %w", cerr)
 		}
 	}
 	if q.updateQuestionStmt != nil {
@@ -210,23 +290,33 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                            DBTX
 	tx                            *sql.Tx
+	addAttemptStmt                *sql.Stmt
 	addChallengeStmt              *sql.Stmt
+	addEpisodeAccessDataStmt      *sql.Stmt
 	addQuestionStmt               *sql.Stmt
 	addQuestionOptionStmt         *sql.Stmt
 	checkAnswerStmt               *sql.Stmt
+	countAttemptsStmt             *sql.Stmt
 	deleteAnswerByIDStmt          *sql.Stmt
+	deleteAttemptStmt             *sql.Stmt
 	deleteChallengeByIDStmt       *sql.Stmt
+	deleteEpisodeAccessDataStmt   *sql.Stmt
 	deleteQuestionByIDStmt        *sql.Stmt
 	getAnswerByIDStmt             *sql.Stmt
 	getAnswersByIDsStmt           *sql.Stmt
 	getAnswersByQuestionIDStmt    *sql.Stmt
+	getAttemptByEpisodeIDStmt     *sql.Stmt
+	getAttemptByQuestionIDStmt    *sql.Stmt
 	getChallengeByEpisodeIDStmt   *sql.Stmt
 	getChallengeByIDStmt          *sql.Stmt
 	getChallengesStmt             *sql.Stmt
+	getEpisodeAccessDataStmt      *sql.Stmt
 	getQuestionByIDStmt           *sql.Stmt
 	getQuestionsByChallengeIDStmt *sql.Stmt
 	updateAnswerStmt              *sql.Stmt
+	updateAttemptStmt             *sql.Stmt
 	updateChallengeStmt           *sql.Stmt
+	updateEpisodeAccessDataStmt   *sql.Stmt
 	updateQuestionStmt            *sql.Stmt
 }
 
@@ -234,23 +324,33 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                            tx,
 		tx:                            tx,
+		addAttemptStmt:                q.addAttemptStmt,
 		addChallengeStmt:              q.addChallengeStmt,
+		addEpisodeAccessDataStmt:      q.addEpisodeAccessDataStmt,
 		addQuestionStmt:               q.addQuestionStmt,
 		addQuestionOptionStmt:         q.addQuestionOptionStmt,
 		checkAnswerStmt:               q.checkAnswerStmt,
+		countAttemptsStmt:             q.countAttemptsStmt,
 		deleteAnswerByIDStmt:          q.deleteAnswerByIDStmt,
+		deleteAttemptStmt:             q.deleteAttemptStmt,
 		deleteChallengeByIDStmt:       q.deleteChallengeByIDStmt,
+		deleteEpisodeAccessDataStmt:   q.deleteEpisodeAccessDataStmt,
 		deleteQuestionByIDStmt:        q.deleteQuestionByIDStmt,
 		getAnswerByIDStmt:             q.getAnswerByIDStmt,
 		getAnswersByIDsStmt:           q.getAnswersByIDsStmt,
 		getAnswersByQuestionIDStmt:    q.getAnswersByQuestionIDStmt,
+		getAttemptByEpisodeIDStmt:     q.getAttemptByEpisodeIDStmt,
+		getAttemptByQuestionIDStmt:    q.getAttemptByQuestionIDStmt,
 		getChallengeByEpisodeIDStmt:   q.getChallengeByEpisodeIDStmt,
 		getChallengeByIDStmt:          q.getChallengeByIDStmt,
 		getChallengesStmt:             q.getChallengesStmt,
+		getEpisodeAccessDataStmt:      q.getEpisodeAccessDataStmt,
 		getQuestionByIDStmt:           q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt: q.getQuestionsByChallengeIDStmt,
 		updateAnswerStmt:              q.updateAnswerStmt,
+		updateAttemptStmt:             q.updateAttemptStmt,
 		updateChallengeStmt:           q.updateChallengeStmt,
+		updateEpisodeAccessDataStmt:   q.updateEpisodeAccessDataStmt,
 		updateQuestionStmt:            q.updateQuestionStmt,
 	}
 }
