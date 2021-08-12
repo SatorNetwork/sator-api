@@ -73,6 +73,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{wallet_id}/stake", httptransport.NewServer(
+		e.SetStake,
+		decodeSetStakeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{wallet_id}/stake", httptransport.NewServer(
+		e.GetStake,
+		decodeGetStakeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -142,4 +156,22 @@ func castStrToInt32(source string) int32 {
 		return 0
 	}
 	return int32(res)
+}
+
+func decodeGetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "wallet_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
+	}
+	return id, nil
+}
+
+func decodeSetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req SetStakeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	req.WalletID = chi.URLParam(r, "wallet_id")
+
+	return req, nil
 }

@@ -614,6 +614,28 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 	return err
 }
 
+// GetStake Mocked method for stake
+func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error) {
+	return Stake{
+		Staking: Staking{
+			AssetName:   "SAO",
+			APY:         123,
+			TotalStaked: 234,
+			Staked:      345,
+			YourShare:   456,
+		},
+		Loyalty: Loyalty{
+			LevelTitle:    "test title",
+			LevelSubtitle: "test subtitle",
+		},
+	}, nil
+}
+
+// SetStake Mocked method for stake
+func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error) {
+	return true, nil
+}
+
 func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
 	return Transaction{
 		ID:        tx.TxHash,
