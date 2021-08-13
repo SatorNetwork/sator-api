@@ -619,14 +619,14 @@ func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, erro
 	return Stake{
 		Staking: Staking{
 			AssetName:   "SAO",
-			APY:         123,
-			TotalStaked: 234,
-			Staked:      345,
-			YourShare:   456,
+			APY:         138.9,
+			TotalStaked: 23423454567,
+			Staked:      345.75,
+			YourShare:   0.021,
 		},
 		Loyalty: Loyalty{
-			LevelTitle:    "test title",
-			LevelSubtitle: "test subtitle",
+			LevelTitle:    "Genin",
+			LevelSubtitle: "25% rewards multiplier",
 		},
 	}, nil
 }
