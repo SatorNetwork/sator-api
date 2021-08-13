@@ -17,13 +17,20 @@ import (
 type (
 	// Service struct
 	Service struct {
-		cr        challengesRepository
-		playUrlFn playURLGenerator
+		cr                  challengesRepository
+		playUrlFn           playURLGenerator
+		episodeAccessConfig EpisodeAccessConfig
 	}
 
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
+
+	// EpisodeAccessConfig struct
+	EpisodeAccessConfig struct {
+		NumberAttempts int
+		Period         int
+	}
 
 	challengesRepository interface {
 		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
@@ -33,12 +40,15 @@ type (
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
 		UpdateChallenge(ctx context.Context, arg repository.UpdateChallengeParams) error
 
+		// Questions
 		AddQuestion(ctx context.Context, arg repository.AddQuestionParams) (repository.Question, error)
 		DeleteQuestionByID(ctx context.Context, id uuid.UUID) error
 		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
+		GetQuestionsByChallengeIDWithExceptions(ctx context.Context, arg repository.GetQuestionsByChallengeIDWithExceptionsParams) ([]repository.Question, error)
 		UpdateQuestion(ctx context.Context, arg repository.UpdateQuestionParams) error
 
+		// Answers
 		AddQuestionOption(ctx context.Context, arg repository.AddQuestionOptionParams) (repository.AnswerOption, error)
 		DeleteAnswerByID(ctx context.Context, arg repository.DeleteAnswerByIDParams) error
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
@@ -54,11 +64,9 @@ type (
 
 		// Attempts
 		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
-		DeleteAttempt(ctx context.Context, arg repository.DeleteAttemptParams) error
-		GetAttemptByEpisodeID(ctx context.Context, arg repository.GetAttemptByEpisodeIDParams) (repository.Attempt, error)
-		GetAttemptByQuestionID(ctx context.Context, arg repository.GetAttemptByQuestionIDParams) (repository.Attempt, error)
-		UpdateAttempt(ctx context.Context, arg repository.UpdateAttemptParams) error
+		GetEpisodeIDByQuestionID(ctx context.Context, arg repository.GetEpisodeIDByQuestionIDParams) (uuid.UUID, error)
 		CountAttempts(ctx context.Context, arg repository.CountAttemptsParams) (int64, error)
+		GetAskedQuestionsByEpisodeID(ctx context.Context, arg repository.GetAskedQuestionsByEpisodeIDParams) ([]uuid.UUID, error)
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -92,6 +100,7 @@ type (
 		AnswerOptions  []AnswerOption `json:"answer_options"`
 	}
 
+	// AnswerOption struct
 	AnswerOption struct {
 		ID         uuid.UUID `json:"id"`
 		QuestionID uuid.UUID `json:"question_id"`
@@ -109,14 +118,15 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator) *Service {
+func NewService(cr challengesRepository, fn playURLGenerator, eac EpisodeAccessConfig) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
 
 	return &Service{
-		cr:        cr,
-		playUrlFn: fn,
+		cr:                  cr,
+		playUrlFn:           fn,
+		episodeAccessConfig: eac,
 	}
 }
 
@@ -137,48 +147,29 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 
 // GetVerificationQuestionByEpisodeID ...
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error) {
-	// count attempts
-	// count >= NumberAttempts(2)
 	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
 		UserID:    userID,
 		EpisodeID: episodeID,
 		CreatedAt: sql.NullTime{
-			Time:  time.Now(),
+			Time:  time.Now().Add(time.Duration(-s.episodeAccessConfig.Period) * time.Hour),
 			Valid: true,
 		},
 	})
+	if numberAttempts >= int64(s.episodeAccessConfig.NumberAttempts) {
+		return nil, fmt.Errorf("user has no more attempts to pass verification question")
+	}
 
-	attempt, err := s.cr.GetAttemptByEpisodeID(ctx, repository.GetAttemptByEpisodeIDParams{
+	askedQuestions, err := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
 		UserID:    userID,
 		EpisodeID: episodeID,
 	})
-	if attempt.LastAttempt.Time.Before(time.Now()) && attempt.Attempts.Int32 >= 2 {
-		return nil, fmt.Errorf("user has no more attempts to pass verification question")
-	}
-	if attempt.LastAttempt.Time.After(time.Now()) {
-		err = s.cr.NullifyAttemptByEpisodeID(ctx, repository.NullifyAttemptByEpisodeIDParams{
-			Attempts: sql.NullInt32{
-				Int32: 0,
-				Valid: true,
-			},
-			UserID:    userID,
-			EpisodeID: episodeID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("could not nullify attempt: %w", err)
-		}
-	}
 
-	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID) // pass here question-ids asked already. If all questions used >>> return err
+	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	// is this question asked already
-	// if yes >>> get new random question
-	//
-
-	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID)
+	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID, askedQuestions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
@@ -205,85 +196,56 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 
 // CheckVerificationQuestionAnswer ...
 func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error) {
-	attempt, err := s.cr.GetAttemptByQuestionID(ctx, repository.GetAttemptByQuestionIDParams{
-		UserID:     userID,
-		QuestionID: questionID,
-	})
-	if attempt.LastAttempt.Time.Before(time.Now()) && attempt.Attempts.Int32 >= 2 {
-		return nil, fmt.Errorf("user has no more attempts to pass verification question")
+	question, err := s.cr.GetQuestionByID(ctx, questionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get question by id: %w", err)
 	}
-	if attempt.LastAttempt.Time.After(time.Now()) {
-		err = s.cr.NullifyAttemptByQuestionI(ctx, repository.NullifyAttemptByQuestionIParams{
-			Attempts: sql.NullInt32{
-				Int32: 0,
-				Valid: true,
-			},
-			UserID:     userID,
-			QuestionID: questionID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("could not nullify attempt: %w", err)
-		}
+
+	challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
+	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
+		UserID:    userID,
+		EpisodeID: challenge.EpisodeID,
+		CreatedAt: sql.NullTime{
+			Time:  time.Now().Add(time.Duration(-s.episodeAccessConfig.Period) * time.Hour),
+			Valid: true,
+		},
+	})
+	if numberAttempts >= int64(s.episodeAccessConfig.NumberAttempts) {
+		return nil, fmt.Errorf("user has no more attempts to pass verification question")
 	}
 
 	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
 	}
+
 	if isValid == false {
-		switch attempt.Attempts.Int32 {
-		case 0:
-			err = s.cr.UpdateAttempt(ctx, repository.UpdateAttemptParams{
-				QuestionID: questionID,
-				AnswerID:   answerID,
-				Attempts: sql.NullInt32{
-					Int32: 1,
-					Valid: true,
-				},
-				Valid: sql.NullBool{
-					Bool:  false,
-					Valid: true,
-				},
-				UserID:    userID,
-				EpisodeID: attempt.EpisodeID,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("could not update attempt data: %w", err)
-			}
-		case 1:
-			err = s.cr.UpdateAttempt(ctx, repository.UpdateAttemptParams{
-				QuestionID: questionID,
-				AnswerID:   answerID,
-				Attempts: sql.NullInt32{
-					Int32: 2,
-					Valid: true,
-				},
-				Valid: sql.NullBool{
-					Bool:  false,
-					Valid: true,
-				},
-				LastAttempt: sql.NullTime{
-					Time:  time.Now(),
-					Valid: true,
-				},
-				UserID:    userID,
-				EpisodeID: attempt.EpisodeID,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("could not update attempt data: %w", err)
-			}
+		_, err = s.cr.AddAttempt(ctx, repository.AddAttemptParams{
+			UserID:     userID,
+			EpisodeID:  challenge.EpisodeID,
+			QuestionID: questionID,
+			AnswerID:   answerID,
+			Valid: sql.NullBool{
+				Bool:  false,
+				Valid: true,
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not add attempt data: %w", err)
 		}
+
+		return false, nil
 	}
 
 	_, err = s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
-		EpisodeID: attempt.EpisodeID,
+		EpisodeID: challenge.EpisodeID,
 		UserID:    userID,
 		ActivatedAt: sql.NullTime{
 			Time:  time.Now(),
-			Valid: true,
-		},
-		IsActivated: sql.NullBool{
-			Bool:  true,
 			Valid: true,
 		},
 	})
@@ -301,6 +263,9 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 		UserID:    uid,
 	})
 	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("user has not activated realm yet")
+		}
 		return nil, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
@@ -437,6 +402,7 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, 
 		if !db.IsNotFoundError(err) {
 			return Question{}, fmt.Errorf("could not get question: %w", err)
 		}
+
 		return Question{}, fmt.Errorf("could not found question with id=%s: %w", id.String(), err)
 	}
 
@@ -516,13 +482,30 @@ func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (
 }
 
 // GetOneRandomQuestionByChallengeID returns one random question by challenge id
-func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
-	questions, err := s.cr.GetQuestionsByChallengeID(ctx, id)
-	if err != nil {
-		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challengeID uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
+	var questions []repository.Question
+	var err error
+	if len(excludeIDs) > 1 {
+		questions, err = s.cr.GetQuestionsByChallengeIDWithExceptions(ctx, repository.GetQuestionsByChallengeIDWithExceptionsParams{
+			ChallengeID: challengeID,
+			QuestionIds: excludeIDs,
+		})
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			}
+
+			return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", challengeID.String(), err)
 		}
-		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
+	} else {
+		questions, err = s.cr.GetQuestionsByChallengeID(ctx, challengeID)
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			}
+
+			return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", challengeID.String(), err)
+		}
 	}
 
 	idsSlice := make([]uuid.UUID, 0, len(questions))
@@ -535,7 +518,7 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid
 		if !db.IsNotFoundError(err) {
 			return nil, fmt.Errorf("could not get answers: %w", err)
 		}
-		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
+		return nil, fmt.Errorf("could not found answers with ids %s: %w", challengeID.String(), err)
 	}
 
 	rand.Seed(time.Now().UnixNano())

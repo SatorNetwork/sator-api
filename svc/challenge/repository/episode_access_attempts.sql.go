@@ -62,96 +62,55 @@ func (q *Queries) CountAttempts(ctx context.Context, arg CountAttemptsParams) (i
 	return count, err
 }
 
-const deleteAttempt = `-- name: DeleteAttempt :exec
-DELETE FROM attempts
-WHERE user_id = $1 AND episode_id = $2
-`
-
-type DeleteAttemptParams struct {
-	UserID    uuid.UUID `json:"user_id"`
-	EpisodeID uuid.UUID `json:"episode_id"`
-}
-
-func (q *Queries) DeleteAttempt(ctx context.Context, arg DeleteAttemptParams) error {
-	_, err := q.exec(ctx, q.deleteAttemptStmt, deleteAttempt, arg.UserID, arg.EpisodeID)
-	return err
-}
-
-const getAttemptByEpisodeID = `-- name: GetAttemptByEpisodeID :one
-SELECT user_id, episode_id, question_id, answer_id, valid, created_at
+const getAskedQuestionsByEpisodeID = `-- name: GetAskedQuestionsByEpisodeID :many
+SELECT question_id
 FROM attempts
 WHERE user_id = $1 AND episode_id = $2
-    LIMIT 1
 `
 
-type GetAttemptByEpisodeIDParams struct {
+type GetAskedQuestionsByEpisodeIDParams struct {
 	UserID    uuid.UUID `json:"user_id"`
 	EpisodeID uuid.UUID `json:"episode_id"`
 }
 
-func (q *Queries) GetAttemptByEpisodeID(ctx context.Context, arg GetAttemptByEpisodeIDParams) (Attempt, error) {
-	row := q.queryRow(ctx, q.getAttemptByEpisodeIDStmt, getAttemptByEpisodeID, arg.UserID, arg.EpisodeID)
-	var i Attempt
-	err := row.Scan(
-		&i.UserID,
-		&i.EpisodeID,
-		&i.QuestionID,
-		&i.AnswerID,
-		&i.Valid,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) GetAskedQuestionsByEpisodeID(ctx context.Context, arg GetAskedQuestionsByEpisodeIDParams) ([]uuid.UUID, error) {
+	rows, err := q.query(ctx, q.getAskedQuestionsByEpisodeIDStmt, getAskedQuestionsByEpisodeID, arg.UserID, arg.EpisodeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var question_id uuid.UUID
+		if err := rows.Scan(&question_id); err != nil {
+			return nil, err
+		}
+		items = append(items, question_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const getAttemptByQuestionID = `-- name: GetAttemptByQuestionID :one
-SELECT user_id, episode_id, question_id, answer_id, valid, created_at
+const getEpisodeIDByQuestionID = `-- name: GetEpisodeIDByQuestionID :one
+SELECT episode_id
 FROM attempts
 WHERE user_id = $1 AND question_id = $2
     LIMIT 1
 `
 
-type GetAttemptByQuestionIDParams struct {
+type GetEpisodeIDByQuestionIDParams struct {
 	UserID     uuid.UUID `json:"user_id"`
 	QuestionID uuid.UUID `json:"question_id"`
 }
 
-func (q *Queries) GetAttemptByQuestionID(ctx context.Context, arg GetAttemptByQuestionIDParams) (Attempt, error) {
-	row := q.queryRow(ctx, q.getAttemptByQuestionIDStmt, getAttemptByQuestionID, arg.UserID, arg.QuestionID)
-	var i Attempt
-	err := row.Scan(
-		&i.UserID,
-		&i.EpisodeID,
-		&i.QuestionID,
-		&i.AnswerID,
-		&i.Valid,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updateAttempt = `-- name: UpdateAttempt :exec
-UPDATE attempts
-SET question_id = $1,
-    answer_id = $2,
-    valid = $3
-WHERE user_id = $4 AND episode_id = $5
-`
-
-type UpdateAttemptParams struct {
-	QuestionID uuid.UUID    `json:"question_id"`
-	AnswerID   uuid.UUID    `json:"answer_id"`
-	Valid      sql.NullBool `json:"valid"`
-	UserID     uuid.UUID    `json:"user_id"`
-	EpisodeID  uuid.UUID    `json:"episode_id"`
-}
-
-func (q *Queries) UpdateAttempt(ctx context.Context, arg UpdateAttemptParams) error {
-	_, err := q.exec(ctx, q.updateAttemptStmt, updateAttempt,
-		arg.QuestionID,
-		arg.AnswerID,
-		arg.Valid,
-		arg.UserID,
-		arg.EpisodeID,
-	)
-	return err
+func (q *Queries) GetEpisodeIDByQuestionID(ctx context.Context, arg GetEpisodeIDByQuestionIDParams) (uuid.UUID, error) {
+	row := q.queryRow(ctx, q.getEpisodeIDByQuestionIDStmt, getEpisodeIDByQuestionID, arg.UserID, arg.QuestionID)
+	var episode_id uuid.UUID
+	err := row.Scan(&episode_id)
+	return episode_id, err
 }
