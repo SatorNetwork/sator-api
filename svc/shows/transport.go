@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 
 	"github.com/go-chi/chi"
@@ -178,6 +179,10 @@ func castStrToInt32(source string) int32 {
 func codeAndMessageFrom(err error) (int, interface{}) {
 	if errors.Is(err, ErrInvalidParameter) {
 		return http.StatusBadRequest, err.Error()
+	}
+
+	if errors.Is(err, ErrNotFound) || db.IsNotFoundError(err) {
+		return http.StatusNotFound, err.Error()
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)

@@ -9,6 +9,49 @@ import (
 	"github.com/google/uuid"
 )
 
+const addSeason = `-- name: AddSeason :exec
+INSERT INTO seasons (
+    show_id,
+    season_number
+) VALUES (
+    $1,
+    $2
+)
+`
+
+type AddSeasonParams struct {
+	ShowID       uuid.UUID `json:"show_id"`
+	SeasonNumber int32     `json:"season_number"`
+}
+
+func (q *Queries) AddSeason(ctx context.Context, arg AddSeasonParams) error {
+	_, err := q.exec(ctx, q.addSeasonStmt, addSeason, arg.ShowID, arg.SeasonNumber)
+	return err
+}
+
+const deleteSeasonByID = `-- name: DeleteSeasonByID :exec
+DELETE FROM seasons
+WHERE id = $1
+`
+
+func (q *Queries) DeleteSeasonByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteSeasonByIDStmt, deleteSeasonByID, id)
+	return err
+}
+
+const getSeasonByID = `-- name: GetSeasonByID :one
+SELECT id, show_id, season_number
+FROM seasons
+WHERE id = $1
+`
+
+func (q *Queries) GetSeasonByID(ctx context.Context, id uuid.UUID) (Season, error) {
+	row := q.queryRow(ctx, q.getSeasonByIDStmt, getSeasonByID, id)
+	var i Season
+	err := row.Scan(&i.ID, &i.ShowID, &i.SeasonNumber)
+	return i, err
+}
+
 const getSeasonsByShowID = `-- name: GetSeasonsByShowID :many
 SELECT id, show_id, season_number
 FROM seasons

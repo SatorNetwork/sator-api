@@ -6,6 +6,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -13,6 +14,7 @@ import (
 const addEpisode = `-- name: AddEpisode :exec
 INSERT INTO episodes (
     show_id,
+    season_id,
     episode_number,
     cover,
     title,
@@ -25,12 +27,14 @@ VALUES (
            $3,
            $4,
            $5,
-           $6
+           $6,
+           $7
        )
 `
 
 type AddEpisodeParams struct {
 	ShowID        uuid.UUID      `json:"show_id"`
+	SeasonID      uuid.UUID      `json:"season_id"`
 	EpisodeNumber int32          `json:"episode_number"`
 	Cover         sql.NullString `json:"cover"`
 	Title         string         `json:"title"`
@@ -41,6 +45,7 @@ type AddEpisodeParams struct {
 func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
 	_, err := q.exec(ctx, q.addEpisodeStmt, addEpisode,
 		arg.ShowID,
+		arg.SeasonID,
 		arg.EpisodeNumber,
 		arg.Cover,
 		arg.Title,
@@ -52,33 +57,39 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
 
 const deleteEpisodeByID = `-- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
-WHERE id = $1 AND show_id = $2
+WHERE id = $1
 `
 
-type DeleteEpisodeByIDParams struct {
-	ID     uuid.UUID `json:"id"`
-	ShowID uuid.UUID `json:"show_id"`
-}
-
-func (q *Queries) DeleteEpisodeByID(ctx context.Context, arg DeleteEpisodeByIDParams) error {
-	_, err := q.exec(ctx, q.deleteEpisodeByIDStmt, deleteEpisodeByID, arg.ID, arg.ShowID)
+func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteEpisodeByIDStmt, deleteEpisodeByID, id)
 	return err
 }
 
 const getEpisodeByID = `-- name: GetEpisodeByID :one
-SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id
+SELECT episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, seasons.season_number as season_number
 FROM episodes
-WHERE id = $1 AND show_id = $2
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = $1
 `
 
-type GetEpisodeByIDParams struct {
-	ID     uuid.UUID `json:"id"`
-	ShowID uuid.UUID `json:"show_id"`
+type GetEpisodeByIDRow struct {
+	ID            uuid.UUID      `json:"id"`
+	ShowID        uuid.UUID      `json:"show_id"`
+	SeasonID      uuid.UUID      `json:"season_id"`
+	EpisodeNumber int32          `json:"episode_number"`
+	Cover         sql.NullString `json:"cover"`
+	Title         string         `json:"title"`
+	Description   sql.NullString `json:"description"`
+	ReleaseDate   sql.NullTime   `json:"release_date"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	ChallengeID   uuid.UUID      `json:"challenge_id"`
+	SeasonNumber  int32          `json:"season_number"`
 }
 
-func (q *Queries) GetEpisodeByID(ctx context.Context, arg GetEpisodeByIDParams) (Episode, error) {
-	row := q.queryRow(ctx, q.getEpisodeByIDStmt, getEpisodeByID, arg.ID, arg.ShowID)
-	var i Episode
+func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (GetEpisodeByIDRow, error) {
+	row := q.queryRow(ctx, q.getEpisodeByIDStmt, getEpisodeByID, id)
+	var i GetEpisodeByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ShowID,
@@ -91,15 +102,17 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, arg GetEpisodeByIDParams) 
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.ChallengeID,
+		&i.SeasonNumber,
 	)
 	return i, err
 }
 
 const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
-SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id
+SELECT episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, seasons.season_number as season_number
 FROM episodes
-WHERE show_id = $1
-ORDER BY episode_number DESC
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.show_id = $1
+ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3
 `
 
@@ -109,15 +122,30 @@ type GetEpisodesByShowIDParams struct {
 	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShowIDParams) ([]Episode, error) {
+type GetEpisodesByShowIDRow struct {
+	ID            uuid.UUID      `json:"id"`
+	ShowID        uuid.UUID      `json:"show_id"`
+	SeasonID      uuid.UUID      `json:"season_id"`
+	EpisodeNumber int32          `json:"episode_number"`
+	Cover         sql.NullString `json:"cover"`
+	Title         string         `json:"title"`
+	Description   sql.NullString `json:"description"`
+	ReleaseDate   sql.NullTime   `json:"release_date"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	ChallengeID   uuid.UUID      `json:"challenge_id"`
+	SeasonNumber  int32          `json:"season_number"`
+}
+
+func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShowIDParams) ([]GetEpisodesByShowIDRow, error) {
 	rows, err := q.query(ctx, q.getEpisodesByShowIDStmt, getEpisodesByShowID, arg.ShowID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Episode
+	var items []GetEpisodesByShowIDRow
 	for rows.Next() {
-		var i Episode
+		var i GetEpisodesByShowIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShowID,
@@ -130,6 +158,7 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.ChallengeID,
+			&i.SeasonNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -151,7 +180,7 @@ SET episode_number = $1,
     title = $3,
     description = $4,
     release_date = $5
-WHERE id = $6 AND show_id = $7
+WHERE id = $6
 `
 
 type UpdateEpisodeParams struct {
@@ -161,7 +190,6 @@ type UpdateEpisodeParams struct {
 	Description   sql.NullString `json:"description"`
 	ReleaseDate   sql.NullTime   `json:"release_date"`
 	ID            uuid.UUID      `json:"id"`
-	ShowID        uuid.UUID      `json:"show_id"`
 }
 
 func (q *Queries) UpdateEpisode(ctx context.Context, arg UpdateEpisodeParams) error {
@@ -172,7 +200,6 @@ func (q *Queries) UpdateEpisode(ctx context.Context, arg UpdateEpisodeParams) er
 		arg.Description,
 		arg.ReleaseDate,
 		arg.ID,
-		arg.ShowID,
 	)
 	return err
 }

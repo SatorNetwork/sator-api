@@ -1,16 +1,19 @@
 -- name: GetEpisodesByShowID :many
-SELECT *
+SELECT episodes.*, seasons.season_number as season_number
 FROM episodes
-WHERE show_id = $1
-ORDER BY episode_number DESC
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.show_id = $1
+ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
 -- name: GetEpisodeByID :one
-SELECT *
+SELECT episodes.*, seasons.season_number as season_number
 FROM episodes
-WHERE id = $1 AND show_id = $2;
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = $1;
 -- name: AddEpisode :exec
 INSERT INTO episodes (
     show_id,
+    season_id,
     episode_number,
     cover,
     title,
@@ -19,6 +22,7 @@ INSERT INTO episodes (
 )
 VALUES (
            @show_id,
+           @season_id,
            @episode_number,
            @cover,
            @title,
@@ -32,7 +36,7 @@ SET episode_number = @episode_number,
     title = @title,
     description = @description,
     release_date = @release_date
-WHERE id = @id AND show_id = @show_id;
+WHERE id = @id;
 -- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
-WHERE id = @id AND show_id = @show_id;
+WHERE id = @id;
