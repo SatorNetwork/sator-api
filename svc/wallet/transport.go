@@ -81,6 +81,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{wallet_id}/unstake", httptransport.NewServer(
+		e.SetStake,
+		decodeSetStakeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{wallet_id}/stake", httptransport.NewServer(
 		e.GetStake,
 		decodeGetStakeRequest,
