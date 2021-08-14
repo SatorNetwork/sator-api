@@ -203,6 +203,13 @@ func decodeUpdateShowRequest(_ context.Context, r *http.Request) (interface{}, e
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
+	}
+
+	req.ID = id
+
 	return req, nil
 }
 
