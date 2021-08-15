@@ -55,6 +55,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteQuestionByIDStmt, err = db.PrepareContext(ctx, deleteQuestionByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteQuestionByID: %w", err)
 	}
+	if q.doesUserHaveAccessToEpisodeStmt, err = db.PrepareContext(ctx, doesUserHaveAccessToEpisode); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserHaveAccessToEpisode: %w", err)
+	}
 	if q.getAnswerByIDStmt, err = db.PrepareContext(ctx, getAnswerByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnswerByID: %w", err)
 	}
@@ -93,6 +96,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateAnswerStmt, err = db.PrepareContext(ctx, updateAnswer); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAnswer: %w", err)
+	}
+	if q.updateAttemptStmt, err = db.PrepareContext(ctx, updateAttempt); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAttempt: %w", err)
 	}
 	if q.updateChallengeStmt, err = db.PrepareContext(ctx, updateChallenge); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateChallenge: %w", err)
@@ -163,6 +169,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteQuestionByIDStmt: %w", cerr)
 		}
 	}
+	if q.doesUserHaveAccessToEpisodeStmt != nil {
+		if cerr := q.doesUserHaveAccessToEpisodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserHaveAccessToEpisodeStmt: %w", cerr)
+		}
+	}
 	if q.getAnswerByIDStmt != nil {
 		if cerr := q.getAnswerByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAnswerByIDStmt: %w", cerr)
@@ -226,6 +237,11 @@ func (q *Queries) Close() error {
 	if q.updateAnswerStmt != nil {
 		if cerr := q.updateAnswerStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateAnswerStmt: %w", cerr)
+		}
+	}
+	if q.updateAttemptStmt != nil {
+		if cerr := q.updateAttemptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAttemptStmt: %w", cerr)
 		}
 	}
 	if q.updateChallengeStmt != nil {
@@ -293,6 +309,7 @@ type Queries struct {
 	deleteChallengeByIDStmt                     *sql.Stmt
 	deleteEpisodeAccessDataStmt                 *sql.Stmt
 	deleteQuestionByIDStmt                      *sql.Stmt
+	doesUserHaveAccessToEpisodeStmt             *sql.Stmt
 	getAnswerByIDStmt                           *sql.Stmt
 	getAnswersByIDsStmt                         *sql.Stmt
 	getAnswersByQuestionIDStmt                  *sql.Stmt
@@ -306,6 +323,7 @@ type Queries struct {
 	getQuestionsByChallengeIDStmt               *sql.Stmt
 	getQuestionsByChallengeIDWithExceptionsStmt *sql.Stmt
 	updateAnswerStmt                            *sql.Stmt
+	updateAttemptStmt                           *sql.Stmt
 	updateChallengeStmt                         *sql.Stmt
 	updateEpisodeAccessDataStmt                 *sql.Stmt
 	updateQuestionStmt                          *sql.Stmt
@@ -313,34 +331,36 @@ type Queries struct {
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                               tx,
-		tx:                               tx,
-		addAttemptStmt:                   q.addAttemptStmt,
-		addChallengeStmt:                 q.addChallengeStmt,
-		addEpisodeAccessDataStmt:         q.addEpisodeAccessDataStmt,
-		addQuestionStmt:                  q.addQuestionStmt,
-		addQuestionOptionStmt:            q.addQuestionOptionStmt,
-		checkAnswerStmt:                  q.checkAnswerStmt,
-		countAttemptsStmt:                q.countAttemptsStmt,
-		deleteAnswerByIDStmt:             q.deleteAnswerByIDStmt,
-		deleteChallengeByIDStmt:          q.deleteChallengeByIDStmt,
-		deleteEpisodeAccessDataStmt:      q.deleteEpisodeAccessDataStmt,
-		deleteQuestionByIDStmt:           q.deleteQuestionByIDStmt,
-		getAnswerByIDStmt:                q.getAnswerByIDStmt,
-		getAnswersByIDsStmt:              q.getAnswersByIDsStmt,
-		getAnswersByQuestionIDStmt:       q.getAnswersByQuestionIDStmt,
-		getAskedQuestionsByEpisodeIDStmt: q.getAskedQuestionsByEpisodeIDStmt,
-		getChallengeByEpisodeIDStmt:      q.getChallengeByEpisodeIDStmt,
-		getChallengeByIDStmt:             q.getChallengeByIDStmt,
-		getChallengesStmt:                q.getChallengesStmt,
-		getEpisodeAccessDataStmt:         q.getEpisodeAccessDataStmt,
-		getEpisodeIDByQuestionIDStmt:     q.getEpisodeIDByQuestionIDStmt,
-		getQuestionByIDStmt:              q.getQuestionByIDStmt,
-		getQuestionsByChallengeIDStmt:    q.getQuestionsByChallengeIDStmt,
+		db:                                          tx,
+		tx:                                          tx,
+		addAttemptStmt:                              q.addAttemptStmt,
+		addChallengeStmt:                            q.addChallengeStmt,
+		addEpisodeAccessDataStmt:                    q.addEpisodeAccessDataStmt,
+		addQuestionStmt:                             q.addQuestionStmt,
+		addQuestionOptionStmt:                       q.addQuestionOptionStmt,
+		checkAnswerStmt:                             q.checkAnswerStmt,
+		countAttemptsStmt:                           q.countAttemptsStmt,
+		deleteAnswerByIDStmt:                        q.deleteAnswerByIDStmt,
+		deleteChallengeByIDStmt:                     q.deleteChallengeByIDStmt,
+		deleteEpisodeAccessDataStmt:                 q.deleteEpisodeAccessDataStmt,
+		deleteQuestionByIDStmt:                      q.deleteQuestionByIDStmt,
+		doesUserHaveAccessToEpisodeStmt:             q.doesUserHaveAccessToEpisodeStmt,
+		getAnswerByIDStmt:                           q.getAnswerByIDStmt,
+		getAnswersByIDsStmt:                         q.getAnswersByIDsStmt,
+		getAnswersByQuestionIDStmt:                  q.getAnswersByQuestionIDStmt,
+		getAskedQuestionsByEpisodeIDStmt:            q.getAskedQuestionsByEpisodeIDStmt,
+		getChallengeByEpisodeIDStmt:                 q.getChallengeByEpisodeIDStmt,
+		getChallengeByIDStmt:                        q.getChallengeByIDStmt,
+		getChallengesStmt:                           q.getChallengesStmt,
+		getEpisodeAccessDataStmt:                    q.getEpisodeAccessDataStmt,
+		getEpisodeIDByQuestionIDStmt:                q.getEpisodeIDByQuestionIDStmt,
+		getQuestionByIDStmt:                         q.getQuestionByIDStmt,
+		getQuestionsByChallengeIDStmt:               q.getQuestionsByChallengeIDStmt,
 		getQuestionsByChallengeIDWithExceptionsStmt: q.getQuestionsByChallengeIDWithExceptionsStmt,
-		updateAnswerStmt:            q.updateAnswerStmt,
-		updateChallengeStmt:         q.updateChallengeStmt,
-		updateEpisodeAccessDataStmt: q.updateEpisodeAccessDataStmt,
-		updateQuestionStmt:          q.updateQuestionStmt,
+		updateAnswerStmt:                            q.updateAnswerStmt,
+		updateAttemptStmt:                           q.updateAttemptStmt,
+		updateChallengeStmt:                         q.updateChallengeStmt,
+		updateEpisodeAccessDataStmt:                 q.updateEpisodeAccessDataStmt,
+		updateQuestionStmt:                          q.updateQuestionStmt,
 	}
 }

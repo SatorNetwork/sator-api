@@ -17,20 +17,15 @@ import (
 type (
 	// Service struct
 	Service struct {
-		cr                  challengesRepository
-		playUrlFn           playURLGenerator
-		episodeAccessConfig EpisodeAccessConfig
+		cr                   challengesRepository
+		playUrlFn            playURLGenerator
+		attemptsNumber       int64
+		activatedRealmPeriod time.Duration
 	}
 
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
-
-	// EpisodeAccessConfig struct
-	EpisodeAccessConfig struct {
-		NumberAttempts int
-		Period         int
-	}
 
 	challengesRepository interface {
 		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
@@ -61,12 +56,14 @@ type (
 		DeleteEpisodeAccessData(ctx context.Context, arg repository.DeleteEpisodeAccessDataParams) error
 		GetEpisodeAccessData(ctx context.Context, arg repository.GetEpisodeAccessDataParams) (repository.EpisodeAccess, error)
 		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
+		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
 
 		// Attempts
 		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
 		GetEpisodeIDByQuestionID(ctx context.Context, arg repository.GetEpisodeIDByQuestionIDParams) (uuid.UUID, error)
 		CountAttempts(ctx context.Context, arg repository.CountAttemptsParams) (int64, error)
 		GetAskedQuestionsByEpisodeID(ctx context.Context, arg repository.GetAskedQuestionsByEpisodeIDParams) ([]uuid.UUID, error)
+		UpdateAttempt(ctx context.Context, arg repository.UpdateAttemptParams) error
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -107,6 +104,20 @@ type (
 		Option     string    `json:"option"`
 		IsCorrect  bool      `json:"is_correct"`
 	}
+
+	QuizQuestion struct {
+		QuestionID     string             `json:"question_id"`
+		QuestionText   string             `json:"question_text"`
+		TimeForAnswer  int                `json:"time_for_answer"`
+		TotalQuestions int                `json:"total_questions"`
+		QuestionNumber int                `json:"question_number"`
+		AnswerOptions  []QuizAnswerOption `json:"answer_options"`
+	}
+
+	QuizAnswerOption struct {
+		AnswerID   string `json:"answer_id"`
+		AnswerText string `json:"answer_text"`
+	}
 )
 
 // DefaultPlayURLGenerator ...
@@ -118,16 +129,23 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator, eac EpisodeAccessConfig) *Service {
+func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
 
-	return &Service{
-		cr:                  cr,
-		playUrlFn:           fn,
-		episodeAccessConfig: eac,
+	s := &Service{
+		cr:                   cr,
+		playUrlFn:            fn,
+		attemptsNumber:       2,
+		activatedRealmPeriod: time.Hour * 24,
 	}
+
+	for _, o := range opt {
+		o(s)
+	}
+
+	return s
 }
 
 // GetByID ...
@@ -151,15 +169,17 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		UserID:    userID,
 		EpisodeID: episodeID,
 		CreatedAt: sql.NullTime{
-			Time:  time.Now().Add(time.Duration(-s.episodeAccessConfig.Period) * time.Hour),
+			Time:  time.Now().Add(-s.activatedRealmPeriod),
 			Valid: true,
 		},
 	})
-	if numberAttempts >= int64(s.episodeAccessConfig.NumberAttempts) {
-		return nil, fmt.Errorf("user has no more attempts to pass verification question")
+	if err == nil {
+		if numberAttempts >= s.attemptsNumber {
+			return nil, fmt.Errorf("user has no more attempts to pass verification question")
+		}
 	}
 
-	askedQuestions, err := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
+	askedQuestions, _ := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
 		UserID:    userID,
 		EpisodeID: episodeID,
 	})
@@ -174,22 +194,27 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	answers := make([]AnswerOption, 0, len(q.AnswerOptions))
+	// store attempt anyway
+	if _, err := s.cr.AddAttempt(ctx, repository.AddAttemptParams{
+		UserID:     userID,
+		EpisodeID:  episodeID,
+		QuestionID: q.ID,
+	}); err != nil {
+		return nil, fmt.Errorf("could not add attempt data: %w", err)
+	}
+
+	answers := make([]QuizAnswerOption, 0, len(q.AnswerOptions))
 	for _, o := range q.AnswerOptions {
-		answers = append(answers, AnswerOption{
-			ID:         o.ID,
-			QuestionID: o.QuestionID,
-			Option:     o.Option,
-			IsCorrect:  o.IsCorrect,
+		answers = append(answers, QuizAnswerOption{
+			AnswerID:   o.ID.String(),
+			AnswerText: o.Option,
 		})
 	}
 
-	return Question{
-		ID:            q.ID,
-		ChallengeID:   q.ChallengeID,
-		Question:      q.Question,
+	return QuizQuestion{
+		QuestionID:    q.ID.String(),
+		QuestionText:  q.Question,
 		TimeForAnswer: int(challenge.TimePerQuestion.Int32),
-		Order:         q.Order,
 		AnswerOptions: answers,
 	}, nil
 }
@@ -206,84 +231,75 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
-		UserID:    userID,
-		EpisodeID: challenge.EpisodeID,
-		CreatedAt: sql.NullTime{
-			Time:  time.Now().Add(time.Duration(-s.episodeAccessConfig.Period) * time.Hour),
-			Valid: true,
-		},
-	})
-	if numberAttempts >= int64(s.episodeAccessConfig.NumberAttempts) {
-		return nil, fmt.Errorf("user has no more attempts to pass verification question")
-	}
-
 	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
 	}
 
-	if isValid == false {
-		_, err = s.cr.AddAttempt(ctx, repository.AddAttemptParams{
-			UserID:     userID,
-			EpisodeID:  challenge.EpisodeID,
-			QuestionID: questionID,
-			AnswerID:   answerID,
-			Valid: sql.NullBool{
-				Bool:  false,
-				Valid: true,
-			},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("could not add attempt data: %w", err)
-		}
+	if err := s.cr.UpdateAttempt(ctx, repository.UpdateAttemptParams{
+		AnswerID:   answerID,
+		Valid:      sql.NullBool{Bool: isValid, Valid: true},
+		UserID:     userID,
+		QuestionID: questionID,
+	}); err != nil {
+		return nil, err
+	}
 
+	if !isValid {
 		return false, nil
 	}
 
-	_, err = s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
+	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
 		EpisodeID: challenge.EpisodeID,
 		UserID:    userID,
 		ActivatedAt: sql.NullTime{
 			Time:  time.Now(),
 			Valid: true,
 		},
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, fmt.Errorf("could not store episode access data: %w", err)
 	}
 
-	return isValid, nil
+	return true, nil
 }
 
 // VerifyUserAccessToEpisode ...
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
+	// hasAccess, err := s.cr.DoesUserHaveAccessToEpisode(ctx, repository.DoesUserHaveAccessToEpisodeParams{
+	// 	EpisodeID: eid,
+	// 	UserID:    uid,
+	// 	NotEarlierThan: sql.NullTime{
+	// 		Time:  time.Now().Add(-s.activatedRealmPeriod),
+	// 		Valid: true,
+	// 	},
+	// })
+	// if err != nil || !hasAccess {
+	// 	return false, nil
+	// }
+
 	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
 		EpisodeID: eid,
 		UserID:    uid,
 	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("user has not activated realm yet")
+			return false, fmt.Errorf("user has not activated realm yet")
 		}
-		return nil, fmt.Errorf("could not get episode access data: %w", err)
+		return false, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
 	if !data.ActivatedAt.Valid {
 		return false, fmt.Errorf("user has not activated realm yet")
 	}
 
-	day := time.Now().Add(-24 * time.Hour)
-	if data.ActivatedAt.Time.Before(day) {
+	if data.ActivatedAt.Time.Before(time.Now().Add(-s.activatedRealmPeriod)) {
 		err = s.cr.UpdateEpisodeAccessData(ctx, repository.UpdateEpisodeAccessDataParams{
-			ActivatedAt: sql.NullTime{
-				Valid: false,
-			},
-			EpisodeID: eid,
-			UserID:    uid,
+			ActivatedAt: sql.NullTime{},
+			EpisodeID:   eid,
+			UserID:      uid,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("could not nullify access to the realm: %w", err)
+			return false, fmt.Errorf("could not nullify access to the realm: %w", err)
 		}
 
 		return false, fmt.Errorf("access to the realm is expired")

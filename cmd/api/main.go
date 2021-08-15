@@ -118,8 +118,8 @@ var (
 	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
 
 	// Episode Access
-	numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
-	period         = env.GetInt("PERIOD", 24)
+	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
+	// period         = env.GetInt("PERIOD", 24)
 )
 
 func main() {
@@ -286,10 +286,7 @@ func main() {
 			challengeRepository,
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
-			),challenge.EpisodeAccessConfig{
-				NumberAttempts: numberAttempts,
-				Period:         period,
-			},
+			),
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(

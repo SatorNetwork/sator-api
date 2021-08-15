@@ -43,20 +43,43 @@ func (q *Queries) DeleteEpisodeAccessData(ctx context.Context, arg DeleteEpisode
 	return err
 }
 
+const doesUserHaveAccessToEpisode = `-- name: DoesUserHaveAccessToEpisode :one
+SELECT EXISTS (
+    SELECT episode_id, user_id, activated_at 
+    FROM episode_access
+    WHERE episode_id = $1 AND user_id = $2 AND activated_at > $3
+)
+`
+
+type DoesUserHaveAccessToEpisodeParams struct {
+	EpisodeID      uuid.UUID    `json:"episode_id"`
+	UserID         uuid.UUID    `json:"user_id"`
+	NotEarlierThan sql.NullTime `json:"not_earlier_than"`
+}
+
+func (q *Queries) DoesUserHaveAccessToEpisode(ctx context.Context, arg DoesUserHaveAccessToEpisodeParams) (bool, error) {
+	row := q.queryRow(ctx, q.doesUserHaveAccessToEpisodeStmt, doesUserHaveAccessToEpisode, arg.EpisodeID, arg.UserID, arg.NotEarlierThan)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getEpisodeAccessData = `-- name: GetEpisodeAccessData :one
 SELECT episode_id, user_id, activated_at
 FROM episode_access
-WHERE episode_id = $1 AND user_id = $2
-    LIMIT 1
+WHERE episode_id = $1 AND user_id = $2 AND activated_at = $3
+ORDER BY activated_at DESC
+LIMIT 1
 `
 
 type GetEpisodeAccessDataParams struct {
-	EpisodeID uuid.UUID `json:"episode_id"`
-	UserID    uuid.UUID `json:"user_id"`
+	EpisodeID   uuid.UUID    `json:"episode_id"`
+	UserID      uuid.UUID    `json:"user_id"`
+	ActivatedAt sql.NullTime `json:"activated_at"`
 }
 
 func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccessDataParams) (EpisodeAccess, error) {
-	row := q.queryRow(ctx, q.getEpisodeAccessDataStmt, getEpisodeAccessData, arg.EpisodeID, arg.UserID)
+	row := q.queryRow(ctx, q.getEpisodeAccessDataStmt, getEpisodeAccessData, arg.EpisodeID, arg.UserID, arg.ActivatedAt)
 	var i EpisodeAccess
 	err := row.Scan(&i.EpisodeID, &i.UserID, &i.ActivatedAt)
 	return i, err

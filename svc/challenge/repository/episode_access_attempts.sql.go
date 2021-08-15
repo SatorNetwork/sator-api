@@ -46,7 +46,7 @@ func (q *Queries) AddAttempt(ctx context.Context, arg AddAttemptParams) (Attempt
 const countAttempts = `-- name: CountAttempts :one
 SELECT COUNT (*)
 FROM attempts
-WHERE user_id = $1 AND episode_id = $2 AND created_at > $3
+WHERE user_id = $1 AND episode_id = $2 AND created_at > $3 AND answer_id IS NOT NULL
 `
 
 type CountAttemptsParams struct {
@@ -113,4 +113,27 @@ func (q *Queries) GetEpisodeIDByQuestionID(ctx context.Context, arg GetEpisodeID
 	var episode_id uuid.UUID
 	err := row.Scan(&episode_id)
 	return episode_id, err
+}
+
+const updateAttempt = `-- name: UpdateAttempt :exec
+UPDATE attempts
+SET answer_id = $1, valid = $2
+WHERE user_id = $3 AND question_id = $4
+`
+
+type UpdateAttemptParams struct {
+	AnswerID   uuid.UUID    `json:"answer_id"`
+	Valid      sql.NullBool `json:"valid"`
+	UserID     uuid.UUID    `json:"user_id"`
+	QuestionID uuid.UUID    `json:"question_id"`
+}
+
+func (q *Queries) UpdateAttempt(ctx context.Context, arg UpdateAttemptParams) error {
+	_, err := q.exec(ctx, q.updateAttemptStmt, updateAttempt,
+		arg.AnswerID,
+		arg.Valid,
+		arg.UserID,
+		arg.QuestionID,
+	)
+	return err
 }
