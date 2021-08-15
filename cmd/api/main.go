@@ -103,7 +103,7 @@ var (
 	companyName    = env.GetString("COMPANY_NAME", "Sator")
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
 
-	//	 Invitation
+	// Invitation
 	invitationReward = env.GetFloat("INVITATION_REWARD", 0)
 	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
 
@@ -116,6 +116,10 @@ var (
 	fileStorageUrl            = env.MustString("STORAGE_URL")
 	fileStorageDisableSsl     = env.GetBool("STORAGE_DISABLE_SSL", true)
 	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
+
+	// Episode Access
+	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
+	// period         = env.GetInt("PERIOD", 24)
 )
 
 func main() {
@@ -205,7 +209,7 @@ func main() {
 			logger,
 		))
 	}
-  
+
 	// Rewards service
 	var rewardsSvcClient *rewardsClient.Client
 

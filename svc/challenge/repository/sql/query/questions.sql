@@ -22,3 +22,7 @@ SET id = @id,
     question_order = @question_order,
     updated_at = @updated_at
 WHERE id = @id;
+-- name: GetQuestionsByChallengeIDWithExceptions :many
+SELECT *
+FROM questions
+WHERE challenge_id = @challenge_id AND id != ANY(@question_ids::uuid[]);
