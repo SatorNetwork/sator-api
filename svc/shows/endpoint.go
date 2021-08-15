@@ -65,21 +65,21 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title         string `json:"title" validate:"required,gt=0"`
-		Cover         string `json:"cover" validate:"required,gt=0"`
-		HasNewEpisode string `json:"has_new_episode"`
-		Category      string `json:"category"`
-		Description   string `json:"description"`
+		Title         string `json:"title,omitempty" validate:"required,gt=0"`
+		Cover         string `json:"cover,omitempty" validate:"required,gt=0"`
+		HasNewEpisode string `json:"has_new_episode,omitempty"`
+		Category      string `json:"category,omitempty"`
+		Description   string `json:"description,omitempty"`
 	}
 
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
-		ID            string `json:"id" validate:"required,uuid"`
-		Title         string `json:"title" validate:"required,gt=0"`
-		Cover         string `json:"cover" validate:"required,gt=0"`
-		HasNewEpisode string `json:"has_new_episode"`
-		Category      string `json:"category"`
-		Description   string `json:"description"`
+		ID            string `json:"id,omitempty" validate:"required,uuid"`
+		Title         string `json:"title,omitempty" validate:"required"`
+		Cover         string `json:"cover,omitempty" validate:"required"`
+		HasNewEpisode string `json:"has_new_episode,omitempty"`
+		Category      string `json:"category,omitempty"`
+		Description   string `json:"description,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct

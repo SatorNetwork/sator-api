@@ -202,7 +202,7 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 	}); err != nil {
 		return nil, fmt.Errorf("could not add attempt data: %w", err)
 	}
-
+  
 	answers := make([]QuizAnswerOption, 0, len(q.AnswerOptions))
 	for _, o := range q.AnswerOptions {
 		answers = append(answers, QuizAnswerOption{

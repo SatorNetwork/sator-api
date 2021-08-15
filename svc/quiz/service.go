@@ -451,14 +451,3 @@ func calcPrize(prizePool float64, totalWinners, totalQuestions, totalPts, totalR
 
 	return (prizePool / float64(totalPoints)) * float64(winnerPoints)
 }
-
-func castAnswerOptions(source []challenge.AnswerOption) []AnswerOption {
-	result := make([]AnswerOption, 0, len(source))
-	for _, a := range source {
-		result = append(result, AnswerOption{
-			AnswerID:   a.ID.String(),
-			AnswerText: a.Option,
-		})
-	}
-	return result
-}

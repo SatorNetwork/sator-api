@@ -643,6 +643,152 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /wallets/{wallet_id}/stake:
+    post:
+      tags:
+        - "Wallet"
+      summary: set stake.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 1000
+      responses:
+        "200":
+          description: staked successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    result:
+                      type: boolean
+                      example: true
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Wallet"
+      summary: Get wallet transactions.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Get wallet transactions list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    staking:
+                      type: object
+                      properties:
+                        asset_name:
+                          type: string
+                          example: "SAO"
+                        apy:
+                          type: number
+                          example: 123
+                        total_staked:
+                          type: number
+                          example: 12345
+                        staked:
+                          type: number
+                          example: 100000
+                        your_share:
+                          type: number
+                          example: 1000
+                    loyalty:
+                      type: object
+                      properties:
+                        level_title:
+                          type: string
+                          example: "test title"
+                        level_subtitle:
+                          type: string
+                          example: "test subtitle"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /wallets/{wallet_id}/unstake:
+    post:
+      tags:
+        - "Wallet"
+      summary: set stake.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 1000
+      responses:
+        "200":
+          description: staked successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    result:
+                      type: boolean
+                      example: true
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows:
     get:
       tags:
@@ -1533,6 +1679,7 @@ paths:
   /questions/{question_id}:
     get:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for get question by id.
       security:
@@ -1588,6 +1735,7 @@ paths:
 
     put:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for update question by id.
       security:
@@ -1627,6 +1775,7 @@ paths:
 
     delete:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for delete question by id.
       security:
@@ -1651,6 +1800,7 @@ paths:
   /challenges/{challenge_id}/questions:
     get:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for get questions by challenge id.
       security:
@@ -1707,6 +1857,7 @@ paths:
           $ref: "#/components/responses/DefaultError"
     post:
       tags:
+        - "Challenges"
         - "Questions"
       summary: Used for create new question.
       security:
@@ -1765,6 +1916,8 @@ paths:
   /questions/{question_id}/answers:
     post:
       tags:
+        - "Challenges"
+        - "Questions"
         - "Answers"
       summary: Used for create new answer.
       security:
@@ -1819,6 +1972,8 @@ paths:
   /questions/{question_id}/answers/{answer_id}:
     put:
       tags:
+        - "Challenges"
+        - "Questions"
         - "Answers"
       summary: Used for update answer by id.
       security:
@@ -1861,6 +2016,8 @@ paths:
 
     delete:
       tags:
+        - "Challenges"
+        - "Questions"
         - "Answers"
       summary: Used for delete answer by id.
       security:

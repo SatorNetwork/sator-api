@@ -203,22 +203,22 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 }
 
 // Cast repository.Episode to service Episode structure
-func castToListEpisodes(source []repository.Episode) []Episode {
-	result := make([]Episode, 0, len(source))
-	for _, s := range source {
-		result = append(result, Episode{
-			ID:            s.ID,
-			ShowID:        s.ShowID,
-			EpisodeNumber: s.EpisodeNumber,
-			Cover:         s.Cover.String,
-			Title:         s.Title,
-			Description:   s.Description.String,
-			ReleaseDate:   s.ReleaseDate.Time.String(),
-			ChallengeID:   s.ChallengeID,
-		})
-	}
-	return result
-}
+// func castToListEpisodes(source []repository.Episode) []Episode {
+// 	result := make([]Episode, 0, len(source))
+// 	for _, s := range source {
+// 		result = append(result, Episode{
+// 			ID:            s.ID,
+// 			ShowID:        s.ShowID,
+// 			EpisodeNumber: s.EpisodeNumber,
+// 			Cover:         s.Cover.String,
+// 			Title:         s.Title,
+// 			Description:   s.Description.String,
+// 			ReleaseDate:   s.ReleaseDate.Time.String(),
+// 			ChallengeID:   s.ChallengeID,
+// 		})
+// 	}
+// 	return result
+// }
 
 // GetEpisodeByID returns episode with provided id.
 func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error) {
