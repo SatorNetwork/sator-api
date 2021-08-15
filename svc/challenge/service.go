@@ -202,7 +202,7 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 	}); err != nil {
 		return nil, fmt.Errorf("could not add attempt data: %w", err)
 	}
-  
+
 	answers := make([]QuizAnswerOption, 0, len(q.AnswerOptions))
 	for _, o := range q.AnswerOptions {
 		answers = append(answers, QuizAnswerOption{
@@ -283,13 +283,13 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return false, fmt.Errorf("user has not activated realm yet")
+			return false, nil
 		}
 		return false, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
 	if !data.ActivatedAt.Valid {
-		return false, fmt.Errorf("user has not activated realm yet")
+		return false, nil
 	}
 
 	if data.ActivatedAt.Time.Before(time.Now().Add(-s.activatedRealmPeriod)) {
@@ -299,7 +299,8 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 			UserID:      uid,
 		})
 		if err != nil {
-			return false, fmt.Errorf("could not nullify access to the realm: %w", err)
+			log.Printf("could not nullify access to the realm: %v", err)
+			return false, nil
 		}
 
 		return false, fmt.Errorf("access to the realm is expired")
