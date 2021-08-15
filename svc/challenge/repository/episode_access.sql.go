@@ -67,19 +67,18 @@ func (q *Queries) DoesUserHaveAccessToEpisode(ctx context.Context, arg DoesUserH
 const getEpisodeAccessData = `-- name: GetEpisodeAccessData :one
 SELECT episode_id, user_id, activated_at
 FROM episode_access
-WHERE episode_id = $1 AND user_id = $2 AND activated_at = $3
+WHERE episode_id = $1 AND user_id = $2
 ORDER BY activated_at DESC
 LIMIT 1
 `
 
 type GetEpisodeAccessDataParams struct {
-	EpisodeID   uuid.UUID    `json:"episode_id"`
-	UserID      uuid.UUID    `json:"user_id"`
-	ActivatedAt sql.NullTime `json:"activated_at"`
+	EpisodeID uuid.UUID `json:"episode_id"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccessDataParams) (EpisodeAccess, error) {
-	row := q.queryRow(ctx, q.getEpisodeAccessDataStmt, getEpisodeAccessData, arg.EpisodeID, arg.UserID, arg.ActivatedAt)
+	row := q.queryRow(ctx, q.getEpisodeAccessDataStmt, getEpisodeAccessData, arg.EpisodeID, arg.UserID)
 	var i EpisodeAccess
 	err := row.Scan(&i.EpisodeID, &i.UserID, &i.ActivatedAt)
 	return i, err
