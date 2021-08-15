@@ -13,7 +13,7 @@ VALUES ($1, $2, $3) RETURNING *;
 -- name: CheckAnswer :one
 SELECT is_correct
 FROM answer_options
-WHERE id = $1
+WHERE id = $1 AND question_id = $2
 LIMIT 1;
 -- name: GetAnswersByIDs :many
 SELECT *

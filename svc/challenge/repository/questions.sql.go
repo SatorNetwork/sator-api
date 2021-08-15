@@ -8,6 +8,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const addQuestion = `-- name: AddQuestion :one
@@ -75,6 +76,47 @@ ORDER BY question_order ASC
 
 func (q *Queries) GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]Question, error) {
 	rows, err := q.query(ctx, q.getQuestionsByChallengeIDStmt, getQuestionsByChallengeID, challengeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Question
+	for rows.Next() {
+		var i Question
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChallengeID,
+			&i.Question,
+			&i.QuestionOrder,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getQuestionsByChallengeIDWithExceptions = `-- name: GetQuestionsByChallengeIDWithExceptions :many
+SELECT id, challenge_id, question, question_order, updated_at, created_at
+FROM questions
+WHERE challenge_id = $1 AND id != ANY($2::uuid[])
+`
+
+type GetQuestionsByChallengeIDWithExceptionsParams struct {
+	ChallengeID uuid.UUID   `json:"challenge_id"`
+	QuestionIds []uuid.UUID `json:"question_ids"`
+}
+
+func (q *Queries) GetQuestionsByChallengeIDWithExceptions(ctx context.Context, arg GetQuestionsByChallengeIDWithExceptionsParams) ([]Question, error) {
+	rows, err := q.query(ctx, q.getQuestionsByChallengeIDWithExceptionsStmt, getQuestionsByChallengeIDWithExceptions, arg.ChallengeID, pq.Array(arg.QuestionIds))
 	if err != nil {
 		return nil, err
 	}

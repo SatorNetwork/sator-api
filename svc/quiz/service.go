@@ -61,7 +61,7 @@ type (
 		GetChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.Challenge, error)
 
 		GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
-		CheckAnswer(ctx context.Context, answerID uuid.UUID) (bool, error)
+		CheckAnswer(ctx context.Context, answerID, qui uuid.UUID) (bool, error)
 	}
 
 	rewardsService interface {
@@ -259,7 +259,7 @@ func (s *Service) StoreAnswer(ctx context.Context, userID, quizID, questionID, a
 		return fmt.Errorf("could not found quiz with id=%s", quizID.String())
 	}
 
-	isCorrect, err := s.challenges.CheckAnswer(ctx, answerID)
+	isCorrect, err := s.challenges.CheckAnswer(ctx, answerID, questionID)
 	if err != nil {
 		return fmt.Errorf("could not check answer: %w", err)
 	}

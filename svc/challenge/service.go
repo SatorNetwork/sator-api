@@ -9,16 +9,18 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
-
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
+
 	"github.com/google/uuid"
 )
 
 type (
 	// Service struct
 	Service struct {
-		cr        challengesRepository
-		playUrlFn playURLGenerator
+		cr                   challengesRepository
+		playUrlFn            playURLGenerator
+		attemptsNumber       int64
+		activatedRealmPeriod time.Duration
 	}
 
 	// ServiceOption function
@@ -33,18 +35,35 @@ type (
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
 		UpdateChallenge(ctx context.Context, arg repository.UpdateChallengeParams) error
 
+		// Questions
 		AddQuestion(ctx context.Context, arg repository.AddQuestionParams) (repository.Question, error)
 		DeleteQuestionByID(ctx context.Context, id uuid.UUID) error
 		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
+		GetQuestionsByChallengeIDWithExceptions(ctx context.Context, arg repository.GetQuestionsByChallengeIDWithExceptionsParams) ([]repository.Question, error)
 		UpdateQuestion(ctx context.Context, arg repository.UpdateQuestionParams) error
 
+		// Answers
 		AddQuestionOption(ctx context.Context, arg repository.AddQuestionOptionParams) (repository.AnswerOption, error)
 		DeleteAnswerByID(ctx context.Context, arg repository.DeleteAnswerByIDParams) error
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
 		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
-		CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error)
+		CheckAnswer(ctx context.Context, arg repository.CheckAnswerParams) (sql.NullBool, error)
 		UpdateAnswer(ctx context.Context, arg repository.UpdateAnswerParams) error
+
+		// Episode Access
+		AddEpisodeAccessData(ctx context.Context, arg repository.AddEpisodeAccessDataParams) (repository.EpisodeAccess, error)
+		DeleteEpisodeAccessData(ctx context.Context, arg repository.DeleteEpisodeAccessDataParams) error
+		GetEpisodeAccessData(ctx context.Context, arg repository.GetEpisodeAccessDataParams) (repository.EpisodeAccess, error)
+		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
+		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
+
+		// Attempts
+		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
+		GetEpisodeIDByQuestionID(ctx context.Context, arg repository.GetEpisodeIDByQuestionIDParams) (uuid.UUID, error)
+		CountAttempts(ctx context.Context, arg repository.CountAttemptsParams) (int64, error)
+		GetAskedQuestionsByEpisodeID(ctx context.Context, arg repository.GetAskedQuestionsByEpisodeIDParams) ([]uuid.UUID, error)
+		UpdateAttempt(ctx context.Context, arg repository.UpdateAttemptParams) error
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -78,6 +97,7 @@ type (
 		AnswerOptions  []AnswerOption `json:"answer_options"`
 	}
 
+	// AnswerOption struct
 	AnswerOption struct {
 		ID         uuid.UUID `json:"id"`
 		QuestionID uuid.UUID `json:"question_id"`
@@ -109,15 +129,23 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator) *Service {
+func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
 
-	return &Service{
-		cr:        cr,
-		playUrlFn: fn,
+	s := &Service{
+		cr:                   cr,
+		playUrlFn:            fn,
+		attemptsNumber:       2,
+		activatedRealmPeriod: time.Hour * 24,
 	}
+
+	for _, o := range opt {
+		o(s)
+	}
+
+	return s
 }
 
 // GetByID ...
@@ -136,17 +164,45 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 }
 
 // GetVerificationQuestionByEpisodeID ...
-func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error) {
+func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error) {
+	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+		CreatedAt: sql.NullTime{
+			Time:  time.Now().Add(-s.activatedRealmPeriod),
+			Valid: true,
+		},
+	})
+	if err == nil {
+		if numberAttempts >= s.attemptsNumber {
+			return nil, fmt.Errorf("user has no more attempts to pass verification question")
+		}
+	}
+
+	askedQuestions, _ := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+	})
+
 	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID)
+	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID, askedQuestions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
+	// store attempt anyway
+	if _, err := s.cr.AddAttempt(ctx, repository.AddAttemptParams{
+		UserID:     userID,
+		EpisodeID:  episodeID,
+		QuestionID: q.ID,
+	}); err != nil {
+		return nil, fmt.Errorf("could not add attempt data: %w", err)
+	}
+  
 	answers := make([]QuizAnswerOption, 0, len(q.AnswerOptions))
 	for _, o := range q.AnswerOptions {
 		answers = append(answers, QuizAnswerOption{
@@ -164,14 +220,92 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 }
 
 // CheckVerificationQuestionAnswer ...
-func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, qid, aid uuid.UUID) (interface{}, error) {
-	return s.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
+func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error) {
+	question, err := s.cr.GetQuestionByID(ctx, questionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get question by id: %w", err)
+	}
+
+	challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
+	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
+	}
+
+	if err := s.cr.UpdateAttempt(ctx, repository.UpdateAttemptParams{
+		AnswerID:   answerID,
+		Valid:      sql.NullBool{Bool: isValid, Valid: true},
+		UserID:     userID,
+		QuestionID: questionID,
+	}); err != nil {
+		return nil, err
+	}
+
+	if !isValid {
+		return false, nil
+	}
+
+	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
+		EpisodeID: challenge.EpisodeID,
+		UserID:    userID,
+		ActivatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+	}); err != nil {
+		return nil, fmt.Errorf("could not store episode access data: %w", err)
+	}
+
+	return true, nil
 }
 
 // VerifyUserAccessToEpisode ...
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
-	// return s.qs.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
-	return false, nil
+	// hasAccess, err := s.cr.DoesUserHaveAccessToEpisode(ctx, repository.DoesUserHaveAccessToEpisodeParams{
+	// 	EpisodeID: eid,
+	// 	UserID:    uid,
+	// 	NotEarlierThan: sql.NullTime{
+	// 		Time:  time.Now().Add(-s.activatedRealmPeriod),
+	// 		Valid: true,
+	// 	},
+	// })
+	// if err != nil || !hasAccess {
+	// 	return false, nil
+	// }
+
+	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
+		EpisodeID: eid,
+		UserID:    uid,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return false, fmt.Errorf("user has not activated realm yet")
+		}
+		return false, fmt.Errorf("could not get episode access data: %w", err)
+	}
+
+	if !data.ActivatedAt.Valid {
+		return false, fmt.Errorf("user has not activated realm yet")
+	}
+
+	if data.ActivatedAt.Time.Before(time.Now().Add(-s.activatedRealmPeriod)) {
+		err = s.cr.UpdateEpisodeAccessData(ctx, repository.UpdateEpisodeAccessDataParams{
+			ActivatedAt: sql.NullTime{},
+			EpisodeID:   eid,
+			UserID:      uid,
+		})
+		if err != nil {
+			return false, fmt.Errorf("could not nullify access to the realm: %w", err)
+		}
+
+		return false, fmt.Errorf("access to the realm is expired")
+	}
+
+	return true, nil
 }
 
 // GetChallengesByShowID ...
@@ -284,6 +418,7 @@ func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, 
 		if !db.IsNotFoundError(err) {
 			return Question{}, fmt.Errorf("could not get question: %w", err)
 		}
+
 		return Question{}, fmt.Errorf("could not found question with id=%s: %w", id.String(), err)
 	}
 
@@ -363,13 +498,30 @@ func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (
 }
 
 // GetOneRandomQuestionByChallengeID returns one random question by challenge id
-func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
-	questions, err := s.cr.GetQuestionsByChallengeID(ctx, id)
-	if err != nil {
-		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challengeID uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
+	var questions []repository.Question
+	var err error
+	if len(excludeIDs) > 1 {
+		questions, err = s.cr.GetQuestionsByChallengeIDWithExceptions(ctx, repository.GetQuestionsByChallengeIDWithExceptionsParams{
+			ChallengeID: challengeID,
+			QuestionIds: excludeIDs,
+		})
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			}
+
+			return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", challengeID.String(), err)
 		}
-		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
+	} else {
+		questions, err = s.cr.GetQuestionsByChallengeID(ctx, challengeID)
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			}
+
+			return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", challengeID.String(), err)
+		}
 	}
 
 	idsSlice := make([]uuid.UUID, 0, len(questions))
@@ -382,7 +534,7 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid
 		if !db.IsNotFoundError(err) {
 			return nil, fmt.Errorf("could not get answers: %w", err)
 		}
-		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
+		return nil, fmt.Errorf("could not found answers with ids %s: %w", challengeID.String(), err)
 	}
 
 	rand.Seed(time.Now().UnixNano())
@@ -426,13 +578,16 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid
 }
 
 // CheckAnswer checks answer
-func (s *Service) CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error) {
-	answers, err := s.cr.CheckAnswer(ctx, id)
+func (s *Service) CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error) {
+	answers, err := s.cr.CheckAnswer(ctx, repository.CheckAnswerParams{
+		ID:         aid,
+		QuestionID: qid,
+	})
 	if err != nil {
 		if !db.IsNotFoundError(err) {
 			return false, fmt.Errorf("could not validate answer: %w", err)
 		}
-		return false, fmt.Errorf("could not found answer option with id %s: %w", id, err)
+		return false, fmt.Errorf("could not found answer option with id %s: %w", aid, err)
 	}
 
 	return answers.Bool, nil
