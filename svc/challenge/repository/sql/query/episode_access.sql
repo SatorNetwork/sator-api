@@ -1,7 +1,7 @@
 -- name: GetEpisodeAccessData :one
 SELECT *
 FROM episode_access
-WHERE episode_id = $1 AND user_id = $2 AND activated_at = $3
+WHERE episode_id = $1 AND user_id = $2
 ORDER BY activated_at DESC
 LIMIT 1;
 -- name: AddEpisodeAccessData :one

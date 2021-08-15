@@ -257,7 +257,7 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 			Valid: true,
 		},
 	}); err != nil {
-		return nil, fmt.Errorf("could not store episode access data: %w", err)
+		return false, fmt.Errorf("could not store episode access data: %w", err)
 	}
 
 	return true, nil
