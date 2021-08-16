@@ -94,7 +94,7 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 	}, nil
 }
 
-// AddTransaction ..
+// AddTransaction ...
 func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error {
 	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
