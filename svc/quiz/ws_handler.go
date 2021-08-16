@@ -62,6 +62,7 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID)) http.Handle
 			return
 		}
 		defer func() {
+			log.Printf("Defer: %v, QuizID: %v", uid, quizID) // TODO: Remove it!
 			quizHub.RemovePlayer(uid)
 			callback(uid, quizID)
 		}()
