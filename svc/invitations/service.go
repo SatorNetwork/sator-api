@@ -85,20 +85,23 @@ func NewService(ir invitationsRepository, m mailer, rc rewardsClient, config Con
 // SendReward ...
 func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error) func(userID, quizID uuid.UUID) {
 	return func(userID, quizID uuid.UUID) {
+		log.Printf("SendReward CALLED") // TODO: Remove it!
 		var ctx context.Context
 
 		invitation, err := s.ir.GetInvitationByInviteeID(ctx, userID)
 		if err != nil {
 			if !db.IsNotFoundError(err) {
-				return // user isn't invited.
+				log.Printf("user isn't invited: %v", err)
+				return
 			}
 		}
+		log.Printf("invitation: %v", invitation)
 		if invitation.RewardReceived.Bool {
-			return // reward received.
+			return
 		}
 
 		// sendRewards
-		if err := sendRewards(
+		if err = sendRewards(
 			ctx,
 			invitation.InvitedBy,
 			quizID,
@@ -109,8 +112,9 @@ func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relation
 			log.Printf("could not send invitation reward: %v", err)
 			return
 		}
+		log.Printf("invitation reward sent to: %v", invitation.InvitedBy)
 
-		if err := s.ir.SetRewardReceived(ctx, repository.SetRewardReceivedParams{
+		if err = s.ir.SetRewardReceived(ctx, repository.SetRewardReceivedParams{
 			ID: invitation.ID,
 			RewardReceived: sql.NullBool{
 				Bool:  true,
@@ -120,6 +124,7 @@ func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relation
 			log.Printf("could not set invitation reward received: %v", err)
 			return
 		}
+		log.Printf("invitation reward received by: %v", invitation.ID)
 	}
 }
 
@@ -134,7 +139,7 @@ func (s *Service) SendInvitation(ctx context.Context, invitedByID uuid.UUID, inv
 				return fmt.Errorf("could not create invitation: %w", err)
 			}
 
-			if err := s.m.SendInvitation(ctx, inviteeEmail, invitedByUsername); err != nil {
+			if err = s.m.SendInvitation(ctx, inviteeEmail, invitedByUsername); err != nil {
 				return fmt.Errorf("could not send invitation: %w", err)
 			}
 
