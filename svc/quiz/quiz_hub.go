@@ -155,6 +155,8 @@ func (h *Hub) Connect(userID uuid.UUID) error {
 }
 
 func (h *Hub) RemovePlayer(userID uuid.UUID) error {
+	log.Printf("RemovePlayer userID: %v", userID) // TODO: Remove it!
+
 	if p, ok := h.players[userID.String()]; !ok {
 		if err := p.Close(); err != nil {
 			return fmt.Errorf("remove player: could not close player hub: %w", err)
