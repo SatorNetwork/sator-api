@@ -359,16 +359,10 @@ func decodeGetQuestionsByChallengeIDRequest(_ context.Context, r *http.Request) 
 }
 
 func decodeUnlockEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req UnlockEpisodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, fmt.Errorf("could not decode request body: %w", err)
-	}
-
 	episodeID := chi.URLParam(r, "episode_id")
 	if episodeID == "" {
 		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
 	}
-	req.EpisodeID = episodeID
 
-	return req, nil
+	return episodeID, nil
 }

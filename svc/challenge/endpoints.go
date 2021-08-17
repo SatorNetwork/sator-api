@@ -130,13 +130,6 @@ type (
 		AnswerID   string `json:"answer_id"`
 		QuestionID string `json:"question_id"`
 	}
-
-	// UnlockEpisodeRequest ...
-	// TODO: remove it, added for demo
-	UnlockEpisodeRequest struct {
-		EpisodeID string `json:"episode_id,omitempty"  validate:"required,uuid"`
-		UnlockFor string `json:"unlock_for,omitempty"  validate:"required,number,gt=0"`
-	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -617,17 +610,12 @@ func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // TODO: remove it, added for demo
 func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(UnlockEpisodeRequest)
-		if err := v(req); err != nil {
-			return nil, err
-		}
-
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(req.EpisodeID)
+		episodeID, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get answer id: %w", err)
 		}
