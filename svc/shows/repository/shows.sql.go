@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const addShow = `-- name: AddShow :exec
+const addShow = `-- name: AddShow :one
 INSERT INTO shows (
     title,
     cover,
@@ -24,7 +24,7 @@ VALUES (
            $3,
            $4,
            $5
-       )
+) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description
 `
 
 type AddShowParams struct {
@@ -35,15 +35,26 @@ type AddShowParams struct {
 	Description   sql.NullString `json:"description"`
 }
 
-func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) error {
-	_, err := q.exec(ctx, q.addShowStmt, addShow,
+func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) {
+	row := q.queryRow(ctx, q.addShowStmt, addShow,
 		arg.Title,
 		arg.Cover,
 		arg.HasNewEpisode,
 		arg.Category,
 		arg.Description,
 	)
-	return err
+	var i Show
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Cover,
+		&i.HasNewEpisode,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.Category,
+		&i.Description,
+	)
+	return i, err
 }
 
 const deleteShowByID = `-- name: DeleteShowByID :exec
