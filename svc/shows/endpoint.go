@@ -3,7 +3,6 @@ package shows
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -22,6 +21,9 @@ type (
 		GetShowsByCategory endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
 
+		AddSeason        endpoint.Endpoint
+		DeleteSeasonByID endpoint.Endpoint
+
 		AddEpisode          endpoint.Endpoint
 		DeleteEpisodeByID   endpoint.Endpoint
 		GetEpisodeByID      endpoint.Endpoint
@@ -30,7 +32,7 @@ type (
 	}
 
 	service interface {
-		AddShow(ctx context.Context, sh Show) error
+		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
@@ -38,7 +40,10 @@ type (
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
-		AddEpisode(ctx context.Context, ep Episode) error
+		AddSeason(ctx context.Context, ss Season) (Season, error)
+		DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error
+
+		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
 		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
@@ -65,21 +70,21 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title         string `json:"title" validate:"required,gt=0"`
-		Cover         string `json:"cover" validate:"required,gt=0"`
-		HasNewEpisode string `json:"has_new_episode"`
-		Category      string `json:"category"`
-		Description   string `json:"description"`
+		Title         string `json:"title,omitempty" validate:"required,gt=0"`
+		Cover         string `json:"cover,omitempty" validate:"required,gt=0"`
+		HasNewEpisode bool   `json:"has_new_episode,omitempty"`
+		Category      string `json:"category,omitempty"`
+		Description   string `json:"description,omitempty"`
 	}
 
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
-		ID            string `json:"id" validate:"required,uuid"`
-		Title         string `json:"title" validate:"required,gt=0"`
-		Cover         string `json:"cover" validate:"required,gt=0"`
-		HasNewEpisode string `json:"has_new_episode"`
-		Category      string `json:"category"`
-		Description   string `json:"description"`
+		ID            string `json:"id,omitempty" validate:"required,uuid"`
+		Title         string `json:"title,omitempty" validate:"required"`
+		Cover         string `json:"cover,omitempty" validate:"required"`
+		HasNewEpisode bool   `json:"has_new_episode,omitempty"`
+		Category      string `json:"category,omitempty"`
+		Description   string `json:"description,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -97,28 +102,44 @@ type (
 	// AddEpisodeRequest struct
 	AddEpisodeRequest struct {
 		ShowID        string `json:"show_id" validate:"required,uuid"`
+		SeasonID      string `json:"season_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
 		Cover         string `json:"cover"`
 		Title         string `json:"title" validate:"required,gt=0"`
 		Description   string `json:"description"`
 		ReleaseDate   string `json:"release_date"`
+		ChallengeID   string `json:"challenge_id"`
 	}
 
 	// UpdateEpisodeRequest struct
 	UpdateEpisodeRequest struct {
 		ID            string `json:"id" validate:"required,uuid"`
 		ShowID        string `json:"show_id" validate:"required,uuid"`
+		SeasonID      string `json:"season_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
 		Cover         string `json:"cover"`
 		Title         string `json:"title" validate:"required,gt=0"`
 		Description   string `json:"description" validate:"required,gt=0"`
-		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z07:00"`
+		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
+		ChallengeID   string `json:"challenge_id"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
 	GetEpisodesByShowIDRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
 		PaginationRequest
+	}
+
+	// AddSeasonRequest struct
+	AddSeasonRequest struct {
+		ShowID       string `json:"show_id" validate:"required,uuid"`
+		SeasonNumber int32  `json:"season_number"`
+	}
+
+	// DeleteSeasonByIDRequest struct
+	DeleteSeasonByIDRequest struct {
+		SeasonID string `json:"season_id" validate:"required,uuid"`
+		ShowID   string `json:"show_id" validate:"required,uuid"`
 	}
 )
 
@@ -151,6 +172,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
 
+		AddSeason:        MakeAddSeasonEndpoint(s, validateFunc),
+		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
+
 		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
 		DeleteEpisodeByID:   MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodeByID:      MakeGetEpisodeByIDEndpoint(s, validateFunc),
@@ -168,6 +192,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowByID = mdw(e.GetShowByID)
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
+
+			e.AddSeason = mdw(e.AddSeason)
+			e.DeleteSeasonByID = mdw(e.DeleteSeasonByID)
 
 			e.AddEpisode = mdw(e.AddEpisode)
 			e.DeleteEpisodeByID = mdw(e.DeleteEpisodeByID)
@@ -270,15 +297,10 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		b, err := strconv.ParseBool(req.HasNewEpisode)
-		if err != nil {
-			return nil, fmt.Errorf("can not parse boolean value from string")
-		}
-
-		err = s.AddShow(ctx, Show{
+		resp, err := s.AddShow(ctx, Show{
 			Title:         req.Title,
 			Cover:         req.Cover,
-			HasNewEpisode: b,
+			HasNewEpisode: req.HasNewEpisode,
 			Category:      req.Category,
 			Description:   req.Description,
 		})
@@ -286,7 +308,7 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		return true, nil
+		return resp, nil
 	}
 }
 
@@ -300,16 +322,11 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		b, err := strconv.ParseBool(req.HasNewEpisode)
-		if err != nil {
-			return nil, fmt.Errorf("can not parse boolean value from string")
-		}
-
 		err = s.UpdateShow(ctx, Show{
 			ID:            id,
 			Title:         req.Title,
 			Cover:         req.Cover,
-			HasNewEpisode: b,
+			HasNewEpisode: req.HasNewEpisode,
 			Category:      req.Category,
 			Description:   req.Description,
 		})
@@ -351,8 +368,20 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		err = s.AddEpisode(ctx, Episode{
+		seasonID, err := uuid.Parse(req.SeasonID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		challengeID, err := uuid.Parse(req.ChallengeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		}
+
+		resp, err := s.AddEpisode(ctx, Episode{
 			ShowID:        showID,
+			SeasonID:      seasonID,
+			ChallengeID:   challengeID,
 			EpisodeNumber: req.EpisodeNumber,
 			Cover:         req.Cover,
 			Title:         req.Title,
@@ -363,7 +392,7 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, err
 		}
 
-		return true, nil
+		return resp, nil
 	}
 }
 
@@ -385,14 +414,26 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
+		seasonID, err := uuid.Parse(req.SeasonID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get season id: %w", err)
+		}
+
+		challengeID, err := uuid.Parse(req.ChallengeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		}
+
 		err = s.UpdateEpisode(ctx, Episode{
 			ID:            id,
 			ShowID:        showID,
+			SeasonID:      seasonID,
 			EpisodeNumber: req.EpisodeNumber,
 			Cover:         req.Cover,
 			Title:         req.Title,
 			Description:   req.Description,
 			ReleaseDate:   req.ReleaseDate,
+			ChallengeID:   challengeID,
 		})
 		if err != nil {
 			return nil, err
@@ -475,5 +516,57 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeAddSeasonEndpoint ...
+func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(AddSeasonRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		resp, err := s.AddSeason(ctx, Season{
+			ShowID:       showID,
+			SeasonNumber: req.SeasonNumber,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeDeleteSeasonByIDEndpoint ...
+func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(DeleteSeasonByIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+		}
+
+		seasonID, err := uuid.Parse(req.SeasonID)
+		if err != nil {
+			return nil, fmt.Errorf("%w season id: %v", ErrInvalidParameter, err)
+		}
+
+		err = s.DeleteSeasonByID(ctx, showID, seasonID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }
