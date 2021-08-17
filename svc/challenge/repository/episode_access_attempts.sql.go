@@ -100,7 +100,8 @@ const getEpisodeIDByQuestionID = `-- name: GetEpisodeIDByQuestionID :one
 SELECT episode_id
 FROM attempts
 WHERE user_id = $1 AND question_id = $2
-    LIMIT 1
+ORDER BY created_at DESC
+LIMIT 1
 `
 
 type GetEpisodeIDByQuestionIDParams struct {
@@ -118,7 +119,7 @@ func (q *Queries) GetEpisodeIDByQuestionID(ctx context.Context, arg GetEpisodeID
 const updateAttempt = `-- name: UpdateAttempt :exec
 UPDATE attempts
 SET answer_id = $1, valid = $2
-WHERE user_id = $3 AND question_id = $4
+WHERE user_id = $3 AND question_id = $4 AND answer_id IS NULL
 `
 
 type UpdateAttemptParams struct {
