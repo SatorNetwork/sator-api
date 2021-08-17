@@ -722,3 +722,19 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 
 	return nil
 }
+
+// CheckVerificationQuestionAnswer ...
+func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID) error {
+	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+		ActivatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not store episode access data: %w", err)
+	}
+
+	return nil
+}
