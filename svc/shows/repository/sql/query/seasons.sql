@@ -18,4 +18,4 @@ INSERT INTO seasons (
 ) RETURNING *;
 -- name: DeleteSeasonByID :exec
 DELETE FROM seasons
-WHERE id = @id;
+WHERE id = @id AND show_id = @show_id;

@@ -33,11 +33,16 @@ func (q *Queries) AddSeason(ctx context.Context, arg AddSeasonParams) (Season, e
 
 const deleteSeasonByID = `-- name: DeleteSeasonByID :exec
 DELETE FROM seasons
-WHERE id = $1
+WHERE id = $1 AND show_id = $2
 `
 
-func (q *Queries) DeleteSeasonByID(ctx context.Context, id uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteSeasonByIDStmt, deleteSeasonByID, id)
+type DeleteSeasonByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	ShowID uuid.UUID `json:"show_id"`
+}
+
+func (q *Queries) DeleteSeasonByID(ctx context.Context, arg DeleteSeasonByIDParams) error {
+	_, err := q.exec(ctx, q.deleteSeasonByIDStmt, deleteSeasonByID, arg.ID, arg.ShowID)
 	return err
 }
 

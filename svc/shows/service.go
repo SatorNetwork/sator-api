@@ -33,8 +33,9 @@ type (
 	Season struct {
 		ID           uuid.UUID `json:"id"`
 		Title        string    `json:"title"`
-		SeasonNumber int       `json:"season_number"`
+		SeasonNumber int32     `json:"season_number"`
 		Episodes     []Episode `json:"episodes"`
+		ShowID       uuid.UUID `json:"show_id"`
 	}
 
 	Episode struct {
@@ -61,7 +62,7 @@ type (
 
 		// Seasons
 		AddSeason(ctx context.Context, arg repository.AddSeasonParams) (repository.Season, error)
-		DeleteSeasonByID(ctx context.Context, id uuid.UUID) error
+		DeleteSeasonByID(ctx context.Context, arg repository.DeleteSeasonByIDParams) error
 		GetSeasonByID(ctx context.Context, id uuid.UUID) (repository.Season, error)
 		GetSeasonsByShowID(ctx context.Context, arg repository.GetSeasonsByShowIDParams) ([]repository.Season, error)
 
@@ -202,7 +203,7 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 	for _, s := range source {
 		result = append(result, Season{
 			ID:           s.ID,
-			SeasonNumber: int(s.SeasonNumber),
+			SeasonNumber: s.SeasonNumber,
 			Title:        fmt.Sprintf("Season %d", s.SeasonNumber),
 			Episodes:     episodes[s.ID.String()],
 		})
@@ -390,10 +391,44 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 	return nil
 }
 
-// DeleteEpisodeByID ..
+// DeleteEpisodeByID ...
 func (s *Service) DeleteEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) error {
 	if err := s.sr.DeleteEpisodeByID(ctx, episodeID); err != nil {
 		return fmt.Errorf("could not delete episode with id=%s:%w", episodeID, err)
+	}
+
+	return nil
+}
+
+// AddSeason ...
+func (s *Service) AddSeason(ctx context.Context, ss Season) (Season, error) {
+	season, err := s.sr.AddSeason(ctx, repository.AddSeasonParams{
+		ShowID:       ss.ShowID,
+		SeasonNumber: ss.SeasonNumber,
+	})
+	if err != nil {
+		return Season{}, fmt.Errorf("could not add season with title=%s: %w", ss.Title, err)
+	}
+
+	return castToSeason(season), nil
+}
+
+// Cast repository.Season to service Season structure
+func castToSeason(source repository.Season) Season {
+	return Season{
+		ID:           source.ID,
+		ShowID:       source.ShowID,
+		SeasonNumber: source.SeasonNumber,
+	}
+}
+
+// DeleteSeasonByID ...
+func (s *Service) DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error {
+	if err := s.sr.DeleteSeasonByID(ctx, repository.DeleteSeasonByIDParams{
+		ID:     seasonID,
+		ShowID: showID,
+	}); err != nil {
+		return fmt.Errorf("could not delete season with id=%s:%w", seasonID, err)
 	}
 
 	return nil

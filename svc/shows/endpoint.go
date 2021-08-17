@@ -21,6 +21,9 @@ type (
 		GetShowsByCategory endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
 
+		AddSeason        endpoint.Endpoint
+		DeleteSeasonByID endpoint.Endpoint
+
 		AddEpisode          endpoint.Endpoint
 		DeleteEpisodeByID   endpoint.Endpoint
 		GetEpisodeByID      endpoint.Endpoint
@@ -36,6 +39,9 @@ type (
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
+
+		AddSeason(ctx context.Context, ss Season) (Season, error)
+		DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
@@ -123,6 +129,18 @@ type (
 		ShowID string `json:"show_id" validate:"required,uuid"`
 		PaginationRequest
 	}
+
+	// AddSeasonRequest struct
+	AddSeasonRequest struct {
+		ShowID       string `json:"show_id" validate:"required,uuid"`
+		SeasonNumber int32  `json:"season_number"`
+	}
+
+	// DeleteSeasonByIDRequest struct
+	DeleteSeasonByIDRequest struct {
+		SeasonID string `json:"season_id" validate:"required,uuid"`
+		ShowID   string `json:"show_id" validate:"required,uuid"`
+	}
 )
 
 // Limit of items
@@ -154,6 +172,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
 
+		AddSeason:        MakeAddSeasonEndpoint(s, validateFunc),
+		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
+
 		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
 		DeleteEpisodeByID:   MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodeByID:      MakeGetEpisodeByIDEndpoint(s, validateFunc),
@@ -171,6 +192,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowByID = mdw(e.GetShowByID)
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
+
+			e.AddSeason = mdw(e.AddSeason)
+			e.DeleteSeasonByID = mdw(e.DeleteSeasonByID)
 
 			e.AddEpisode = mdw(e.AddEpisode)
 			e.DeleteEpisodeByID = mdw(e.DeleteEpisodeByID)
@@ -492,5 +516,57 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeAddSeasonEndpoint ...
+func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(AddSeasonRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		resp, err := s.AddSeason(ctx, Season{
+			ShowID:       showID,
+			SeasonNumber: req.SeasonNumber,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeDeleteSeasonByIDEndpoint ...
+func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(DeleteSeasonByIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+		}
+
+		seasonID, err := uuid.Parse(req.SeasonID)
+		if err != nil {
+			return nil, fmt.Errorf("%w season id: %v", ErrInvalidParameter, err)
+		}
+
+		err = s.DeleteSeasonByID(ctx, showID, seasonID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }
