@@ -32,6 +32,14 @@ run-local: ## Run api via `go run`
 	SOLANA_API_BASE_URL=https://api.devnet.solana.com/ \
 	POSTMARK_SERVER_TOKEN=local \
 	POSTMARK_ACCOUNT_TOKEN=local \
+	STORAGE_KEY=XXXXXXXXXX \
+    STORAGE_SECRET=XXXXXXXXXX \
+    STORAGE_ENDPOINT=https://nyc3.digitaloceanspaces.com \
+    STORAGE_REGION=nyc3 \
+    STORAGE_BUCKET=sator-media-storage \
+    STORAGE_URL=https://sator-media-storage.nyc3.digitaloceanspaces.com \
+    STORAGE_FORCE_PATH_STYLE=false \
+    STORAGE_DISABLE_SSL=true \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
 
 migrate: ## Run all migrations on server

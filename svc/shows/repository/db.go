@@ -25,11 +25,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addEpisodeStmt, err = db.PrepareContext(ctx, addEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query AddEpisode: %w", err)
 	}
+	if q.addSeasonStmt, err = db.PrepareContext(ctx, addSeason); err != nil {
+		return nil, fmt.Errorf("error preparing query AddSeason: %w", err)
+	}
 	if q.addShowStmt, err = db.PrepareContext(ctx, addShow); err != nil {
 		return nil, fmt.Errorf("error preparing query AddShow: %w", err)
 	}
 	if q.deleteEpisodeByIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEpisodeByID: %w", err)
+	}
+	if q.deleteSeasonByIDStmt, err = db.PrepareContext(ctx, deleteSeasonByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteSeasonByID: %w", err)
 	}
 	if q.deleteShowByIDStmt, err = db.PrepareContext(ctx, deleteShowByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteShowByID: %w", err)
@@ -39,6 +45,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getEpisodesByShowIDStmt, err = db.PrepareContext(ctx, getEpisodesByShowID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodesByShowID: %w", err)
+	}
+	if q.getSeasonByIDStmt, err = db.PrepareContext(ctx, getSeasonByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSeasonByID: %w", err)
 	}
 	if q.getSeasonsByShowIDStmt, err = db.PrepareContext(ctx, getSeasonsByShowID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSeasonsByShowID: %w", err)
@@ -68,6 +77,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addEpisodeStmt: %w", cerr)
 		}
 	}
+	if q.addSeasonStmt != nil {
+		if cerr := q.addSeasonStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addSeasonStmt: %w", cerr)
+		}
+	}
 	if q.addShowStmt != nil {
 		if cerr := q.addShowStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addShowStmt: %w", cerr)
@@ -76,6 +90,11 @@ func (q *Queries) Close() error {
 	if q.deleteEpisodeByIDStmt != nil {
 		if cerr := q.deleteEpisodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteEpisodeByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteSeasonByIDStmt != nil {
+		if cerr := q.deleteSeasonByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteSeasonByIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteShowByIDStmt != nil {
@@ -91,6 +110,11 @@ func (q *Queries) Close() error {
 	if q.getEpisodesByShowIDStmt != nil {
 		if cerr := q.getEpisodesByShowIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEpisodesByShowIDStmt: %w", cerr)
+		}
+	}
+	if q.getSeasonByIDStmt != nil {
+		if cerr := q.getSeasonByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSeasonByIDStmt: %w", cerr)
 		}
 	}
 	if q.getSeasonsByShowIDStmt != nil {
@@ -163,11 +187,14 @@ type Queries struct {
 	db                      DBTX
 	tx                      *sql.Tx
 	addEpisodeStmt          *sql.Stmt
+	addSeasonStmt           *sql.Stmt
 	addShowStmt             *sql.Stmt
 	deleteEpisodeByIDStmt   *sql.Stmt
+	deleteSeasonByIDStmt    *sql.Stmt
 	deleteShowByIDStmt      *sql.Stmt
 	getEpisodeByIDStmt      *sql.Stmt
 	getEpisodesByShowIDStmt *sql.Stmt
+	getSeasonByIDStmt       *sql.Stmt
 	getSeasonsByShowIDStmt  *sql.Stmt
 	getShowByIDStmt         *sql.Stmt
 	getShowsStmt            *sql.Stmt
@@ -181,11 +208,14 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                      tx,
 		tx:                      tx,
 		addEpisodeStmt:          q.addEpisodeStmt,
+		addSeasonStmt:           q.addSeasonStmt,
 		addShowStmt:             q.addShowStmt,
 		deleteEpisodeByIDStmt:   q.deleteEpisodeByIDStmt,
+		deleteSeasonByIDStmt:    q.deleteSeasonByIDStmt,
 		deleteShowByIDStmt:      q.deleteShowByIDStmt,
 		getEpisodeByIDStmt:      q.getEpisodeByIDStmt,
 		getEpisodesByShowIDStmt: q.getEpisodesByShowIDStmt,
+		getSeasonByIDStmt:       q.getSeasonByIDStmt,
 		getSeasonsByShowIDStmt:  q.getSeasonsByShowIDStmt,
 		getShowByIDStmt:         q.getShowByIDStmt,
 		getShowsStmt:            q.getShowsStmt,
