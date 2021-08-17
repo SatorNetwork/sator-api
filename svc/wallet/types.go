@@ -33,6 +33,7 @@ const (
 	ActionClaimRewards  ActionType = "claim_rewards"
 	ActionSendTokens    ActionType = "send_tokens"
 	ActionReceiveTokens ActionType = "receive_tokens"
+	ActionStakeTokens   ActionType = "stake_tokens"
 )
 
 // Name of action type
@@ -44,6 +45,8 @@ func (at ActionType) Name() string {
 		return "Send"
 	case ActionReceiveTokens:
 		return "Receive"
+	case ActionStakeTokens:
+		return "Stake"
 	}
 	return "Undefined"
 }
@@ -113,5 +116,29 @@ type (
 	Balance struct {
 		Currency string  `json:"currency"`
 		Amount   float64 `json:"amount"`
+	}
+)
+
+// Stake details
+type (
+	// Stake struct
+	Stake struct {
+		Staking Staking `json:"staking"`
+		Loyalty Loyalty `json:"loyalty"`
+	}
+
+	// Staking struct
+	Staking struct {
+		AssetName   string  `json:"asset_name"`
+		APY         float64 `json:"apy"`
+		TotalStaked float64 `json:"total_staked"`
+		Staked      float64 `json:"staked"`
+		YourShare   float64 `json:"your_share"`
+	}
+
+	// Loyalty struct
+	Loyalty struct {
+		LevelTitle    string `json:"level_title"`
+		LevelSubtitle string `json:"level_subtitle"`
 	}
 )

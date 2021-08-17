@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 
 	"github.com/go-chi/chi"
@@ -38,7 +39,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	// shows list
+	// shows
 	r.Get("/", httptransport.NewServer(
 		e.GetShows,
 		decodeGetShowsRequest,
@@ -46,14 +47,6 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/filter/{category}", httptransport.NewServer(
-		e.GetShowsByCategory,
-		decodeGetShowsByCategoryRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
-	// show
 	r.Post("/", httptransport.NewServer(
 		e.AddShow,
 		decodeAddShowRequest,
@@ -105,7 +98,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/{show_id}/episodes", httptransport.NewServer(
+	r.Post("/{show_id}/episodes/{season_id}", httptransport.NewServer(
 		e.AddEpisode,
 		decodeAddEpisodeRequest,
 		httpencoder.EncodeResponse,
@@ -122,6 +115,28 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Delete("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.DeleteEpisodeByID,
 		decodeDeleteEpisodeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/filter/{category}", httptransport.NewServer(
+		e.GetShowsByCategory,
+		decodeGetShowsByCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	// Seasons
+	r.Post("/{show_id}/seasons", httptransport.NewServer(
+		e.AddSeason,
+		decodeAddSeasonRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{show_id}/seasons/{season_id}", httptransport.NewServer(
+		e.DeleteSeasonByID,
+		decodeDeleteSeasonByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -180,6 +195,10 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusBadRequest, err.Error()
 	}
 
+	if errors.Is(err, ErrNotFound) || db.IsNotFoundError(err) {
+		return http.StatusNotFound, err.Error()
+	}
+
 	return httpencoder.CodeAndMessageFrom(err)
 }
 
@@ -197,6 +216,13 @@ func decodeUpdateShowRequest(_ context.Context, r *http.Request) (interface{}, e
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
+
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show_id", ErrInvalidParameter)
+	}
+
+	req.ID = id
 
 	return req, nil
 }
@@ -221,6 +247,12 @@ func decodeAddEpisodeRequest(_ context.Context, r *http.Request) (interface{}, e
 		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
 	}
 	req.ShowID = showID
+
+	seasonID := chi.URLParam(r, "season_id")
+	if seasonID == "" {
+		return nil, fmt.Errorf("%w: missed season id", ErrInvalidParameter)
+	}
+	req.SeasonID = seasonID
 
 	return req, nil
 }
@@ -287,5 +319,37 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
+	}, nil
+}
+
+func decodeAddSeasonRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AddSeasonRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+	req.ShowID = showID
+
+	return req, nil
+}
+
+func decodeDeleteSeasonByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	seasonID := chi.URLParam(r, "season_id")
+	if seasonID == "" {
+		return nil, fmt.Errorf("%w: missed season id", ErrInvalidParameter)
+	}
+
+	return DeleteSeasonByIDRequest{
+		ShowID:   showID,
+		SeasonID: seasonID,
 	}, nil
 }

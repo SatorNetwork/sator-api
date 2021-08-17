@@ -39,15 +39,35 @@ func (q *Queries) AddQuestionOption(ctx context.Context, arg AddQuestionOptionPa
 const checkAnswer = `-- name: CheckAnswer :one
 SELECT is_correct
 FROM answer_options
-WHERE id = $1
+WHERE id = $1 AND question_id = $2
 LIMIT 1
 `
 
-func (q *Queries) CheckAnswer(ctx context.Context, id uuid.UUID) (sql.NullBool, error) {
-	row := q.queryRow(ctx, q.checkAnswerStmt, checkAnswer, id)
+type CheckAnswerParams struct {
+	ID         uuid.UUID `json:"id"`
+	QuestionID uuid.UUID `json:"question_id"`
+}
+
+func (q *Queries) CheckAnswer(ctx context.Context, arg CheckAnswerParams) (sql.NullBool, error) {
+	row := q.queryRow(ctx, q.checkAnswerStmt, checkAnswer, arg.ID, arg.QuestionID)
 	var is_correct sql.NullBool
 	err := row.Scan(&is_correct)
 	return is_correct, err
+}
+
+const deleteAnswerByID = `-- name: DeleteAnswerByID :exec
+DELETE FROM answer_options
+WHERE id = $1 AND question_id = $2
+`
+
+type DeleteAnswerByIDParams struct {
+	ID         uuid.UUID `json:"id"`
+	QuestionID uuid.UUID `json:"question_id"`
+}
+
+func (q *Queries) DeleteAnswerByID(ctx context.Context, arg DeleteAnswerByIDParams) error {
+	_, err := q.exec(ctx, q.deleteAnswerByIDStmt, deleteAnswerByID, arg.ID, arg.QuestionID)
+	return err
 }
 
 const getAnswerByID = `-- name: GetAnswerByID :one
@@ -141,4 +161,33 @@ func (q *Queries) GetAnswersByQuestionID(ctx context.Context, questionID uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateAnswer = `-- name: UpdateAnswer :exec
+UPDATE answer_options
+SET id = $1,
+    question_id = $2,
+    answer_option = $3,
+    is_correct = $4,
+    updated_at = $5
+WHERE id = $1
+`
+
+type UpdateAnswerParams struct {
+	ID           uuid.UUID    `json:"id"`
+	QuestionID   uuid.UUID    `json:"question_id"`
+	AnswerOption string       `json:"answer_option"`
+	IsCorrect    sql.NullBool `json:"is_correct"`
+	UpdatedAt    sql.NullTime `json:"updated_at"`
+}
+
+func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) error {
+	_, err := q.exec(ctx, q.updateAnswerStmt, updateAnswer,
+		arg.ID,
+		arg.QuestionID,
+		arg.AnswerOption,
+		arg.IsCorrect,
+		arg.UpdatedAt,
+	)
+	return err
 }

@@ -249,6 +249,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
+			{
+				Type: ActionStakeTokens.String(),
+				Name: ActionStakeTokens.Name(),
+				URL:  "",
+			},
 		},
 		Balance: balance,
 	}, nil
@@ -539,17 +544,21 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	toEncode.Amount = amount
 	toEncode.RecipientAddr = recipientPK
 
-	bytes, err := json.Marshal(toEncode)
+	log.Printf("toEncode: %+v", toEncode)
+
+	encodedData, err := json.Marshal(toEncode)
 	if err != nil {
 		return PreparedTransferTransaction{}, fmt.Errorf("could not marshal amount and recipient pk: %w", err)
 	}
+
+	log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
 
 	return PreparedTransferTransaction{
 		AssetName:       asset,
 		Amount:          amount,
 		RecipientAddr:   recipientPK,
-		Fee:             1488,
-		TransactionHash: base58.Encode(bytes),
+		Fee:             amount * 0.025,
+		TransactionHash: base58.Encode(encodedData),
 		SenderWalletID:  walletID.String(),
 	}, nil
 }
@@ -612,6 +621,28 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 	}
 
 	return err
+}
+
+// GetStake Mocked method for stake
+func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error) {
+	return Stake{
+		Staking: Staking{
+			AssetName:   "SAO",
+			APY:         138.9,
+			TotalStaked: 23423454567,
+			Staked:      345.75,
+			YourShare:   0.021,
+		},
+		Loyalty: Loyalty{
+			LevelTitle:    "Genin",
+			LevelSubtitle: "25% rewards multiplier",
+		},
+	}, nil
+}
+
+// SetStake Mocked method for stake
+func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error) {
+	return true, nil
 }
 
 func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {

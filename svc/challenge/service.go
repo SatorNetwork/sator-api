@@ -2,11 +2,14 @@ package challenge
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
-	"github.com/SatorNetwork/sator-api/svc/questions"
 
 	"github.com/google/uuid"
 )
@@ -14,53 +17,104 @@ import (
 type (
 	// Service struct
 	Service struct {
-		cr        challengesRepository
-		playUrlFn playURLGenerator
-		qs        questionsService
+		cr                   challengesRepository
+		playUrlFn            playURLGenerator
+		attemptsNumber       int64
+		activatedRealmPeriod time.Duration
 	}
 
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
 
-	// Challenge struct
-	// Fields were rearranged to optimize memory usage.
-	Challenge struct {
-		ID                 uuid.UUID `json:"id"`
-		Title              string    `json:"title"`
-		Description        string    `json:"description"`
-		PrizePool          string    `json:"prize_pool"`
-		PrizePoolAmount    float64   `json:"-"`
-		Players            int       `json:"players"`
-		Winners            string    `json:"winners"`
-		TimePerQuestion    string    `json:"time_per_question"`
-		TimePerQuestionSec int64     `json:"-"`
-		Play               string    `json:"play"`
-	}
-
 	challengesRepository interface {
-		GetChallengeByID(ctx context.Context, id uuid.UUID) (repository.Challenge, error)
+		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
 		GetChallenges(ctx context.Context, arg repository.GetChallengesParams) ([]repository.Challenge, error)
 		GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UUID) (repository.Challenge, error)
+		GetChallengeByID(ctx context.Context, id uuid.UUID) (repository.Challenge, error)
+		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
+		UpdateChallenge(ctx context.Context, arg repository.UpdateChallengeParams) error
+
+		// Questions
+		AddQuestion(ctx context.Context, arg repository.AddQuestionParams) (repository.Question, error)
+		DeleteQuestionByID(ctx context.Context, id uuid.UUID) error
+		GetQuestionByID(ctx context.Context, id uuid.UUID) (repository.Question, error)
+		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]repository.Question, error)
+		GetQuestionsByChallengeIDWithExceptions(ctx context.Context, arg repository.GetQuestionsByChallengeIDWithExceptionsParams) ([]repository.Question, error)
+		UpdateQuestion(ctx context.Context, arg repository.UpdateQuestionParams) error
+
+		// Answers
+		AddQuestionOption(ctx context.Context, arg repository.AddQuestionOptionParams) (repository.AnswerOption, error)
+		DeleteAnswerByID(ctx context.Context, arg repository.DeleteAnswerByIDParams) error
+		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
+		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
+		CheckAnswer(ctx context.Context, arg repository.CheckAnswerParams) (sql.NullBool, error)
+		UpdateAnswer(ctx context.Context, arg repository.UpdateAnswerParams) error
+
+		// Episode Access
+		AddEpisodeAccessData(ctx context.Context, arg repository.AddEpisodeAccessDataParams) (repository.EpisodeAccess, error)
+		DeleteEpisodeAccessData(ctx context.Context, arg repository.DeleteEpisodeAccessDataParams) error
+		GetEpisodeAccessData(ctx context.Context, arg repository.GetEpisodeAccessDataParams) (repository.EpisodeAccess, error)
+		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
+		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
+
+		// Attempts
+		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
+		GetEpisodeIDByQuestionID(ctx context.Context, arg repository.GetEpisodeIDByQuestionIDParams) (uuid.UUID, error)
+		CountAttempts(ctx context.Context, arg repository.CountAttemptsParams) (int64, error)
+		GetAskedQuestionsByEpisodeID(ctx context.Context, arg repository.GetAskedQuestionsByEpisodeIDParams) ([]uuid.UUID, error)
+		UpdateAttempt(ctx context.Context, arg repository.UpdateAttemptParams) error
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
 
-	questionsService interface {
-		GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*questions.Question, error)
-		CheckAnswer(ctx context.Context, id uuid.UUID) (bool, error)
+	// Challenge struct
+	// Fields were rearranged to optimize memory usage.
+	Challenge struct {
+		ID                 uuid.UUID `json:"id"`
+		ShowID             uuid.UUID `json:"show_id"`
+		Title              string    `json:"title"`
+		Description        string    `json:"description"`
+		PrizePool          string    `json:"prize_pool"`
+		PrizePoolAmount    float64   `json:"-"`
+		Players            int32     `json:"players"`
+		Winners            string    `json:"winners"`
+		TimePerQuestion    string    `json:"time_per_question"`
+		TimePerQuestionSec int64     `json:"-"`
+		Play               string    `json:"play"`
+		EpisodeID          uuid.UUID `json:"episode_id"`
+		Kind               int32     `json:"kind"`
 	}
 
+	// Question struct
 	Question struct {
-		QuestionID     string         `json:"question_id"`
-		QuestionText   string         `json:"question_text"`
+		ID             uuid.UUID      `json:"id"`
+		ChallengeID    uuid.UUID      `json:"challenge_id"`
+		Question       string         `json:"question"`
 		TimeForAnswer  int            `json:"time_for_answer"`
-		TotalQuestions int            `json:"total_questions"`
-		QuestionNumber int            `json:"question_number"`
+		TotalQuestions int            `json:"total_questions"` // TODO: Do we need this field?
+		Order          int32          `json:"order"`
 		AnswerOptions  []AnswerOption `json:"answer_options"`
 	}
 
+	// AnswerOption struct
 	AnswerOption struct {
+		ID         uuid.UUID `json:"id"`
+		QuestionID uuid.UUID `json:"question_id"`
+		Option     string    `json:"option"`
+		IsCorrect  bool      `json:"is_correct"`
+	}
+
+	QuizQuestion struct {
+		QuestionID     string             `json:"question_id"`
+		QuestionText   string             `json:"question_text"`
+		TimeForAnswer  int                `json:"time_for_answer"`
+		TotalQuestions int                `json:"total_questions"`
+		QuestionNumber int                `json:"question_number"`
+		AnswerOptions  []QuizAnswerOption `json:"answer_options"`
+	}
+
+	QuizAnswerOption struct {
 		AnswerID   string `json:"answer_id"`
 		AnswerText string `json:"answer_text"`
 	}
@@ -75,20 +129,23 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator, qs questionsService) *Service {
+func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
 
-	if qs == nil {
-		log.Fatalln("questions service client is not set")
+	s := &Service{
+		cr:                   cr,
+		playUrlFn:            fn,
+		attemptsNumber:       2,
+		activatedRealmPeriod: time.Hour * 24,
 	}
 
-	return &Service{
-		cr:        cr,
-		playUrlFn: fn,
-		qs:        qs,
+	for _, o := range opt {
+		o(s)
 	}
+
+	return s
 }
 
 // GetByID ...
@@ -107,25 +164,54 @@ func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface
 }
 
 // GetVerificationQuestionByEpisodeID ...
-func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID uuid.UUID) (interface{}, error) {
+func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error) {
+	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+		CreatedAt: sql.NullTime{
+			Time:  time.Now().Add(-s.activatedRealmPeriod),
+			Valid: true,
+		},
+	})
+	if err == nil {
+		if numberAttempts >= s.attemptsNumber {
+			return nil, fmt.Errorf("user has no more attempts to pass verification question")
+		}
+	}
+
+	askedQuestions, _ := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+	})
+
 	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
-	q, err := s.qs.GetOneRandomQuestionByChallengeID(ctx, challenge.ID)
+
+	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID, askedQuestions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
-	answers := make([]AnswerOption, 0, len(q.AnswerOptions))
+	// store attempt anyway
+	if _, err := s.cr.AddAttempt(ctx, repository.AddAttemptParams{
+		UserID:     userID,
+		EpisodeID:  episodeID,
+		QuestionID: q.ID,
+	}); err != nil {
+		return nil, fmt.Errorf("could not add attempt data: %w", err)
+	}
+
+	answers := make([]QuizAnswerOption, 0, len(q.AnswerOptions))
 	for _, o := range q.AnswerOptions {
-		answers = append(answers, AnswerOption{
+		answers = append(answers, QuizAnswerOption{
 			AnswerID:   o.ID.String(),
 			AnswerText: o.Option,
 		})
 	}
 
-	return Question{
+	return QuizQuestion{
 		QuestionID:    q.ID.String(),
 		QuestionText:  q.Question,
 		TimeForAnswer: int(challenge.TimePerQuestion.Int32),
@@ -134,14 +220,93 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 }
 
 // CheckVerificationQuestionAnswer ...
-func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, qid, aid uuid.UUID) (interface{}, error) {
-	return s.qs.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
+func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error) {
+	question, err := s.cr.GetQuestionByID(ctx, questionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get question by id: %w", err)
+	}
+
+	challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
+	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
+	}
+
+	if err := s.cr.UpdateAttempt(ctx, repository.UpdateAttemptParams{
+		AnswerID:   answerID,
+		Valid:      sql.NullBool{Bool: isValid, Valid: true},
+		UserID:     userID,
+		QuestionID: questionID,
+	}); err != nil {
+		return nil, err
+	}
+
+	if !isValid {
+		return false, nil
+	}
+
+	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
+		EpisodeID: challenge.EpisodeID,
+		UserID:    userID,
+		ActivatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+	}); err != nil {
+		return false, fmt.Errorf("could not store episode access data: %w", err)
+	}
+
+	return true, nil
 }
 
 // VerifyUserAccessToEpisode ...
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
-	// return s.qs.CheckAnswer(ctx, aid) // FIXME: check question + answer, not only answer
-	return false, nil
+	// hasAccess, err := s.cr.DoesUserHaveAccessToEpisode(ctx, repository.DoesUserHaveAccessToEpisodeParams{
+	// 	EpisodeID: eid,
+	// 	UserID:    uid,
+	// 	NotEarlierThan: sql.NullTime{
+	// 		Time:  time.Now().Add(-s.activatedRealmPeriod),
+	// 		Valid: true,
+	// 	},
+	// })
+	// if err != nil || !hasAccess {
+	// 	return false, nil
+	// }
+
+	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
+		EpisodeID: eid,
+		UserID:    uid,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("could not get episode access data: %w", err)
+	}
+
+	if !data.ActivatedAt.Valid {
+		return false, nil
+	}
+
+	if data.ActivatedAt.Time.Before(time.Now().Add(-s.activatedRealmPeriod)) {
+		err = s.cr.UpdateEpisodeAccessData(ctx, repository.UpdateEpisodeAccessDataParams{
+			ActivatedAt: sql.NullTime{},
+			EpisodeID:   eid,
+			UserID:      uid,
+		})
+		if err != nil {
+			log.Printf("could not nullify access to the realm: %v", err)
+			return false, nil
+		}
+
+		return false, fmt.Errorf("access to the realm is expired")
+	}
+
+	return true, nil
 }
 
 // GetChallengesByShowID ...
@@ -155,7 +320,7 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
 	}
 
-	// Cast repository.Callange into challenge.Challenge struct
+	// Cast repository.Challenge into challenge.Challenge struct
 	result := make([]Challenge, 0, len(list))
 	for _, v := range list {
 		result = append(result, castToChallenge(v, s.playUrlFn))
@@ -166,13 +331,410 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challenge {
 	return Challenge{
 		ID:                 c.ID,
+		ShowID:             c.ShowID,
 		Title:              c.Title,
 		Description:        c.Description.String,
 		PrizePool:          fmt.Sprintf("%.2f SAO", c.PrizePool),
 		PrizePoolAmount:    c.PrizePool,
-		Players:            int(c.PlayersToStart),
+		Players:            c.PlayersToStart,
 		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
 		TimePerQuestionSec: int64(c.TimePerQuestion.Int32),
 		Play:               playUrlFn(c.ID),
+		EpisodeID:          c.EpisodeID,
+		Kind:               c.Kind,
 	}
+}
+
+// AddChallenge ..
+func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, error) {
+	challenge, err := s.cr.AddChallenge(ctx, repository.AddChallengeParams{
+		ShowID: ch.ShowID,
+		Title:  ch.Title,
+		Description: sql.NullString{
+			String: ch.Description,
+			Valid:  len(ch.Description) > 0,
+		},
+		PrizePool:      ch.PrizePoolAmount,
+		PlayersToStart: ch.Players,
+		TimePerQuestion: sql.NullInt32{
+			Int32: int32(ch.TimePerQuestionSec),
+			Valid: true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		EpisodeID: ch.EpisodeID,
+		Kind:      ch.Kind,
+	})
+	if err != nil {
+		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
+	}
+
+	return castToChallenge(challenge, s.playUrlFn), nil
+}
+
+// DeleteChallengeByID ...
+func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.cr.DeleteChallengeByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete challenge with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// UpdateChallenge ..
+func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
+	if err := s.cr.UpdateChallenge(ctx, repository.UpdateChallengeParams{
+		ShowID: ch.ShowID,
+		Title:  ch.Title,
+		Description: sql.NullString{
+			String: ch.Title,
+			Valid:  len(ch.Description) > 0,
+		},
+		PrizePool:      ch.PrizePoolAmount,
+		PlayersToStart: ch.Players,
+		TimePerQuestion: sql.NullInt32{
+			Int32: int32(ch.TimePerQuestionSec),
+			Valid: false,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		EpisodeID: ch.EpisodeID,
+		Kind:      ch.Kind,
+		ID:        ch.ID,
+	}); err != nil {
+		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)
+	}
+
+	return nil
+}
+
+// GetQuestionByID returns question by id
+func (s *Service) GetQuestionByID(ctx context.Context, id uuid.UUID) (Question, error) {
+	question, err := s.cr.GetQuestionByID(ctx, id)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return Question{}, fmt.Errorf("could not get question: %w", err)
+		}
+
+		return Question{}, fmt.Errorf("could not found question with id=%s: %w", id.String(), err)
+	}
+
+	answers, err := s.cr.GetAnswersByQuestionID(ctx, question.ID)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return Question{}, fmt.Errorf("could not get answer options for question with id=%s: %w", id.String(), err)
+		}
+
+		return Question{}, fmt.Errorf("could not found any answer options for question with id=%s: %w", id.String(), err)
+	}
+
+	return castToQuestionWithAnswers(question, answers), nil
+}
+
+// GetQuestionsByChallengeID returns questions by challenge id
+func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+	questions, err := s.cr.GetQuestionsByChallengeID(ctx, id)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+		}
+		return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", id.String(), err)
+	}
+
+	idsSlice := make([]uuid.UUID, 0, len(questions))
+	for _, v := range questions {
+		idsSlice = append(idsSlice, v.ID)
+	}
+
+	answers, err := s.cr.GetAnswersByIDs(ctx, idsSlice)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get answers: %w", err)
+		}
+		return nil, fmt.Errorf("could not found answers with ids %s: %w", id.String(), err)
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
+
+	answMap := make(map[string][]AnswerOption)
+	for _, v := range answers {
+		if _, ok := answMap[v.QuestionID.String()]; ok {
+			answMap[v.QuestionID.String()] = append(answMap[v.QuestionID.String()], AnswerOption{
+				ID:         v.ID,
+				QuestionID: v.QuestionID,
+				Option:     v.AnswerOption,
+				IsCorrect:  v.IsCorrect.Bool,
+			})
+		} else {
+			answMap[v.QuestionID.String()] = []AnswerOption{
+				{
+					ID:         v.ID,
+					QuestionID: v.QuestionID,
+					Option:     v.AnswerOption,
+					IsCorrect:  v.IsCorrect.Bool,
+				},
+			}
+		}
+	}
+
+	qlist := make([]Question, 0, len(questions))
+	for _, v := range questions {
+		if opt, ok := answMap[v.ID.String()]; ok {
+			qlist = append(qlist, Question{
+				ID:            v.ID,
+				ChallengeID:   v.ChallengeID,
+				Question:      v.Question,
+				Order:         v.QuestionOrder,
+				AnswerOptions: opt,
+			})
+		}
+	}
+
+	return qlist, nil
+}
+
+// GetOneRandomQuestionByChallengeID returns one random question by challenge id
+func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challengeID uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
+	var questions []repository.Question
+	var err error
+	if len(excludeIDs) > 1 {
+		questions, err = s.cr.GetQuestionsByChallengeIDWithExceptions(ctx, repository.GetQuestionsByChallengeIDWithExceptionsParams{
+			ChallengeID: challengeID,
+			QuestionIds: excludeIDs,
+		})
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			}
+
+			return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", challengeID.String(), err)
+		}
+	} else {
+		questions, err = s.cr.GetQuestionsByChallengeID(ctx, challengeID)
+		if err != nil {
+			if !db.IsNotFoundError(err) {
+				return nil, fmt.Errorf("could not get questions by challenge id: %w", err)
+			}
+
+			return nil, fmt.Errorf("could not found any questions with challenge id %s: %w", challengeID.String(), err)
+		}
+	}
+
+	idsSlice := make([]uuid.UUID, 0, len(questions))
+	for _, v := range questions {
+		idsSlice = append(idsSlice, v.ID)
+	}
+
+	answers, err := s.cr.GetAnswersByIDs(ctx, idsSlice)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("could not get answers: %w", err)
+		}
+		return nil, fmt.Errorf("could not found answers with ids %s: %w", challengeID.String(), err)
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
+
+	answMap := make(map[string][]AnswerOption)
+	for _, v := range answers {
+		if _, ok := answMap[v.QuestionID.String()]; ok {
+			answMap[v.QuestionID.String()] = append(answMap[v.QuestionID.String()], AnswerOption{
+				ID:         v.ID,
+				QuestionID: v.QuestionID,
+				Option:     v.AnswerOption,
+				IsCorrect:  v.IsCorrect.Bool,
+			})
+		} else {
+			answMap[v.QuestionID.String()] = []AnswerOption{
+				{
+					ID:         v.ID,
+					QuestionID: v.QuestionID,
+					Option:     v.AnswerOption,
+					IsCorrect:  v.IsCorrect.Bool,
+				},
+			}
+		}
+	}
+
+	qlist := make([]Question, 0, len(questions))
+	for _, v := range questions {
+		if opt, ok := answMap[v.ID.String()]; ok {
+			qlist = append(qlist, Question{
+				ID:            v.ID,
+				ChallengeID:   v.ChallengeID,
+				Question:      v.Question,
+				Order:         v.QuestionOrder,
+				AnswerOptions: opt,
+			})
+		}
+	}
+
+	return &qlist[rand.Intn(len(qlist)-1)], nil
+}
+
+// CheckAnswer checks answer
+func (s *Service) CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error) {
+	answers, err := s.cr.CheckAnswer(ctx, repository.CheckAnswerParams{
+		ID:         aid,
+		QuestionID: qid,
+	})
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return false, fmt.Errorf("could not validate answer: %w", err)
+		}
+		return false, fmt.Errorf("could not found answer option with id %s: %w", aid, err)
+	}
+
+	return answers.Bool, nil
+}
+
+func castToQuestionWithAnswers(q repository.Question, a []repository.AnswerOption) Question {
+	options := make([]AnswerOption, 0, len(a))
+	for _, ao := range a {
+		options = append(options, AnswerOption{
+			ID:         ao.ID,
+			QuestionID: ao.QuestionID,
+			Option:     ao.AnswerOption,
+			IsCorrect:  ao.IsCorrect.Bool,
+		})
+	}
+
+	return Question{
+		ID:            q.ID,
+		ChallengeID:   q.ChallengeID,
+		Question:      q.Question,
+		Order:         q.QuestionOrder,
+		AnswerOptions: options,
+	}
+}
+
+// AddQuestion ..
+func (s *Service) AddQuestion(ctx context.Context, qw Question) (Question, error) {
+	question, err := s.cr.AddQuestion(ctx, repository.AddQuestionParams{
+		ChallengeID:   qw.ChallengeID,
+		Question:      qw.Question,
+		QuestionOrder: qw.Order,
+	})
+	if err != nil {
+		return Question{}, fmt.Errorf("could not add question %s: %v", qw.Question, err)
+	}
+
+	return castToQuestion(question), nil
+}
+
+func castToQuestion(q repository.Question) Question {
+	return Question{
+		ID:          q.ID,
+		ChallengeID: q.ChallengeID,
+		Question:    q.Question,
+		Order:       q.QuestionOrder,
+	}
+}
+
+// AddQuestionOption ..
+func (s *Service) AddQuestionOption(ctx context.Context, ao AnswerOption) (AnswerOption, error) {
+	answer, err := s.cr.AddQuestionOption(ctx, repository.AddQuestionOptionParams{
+		QuestionID:   ao.QuestionID,
+		AnswerOption: ao.Option,
+		IsCorrect: sql.NullBool{
+			Bool:  ao.IsCorrect,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return AnswerOption{}, fmt.Errorf("could not add answer %s: %v", ao.Option, err)
+	}
+
+	return castToAnswerOption(answer), nil
+}
+
+func castToAnswerOption(ao repository.AnswerOption) AnswerOption {
+	return AnswerOption{
+		ID:         ao.ID,
+		QuestionID: ao.QuestionID,
+		Option:     ao.AnswerOption,
+		IsCorrect:  ao.IsCorrect.Bool,
+	}
+}
+
+// DeleteQuestionByID ...
+func (s *Service) DeleteQuestionByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.cr.DeleteQuestionByID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete question with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// DeleteAnswerByID ...
+func (s *Service) DeleteAnswerByID(ctx context.Context, id, questionID uuid.UUID) error {
+	if err := s.cr.DeleteAnswerByID(ctx, repository.DeleteAnswerByIDParams{
+		ID:         id,
+		QuestionID: questionID,
+	}); err != nil {
+		return fmt.Errorf("could not delete answer with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// UpdateQuestion ..
+func (s *Service) UpdateQuestion(ctx context.Context, qw Question) error {
+	if err := s.cr.UpdateQuestion(ctx, repository.UpdateQuestionParams{
+		ID:            qw.ID,
+		ChallengeID:   qw.ChallengeID,
+		Question:      qw.Question,
+		QuestionOrder: qw.Order,
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not update question with id=%s:%w", qw.ID, err)
+	}
+
+	return nil
+}
+
+// UpdateAnswer ..
+func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
+	if err := s.cr.UpdateAnswer(ctx, repository.UpdateAnswerParams{
+		ID:           ao.ID,
+		QuestionID:   ao.QuestionID,
+		AnswerOption: ao.Option,
+		IsCorrect: sql.NullBool{
+			Bool:  ao.IsCorrect,
+			Valid: true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not update answer with id=%s:%w", ao.ID, err)
+	}
+
+	return nil
+}
+
+// CheckVerificationQuestionAnswer ...
+func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID) error {
+	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+		ActivatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+	}); err != nil {
+		return fmt.Errorf("could not store episode access data: %w", err)
+	}
+
+	return nil
 }

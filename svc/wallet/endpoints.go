@@ -19,6 +19,8 @@ type (
 		GetWallets                    endpoint.Endpoint
 		GetWalletByID                 endpoint.Endpoint
 		GetListTransactionsByWalletID endpoint.Endpoint
+		GetStake                      endpoint.Endpoint
+		SetStake                      endpoint.Endpoint
 	}
 
 	service interface {
@@ -27,6 +29,8 @@ type (
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
+		GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error)
+		SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error)
 	}
 
 	CreateTransferRequest struct {
@@ -51,6 +55,12 @@ type (
 	PaginationRequest struct {
 		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
 		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
+	}
+
+	// SetStakeRequest struct
+	SetStakeRequest struct {
+		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
+		WalletID string  `json:"wallet_id" validate:"required,uuid"`
 	}
 )
 
@@ -79,6 +89,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
 		CreateTransfer:                MakeCreateTransferRequestEndpoint(s, validateFunc),
 		ConfirmTransfer:               MakeConfirmTransferRequestEndpoint(s, validateFunc),
+		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
+		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -195,5 +207,42 @@ func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) end
 		}
 
 		return true, nil
+	}
+}
+
+func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(SetStakeRequest)
+		if err := v(req); err != nil {
+			return false, err
+		}
+
+		walletID, err := uuid.Parse(req.WalletID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid wallet id: %w", err)
+		}
+
+		result, err := s.SetStake(ctx, walletID, req.Amount)
+		if err != nil {
+			return false, err
+		}
+
+		return result, nil
+	}
+}
+
+func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		walletID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		stake, err := s.GetStake(ctx, walletID)
+		if err != nil {
+			return nil, err
+		}
+
+		return stake, nil
 	}
 }

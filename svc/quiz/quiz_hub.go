@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/questions"
+	"github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz/repository"
 
 	"github.com/dustin/go-broadcast"
@@ -42,7 +42,7 @@ type (
 		startQuiz               broadcast.Broadcaster
 		stopQuiz                broadcast.Broadcaster
 
-		questions       map[string]questions.Question
+		questions       map[string]challenge.Question
 		questionsSentAt map[string]time.Time
 		answers         map[string]uuid.UUID
 
@@ -87,7 +87,7 @@ func (ph *PlayerHub) Close() error {
 }
 
 // NewQuizHub setup new quiz hub
-func NewQuizHub(quiz repository.Quiz, qs map[string]questions.Question) *Hub {
+func NewQuizHub(quiz repository.Quiz, qs map[string]challenge.Question) *Hub {
 	return &Hub{
 		ChallengeID:          quiz.ChallengeID,
 		QuizID:               quiz.ID,
@@ -155,6 +155,8 @@ func (h *Hub) Connect(userID uuid.UUID) error {
 }
 
 func (h *Hub) RemovePlayer(userID uuid.UUID) error {
+	log.Printf("RemovePlayer userID: %v", userID) // TODO: Remove it!
+
 	if p, ok := h.players[userID.String()]; !ok {
 		if err := p.Close(); err != nil {
 			return fmt.Errorf("remove player: could not close player hub: %w", err)
