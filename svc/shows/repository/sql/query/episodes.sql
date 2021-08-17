@@ -10,7 +10,7 @@ SELECT episodes.*, seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = $1;
--- name: AddEpisode :exec
+-- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,
     season_id,
@@ -18,7 +18,8 @@ INSERT INTO episodes (
     cover,
     title,
     description,
-    release_date
+    release_date,
+    challenge_id
 )
 VALUES (
            @show_id,
@@ -27,11 +28,15 @@ VALUES (
            @cover,
            @title,
            @description,
-           @release_date
-       );
+           @release_date,
+           @challenge_id
+) RETURNING *;
 -- name: UpdateEpisode :exec
 UPDATE episodes
 SET episode_number = @episode_number,
+    season_id = @season_id,
+    show_id = @show_id,
+    challenge_id = @challenge_id,
     cover = @cover,
     title = @title,
     description = @description,

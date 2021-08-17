@@ -840,6 +840,71 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
+    post:
+      tags:
+        - "Shows"
+      summary: Used for create new show.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                  required: true
+                cover:
+                  type: string
+                  example: "cover"
+                  required: true
+                has_new_episode:
+                  type: boolean
+                  example: true
+                category:
+                  type: string
+                  example: "category"
+                description:
+                  type: string
+                  example: "description"
+      responses:
+        "200":
+          description: Returns shows data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                    required: true
+                  cover:
+                    type: string
+                    example: "cover"
+                    required: true
+                  has_new_episode:
+                    type: boolean
+                    example: true
+                  category:
+                    type: string
+                    example: "category"
+                  description:
+                    type: string
+                    example: "description"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/{show_id}/challenges:
     get:
       tags:
@@ -992,6 +1057,294 @@ paths:
                       example: true
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+
+  /shows/{show_id}/episodes:
+    get:
+      tags:
+        - "Episodes"
+      summary: Get episodes by show id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns list episodes by show id.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    show_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    episode_number:
+                      type: number
+                      example: 13
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    title:
+                      type: string
+                      example: "Peaky Blinders"
+                    description:
+                      type: string
+                      example: "description"
+                    release_date:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/{show_id}/episodes/{season_id}:
+    post:
+      tags:
+        - "Episodes"
+      summary: Used for create new episode.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: season_id
+          in: path
+          description: Season ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                episode_number:
+                  type: number
+                  example: 13
+                cover:
+                  type: string
+                  example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                title:
+                  type: string
+                  example: "Peaky Blinders"
+                  required: true
+                description:
+                  type: string
+                  example: "description"
+                release_date:
+                  type: string
+                  example: "2006-01-02T15:04:05Z"
+                challenge_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+      responses:
+        "200":
+          description: Returns episode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  season_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  season_number:
+                    type: number
+                    example: 13
+                  episode_number:
+                    type: number
+                    example: 12
+                  cover:
+                    type: string
+                    example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                  title:
+                    type: string
+                    example: "Peaky Blinders"
+                    required: true
+                  description:
+                    type: string
+                    example: "description"
+                  release_date:
+                    type: string
+                    example: "2006-01-02T15:04:05Z"
+                  challenge_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/{show_id}/episodes/{episode_id}:
+    get:
+      tags:
+        - "Episodes"
+      summary: Get episode by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns episode by id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  season_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  episode_number:
+                    type: number
+                    example: 13
+                  cover:
+                    type: string
+                    example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                  title:
+                    type: string
+                    example: "Peaky Blinders"
+                  description:
+                    type: string
+                    example: "description"
+                  release_date:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                  challenge_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    put:
+      tags:
+        - "Episodes"
+      summary: Used for update episode.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                season_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                episode_number:
+                  type: number
+                  example: 13
+                cover:
+                  type: string
+                  example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                title:
+                  type: string
+                  example: "Peaky Blinders"
+                description:
+                  type: string
+                  example: "description"
+                release_date:
+                  type: string
+                  example: "2006-01-02T15:04:05Z"
+                challenge_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Episodes"
+      summary: Used for delete episode by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
 
   /challenges/{challenge_id}:
     get:

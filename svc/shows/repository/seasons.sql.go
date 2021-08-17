@@ -9,14 +9,14 @@ import (
 	"github.com/google/uuid"
 )
 
-const addSeason = `-- name: AddSeason :exec
+const addSeason = `-- name: AddSeason :one
 INSERT INTO seasons (
     show_id,
     season_number
 ) VALUES (
     $1,
     $2
-)
+) RETURNING id, show_id, season_number
 `
 
 type AddSeasonParams struct {
@@ -24,9 +24,11 @@ type AddSeasonParams struct {
 	SeasonNumber int32     `json:"season_number"`
 }
 
-func (q *Queries) AddSeason(ctx context.Context, arg AddSeasonParams) error {
-	_, err := q.exec(ctx, q.addSeasonStmt, addSeason, arg.ShowID, arg.SeasonNumber)
-	return err
+func (q *Queries) AddSeason(ctx context.Context, arg AddSeasonParams) (Season, error) {
+	row := q.queryRow(ctx, q.addSeasonStmt, addSeason, arg.ShowID, arg.SeasonNumber)
+	var i Season
+	err := row.Scan(&i.ID, &i.ShowID, &i.SeasonNumber)
+	return i, err
 }
 
 const deleteSeasonByID = `-- name: DeleteSeasonByID :exec

@@ -8,14 +8,14 @@ LIMIT $2 OFFSET $3;
 SELECT *
 FROM seasons
 WHERE id = $1;
--- name: AddSeason :exec
+-- name: AddSeason :one
 INSERT INTO seasons (
     show_id,
     season_number
 ) VALUES (
     @show_id,
     @season_number
-);
+) RETURNING *;
 -- name: DeleteSeasonByID :exec
 DELETE FROM seasons
 WHERE id = @id;

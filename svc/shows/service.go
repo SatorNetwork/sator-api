@@ -52,7 +52,7 @@ type (
 
 	showsRepository interface {
 		// Shows
-		AddShow(ctx context.Context, arg repository.AddShowParams) error
+		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
@@ -60,13 +60,13 @@ type (
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
 		// Seasons
-		AddSeason(ctx context.Context, arg repository.AddSeasonParams) error
+		AddSeason(ctx context.Context, arg repository.AddSeasonParams) (repository.Season, error)
 		DeleteSeasonByID(ctx context.Context, id uuid.UUID) error
 		GetSeasonByID(ctx context.Context, id uuid.UUID) (repository.Season, error)
 		GetSeasonsByShowID(ctx context.Context, arg repository.GetSeasonsByShowIDParams) ([]repository.Season, error)
 
 		// Episodes
-		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) error
+		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) (repository.Episode, error)
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.GetEpisodeByIDRow, error)
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.GetEpisodesByShowIDRow, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
@@ -250,9 +250,25 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow) Episode {
 	}
 }
 
-// AddShow ..
-func (s *Service) AddShow(ctx context.Context, sh Show) error {
-	if err := s.sr.AddShow(ctx, repository.AddShowParams{
+// Cast repository.Episode to service Episode structure
+func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
+	return Episode{
+		ID:            source.ID,
+		ShowID:        source.ShowID,
+		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID,
+		SeasonNumber:  seasonNumber,
+		Cover:         source.Cover.String,
+		Title:         source.Title,
+		Description:   source.Description.String,
+		ReleaseDate:   source.ReleaseDate.Time.String(),
+		ChallengeID:   source.ChallengeID,
+	}
+}
+
+// AddShow ...
+func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
+	show, err := s.sr.AddShow(ctx, repository.AddShowParams{
 		Title:         sh.Title,
 		Cover:         sh.Cover,
 		HasNewEpisode: sh.HasNewEpisode,
@@ -264,14 +280,15 @@ func (s *Service) AddShow(ctx context.Context, sh Show) error {
 			String: sh.Description,
 			Valid:  len(sh.Description) > 0,
 		},
-	}); err != nil {
-		return fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
+	})
+	if err != nil {
+		return Show{}, fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
 	}
 
-	return nil
+	return castToShow(show), nil
 }
 
-// UpdateShow ..
+// UpdateShow ...
 func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 	if err := s.sr.UpdateShow(ctx, repository.UpdateShowParams{
 		Title:         sh.Title,
@@ -289,6 +306,7 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 	}); err != nil {
 		return fmt.Errorf("could not update show with id=%s:%w", sh.ID, err)
 	}
+
 	return nil
 }
 
@@ -302,13 +320,13 @@ func (s *Service) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
 }
 
 // AddEpisode ..
-func (s *Service) AddEpisode(ctx context.Context, ep Episode) error {
+func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 	rDate, err := utils.DateFromString(ep.ReleaseDate)
 	if err != nil {
-		return fmt.Errorf("could not add parse date from string: %w", err)
+		return Episode{}, fmt.Errorf("could not add parse date from string: %w", err)
 	}
 
-	if err = s.sr.AddEpisode(ctx, repository.AddEpisodeParams{
+	episode, err := s.sr.AddEpisode(ctx, repository.AddEpisodeParams{
 		ShowID:        ep.ShowID,
 		SeasonID:      ep.SeasonID,
 		EpisodeNumber: ep.EpisodeNumber,
@@ -325,11 +343,18 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) error {
 			Time:  rDate,
 			Valid: true,
 		},
-	}); err != nil {
-		return fmt.Errorf("could not add episode #%d for show_id=%s: %w", ep.EpisodeNumber, ep.ShowID.String(), err)
+		ChallengeID: ep.ChallengeID,
+	})
+	if err != nil {
+		return Episode{}, fmt.Errorf("could not add episode #%d for show_id=%s: %w", ep.EpisodeNumber, ep.ShowID.String(), err)
 	}
 
-	return nil
+	episodeByID, err := s.sr.GetEpisodeByID(ctx, episode.ID)
+	if err != nil {
+		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
+	}
+
+	return castToEpisode(episode, episodeByID.SeasonNumber), nil
 }
 
 // UpdateEpisode ..
@@ -341,6 +366,8 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 
 	if err = s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
 		ID:            ep.ID,
+		ShowID:        ep.ShowID,
+		SeasonID:      ep.SeasonID,
 		EpisodeNumber: ep.EpisodeNumber,
 		Cover: sql.NullString{
 			String: ep.Cover,
@@ -348,16 +375,18 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		},
 		Title: ep.Title,
 		Description: sql.NullString{
-			String: ep.Title,
+			String: ep.Description,
 			Valid:  true,
 		},
 		ReleaseDate: sql.NullTime{
 			Time:  rDate,
 			Valid: true,
 		},
+		ChallengeID: ep.ChallengeID,
 	}); err != nil {
 		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
 	}
+
 	return nil
 }
 

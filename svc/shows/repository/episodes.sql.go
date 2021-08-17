@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const addEpisode = `-- name: AddEpisode :exec
+const addEpisode = `-- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,
     season_id,
@@ -19,7 +19,8 @@ INSERT INTO episodes (
     cover,
     title,
     description,
-    release_date
+    release_date,
+    challenge_id
 )
 VALUES (
            $1,
@@ -28,8 +29,9 @@ VALUES (
            $4,
            $5,
            $6,
-           $7
-       )
+           $7,
+           $8
+) RETURNING id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id
 `
 
 type AddEpisodeParams struct {
@@ -40,10 +42,11 @@ type AddEpisodeParams struct {
 	Title         string         `json:"title"`
 	Description   sql.NullString `json:"description"`
 	ReleaseDate   sql.NullTime   `json:"release_date"`
+	ChallengeID   uuid.UUID      `json:"challenge_id"`
 }
 
-func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
-	_, err := q.exec(ctx, q.addEpisodeStmt, addEpisode,
+func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) (Episode, error) {
+	row := q.queryRow(ctx, q.addEpisodeStmt, addEpisode,
 		arg.ShowID,
 		arg.SeasonID,
 		arg.EpisodeNumber,
@@ -51,8 +54,23 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) error {
 		arg.Title,
 		arg.Description,
 		arg.ReleaseDate,
+		arg.ChallengeID,
 	)
-	return err
+	var i Episode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonID,
+		&i.EpisodeNumber,
+		&i.Cover,
+		&i.Title,
+		&i.Description,
+		&i.ReleaseDate,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.ChallengeID,
+	)
+	return i, err
 }
 
 const deleteEpisodeByID = `-- name: DeleteEpisodeByID :exec
@@ -176,15 +194,21 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 const updateEpisode = `-- name: UpdateEpisode :exec
 UPDATE episodes
 SET episode_number = $1,
-    cover = $2,
-    title = $3,
-    description = $4,
-    release_date = $5
-WHERE id = $6
+    season_id = $2,
+    show_id = $3,
+    challenge_id = $4,
+    cover = $5,
+    title = $6,
+    description = $7,
+    release_date = $8
+WHERE id = $9
 `
 
 type UpdateEpisodeParams struct {
 	EpisodeNumber int32          `json:"episode_number"`
+	SeasonID      uuid.UUID      `json:"season_id"`
+	ShowID        uuid.UUID      `json:"show_id"`
+	ChallengeID   uuid.UUID      `json:"challenge_id"`
 	Cover         sql.NullString `json:"cover"`
 	Title         string         `json:"title"`
 	Description   sql.NullString `json:"description"`
@@ -195,6 +219,9 @@ type UpdateEpisodeParams struct {
 func (q *Queries) UpdateEpisode(ctx context.Context, arg UpdateEpisodeParams) error {
 	_, err := q.exec(ctx, q.updateEpisodeStmt, updateEpisode,
 		arg.EpisodeNumber,
+		arg.SeasonID,
+		arg.ShowID,
+		arg.ChallengeID,
 		arg.Cover,
 		arg.Title,
 		arg.Description,
