@@ -1387,6 +1387,9 @@ paths:
                   season_number:
                     type: number
                     example: 13
+                  title:
+                    type: string
+                    example: "Season 2"
 
         "400":
           $ref: "#/components/responses/DefaultError"
