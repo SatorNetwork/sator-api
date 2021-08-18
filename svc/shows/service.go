@@ -417,6 +417,7 @@ func (s *Service) AddSeason(ctx context.Context, ss Season) (Season, error) {
 func castToSeason(source repository.Season) Season {
 	return Season{
 		ID:           source.ID,
+		Title:        fmt.Sprintf("Season %d", source.SeasonNumber),
 		ShowID:       source.ShowID,
 		SeasonNumber: source.SeasonNumber,
 	}
