@@ -10,25 +10,25 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-// InitializeStakePoolInput ...
+// InitializeStakePoolInput struct
 type InitializeStakePoolInput struct {
 	Number uint8 // 0
 	Ranks  []Rank
 }
 
-// StakeInput ...
+// StakeInput struct
 type StakeInput struct {
 	Number   uint8 // 1
 	Duration int64
 	Amount   uint64
 }
 
-// UnstakeInput ...
+// UnstakeInput struct
 type UnstakeInput struct {
 	Number uint8 // 2
 }
 
-// InitializeStakePool ...
+// InitializeStakePool generates and calls instruction that initializes stake pool
 func (c *Client) InitializeStakePool(ctx context.Context, feePayer, signer, asset, issuer types.Account) (string, error) {
 	stakePool := c.NewAccount()
 	systemProgram := c.PublicKeyFromString("11111111111111111111111111111111")
@@ -60,15 +60,15 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, signer, asse
 			{
 				ProgramID: programID,
 				Accounts: []types.AccountMeta{
-					{PubKey: systemProgram, IsSigner: false, IsWritable: false},        // system - link incl
-					{PubKey: sysvarRent, IsSigner: false, IsWritable: false},           // system - link incl
-					{PubKey: splToken, IsSigner: false, IsWritable: false},             // SPL "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},    // fee_payer
-					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},      // issuer
-					{PubKey: stakePool.PublicKey, IsSigner: true, IsWritable: true},    // new acc for stake pool
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},       // to generate from rules #1
-					{PubKey: tokenAccountStakePool, IsSigner: false, IsWritable: true}, // to generate from rules #2
-					{PubKey: asset.PublicKey, IsSigner: false, IsWritable: true},       // MINT
+					{PubKey: systemProgram, IsSigner: false, IsWritable: false},
+					{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
+					{PubKey: splToken, IsSigner: false, IsWritable: false},
+					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
+					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
+					{PubKey: stakePool.PublicKey, IsSigner: true, IsWritable: true},
+					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+					{PubKey: tokenAccountStakePool, IsSigner: false, IsWritable: true},
+					{PubKey: asset.PublicKey, IsSigner: false, IsWritable: true},
 				},
 				Data: data,
 			},
@@ -89,8 +89,8 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, signer, asse
 	return txhash, nil
 }
 
-// Stake ...
-func (c *Client) Stake(ctx context.Context, feePayer, signer types.Account, pool, stakeAuthority, userWallet, tokenAccountStakeTarget common.PublicKey) (string, error) {
+// Stake stakes given amount for given period.
+func (c *Client) Stake(ctx context.Context, feePayer, signer types.Account, pool, stakeAuthority, userWallet, tokenAccountStakeTarget common.PublicKey, duration int64, amount uint64) (string, error) {
 	sysvarClock := c.PublicKeyFromString("SysvarC1ock11111111111111111111111111111111")
 	sysvarRent := c.PublicKeyFromString("SysvarRent111111111111111111111111111111111")
 	systemProgram := c.PublicKeyFromString("11111111111111111111111111111111")
@@ -105,8 +105,8 @@ func (c *Client) Stake(ctx context.Context, feePayer, signer types.Account, pool
 
 	data, err := borsh.Serialize(StakeInput{
 		Number:   1,
-		Duration: 3600,
-		Amount:   1000,
+		Duration: duration,
+		Amount:   amount,
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not serialize data with borsh: %w", err)
@@ -124,13 +124,13 @@ func (c *Client) Stake(ctx context.Context, feePayer, signer types.Account, pool
 					{PubKey: systemProgram, IsSigner: false, IsWritable: false},
 					{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
 					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
-					{PubKey: splToken, IsSigner: false, IsWritable: false},                    // spl
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},           // feepayer // fee payer, lock owner
-					{PubKey: pool, IsSigner: false, IsWritable: true},                         // from init
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},              // предварительно юзер на кого делаем стейк
-					{PubKey: tokenAccountSource.PublicKey, IsSigner: false, IsWritable: true}, // spl acc with Wallet PK
-					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},      // generated #3
-					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},                 // gen from wallet PK, time when locked.
+					{PubKey: splToken, IsSigner: false, IsWritable: false},
+					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
+					{PubKey: pool, IsSigner: false, IsWritable: true},
+					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+					{PubKey: tokenAccountSource.PublicKey, IsSigner: false, IsWritable: true},
+					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
+					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
 				},
 				Data: data,
 			},
@@ -151,8 +151,8 @@ func (c *Client) Stake(ctx context.Context, feePayer, signer types.Account, pool
 	return txhash, nil
 }
 
-// Unstake ...
-func (c *Client) Unstake(ctx context.Context, feePayer, signer, asset, issuer, pool, userWallet, tokenAccount, stake, stakeAuthority types.Account) (string, error) {
+// Unstake unstake.
+func (c *Client) Unstake(ctx context.Context, feePayer, signer, issuer, pool, userWallet, tokenAccount, stake, stakeAuthority types.Account) (string, error) {
 	sysvarClock := c.PublicKeyFromString("SysvarC1ock11111111111111111111111111111111")
 	splToken := c.PublicKeyFromString("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
@@ -171,14 +171,14 @@ func (c *Client) Unstake(ctx context.Context, feePayer, signer, asset, issuer, p
 			{
 				ProgramID: c.PublicKeyFromString("CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u"),
 				Accounts: []types.AccountMeta{
-					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},              // sysvar clock const
-					{PubKey: splToken, IsSigner: false, IsWritable: false},                 // spl token const
-					{PubKey: pool.PublicKey, IsSigner: false, IsWritable: false},           // pool from init
-					{PubKey: stakeAuthority.PublicKey, IsSigner: false, IsWritable: false}, // from init
-					{PubKey: userWallet.PublicKey, IsSigner: false, IsWritable: true},      // wallet
-					{PubKey: tokenAccount.PublicKey, IsSigner: false, IsWritable: true},    // token account from init
-					{PubKey: stake.PublicKey, IsSigner: false, IsWritable: true},           // gen in stake
-					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},          // issuer
+					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
+					{PubKey: splToken, IsSigner: false, IsWritable: false},
+					{PubKey: pool.PublicKey, IsSigner: false, IsWritable: false},
+					{PubKey: stakeAuthority.PublicKey, IsSigner: false, IsWritable: false},
+					{PubKey: userWallet.PublicKey, IsSigner: false, IsWritable: true},
+					{PubKey: tokenAccount.PublicKey, IsSigner: false, IsWritable: true},
+					{PubKey: stake.PublicKey, IsSigner: false, IsWritable: true},
+					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
 				},
 				Data: data,
 			},
