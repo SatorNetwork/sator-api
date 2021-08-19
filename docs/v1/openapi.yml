@@ -1108,7 +1108,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /shows/{show_id}/episodes/{season_id}:
     post:
       tags:
         - "Episodes"
@@ -1119,12 +1118,6 @@ paths:
         - name: show_id
           in: path
           description: Show ID.
-          required: true
-          schema:
-            type: string
-        - name: season_id
-          in: path
-          description: Season ID.
           required: true
           schema:
             type: string
@@ -1152,6 +1145,9 @@ paths:
                   type: string
                   example: "2006-01-02T15:04:05Z"
                 challenge_id:
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                season_id:
                   type: string
                   example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
       responses:
@@ -1387,6 +1383,9 @@ paths:
                   season_number:
                     type: number
                     example: 13
+                  title:
+                    type: string
+                    example: "Season 2"
 
         "400":
           $ref: "#/components/responses/DefaultError"
