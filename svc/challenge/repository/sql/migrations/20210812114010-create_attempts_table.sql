@@ -1,5 +1,5 @@
 -- +migrate Up
-CREATE TABLE IF NOT EXISTS attempts (
+CREATE TABLE IF NOT EXISTS attempts (  -- TODO: rename to verification_questions_attempts
     user_id uuid NOT NULL,
     episode_id uuid NOT NULL,
     question_id uuid NOT NULL,

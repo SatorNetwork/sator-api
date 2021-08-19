@@ -58,10 +58,14 @@ type (
 	}
 
 	challengesService interface {
-		GetChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.Challenge, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge.Challenge, error)
 
 		GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
 		CheckAnswer(ctx context.Context, answerID, qui uuid.UUID) (bool, error)
+
+		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
+		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
+		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
 	}
 
 	rewardsService interface {
@@ -124,13 +128,29 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	s.mutex.Lock(key, time.Second*3)
 	defer s.mutex.Unlock(key)
 
+	receivedReward, err := s.challenges.GetChallengeReceivedRewardAmount(ctx, uid, challengeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get received reward amount: %w", err)
+	}
+	if receivedReward > 0 {
+		return nil, fmt.Errorf("reward has been received for this challenge already: %w", err)
+	}
+
+	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
+	if err != nil {
+		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
+	}
+	if attempts >= 2 {
+		return nil, fmt.Errorf("no more attempts left: %w", err)
+	}
+
 	quiz, err := s.repo.GetQuizByChallengeID(ctx, challengeID)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
 			return nil, fmt.Errorf("could not get quiz: %w", err)
 		}
 
-		challenge, err := s.challenges.GetChallengeByID(ctx, challengeID)
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
 		if err != nil {
 			return nil, fmt.Errorf("could not get challenge with id=%s: %w", challengeID.String(), err)
 		}
@@ -138,8 +158,8 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		quiz, err = s.repo.AddNewQuiz(ctx, repository.AddNewQuizParams{
 			ChallengeID:     challenge.ID,
 			PrizePool:       challenge.PrizePoolAmount,
-			PlayersToStart:  int32(challenge.Players),
-			TimePerQuestion: int64(challenge.TimePerQuestionSec),
+			PlayersToStart:  challenge.Players,
+			TimePerQuestion: challenge.TimePerQuestionSec,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("could not start new quiz: %w", err)
@@ -159,7 +179,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 			log.Printf("could not update status of quiz with id=%s: %v", quiz.ID.String(), err)
 		}
 
-		challenge, err := s.challenges.GetChallengeByID(ctx, challengeID)
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
 		if err != nil {
 			return nil, fmt.Errorf("could not get challenge with id=%s: %w", challengeID.String(), err)
 		}
@@ -167,8 +187,8 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		quiz, err = s.repo.AddNewQuiz(ctx, repository.AddNewQuizParams{
 			ChallengeID:     challenge.ID,
 			PrizePool:       challenge.PrizePoolAmount,
-			PlayersToStart:  int32(challenge.Players),
-			TimePerQuestion: int64(challenge.TimePerQuestionSec),
+			PlayersToStart:  challenge.Players,
+			TimePerQuestion: challenge.TimePerQuestionSec,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("could not start new quiz: %w", err)
@@ -429,6 +449,10 @@ func (s *Service) getQuizWinners(ctx context.Context, quiz repository.Quiz, ques
 		if err := s.rewards.AddDepositTransaction(ctx, w.UserID, quiz.ID, RelationTypeQuizzes, prize); err != nil {
 			log.Printf("could not store reward: user_id=%s, quiz_id=%s, amount=%v error: %v",
 				w.UserID.String(), quiz.ID.String(), prize, err)
+		}
+		if err := s.challenges.StoreChallengeReceivedRewardAmount(ctx, quiz.ChallengeID, w.UserID, prize); err != nil {
+			log.Printf("could not store passed challenge data: user_id=%s, challenge_id=%s, amount=%v error: %v",
+				w.UserID.String(), quiz.ChallengeID.String(), prize, err)
 		}
 		winners = append(winners, Winner{
 			UserID:      w.UserID.String(),

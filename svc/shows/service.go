@@ -76,7 +76,7 @@ type (
 
 	// Challenges service client
 	challengesClient interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetListByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 	}
 )
 
@@ -106,8 +106,8 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 }
 
 // GetShowChallenges returns challenges by show id.
-func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
-	challenges, err := s.chc.GetListByShowID(ctx, showID, limit, offset)
+func (s *Service) GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error) {
+	challenges, err := s.chc.GetListByShowID(ctx, showID, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenges list by show id: %w", err)
 	}
@@ -417,8 +417,9 @@ func (s *Service) AddSeason(ctx context.Context, ss Season) (Season, error) {
 func castToSeason(source repository.Season) Season {
 	return Season{
 		ID:           source.ID,
-		ShowID:       source.ShowID,
+		Title:        fmt.Sprintf("Season %d", source.SeasonNumber),
 		SeasonNumber: source.SeasonNumber,
+		ShowID:       source.ShowID,
 	}
 }
 

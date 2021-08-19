@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/jwt"
+
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -35,7 +37,7 @@ type (
 		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
-		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
@@ -227,6 +229,11 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 // MakeGetShowChallengesEndpoint ...
 func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(GetShowChallengesRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -237,7 +244,7 @@ func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetShowChallenges(ctx, showID, req.Limit(), req.Offset())
+		resp, err := s.GetShowChallenges(ctx, showID, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
