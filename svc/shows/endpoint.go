@@ -104,11 +104,11 @@ type (
 		ShowID        string `json:"show_id" validate:"required,uuid"`
 		SeasonID      string `json:"season_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
-		Cover         string `json:"cover"`
+		Cover         string `json:"cover,omitempty"`
 		Title         string `json:"title" validate:"required,gt=0"`
-		Description   string `json:"description"`
-		ReleaseDate   string `json:"release_date"`
-		ChallengeID   string `json:"challenge_id"`
+		Description   string `json:"description,omitempty"`
+		ReleaseDate   string `json:"release_date,omitempty"`
+		ChallengeID   string `json:"challenge_id,omitempty"`
 	}
 
 	// UpdateEpisodeRequest struct
@@ -117,11 +117,11 @@ type (
 		ShowID        string `json:"show_id" validate:"required,uuid"`
 		SeasonID      string `json:"season_id" validate:"required,uuid"`
 		EpisodeNumber int32  `json:"episode_number"`
-		Cover         string `json:"cover"`
+		Cover         string `json:"cover,omitempty"`
 		Title         string `json:"title" validate:"required,gt=0"`
 		Description   string `json:"description" validate:"required,gt=0"`
 		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
-		ChallengeID   string `json:"challenge_id"`
+		ChallengeID   string `json:"challenge_id,omitempty"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
@@ -373,9 +373,12 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		challengeID, err := uuid.Parse(req.ChallengeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		var challengeID uuid.UUID
+		if req.ChallengeID != "" {
+			challengeID, err = uuid.Parse(req.ChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get challenge id: %w", err)
+			}
 		}
 
 		resp, err := s.AddEpisode(ctx, Episode{
@@ -419,9 +422,12 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get season id: %w", err)
 		}
 
-		challengeID, err := uuid.Parse(req.ChallengeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		var challengeID uuid.UUID
+		if req.ChallengeID != "" {
+			challengeID, err = uuid.Parse(req.ChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get challenge id: %w", err)
+			}
 		}
 
 		err = s.UpdateEpisode(ctx, Episode{
