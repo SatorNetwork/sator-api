@@ -20,7 +20,8 @@ INSERT INTO challenges (
     time_per_question,
     updated_at,
     episode_id,
-    kind
+    kind,
+    user_max_attempts
 )
 VALUES (
            $1,
@@ -31,8 +32,9 @@ VALUES (
            $6,
            $7,
            $8,
-           $9
-       ) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
+           $9,
+           $10
+       ) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
 `
 
 type AddChallengeParams struct {
@@ -45,6 +47,7 @@ type AddChallengeParams struct {
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
 	EpisodeID       uuid.UUID      `json:"episode_id"`
 	Kind            int32          `json:"kind"`
+	UserMaxAttempts int32          `json:"user_max_attempts"`
 }
 
 func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Challenge, error) {
@@ -58,6 +61,7 @@ func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Cha
 		arg.UpdatedAt,
 		arg.EpisodeID,
 		arg.Kind,
+		arg.UserMaxAttempts,
 	)
 	var i Challenge
 	err := row.Scan(
@@ -72,6 +76,7 @@ func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Cha
 		&i.CreatedAt,
 		&i.EpisodeID,
 		&i.Kind,
+		&i.UserMaxAttempts,
 	)
 	return i, err
 }
@@ -87,7 +92,7 @@ func (q *Queries) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getChallengeByEpisodeID = `-- name: GetChallengeByEpisodeID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
 FROM challenges
 WHERE episode_id = $1
 ORDER BY created_at DESC
@@ -109,12 +114,13 @@ func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UU
 		&i.CreatedAt,
 		&i.EpisodeID,
 		&i.Kind,
+		&i.UserMaxAttempts,
 	)
 	return i, err
 }
 
 const getChallengeByID = `-- name: GetChallengeByID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
 FROM challenges
 WHERE id = $1
 ORDER BY created_at DESC
@@ -136,12 +142,13 @@ func (q *Queries) GetChallengeByID(ctx context.Context, id uuid.UUID) (Challenge
 		&i.CreatedAt,
 		&i.EpisodeID,
 		&i.Kind,
+		&i.UserMaxAttempts,
 	)
 	return i, err
 }
 
 const getChallenges = `-- name: GetChallenges :many
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
 FROM challenges
 WHERE show_id = $1
 ORDER BY updated_at DESC,
@@ -176,6 +183,7 @@ func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([
 			&i.CreatedAt,
 			&i.EpisodeID,
 			&i.Kind,
+			&i.UserMaxAttempts,
 		); err != nil {
 			return nil, err
 		}
@@ -200,8 +208,9 @@ SET show_id = $1,
     time_per_question = $6,
     updated_at = $7,
     episode_id = $8,
-    kind = $9
-WHERE id = $10
+    kind = $9,
+    user_max_attempts = $10
+WHERE id = $11
 `
 
 type UpdateChallengeParams struct {
@@ -214,6 +223,7 @@ type UpdateChallengeParams struct {
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
 	EpisodeID       uuid.UUID      `json:"episode_id"`
 	Kind            int32          `json:"kind"`
+	UserMaxAttempts int32          `json:"user_max_attempts"`
 	ID              uuid.UUID      `json:"id"`
 }
 
@@ -228,6 +238,7 @@ func (q *Queries) UpdateChallenge(ctx context.Context, arg UpdateChallengeParams
 		arg.UpdatedAt,
 		arg.EpisodeID,
 		arg.Kind,
+		arg.UserMaxAttempts,
 		arg.ID,
 	)
 	return err

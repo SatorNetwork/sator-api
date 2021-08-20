@@ -40,13 +40,12 @@ type (
 	}
 
 	service interface {
-		GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-		GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (interface{}, error)
+		GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		AddChallenge(ctx context.Context, ch Challenge) (Challenge, error)
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
 		UpdateChallenge(ctx context.Context, ch Challenge) error
 
-		// FIXME: needs refactoring!
 		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error)
 		CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error)
 		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error)
@@ -75,6 +74,7 @@ type (
 		TimePerQuestionSec int64   `json:"time_per_question_sec"`
 		EpisodeID          string  `json:"episode_id" validate:"uuid"`
 		Kind               int32   `json:"kind"`
+		UserMaxAttempts    int32   `json:"user_max_attempts"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -88,6 +88,7 @@ type (
 		TimePerQuestionSec int64   `json:"time_per_question_sec"`
 		EpisodeID          string  `json:"episode_id" validate:"uuid"`
 		Kind               int32   `json:"kind"`
+		UserMaxAttempts    int32   `json:"user_max_attempts"`
 	}
 
 	CheckAnswerRequest struct {
@@ -268,12 +269,17 @@ func MakeVerifyUserAccessToEpisodeEndpoint(s service) endpoint.Endpoint {
 // MakeGetChallengeByIdEndpoint ...
 func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetChallengeByID(ctx, id)
+		resp, err := s.GetChallengeByID(ctx, id, uid)
 		if err != nil {
 			return nil, err
 		}

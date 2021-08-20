@@ -1471,10 +1471,22 @@ paths:
                     type: string
                     description: "Absolute URL to start quiz. In the future it will be URL to connect websocket."
                     example: "http://localhost:8080/challenges/{challenge_id}/play"
+                  user_max_attempts:
+                    type: integer
+                    example: 3
+                    default: 2
+                  attempts_left:
+                    type: integer
+                    example: 1
+                    default: 0
+                  received_reward:
+                    type: number
+                    example: 123.456
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
     put:
       tags:
         - "Challenges"
@@ -1519,6 +1531,10 @@ paths:
                 kind:
                   type: integer
                   example: 10
+                user_max_attempts:
+                  type: integer
+                  example: 3
+                  default: 2
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -1585,6 +1601,10 @@ paths:
                 kind:
                   type: integer
                   example: 10
+                user_max_attempts:
+                  type: integer
+                  example: 3
+                  default: 2
       responses:
         "200":
           description: Returns challenge details.
@@ -1620,6 +1640,17 @@ paths:
                   kind:
                     type: integer
                     example: 10
+                  user_max_attempts:
+                    type: integer
+                    example: 3
+                    default: 2
+                  attempts_left:
+                    type: integer
+                    example: 1
+                    default: 0
+                  received_reward:
+                    type: number
+                    example: 123.456
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":

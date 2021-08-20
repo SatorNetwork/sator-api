@@ -39,12 +39,19 @@ type Challenge struct {
 	CreatedAt       time.Time      `json:"created_at"`
 	EpisodeID       uuid.UUID      `json:"episode_id"`
 	Kind            int32          `json:"kind"`
+	UserMaxAttempts int32          `json:"user_max_attempts"`
 }
 
 type EpisodeAccess struct {
 	EpisodeID   uuid.UUID    `json:"episode_id"`
 	UserID      uuid.UUID    `json:"user_id"`
 	ActivatedAt sql.NullTime `json:"activated_at"`
+}
+
+type PassedChallengesDatum struct {
+	UserID       uuid.UUID `json:"user_id"`
+	ChallengeID  uuid.UUID `json:"challenge_id"`
+	RewardAmount float64   `json:"reward_amount"`
 }
 
 type Question struct {

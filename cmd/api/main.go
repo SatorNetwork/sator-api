@@ -373,7 +373,7 @@ func main() {
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,
-			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction)),
+			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction), challengeSvcClient),
 		))
 
 		// run quiz service

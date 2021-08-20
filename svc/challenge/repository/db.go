@@ -28,6 +28,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addChallengeStmt, err = db.PrepareContext(ctx, addChallenge); err != nil {
 		return nil, fmt.Errorf("error preparing query AddChallenge: %w", err)
 	}
+	if q.addChallengeAttemptStmt, err = db.PrepareContext(ctx, addChallengeAttempt); err != nil {
+		return nil, fmt.Errorf("error preparing query AddChallengeAttempt: %w", err)
+	}
 	if q.addEpisodeAccessDataStmt, err = db.PrepareContext(ctx, addEpisodeAccessData); err != nil {
 		return nil, fmt.Errorf("error preparing query AddEpisodeAccessData: %w", err)
 	}
@@ -42,6 +45,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.countAttemptsStmt, err = db.PrepareContext(ctx, countAttempts); err != nil {
 		return nil, fmt.Errorf("error preparing query CountAttempts: %w", err)
+	}
+	if q.countPassedChallengeAttemptsStmt, err = db.PrepareContext(ctx, countPassedChallengeAttempts); err != nil {
+		return nil, fmt.Errorf("error preparing query CountPassedChallengeAttempts: %w", err)
 	}
 	if q.deleteAnswerByIDStmt, err = db.PrepareContext(ctx, deleteAnswerByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteAnswerByID: %w", err)
@@ -76,6 +82,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getChallengeByIDStmt, err = db.PrepareContext(ctx, getChallengeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallengeByID: %w", err)
 	}
+	if q.getChallengeReceivedRewardAmountStmt, err = db.PrepareContext(ctx, getChallengeReceivedRewardAmount); err != nil {
+		return nil, fmt.Errorf("error preparing query GetChallengeReceivedRewardAmount: %w", err)
+	}
 	if q.getChallengesStmt, err = db.PrepareContext(ctx, getChallenges); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallenges: %w", err)
 	}
@@ -93,6 +102,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getQuestionsByChallengeIDWithExceptionsStmt, err = db.PrepareContext(ctx, getQuestionsByChallengeIDWithExceptions); err != nil {
 		return nil, fmt.Errorf("error preparing query GetQuestionsByChallengeIDWithExceptions: %w", err)
+	}
+	if q.storeChallengeReceivedRewardAmountStmt, err = db.PrepareContext(ctx, storeChallengeReceivedRewardAmount); err != nil {
+		return nil, fmt.Errorf("error preparing query StoreChallengeReceivedRewardAmount: %w", err)
 	}
 	if q.updateAnswerStmt, err = db.PrepareContext(ctx, updateAnswer); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAnswer: %w", err)
@@ -124,6 +136,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addChallengeStmt: %w", cerr)
 		}
 	}
+	if q.addChallengeAttemptStmt != nil {
+		if cerr := q.addChallengeAttemptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addChallengeAttemptStmt: %w", cerr)
+		}
+	}
 	if q.addEpisodeAccessDataStmt != nil {
 		if cerr := q.addEpisodeAccessDataStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addEpisodeAccessDataStmt: %w", cerr)
@@ -147,6 +164,11 @@ func (q *Queries) Close() error {
 	if q.countAttemptsStmt != nil {
 		if cerr := q.countAttemptsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countAttemptsStmt: %w", cerr)
+		}
+	}
+	if q.countPassedChallengeAttemptsStmt != nil {
+		if cerr := q.countPassedChallengeAttemptsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countPassedChallengeAttemptsStmt: %w", cerr)
 		}
 	}
 	if q.deleteAnswerByIDStmt != nil {
@@ -204,6 +226,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getChallengeByIDStmt: %w", cerr)
 		}
 	}
+	if q.getChallengeReceivedRewardAmountStmt != nil {
+		if cerr := q.getChallengeReceivedRewardAmountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getChallengeReceivedRewardAmountStmt: %w", cerr)
+		}
+	}
 	if q.getChallengesStmt != nil {
 		if cerr := q.getChallengesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getChallengesStmt: %w", cerr)
@@ -232,6 +259,11 @@ func (q *Queries) Close() error {
 	if q.getQuestionsByChallengeIDWithExceptionsStmt != nil {
 		if cerr := q.getQuestionsByChallengeIDWithExceptionsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getQuestionsByChallengeIDWithExceptionsStmt: %w", cerr)
+		}
+	}
+	if q.storeChallengeReceivedRewardAmountStmt != nil {
+		if cerr := q.storeChallengeReceivedRewardAmountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing storeChallengeReceivedRewardAmountStmt: %w", cerr)
 		}
 	}
 	if q.updateAnswerStmt != nil {
@@ -300,11 +332,13 @@ type Queries struct {
 	tx                                          *sql.Tx
 	addAttemptStmt                              *sql.Stmt
 	addChallengeStmt                            *sql.Stmt
+	addChallengeAttemptStmt                     *sql.Stmt
 	addEpisodeAccessDataStmt                    *sql.Stmt
 	addQuestionStmt                             *sql.Stmt
 	addQuestionOptionStmt                       *sql.Stmt
 	checkAnswerStmt                             *sql.Stmt
 	countAttemptsStmt                           *sql.Stmt
+	countPassedChallengeAttemptsStmt            *sql.Stmt
 	deleteAnswerByIDStmt                        *sql.Stmt
 	deleteChallengeByIDStmt                     *sql.Stmt
 	deleteEpisodeAccessDataStmt                 *sql.Stmt
@@ -316,12 +350,14 @@ type Queries struct {
 	getAskedQuestionsByEpisodeIDStmt            *sql.Stmt
 	getChallengeByEpisodeIDStmt                 *sql.Stmt
 	getChallengeByIDStmt                        *sql.Stmt
+	getChallengeReceivedRewardAmountStmt        *sql.Stmt
 	getChallengesStmt                           *sql.Stmt
 	getEpisodeAccessDataStmt                    *sql.Stmt
 	getEpisodeIDByQuestionIDStmt                *sql.Stmt
 	getQuestionByIDStmt                         *sql.Stmt
 	getQuestionsByChallengeIDStmt               *sql.Stmt
 	getQuestionsByChallengeIDWithExceptionsStmt *sql.Stmt
+	storeChallengeReceivedRewardAmountStmt      *sql.Stmt
 	updateAnswerStmt                            *sql.Stmt
 	updateAttemptStmt                           *sql.Stmt
 	updateChallengeStmt                         *sql.Stmt
@@ -335,11 +371,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                                          tx,
 		addAttemptStmt:                              q.addAttemptStmt,
 		addChallengeStmt:                            q.addChallengeStmt,
+		addChallengeAttemptStmt:                     q.addChallengeAttemptStmt,
 		addEpisodeAccessDataStmt:                    q.addEpisodeAccessDataStmt,
 		addQuestionStmt:                             q.addQuestionStmt,
 		addQuestionOptionStmt:                       q.addQuestionOptionStmt,
 		checkAnswerStmt:                             q.checkAnswerStmt,
 		countAttemptsStmt:                           q.countAttemptsStmt,
+		countPassedChallengeAttemptsStmt:            q.countPassedChallengeAttemptsStmt,
 		deleteAnswerByIDStmt:                        q.deleteAnswerByIDStmt,
 		deleteChallengeByIDStmt:                     q.deleteChallengeByIDStmt,
 		deleteEpisodeAccessDataStmt:                 q.deleteEpisodeAccessDataStmt,
@@ -351,12 +389,14 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAskedQuestionsByEpisodeIDStmt:            q.getAskedQuestionsByEpisodeIDStmt,
 		getChallengeByEpisodeIDStmt:                 q.getChallengeByEpisodeIDStmt,
 		getChallengeByIDStmt:                        q.getChallengeByIDStmt,
+		getChallengeReceivedRewardAmountStmt:        q.getChallengeReceivedRewardAmountStmt,
 		getChallengesStmt:                           q.getChallengesStmt,
 		getEpisodeAccessDataStmt:                    q.getEpisodeAccessDataStmt,
 		getEpisodeIDByQuestionIDStmt:                q.getEpisodeIDByQuestionIDStmt,
 		getQuestionByIDStmt:                         q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt:               q.getQuestionsByChallengeIDStmt,
 		getQuestionsByChallengeIDWithExceptionsStmt: q.getQuestionsByChallengeIDWithExceptionsStmt,
+		storeChallengeReceivedRewardAmountStmt:      q.storeChallengeReceivedRewardAmountStmt,
 		updateAnswerStmt:                            q.updateAnswerStmt,
 		updateAttemptStmt:                           q.updateAttemptStmt,
 		updateChallengeStmt:                         q.updateChallengeStmt,
