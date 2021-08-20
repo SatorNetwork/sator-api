@@ -206,6 +206,7 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 			SeasonNumber: s.SeasonNumber,
 			Title:        fmt.Sprintf("Season %d", s.SeasonNumber),
 			Episodes:     episodes[s.ID.String()],
+			ShowID:       s.ShowID,
 		})
 	}
 	return result
@@ -227,6 +228,7 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow) Episode {
 		ID:            source.ID,
 		ShowID:        source.ShowID,
 		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID,
 		SeasonNumber:  source.SeasonNumber,
 		Cover:         source.Cover.String,
 		Title:         source.Title,
@@ -242,6 +244,7 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow) Episode {
 		ID:            source.ID,
 		ShowID:        source.ShowID,
 		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID,
 		SeasonNumber:  source.SeasonNumber,
 		Cover:         source.Cover.String,
 		Title:         source.Title,
