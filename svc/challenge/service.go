@@ -58,12 +58,18 @@ type (
 		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
 		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
 
-		// Attempts
+		// Verification Question Attempts
 		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
 		GetEpisodeIDByQuestionID(ctx context.Context, arg repository.GetEpisodeIDByQuestionIDParams) (uuid.UUID, error)
 		CountAttempts(ctx context.Context, arg repository.CountAttemptsParams) (int64, error)
 		GetAskedQuestionsByEpisodeID(ctx context.Context, arg repository.GetAskedQuestionsByEpisodeIDParams) ([]uuid.UUID, error)
 		UpdateAttempt(ctx context.Context, arg repository.UpdateAttemptParams) error
+
+		// Challenge Attempts
+		AddChallengeAttempt(ctx context.Context, arg repository.AddChallengeAttemptParams) (repository.PassedChallengesDatum, error)
+		StoreChallengeReceivedRewardAmount(ctx context.Context, arg repository.StoreChallengeReceivedRewardAmountParams) error
+		CountPassedChallengeAttempts(ctx context.Context, arg repository.CountPassedChallengeAttemptsParams) (int64, error)
+		GetChallengeReceivedRewardAmount(ctx context.Context, arg repository.GetChallengeReceivedRewardAmountParams) (float64, error)
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -84,6 +90,9 @@ type (
 		Play               string    `json:"play"`
 		EpisodeID          uuid.UUID `json:"episode_id"`
 		Kind               int32     `json:"kind"`
+		UserMaxAttempts    int32     `json:"user_max_attempts"`
+		AttemptsLeft       int32     `json:"attempts_left"`
+		ReceivedReward     float64   `json:"received_reward"`
 	}
 
 	// Question struct
@@ -149,18 +158,42 @@ func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOpti
 }
 
 // GetByID ...
-func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (Challenge, error) {
-	challenge, err := s.cr.GetChallengeByID(ctx, id)
+func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (Challenge, error) {
+	challenge, err := s.cr.GetChallengeByID(ctx, challengeID)
 	if err != nil {
-		return Challenge{}, fmt.Errorf("could not get challenge by id: %w", err)
+		return Challenge{}, fmt.Errorf("could not get challenge by challengeID: %w", err)
 	}
 
-	return castToChallenge(challenge, s.playUrlFn), nil
+	var attemptsLeft int32
+
+	receivedReward, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+		UserID:      userID,
+		ChallengeID: challengeID,
+	})
+	if err != nil {
+		return Challenge{}, fmt.Errorf("could not get received reward amount: %w", err)
+	}
+
+	if receivedReward == 0 {
+		attempts, err := s.cr.CountPassedChallengeAttempts(ctx, repository.CountPassedChallengeAttemptsParams{
+			UserID:      userID,
+			ChallengeID: challengeID,
+		})
+		if err != nil {
+			return Challenge{}, fmt.Errorf("could not get passed challenge attempts: %w", err)
+		}
+		attemptsLeft = challenge.UserMaxAttempts - int32(attempts)
+		if attemptsLeft < 0 {
+			attemptsLeft = 0
+		}
+	}
+
+	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward), nil
 }
 
 // GetChallengeByID ...
-func (s *Service) GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
-	return s.GetByID(ctx, id)
+func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (interface{}, error) {
+	return s.GetByID(ctx, challengeID, userID)
 }
 
 // GetVerificationQuestionByEpisodeID ...
@@ -310,7 +343,7 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 }
 
 // GetChallengesByShowID ...
-func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
+func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error) {
 	list, err := s.cr.GetChallenges(ctx, repository.GetChallengesParams{
 		ShowID: showID,
 		Limit:  limit,
@@ -319,16 +352,38 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID uuid.UUID, l
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
 	}
-
+	var attemptsLeft int32
 	// Cast repository.Challenge into challenge.Challenge struct
 	result := make([]Challenge, 0, len(list))
 	for _, v := range list {
-		result = append(result, castToChallenge(v, s.playUrlFn))
+		receivedReward, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+			UserID:      userID,
+			ChallengeID: v.ID,
+		})
+		if err != nil {
+			return Challenge{}, fmt.Errorf("could not get received reward amount: %w", err)
+		}
+
+		if receivedReward == 0 {
+			attempts, err := s.cr.CountPassedChallengeAttempts(ctx, repository.CountPassedChallengeAttemptsParams{
+				UserID:      userID,
+				ChallengeID: v.ID,
+			})
+			if err != nil {
+				return Challenge{}, fmt.Errorf("could not get passed challenge attempts: %w", err)
+			}
+			attemptsLeft = v.UserMaxAttempts - int32(attempts)
+			if attemptsLeft < 0 {
+				attemptsLeft = 0
+			}
+		}
+		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward))
 	}
+
 	return result, nil
 }
 
-func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challenge {
+func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64) Challenge {
 	return Challenge{
 		ID:                 c.ID,
 		ShowID:             c.ShowID,
@@ -342,6 +397,9 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator) Challen
 		Play:               playUrlFn(c.ID),
 		EpisodeID:          c.EpisodeID,
 		Kind:               c.Kind,
+		UserMaxAttempts:    c.UserMaxAttempts,
+		AttemptsLeft:       attemptsLeft,
+		ReceivedReward:     receivedReward,
 	}
 }
 
@@ -364,14 +422,15 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 			Time:  time.Now().UTC(),
 			Valid: true,
 		},
-		EpisodeID: ch.EpisodeID,
-		Kind:      ch.Kind,
+		EpisodeID:       ch.EpisodeID,
+		Kind:            ch.Kind,
+		UserMaxAttempts: ch.UserMaxAttempts,
 	})
 	if err != nil {
 		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
 
-	return castToChallenge(challenge, s.playUrlFn), nil
+	return castToChallenge(challenge, s.playUrlFn, 0, 0), nil
 }
 
 // DeleteChallengeByID ...
@@ -402,9 +461,10 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 			Time:  time.Now().UTC(),
 			Valid: true,
 		},
-		EpisodeID: ch.EpisodeID,
-		Kind:      ch.Kind,
-		ID:        ch.ID,
+		EpisodeID:       ch.EpisodeID,
+		Kind:            ch.Kind,
+		ID:              ch.ID,
+		UserMaxAttempts: ch.UserMaxAttempts,
 	}); err != nil {
 		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)
 	}
@@ -723,7 +783,7 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 	return nil
 }
 
-// CheckVerificationQuestionAnswer ...
+// UnlockEpisode ...
 func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID) error {
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
 		EpisodeID: episodeID,
@@ -737,4 +797,55 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 	}
 
 	return nil
+}
+
+// StoreChallengeAttempt ...
+func (s *Service) StoreChallengeAttempt(ctx context.Context, challengeID, userID uuid.UUID) error {
+	if _, err := s.cr.AddChallengeAttempt(ctx, repository.AddChallengeAttemptParams{
+		UserID:      userID,
+		ChallengeID: challengeID,
+	}); err != nil {
+		return fmt.Errorf("could not store passed challenge data: %w", err)
+	}
+
+	return nil
+}
+
+// StoreChallengeReceivedRewardAmount ...
+func (s *Service) StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error {
+	if err := s.cr.StoreChallengeReceivedRewardAmount(ctx, repository.StoreChallengeReceivedRewardAmountParams{
+		UserID:       userID,
+		ChallengeID:  challengeID,
+		RewardAmount: rewardAmount,
+	}); err != nil {
+		return fmt.Errorf("could not store passed challenge data: %w", err)
+	}
+
+	return nil
+}
+
+// GetChallengeReceivedRewardAmount ...
+func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
+	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+		UserID:      userID,
+		ChallengeID: challengeID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
+	}
+
+	return amount, nil
+}
+
+// GetPassedChallengeAttempts ...
+func (s *Service) GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error) {
+	attemptsNumber, err := s.cr.CountPassedChallengeAttempts(ctx, repository.CountPassedChallengeAttemptsParams{
+		UserID:      userID,
+		ChallengeID: challengeID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("could not get passed challenge attempts: %w", err)
+	}
+
+	return attemptsNumber, nil
 }

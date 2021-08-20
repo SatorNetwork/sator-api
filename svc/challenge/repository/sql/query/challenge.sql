@@ -21,7 +21,8 @@ INSERT INTO challenges (
     time_per_question,
     updated_at,
     episode_id,
-    kind
+    kind,
+    user_max_attempts
 )
 VALUES (
            @show_id,
@@ -32,7 +33,8 @@ VALUES (
            @time_per_question,
            @updated_at,
            @episode_id,
-           @kind
+           @kind,
+           @user_max_attempts
        ) RETURNING *;
 -- name: UpdateChallenge :exec
 UPDATE challenges
@@ -44,7 +46,8 @@ SET show_id = @show_id,
     time_per_question = @time_per_question,
     updated_at = @updated_at,
     episode_id = @episode_id,
-    kind = @kind
+    kind = @kind,
+    user_max_attempts = @user_max_attempts
 WHERE id = @id;
 -- name: DeleteChallengeByID :exec
 DELETE FROM challenges
