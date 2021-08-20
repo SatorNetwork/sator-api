@@ -3,6 +3,7 @@ package quiz
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -133,14 +134,15 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, fmt.Errorf("could not get received reward amount: %w", err)
 	}
 	if receivedReward > 0 {
-		return nil, fmt.Errorf("reward has been received for this challenge already: %w", err)
+		return nil, errors.New("reward has been already received for this challenge")
 	}
 
+	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
 	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
 	}
-	if attempts >= 2 {
+	if attempts >= int64(challengeByID.UserMaxAttempts) {
 		return nil, fmt.Errorf("no more attempts left: %w", err)
 	}
 

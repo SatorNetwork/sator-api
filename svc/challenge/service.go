@@ -182,12 +182,8 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 		if err != nil {
 			return Challenge{}, fmt.Errorf("could not get passed challenge attempts: %w", err)
 		}
-		switch int(attempts) {
-		case 0:
-			attemptsLeft = 2
-		case 1:
-			attemptsLeft = 1
-		default:
+		attemptsLeft = challenge.UserMaxAttempts - int32(attempts)
+		if attemptsLeft < 0 {
 			attemptsLeft = 0
 		}
 	}
@@ -376,12 +372,8 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 			if err != nil {
 				return Challenge{}, fmt.Errorf("could not get passed challenge attempts: %w", err)
 			}
-			switch int(attempts) {
-			case 0:
-				attemptsLeft = 2
-			case 1:
-				attemptsLeft = 1
-			default:
+			attemptsLeft = v.UserMaxAttempts - int32(attempts)
+			if attemptsLeft < 0 {
 				attemptsLeft = 0
 			}
 		}
@@ -844,7 +836,6 @@ func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challeng
 
 	return amount, nil
 }
-
 
 // GetPassedChallengeAttempts ...
 func (s *Service) GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error) {
