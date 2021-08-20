@@ -62,3 +62,18 @@ type Question struct {
 	UpdatedAt     sql.NullTime `json:"updated_at"`
 	CreatedAt     time.Time    `json:"created_at"`
 }
+
+type EpisodeAccess struct {
+	EpisodeID   uuid.UUID    `json:"episode_id"`
+	UserID      uuid.UUID    `json:"user_id"`
+	ActivatedAt sql.NullTime `json:"activated_at"`
+}
+
+type Question struct {
+	ID            uuid.UUID    `json:"id"`
+	ChallengeID   uuid.UUID    `json:"challenge_id"`
+	Question      string       `json:"question"`
+	QuestionOrder int32        `json:"question_order"`
+	UpdatedAt     sql.NullTime `json:"updated_at"`
+	CreatedAt     time.Time    `json:"created_at"`
+}
