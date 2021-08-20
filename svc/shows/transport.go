@@ -98,7 +98,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/{show_id}/episodes", httptransport.NewServer(
+	r.Post("/{show_id}/episodes/{season_id}", httptransport.NewServer(
 		e.AddEpisode,
 		decodeAddEpisodeRequest,
 		httpencoder.EncodeResponse,
@@ -247,6 +247,12 @@ func decodeAddEpisodeRequest(_ context.Context, r *http.Request) (interface{}, e
 		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
 	}
 	req.ShowID = showID
+
+	seasonID := chi.URLParam(r, "season_id")
+	if seasonID == "" {
+		return nil, fmt.Errorf("%w: missed season id", ErrInvalidParameter)
+	}
+	req.SeasonID = seasonID
 
 	return req, nil
 }
