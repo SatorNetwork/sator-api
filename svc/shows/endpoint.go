@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+
 	"github.com/SatorNetwork/sator-api/internal/validator"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )

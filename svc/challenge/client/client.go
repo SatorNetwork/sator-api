@@ -106,33 +106,3 @@ func (c *Client) GetPassedChallengeAttempts(ctx context.Context, challengeID, us
 
 	return res, nil
 }
-
-// GetQuestionsByChallengeID returns questions list filtered by challenge id
-func (c *Client) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) ([]challenge.Question, error) {
-	res, err := c.s.GetQuestionsByChallengeID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
-
-	list := make([]challenge.Question, 0)
-	if err := json.Unmarshal(b, &list); err != nil {
-		return nil, err
-	}
-
-	return list, nil
-}
-
-// CheckAnswer ...
-func (c *Client) CheckAnswer(ctx context.Context, aid, uid uuid.UUID) (bool, error) {
-	return c.s.CheckAnswer(ctx, aid, uid)
-}
-
-// GetOneRandomQuestionByChallengeID ...
-func (c *Client) GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*challenge.Question, error) {
-	return c.s.GetOneRandomQuestionByChallengeID(ctx, id, excludeIDs...)
-}
