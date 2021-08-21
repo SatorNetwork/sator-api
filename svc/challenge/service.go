@@ -82,11 +82,11 @@ type (
 		Title              string    `json:"title"`
 		Description        string    `json:"description"`
 		PrizePool          string    `json:"prize_pool"`
-		PrizePoolAmount    float64   `json:"-"`
+		PrizePoolAmount    float64   `json:"prize_pool_amount"`
 		Players            int32     `json:"players"`
 		Winners            string    `json:"winners"`
 		TimePerQuestion    string    `json:"time_per_question"`
-		TimePerQuestionSec int64     `json:"-"`
+		TimePerQuestionSec int64     `json:"time_per_question_sec"`
 		Play               string    `json:"play"`
 		EpisodeID          uuid.UUID `json:"episode_id"`
 		Kind               int32     `json:"kind"`
