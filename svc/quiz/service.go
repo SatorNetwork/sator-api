@@ -130,7 +130,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	defer s.mutex.Unlock(key)
 
 	receivedReward, err := s.challenges.GetChallengeReceivedRewardAmount(ctx, uid, challengeID)
-	if err != nil {
+	if err != nil && !db.IsNotFoundError(err) {
 		return nil, fmt.Errorf("could not get received reward amount: %w", err)
 	}
 	if receivedReward > 0 {

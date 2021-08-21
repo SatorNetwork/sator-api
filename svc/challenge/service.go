@@ -170,7 +170,7 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 		UserID:      userID,
 		ChallengeID: challengeID,
 	})
-	if err != nil {
+	if err != nil && !db.IsNotFoundError(err) {
 		return Challenge{}, fmt.Errorf("could not get received reward amount: %w", err)
 	}
 
@@ -360,7 +360,7 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 			UserID:      userID,
 			ChallengeID: v.ID,
 		})
-		if err != nil {
+		if err != nil && !db.IsNotFoundError(err) {
 			return Challenge{}, fmt.Errorf("could not get received reward amount: %w", err)
 		}
 
@@ -831,6 +831,9 @@ func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challeng
 		ChallengeID: challengeID,
 	})
 	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
 		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
 	}
 
