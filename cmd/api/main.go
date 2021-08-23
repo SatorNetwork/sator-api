@@ -280,7 +280,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("referralRepo error: %v", err)
 		}
-		r.Mount("/referrals", referrals.MakeHTTPHandler(
+		r.Mount("/ref", referrals.MakeHTTPHandler(
 			referrals.MakeEndpoints(referrals.NewService(referralRepository), jwtMdw),
 			logger,
 		))
