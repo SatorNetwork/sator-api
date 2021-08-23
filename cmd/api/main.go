@@ -35,6 +35,8 @@ import (
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
+	"github.com/SatorNetwork/sator-api/svc/referrals"
+	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
@@ -268,6 +270,18 @@ func main() {
 		}
 		r.Mount("/profile", profile.MakeHTTPHandler(
 			profile.MakeEndpoints(profile.NewService(profileRepository), jwtMdw),
+			logger,
+		))
+	}
+
+	{
+		// Referrals service
+		referralRepository, err := referralsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("referralRepo error: %v", err)
+		}
+		r.Mount("/ref", referrals.MakeHTTPHandler(
+			referrals.MakeEndpoints(referrals.NewService(referralRepository), jwtMdw),
 			logger,
 		))
 	}
