@@ -3,6 +3,7 @@
 package repository
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,4 +13,13 @@ type Referral struct {
 	ReferralCodeID uuid.UUID `json:"referral_code_id"`
 	UserID         uuid.UUID `json:"user_id"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ReferralCode struct {
+	ID         uuid.UUID      `json:"id"`
+	Title      sql.NullString `json:"title"`
+	Code       string         `json:"code"`
+	IsPersonal sql.NullBool   `json:"is_personal"`
+	UserID     uuid.UUID      `json:"user_id"`
+	CreatedAt  time.Time      `json:"created_at"`
 }
