@@ -2660,3 +2660,323 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+
+  /ref/codes/my:
+    get:
+      tags:
+        - "Referral codes"
+      summary: Get users referral code.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          description: Returns referral code data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  code:
+                    type: string
+                    example: "code"
+                  is_personal:
+                    type: boolean
+                    example: true
+                  user_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /ref/codes/{id}:
+    put:
+      tags:
+        - "Referral codes"
+      summary: used to update referral code.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Referral code ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                code:
+                  type: string
+                  example: "code"
+                is_personal:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  code:
+                    type: string
+                    example: "code"
+                  is_personal:
+                    type: boolean
+                    example: true
+                  user_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Referral codes"
+      summary: used for delete referral code by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Referral code ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /ref/codes:
+    post:
+      tags:
+        - "Referral codes"
+      summary: used to store new referral code.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                  required: true
+                code:
+                  type: string
+                  example: "code"
+                  required: true
+                is_personal:
+                  type: boolean
+                  example: true
+                  required: true
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  code:
+                    type: string
+                    example: "code"
+                  is_personal:
+                    type: boolean
+                    example: true
+                  user_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Referral codes"
+      summary: Get referral codes list.
+      security:
+        - bearerAuth: [ ]
+
+      responses:
+        "200":
+          description: Returns referral codes data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                   id:
+                     type: string
+                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                   title:
+                     type: string
+                     example: "title"
+                   code:
+                     type: string
+                     example: "code"
+                   is_personal:
+                     type: boolean
+                     example: true
+                   user_id:
+                     type: string
+                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                   created_at:
+                     type: string
+                     example: "2006-01-02T15:04:05Z07:00"
+                     description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /ref/codes/{id}/referrals:
+    get:
+      tags:
+        - "Referral codes"
+      summary: Get list of users who signed up via this referral code.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Referral code ID.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns paginated list of users who signed up via this referral code.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    referral_code_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /ref/confirm/{code}:
+    post:
+      tags:
+        - "Referral codes"
+      summary: used to store current user to the referrals table.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: code
+          in: path
+          description: Referral code.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
