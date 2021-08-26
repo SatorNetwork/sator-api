@@ -3,7 +3,6 @@ package challenge
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
@@ -118,7 +117,7 @@ type (
 	AnswerOptionRequest struct {
 		QuestionID string `json:"question_id,omitempty"`
 		Option     string `json:"option" validate:"required,gt=0"`
-		IsCorrect  string `json:"is_correct" validate:"required,gt=0"`
+		IsCorrect  bool   `json:"is_correct" validate:"required"`
 	}
 
 	// UpdateAnswerRequest struct
@@ -126,7 +125,7 @@ type (
 		ID         string `json:"id" validate:"required,uuid"`
 		QuestionID string `json:"question_id" validate:"required,uuid"`
 		Option     string `json:"option" validate:"required,gt=0"`
-		IsCorrect  string `json:"is_correct" validate:"required,gt=0"`
+		IsCorrect  bool   `json:"is_correct" validate:"required"`
 	}
 
 	// DeleteAnswerByIDRequest struct
@@ -412,15 +411,10 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			answerOptions := make([]AnswerOption, 0, len(req.AnswerOptions))
 
 			for _, answ := range req.AnswerOptions {
-				isCorrect, err := strconv.ParseBool(answ.IsCorrect)
-				if err != nil {
-					return nil, fmt.Errorf("could not parse bool from string %w", err)
-				}
-
 				ao, err := s.AddQuestionOption(ctx, AnswerOption{
 					QuestionID: resp.ID,
 					Option:     answ.Option,
-					IsCorrect:  isCorrect,
+					IsCorrect:  answ.IsCorrect,
 				})
 				if err != nil {
 					return nil, err
@@ -449,15 +443,10 @@ func MakeAddQuestionOptionEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		isCorrect, err := strconv.ParseBool(req.IsCorrect)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bool from string %w", err)
-		}
-
 		resp, err := s.AddQuestionOption(ctx, AnswerOption{
 			QuestionID: questionID,
 			Option:     req.Option,
-			IsCorrect:  isCorrect,
+			IsCorrect:  req.IsCorrect,
 		})
 		if err != nil {
 			return nil, err
@@ -544,15 +533,10 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			}
 
 			for _, answ := range req.AnswerOptions {
-				isCorrect, err := strconv.ParseBool(answ.IsCorrect)
-				if err != nil {
-					return nil, fmt.Errorf("could not parse bool from string %w", err)
-				}
-
 				if _, err := s.AddQuestionOption(ctx, AnswerOption{
 					QuestionID: id,
 					Option:     answ.Option,
-					IsCorrect:  isCorrect,
+					IsCorrect:  answ.IsCorrect,
 				}); err != nil {
 					return nil, err
 				}
@@ -581,16 +565,11 @@ func MakeUpdateAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		isCorrect, err := strconv.ParseBool(req.IsCorrect)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bool from string %w", err)
-		}
-
 		if err = s.UpdateAnswer(ctx, AnswerOption{
 			ID:         id,
 			QuestionID: questionID,
 			Option:     req.Option,
-			IsCorrect:  isCorrect,
+			IsCorrect:  req.IsCorrect,
 		}); err != nil {
 			return nil, err
 		}

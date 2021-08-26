@@ -2234,9 +2234,8 @@ paths:
                         type: string
                         description: Answer option
                       is_correct:
-                        type: string
-                        example: "true"
-                        description: It can be 0, 1, T, F, true, false
+                        type: boolean
+                        example: true
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -2368,9 +2367,8 @@ paths:
                         type: string
                         description: Answer option
                       is_correct:
-                        type: string
-                        example: "true"
-                        description: It can be 0, 1, T, F, true, false
+                        type: boolean
+                        example: true
       responses:
         "200":
           description: Returns question details.
@@ -2426,8 +2424,8 @@ paths:
                   type: string
                   example: "option"
                 is_correct:
-                  type: string
-                  example: "true"
+                  type: boolean
+                  example: true
       responses:
         "200":
           description: Returns answer details.
@@ -2488,8 +2486,8 @@ paths:
                   type: string
                   example: "option"
                 is_correct:
-                  type: string
-                  example: "true"
+                  type: boolean
+                  example: true
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
