@@ -87,7 +87,7 @@ type (
 		Players            int32     `json:"players"`
 		Winners            string    `json:"winners"`
 		TimePerQuestion    string    `json:"time_per_question"`
-		TimePerQuestionSec int64     `json:"time_per_question_sec"`
+		TimePerQuestionSec int32     `json:"time_per_question_sec"`
 		Play               string    `json:"play"`
 		EpisodeID          uuid.UUID `json:"episode_id"`
 		Kind               int32     `json:"kind"`
@@ -394,7 +394,7 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		PrizePoolAmount:    c.PrizePool,
 		Players:            c.PlayersToStart,
 		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
-		TimePerQuestionSec: int64(c.TimePerQuestion.Int32),
+		TimePerQuestionSec: c.TimePerQuestion.Int32,
 		Play:               playUrlFn(c.ID),
 		EpisodeID:          c.EpisodeID,
 		Kind:               c.Kind,
@@ -446,6 +446,7 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 // UpdateChallenge ..
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	if err := s.cr.UpdateChallenge(ctx, repository.UpdateChallengeParams{
+		ID:     ch.ID,
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
 		Description: sql.NullString{
@@ -456,15 +457,10 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
 			Int32: int32(ch.TimePerQuestionSec),
-			Valid: false,
-		},
-		UpdatedAt: sql.NullTime{
-			Time:  time.Now().UTC(),
-			Valid: true,
+			Valid: ch.TimePerQuestionSec > 0,
 		},
 		EpisodeID:       ch.EpisodeID,
 		Kind:            ch.Kind,
-		ID:              ch.ID,
 		UserMaxAttempts: ch.UserMaxAttempts,
 	}); err != nil {
 		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)

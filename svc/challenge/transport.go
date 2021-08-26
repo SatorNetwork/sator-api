@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
@@ -218,6 +219,8 @@ func decodeAddChallengeRequest(_ context.Context, r *http.Request) (interface{},
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
+	log.Printf("AddChallengeRequest: %+v", req)
+
 	return req, nil
 }
 
@@ -242,6 +245,8 @@ func decodeUpdateChallengeRequest(_ context.Context, r *http.Request) (interface
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}
 	req.ID = challengeID
+
+	log.Printf("UpdateChallengeRequest: %+v", req)
 
 	return req, nil
 }

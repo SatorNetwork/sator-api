@@ -138,6 +138,9 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	}
 
 	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
 	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
@@ -161,7 +164,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 			ChallengeID:     challenge.ID,
 			PrizePool:       challenge.PrizePoolAmount,
 			PlayersToStart:  challenge.Players,
-			TimePerQuestion: challenge.TimePerQuestionSec,
+			TimePerQuestion: int64(challenge.TimePerQuestionSec),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("could not start new quiz: %w", err)
@@ -190,7 +193,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 			ChallengeID:     challenge.ID,
 			PrizePool:       challenge.PrizePoolAmount,
 			PlayersToStart:  challenge.Players,
-			TimePerQuestion: challenge.TimePerQuestionSec,
+			TimePerQuestion: int64(challenge.TimePerQuestionSec),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("could not start new quiz: %w", err)

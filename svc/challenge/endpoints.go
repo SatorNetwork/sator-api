@@ -70,11 +70,11 @@ type (
 		Title              string  `json:"title" validate:"required,gt=0"`
 		Description        string  `json:"description"`
 		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
-		PlayersToStart     int32   `json:"players_to_start" validate:"required"`
-		TimePerQuestionSec int64   `json:"time_per_question_sec"`
-		EpisodeID          string  `json:"episode_id" validate:"uuid"`
-		Kind               int32   `json:"kind"`
-		UserMaxAttempts    int32   `json:"user_max_attempts"`
+		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
+		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
+		EpisodeID          string  `json:"episode_id"`
+		Kind               int     `json:"kind"`
+		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -84,11 +84,11 @@ type (
 		Title              string  `json:"title" validate:"required,gt=0"`
 		Description        string  `json:"description"`
 		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
-		PlayersToStart     int32   `json:"players_to_start" validate:"required"`
-		TimePerQuestionSec int64   `json:"time_per_question_sec"`
-		EpisodeID          string  `json:"episode_id" validate:"uuid"`
-		Kind               int32   `json:"kind"`
-		UserMaxAttempts    int32   `json:"user_max_attempts"`
+		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
+		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
+		EpisodeID          string  `json:"episode_id"`
+		Kind               int     `json:"kind"`
+		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
 	}
 
 	CheckAnswerRequest struct {
@@ -313,10 +313,10 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			Title:              req.Title,
 			Description:        req.Description,
 			PrizePoolAmount:    req.PrizePoolAmount,
-			Players:            req.PlayersToStart,
-			TimePerQuestionSec: req.TimePerQuestionSec,
+			Players:            int32(req.PlayersToStart),
+			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			EpisodeID:          episodeID,
-			Kind:               req.Kind,
+			Kind:               int32(req.Kind),
 		})
 		if err != nil {
 			return nil, err
@@ -372,10 +372,10 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			Title:              req.Title,
 			Description:        req.Description,
 			PrizePoolAmount:    req.PrizePoolAmount,
-			Players:            req.PlayersToStart,
-			TimePerQuestionSec: req.TimePerQuestionSec,
+			Players:            int32(req.PlayersToStart),
+			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			EpisodeID:          episodeID,
-			Kind:               req.Kind,
+			Kind:               int32(req.Kind),
 		})
 		if err != nil {
 			return nil, err
