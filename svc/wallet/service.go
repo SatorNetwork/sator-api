@@ -544,14 +544,14 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	toEncode.Amount = amount
 	toEncode.RecipientAddr = recipientPK
 
-	log.Printf("toEncode: %+v", toEncode)
+	// log.Printf("toEncode: %+v", toEncode)
 
 	encodedData, err := json.Marshal(toEncode)
 	if err != nil {
 		return PreparedTransferTransaction{}, fmt.Errorf("could not marshal amount and recipient pk: %w", err)
 	}
 
-	log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
+	// log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
 
 	return PreparedTransferTransaction{
 		AssetName:       asset,
