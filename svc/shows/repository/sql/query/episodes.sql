@@ -19,7 +19,8 @@ INSERT INTO episodes (
     title,
     description,
     release_date,
-    challenge_id
+    challenge_id,
+    verification_challenge_id
 )
 VALUES (
            @show_id,
@@ -29,7 +30,8 @@ VALUES (
            @title,
            @description,
            @release_date,
-           @challenge_id
+           @challenge_id,
+           @verification_challenge_id
 ) RETURNING *;
 -- name: UpdateEpisode :exec
 UPDATE episodes
@@ -37,6 +39,7 @@ SET episode_number = @episode_number,
     season_id = @season_id,
     show_id = @show_id,
     challenge_id = @challenge_id,
+    verification_challenge_id = @verification_challenge_id,
     cover = @cover,
     title = @title,
     description = @description,

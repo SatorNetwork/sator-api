@@ -103,27 +103,29 @@ type (
 
 	// AddEpisodeRequest struct
 	AddEpisodeRequest struct {
-		ShowID        string `json:"show_id" validate:"required,uuid"`
-		SeasonID      string `json:"season_id" validate:"required,uuid"`
-		EpisodeNumber int32  `json:"episode_number"`
-		Cover         string `json:"cover,omitempty"`
-		Title         string `json:"title" validate:"required,gt=0"`
-		Description   string `json:"description,omitempty"`
-		ReleaseDate   string `json:"release_date,omitempty"`
-		ChallengeID   string `json:"challenge_id,omitempty"`
+		ShowID                  string `json:"show_id" validate:"required,uuid"`
+		SeasonID                string `json:"season_id" validate:"required,uuid"`
+		EpisodeNumber           int32  `json:"episode_number"`
+		Cover                   string `json:"cover,omitempty"`
+		Title                   string `json:"title" validate:"required,gt=0"`
+		Description             string `json:"description,omitempty"`
+		ReleaseDate             string `json:"release_date,omitempty"`
+		ChallengeID             string `json:"challenge_id,omitempty" validate:"uuid"`
+		VerificationChallengeID string `json:"verification_challenge_id,omitempty" validate:"uuid"`
 	}
 
 	// UpdateEpisodeRequest struct
 	UpdateEpisodeRequest struct {
-		ID            string `json:"id" validate:"required,uuid"`
-		ShowID        string `json:"show_id" validate:"required,uuid"`
-		SeasonID      string `json:"season_id" validate:"required,uuid"`
-		EpisodeNumber int32  `json:"episode_number"`
-		Cover         string `json:"cover,omitempty"`
-		Title         string `json:"title" validate:"required,gt=0"`
-		Description   string `json:"description" validate:"required,gt=0"`
-		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
-		ChallengeID   string `json:"challenge_id,omitempty"`
+		ID                      string `json:"id" validate:"required,uuid"`
+		ShowID                  string `json:"show_id" validate:"required,uuid"`
+		SeasonID                string `json:"season_id" validate:"required,uuid"`
+		EpisodeNumber           int32  `json:"episode_number"`
+		Cover                   string `json:"cover,omitempty"`
+		Title                   string `json:"title" validate:"required,gt=0"`
+		Description             string `json:"description" validate:"required,gt=0"`
+		ReleaseDate             string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
+		ChallengeID             string `json:"challenge_id,omitempty" validate:"uuid"`
+		VerificationChallengeID string `json:"verification_challenge_id,omitempty" validate:"uuid"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
@@ -380,7 +382,7 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		var challengeID uuid.UUID
+		var challengeID, verificationChallengeID uuid.UUID
 		if req.ChallengeID != "" {
 			challengeID, err = uuid.Parse(req.ChallengeID)
 			if err != nil {
@@ -388,15 +390,23 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			}
 		}
 
+		if req.VerificationChallengeID != "" {
+			verificationChallengeID, err = uuid.Parse(req.VerificationChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get verification challenge id: %w", err)
+			}
+		}
+
 		resp, err := s.AddEpisode(ctx, Episode{
-			ShowID:        showID,
-			SeasonID:      seasonID,
-			ChallengeID:   challengeID,
-			EpisodeNumber: req.EpisodeNumber,
-			Cover:         req.Cover,
-			Title:         req.Title,
-			Description:   req.Description,
-			ReleaseDate:   req.ReleaseDate,
+			ShowID:                  showID,
+			SeasonID:                seasonID,
+			ChallengeID:             challengeID,
+			VerificationChallengeID: verificationChallengeID,
+			EpisodeNumber:           req.EpisodeNumber,
+			Cover:                   req.Cover,
+			Title:                   req.Title,
+			Description:             req.Description,
+			ReleaseDate:             req.ReleaseDate,
 		})
 		if err != nil {
 			return nil, err
@@ -429,7 +439,7 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get season id: %w", err)
 		}
 
-		var challengeID uuid.UUID
+		var challengeID, verificationChallengeID uuid.UUID
 		if req.ChallengeID != "" {
 			challengeID, err = uuid.Parse(req.ChallengeID)
 			if err != nil {
@@ -437,16 +447,24 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			}
 		}
 
+		if req.VerificationChallengeID != "" {
+			verificationChallengeID, err = uuid.Parse(req.VerificationChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get verification challenge id: %w", err)
+			}
+		}
+
 		err = s.UpdateEpisode(ctx, Episode{
-			ID:            id,
-			ShowID:        showID,
-			SeasonID:      seasonID,
-			EpisodeNumber: req.EpisodeNumber,
-			Cover:         req.Cover,
-			Title:         req.Title,
-			Description:   req.Description,
-			ReleaseDate:   req.ReleaseDate,
-			ChallengeID:   challengeID,
+			ID:                      id,
+			ShowID:                  showID,
+			SeasonID:                seasonID,
+			EpisodeNumber:           req.EpisodeNumber,
+			Cover:                   req.Cover,
+			Title:                   req.Title,
+			Description:             req.Description,
+			ReleaseDate:             req.ReleaseDate,
+			ChallengeID:             challengeID,
+			VerificationChallengeID: verificationChallengeID,
 		})
 		if err != nil {
 			return nil, err
