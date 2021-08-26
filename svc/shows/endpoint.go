@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
-
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -110,8 +109,8 @@ type (
 		Title                   string `json:"title" validate:"required,gt=0"`
 		Description             string `json:"description,omitempty"`
 		ReleaseDate             string `json:"release_date,omitempty"`
-		ChallengeID             string `json:"challenge_id,omitempty" validate:"uuid"`
-		VerificationChallengeID string `json:"verification_challenge_id,omitempty" validate:"uuid"`
+		ChallengeID             string `json:"challenge_id,omitempty"`
+		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 	}
 
 	// UpdateEpisodeRequest struct
@@ -124,8 +123,8 @@ type (
 		Title                   string `json:"title" validate:"required,gt=0"`
 		Description             string `json:"description" validate:"required,gt=0"`
 		ReleaseDate             string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
-		ChallengeID             string `json:"challenge_id,omitempty" validate:"uuid"`
-		VerificationChallengeID string `json:"verification_challenge_id,omitempty" validate:"uuid"`
+		ChallengeID             string `json:"challenge_id,omitempty"`
+		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
