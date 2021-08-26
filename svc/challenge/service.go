@@ -406,7 +406,6 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 
 // AddChallenge ..
 func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, error) {
-	log.Printf("AddChallenge: %+v", ch)
 	challenge, err := s.cr.AddChallenge(ctx, repository.AddChallengeParams{
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
@@ -431,7 +430,6 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 	if err != nil {
 		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
-	log.Printf("AddChallenge: challenge db result: %+v", challenge)
 
 	return castToChallenge(challenge, s.playUrlFn, 0, 0), nil
 }
@@ -447,7 +445,6 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 
 // UpdateChallenge ..
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
-	log.Printf("UpdateChallenge: %+v", ch)
 	if err := s.cr.UpdateChallenge(ctx, repository.UpdateChallengeParams{
 		ID:     ch.ID,
 		ShowID: ch.ShowID,
@@ -468,8 +465,6 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	}); err != nil {
 		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)
 	}
-	challenge, err := s.cr.GetChallengeByID(ctx, ch.ID)
-	log.Printf("UpdateChallenge: challenge db result: %+v; err: %v", challenge, err)
 
 	return nil
 }

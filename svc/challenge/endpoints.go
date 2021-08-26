@@ -320,6 +320,7 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			EpisodeID:          episodeID,
 			Kind:               int32(req.Kind),
+			UserMaxAttempts:    int32(req.UserMaxAttempts),
 		})
 		if err != nil {
 			return nil, err
@@ -382,6 +383,7 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			EpisodeID:          episodeID,
 			Kind:               int32(req.Kind),
+			UserMaxAttempts:    int32(req.UserMaxAttempts),
 		})
 		if err != nil {
 			return nil, err
