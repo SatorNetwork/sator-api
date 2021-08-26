@@ -2347,6 +2347,16 @@ paths:
                 order:
                   type: integer
                   example: 1
+                answer_options:
+                  type: object
+                  properties:
+                    option: 
+                      type: string
+                      description: Answer option
+                    is_correct:
+                      type: string
+                      example: "true"
+                      description: It can be 0, 1, T, F, true, false
       responses:
         "200":
           description: Returns question details.

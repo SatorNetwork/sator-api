@@ -98,9 +98,10 @@ type (
 
 	// AddQuestionRequest struct
 	AddQuestionRequest struct {
-		ChallengeID string `json:"challenge_id" validate:"required,uuid"`
-		Question    string `json:"question" validate:"required,gt=0"`
-		Order       int32  `json:"order" validate:"required,gt=0"`
+		ChallengeID   string                `json:"challenge_id" validate:"required,uuid"`
+		Question      string                `json:"question" validate:"required,gt=0"`
+		Order         int32                 `json:"order" validate:"required,gt=0"`
+		AnswerOptions []AnswerOptionRequest `json:"answer_options,omitempty"`
 	}
 
 	// UpdateQuestionRequest struct
@@ -113,7 +114,7 @@ type (
 
 	// AnswerOptionRequest struct
 	AnswerOptionRequest struct {
-		QuestionID string `json:"question_id" validate:"required,uuid"`
+		QuestionID string `json:"question_id,omitempty"`
 		Option     string `json:"option" validate:"required,gt=0"`
 		IsCorrect  string `json:"is_correct" validate:"required,gt=0"`
 	}
@@ -403,6 +404,23 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 		})
 		if err != nil {
 			return nil, err
+		}
+
+		if len(req.AnswerOptions) > 0 {
+			for _, answ := range req.AnswerOptions {
+				isCorrect, err := strconv.ParseBool(answ.IsCorrect)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse bool from string %w", err)
+				}
+
+				if _, err := s.AddQuestionOption(ctx, AnswerOption{
+					QuestionID: resp.ID,
+					Option:     answ.Option,
+					IsCorrect:  isCorrect,
+				}); err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		return resp, nil
