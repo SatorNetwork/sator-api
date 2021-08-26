@@ -86,7 +86,8 @@ var (
 	masterOTPHash = env.GetString("MASTER_OTP_HASH", "")
 
 	// Quiz
-	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
+	quizWsConnURL   = env.MustString("QUIZ_WS_CONN_URL")
+	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
@@ -387,7 +388,12 @@ func main() {
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,
-			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction), challengeSvcClient),
+			quiz.QuizWsHandler(
+				quizSvc,
+				invitationsService.SendReward(rewardService.AddTransaction),
+				challengeSvcClient,
+				quizBotsTimeout,
+			),
 		))
 
 		// run quiz service
