@@ -226,16 +226,17 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUI
 // Cast repository.GetEpisodeByIDRow to service Episode structure
 func castRowToEpisode(source repository.GetEpisodeByIDRow) Episode {
 	return Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonID:      source.SeasonID,
-		SeasonNumber:  source.SeasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		ChallengeID:   source.ChallengeID,
+		ID:                      source.ID,
+		ShowID:                  source.ShowID,
+		EpisodeNumber:           source.EpisodeNumber,
+		SeasonID:                source.SeasonID,
+		SeasonNumber:            source.SeasonNumber,
+		Cover:                   source.Cover.String,
+		Title:                   source.Title,
+		Description:             source.Description.String,
+		ReleaseDate:             source.ReleaseDate.Time.String(),
+		ChallengeID:             source.ChallengeID,
+		VerificationChallengeID: source.VerificationChallengeID,
 	}
 }
 
