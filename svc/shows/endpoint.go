@@ -491,8 +491,7 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		err = s.DeleteEpisodeByID(ctx, showID, episodeID)
-		if err != nil {
+		if err := s.DeleteEpisodeByID(ctx, showID, episodeID); err != nil {
 			return nil, err
 		}
 
