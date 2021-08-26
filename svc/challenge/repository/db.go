@@ -52,6 +52,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteAnswerByIDStmt, err = db.PrepareContext(ctx, deleteAnswerByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteAnswerByID: %w", err)
 	}
+	if q.deleteAnswersByQuestionIDStmt, err = db.PrepareContext(ctx, deleteAnswersByQuestionID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAnswersByQuestionID: %w", err)
+	}
 	if q.deleteChallengeByIDStmt, err = db.PrepareContext(ctx, deleteChallengeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteChallengeByID: %w", err)
 	}
@@ -174,6 +177,11 @@ func (q *Queries) Close() error {
 	if q.deleteAnswerByIDStmt != nil {
 		if cerr := q.deleteAnswerByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteAnswerByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteAnswersByQuestionIDStmt != nil {
+		if cerr := q.deleteAnswersByQuestionIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAnswersByQuestionIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteChallengeByIDStmt != nil {
@@ -340,6 +348,7 @@ type Queries struct {
 	countAttemptsStmt                           *sql.Stmt
 	countPassedChallengeAttemptsStmt            *sql.Stmt
 	deleteAnswerByIDStmt                        *sql.Stmt
+	deleteAnswersByQuestionIDStmt               *sql.Stmt
 	deleteChallengeByIDStmt                     *sql.Stmt
 	deleteEpisodeAccessDataStmt                 *sql.Stmt
 	deleteQuestionByIDStmt                      *sql.Stmt
@@ -379,6 +388,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		countAttemptsStmt:                           q.countAttemptsStmt,
 		countPassedChallengeAttemptsStmt:            q.countPassedChallengeAttemptsStmt,
 		deleteAnswerByIDStmt:                        q.deleteAnswerByIDStmt,
+		deleteAnswersByQuestionIDStmt:               q.deleteAnswersByQuestionIDStmt,
 		deleteChallengeByIDStmt:                     q.deleteChallengeByIDStmt,
 		deleteEpisodeAccessDataStmt:                 q.deleteEpisodeAccessDataStmt,
 		deleteQuestionByIDStmt:                      q.deleteQuestionByIDStmt,

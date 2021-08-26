@@ -46,6 +46,7 @@ type (
 		// Answers
 		AddQuestionOption(ctx context.Context, arg repository.AddQuestionOptionParams) (repository.AnswerOption, error)
 		DeleteAnswerByID(ctx context.Context, arg repository.DeleteAnswerByIDParams) error
+		DeleteAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) error
 		GetAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) ([]repository.AnswerOption, error)
 		GetAnswersByIDs(ctx context.Context, questionIds []uuid.UUID) ([]repository.AnswerOption, error)
 		CheckAnswer(ctx context.Context, arg repository.CheckAnswerParams) (sql.NullBool, error)
@@ -739,6 +740,15 @@ func (s *Service) DeleteAnswerByID(ctx context.Context, id, questionID uuid.UUID
 		QuestionID: questionID,
 	}); err != nil {
 		return fmt.Errorf("could not delete answer with id=%s:%w", id, err)
+	}
+
+	return nil
+}
+
+// DeleteAnswersByQuestionID ...
+func (s *Service) DeleteAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) error {
+	if err := s.cr.DeleteAnswersByQuestionID(ctx, questionID); err != nil {
+		return fmt.Errorf("could not delete answer options by question id=%s: %w", questionID, err)
 	}
 
 	return nil

@@ -2225,6 +2225,18 @@ paths:
                 order:
                   type: integer
                   example: 2
+                answer_options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      option: 
+                        type: string
+                        description: Answer option
+                      is_correct:
+                        type: string
+                        example: "true"
+                        description: It can be 0, 1, T, F, true, false
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -2348,15 +2360,17 @@ paths:
                   type: integer
                   example: 1
                 answer_options:
-                  type: object
-                  properties:
-                    option: 
-                      type: string
-                      description: Answer option
-                    is_correct:
-                      type: string
-                      example: "true"
-                      description: It can be 0, 1, T, F, true, false
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      option: 
+                        type: string
+                        description: Answer option
+                      is_correct:
+                        type: string
+                        example: "true"
+                        description: It can be 0, 1, T, F, true, false
       responses:
         "200":
           description: Returns question details.

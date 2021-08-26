@@ -58,6 +58,7 @@ type (
 
 		AddQuestionOption(ctx context.Context, ao AnswerOption) (AnswerOption, error)
 		DeleteAnswerByID(ctx context.Context, id, questionID uuid.UUID) error
+		DeleteAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) error
 		CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error)
 		UpdateAnswer(ctx context.Context, ao AnswerOption) error
 
@@ -106,10 +107,11 @@ type (
 
 	// UpdateQuestionRequest struct
 	UpdateQuestionRequest struct {
-		ID          string `json:"id" validate:"required,uuid"`
-		ChallengeID string `json:"challenge_id" validate:"required,uuid"`
-		Question    string `json:"question" validate:"required,gt=0"`
-		Order       int32  `json:"order" validate:"required,gt=0"`
+		ID            string                `json:"id" validate:"required,uuid"`
+		ChallengeID   string                `json:"challenge_id" validate:"required,uuid"`
+		Question      string                `json:"question" validate:"required,gt=0"`
+		Order         int32                 `json:"order" validate:"required,gt=0"`
+		AnswerOptions []AnswerOptionRequest `json:"answer_options,omitempty"`
 	}
 
 	// AnswerOptionRequest struct
@@ -406,7 +408,7 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			return nil, err
 		}
 
-		if len(req.AnswerOptions) > 0 {
+		if len(req.AnswerOptions) == 4 {
 			for _, answ := range req.AnswerOptions {
 				isCorrect, err := strconv.ParseBool(answ.IsCorrect)
 				if err != nil {
@@ -527,6 +529,27 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			Order:       req.Order,
 		}); err != nil {
 			return nil, err
+		}
+
+		if len(req.AnswerOptions) == 4 {
+			if err := s.DeleteAnswersByQuestionID(ctx, id); err != nil {
+				return nil, err
+			}
+
+			for _, answ := range req.AnswerOptions {
+				isCorrect, err := strconv.ParseBool(answ.IsCorrect)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse bool from string %w", err)
+				}
+
+				if _, err := s.AddQuestionOption(ctx, AnswerOption{
+					QuestionID: id,
+					Option:     answ.Option,
+					IsCorrect:  isCorrect,
+				}); err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		return true, nil

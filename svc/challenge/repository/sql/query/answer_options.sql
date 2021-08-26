@@ -22,6 +22,9 @@ WHERE question_id = ANY(@question_ids::uuid[]);
 -- name: DeleteAnswerByID :exec
 DELETE FROM answer_options
 WHERE id = @id AND question_id = @question_id;
+-- name: DeleteAnswersByQuestionID :exec
+DELETE FROM answer_options
+WHERE question_id = @question_id;
 -- name: UpdateAnswer :exec
 UPDATE answer_options
 SET id = @id,
