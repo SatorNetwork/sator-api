@@ -102,7 +102,6 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		"file:image": []string{
 			"required",
 			"size:2097152",
-			"ext:png,jpeg",
 			"mime:image/png,image/jpeg",
 		},
 	}
