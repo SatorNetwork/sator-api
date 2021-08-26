@@ -72,7 +72,7 @@ type (
 		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
 		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
 		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
-		EpisodeID          string  `json:"episode_id"`
+		EpisodeID          string  `json:"episode_id,omitempty"`
 		Kind               int     `json:"kind"`
 		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
 	}
@@ -303,9 +303,12 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(req.EpisodeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get episode id: %w", err)
+		var episodeID uuid.UUID
+		if req.EpisodeID != "" {
+			episodeID, err = uuid.Parse(req.EpisodeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get episode id: %w", err)
+			}
 		}
 
 		resp, err := s.AddChallenge(ctx, Challenge{
@@ -361,9 +364,12 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(req.EpisodeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get episode id: %w", err)
+		var episodeID uuid.UUID
+		if req.EpisodeID != "" {
+			episodeID, err = uuid.Parse(req.EpisodeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get episode id: %w", err)
+			}
 		}
 
 		err = s.UpdateChallenge(ctx, Challenge{
