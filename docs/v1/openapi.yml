@@ -1829,6 +1829,14 @@ paths:
                   result:
                     type: boolean
                     example: true
+                  activated_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z"
+                    description: "RFC3339 timestamp when realm was activated"
+                  activated_before:
+                    type: string
+                    example: "2006-01-02T15:04:05Z"
+                    description: "RFC3339 timestamp when realm access ends"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
