@@ -623,6 +623,10 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challen
 		}
 	}
 
+	if len(qlist) == 1 {
+		return &qlist[0], nil
+	}
+
 	return &qlist[rand.Intn(len(qlist)-1)], nil
 }
 
