@@ -24,7 +24,7 @@ type (
 		chargeForUnlockFn    chargeForUnlockFunc
 	}
 
-	chargeForUnlockFunc func() error
+	chargeForUnlockFunc func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
 
 	// ServiceOption function
 	// interface to extend service via options
@@ -783,14 +783,18 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 // UnlockEpisode ...
 func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID, unlockOption string) error {
 	activateBefore := time.Now()
+	var amount float64
 
 	switch unlockOption {
 	case "unlock_opt_10_2h":
 		activateBefore.Add(time.Hour * 2)
+		amount = 10
 	case "unlock_opt_100_24h":
 		activateBefore.Add(time.Hour * 24)
+		amount = 100
 	case "unlock_opt_500_week":
 		activateBefore.Add(time.Hour * 24 * 7)
+		amount = 500
 	}
 
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
@@ -806,6 +810,12 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		},
 	}); err != nil {
 		return fmt.Errorf("could not store episode access data: %w", err)
+	}
+
+	if s.chargeForUnlockFn != nil && amount > 0 {
+		if err := s.chargeForUnlockFn(ctx, userID, amount, "unlock episode realm"); err != nil {
+			return fmt.Errorf("could not unlock episode realm: %w", err)
+		}
 	}
 
 	return nil

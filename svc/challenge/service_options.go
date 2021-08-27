@@ -17,3 +17,10 @@ func WithCustomActivatedPeriod(p time.Duration) ServiceOption {
 		s.activatedRealmPeriod = p
 	}
 }
+
+// WithChargeForUnlockFunc ...
+func WithChargeForUnlockFunc(fn chargeForUnlockFunc) ServiceOption {
+	return func(s *Service) {
+		s.chargeForUnlockFn = fn
+	}
+}
