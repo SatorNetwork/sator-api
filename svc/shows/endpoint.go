@@ -152,7 +152,7 @@ type (
 	// RateEpisodeRequest struct
 	RateEpisodeRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
-		Rating    int32  `json:"rating" validate:"required"`
+		Rating    int32  `json:"rating" validate:"required,gte=1,lte=10"`
 	}
 )
 
