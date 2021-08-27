@@ -852,15 +852,16 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - "title"
+                - "cover"
               properties:
                 title:
                   type: string
                   example: "title"
-                  required: true
                 cover:
                   type: string
                   example: "cover"
-                  required: true
                 has_new_episode:
                   type: boolean
                   example: true
@@ -877,6 +878,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - "title"
+                  - "cover"
                 properties:
                   id:
                     type: string
@@ -884,11 +888,9 @@ paths:
                   title:
                     type: string
                     example: "title"
-                    required: true
                   cover:
                     type: string
                     example: "cover"
-                    required: true
                   has_new_episode:
                     type: boolean
                     example: true
@@ -1129,6 +1131,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - "title"
               properties:
                 episode_number:
                   type: number
@@ -1139,7 +1143,6 @@ paths:
                 title:
                   type: string
                   example: "Peaky Blinders"
-                  required: true
                 description:
                   type: string
                   example: "description"
@@ -1162,6 +1165,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - "title"
                 properties:
                   id:
                     type: string
@@ -1184,7 +1189,6 @@ paths:
                   title:
                     type: string
                     example: "Peaky Blinders"
-                    required: true
                   description:
                     type: string
                     example: "description"
@@ -1261,10 +1265,10 @@ paths:
                   verification_challenge_id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-									rating:
-										type: number
-										example: 8.76
-										description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                  rating:
+                    type: number
+                    example: 8.76
+                    description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
