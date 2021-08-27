@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 
@@ -458,7 +459,7 @@ func (s *Service) DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UU
 // getAverageEpisodesRatingByID returns average episode rating.
 func (s *Service) getAverageEpisodesRatingByID(ctx context.Context, episodeID uuid.UUID) (float64, error) {
 	rating, err := s.sr.GetEpisodeRatingByID(ctx, episodeID)
-	if err != nil {
+	if err != nil && !db.IsNotFoundError(err) {
 		return 0, fmt.Errorf("could not get average episode rating by ID= %v: %w", episodeID, err)
 	}
 
