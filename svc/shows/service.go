@@ -50,6 +50,7 @@ type (
 		ReleaseDate             string    `json:"release_date"`
 		ChallengeID             uuid.UUID `json:"challenge_id"`
 		VerificationChallengeID uuid.UUID `json:"verification_challenge_id"`
+		Rating                  float64   `json:"rating"`
 	}
 
 	showsRepository interface {
@@ -73,6 +74,10 @@ type (
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.GetEpisodesByShowIDRow, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
+
+		// Episodes rating
+		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (float64, error)
+		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
 	}
 
 	// Challenges service client
@@ -220,11 +225,16 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUI
 		return nil, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
 	}
 
-	return castRowToEpisode(episode), nil
+	rating, err := s.getAverageEpisodesRatingByID(ctx, episodeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
+	}
+
+	return castRowToEpisode(episode, rating), nil
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure
-func castRowToEpisode(source repository.GetEpisodeByIDRow) Episode {
+func castRowToEpisode(source repository.GetEpisodeByIDRow, rating float64) Episode {
 	return Episode{
 		ID:                      source.ID,
 		ShowID:                  source.ShowID,
@@ -237,6 +247,7 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow) Episode {
 		ReleaseDate:             source.ReleaseDate.Time.String(),
 		ChallengeID:             source.ChallengeID,
 		VerificationChallengeID: source.VerificationChallengeID,
+		Rating:                  rating,
 	}
 }
 
@@ -439,6 +450,30 @@ func (s *Service) DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UU
 		ShowID: showID,
 	}); err != nil {
 		return fmt.Errorf("could not delete season with id=%s:%w", seasonID, err)
+	}
+
+	return nil
+}
+
+// getAverageEpisodesRatingByID returns average episode rating.
+func (s *Service) getAverageEpisodesRatingByID(ctx context.Context, episodeID uuid.UUID) (float64, error) {
+	rating, err := s.sr.GetEpisodeRatingByID(ctx, episodeID)
+	if err != nil {
+		return 0, fmt.Errorf("could not get average episode rating by ID= %v: %w", episodeID, err)
+	}
+
+	return rating, nil
+}
+
+// RateEpisode ...
+func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error {
+	err := s.sr.RateEpisode(ctx, repository.RateEpisodeParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+		Rating:    rating,
+	})
+	if err != nil {
+		return fmt.Errorf("could not rate episode with episodeID=%s: %w", episodeID, err)
 	}
 
 	return nil

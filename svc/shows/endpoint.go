@@ -30,6 +30,8 @@ type (
 		GetEpisodeByID      endpoint.Endpoint
 		GetEpisodesByShowID endpoint.Endpoint
 		UpdateEpisode       endpoint.Endpoint
+
+		RateEpisode endpoint.Endpoint
 	}
 
 	service interface {
@@ -49,6 +51,8 @@ type (
 		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
+
+		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
 	}
 
 	// PaginationRequest struct
@@ -144,6 +148,12 @@ type (
 		SeasonID string `json:"season_id" validate:"required,uuid"`
 		ShowID   string `json:"show_id" validate:"required,uuid"`
 	}
+
+	// RateEpisodeRequest struct
+	RateEpisodeRequest struct {
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		Rating    int32  `json:"rating" validate:"required"`
+	}
 )
 
 // Limit of items
@@ -183,6 +193,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetEpisodeByID:      MakeGetEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
+
+		RateEpisode: MakeRateEpisodeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -204,6 +216,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
+
+			e.RateEpisode = mdw(e.RateEpisode)
 		}
 	}
 
@@ -592,6 +606,33 @@ func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.
 		}
 
 		err = s.DeleteSeasonByID(ctx, showID, seasonID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeRateEpisodeEndpoint ...
+func MakeRateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(RateEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		err = s.RateEpisode(ctx, episodeID, uid, req.Rating)
 		if err != nil {
 			return nil, err
 		}
