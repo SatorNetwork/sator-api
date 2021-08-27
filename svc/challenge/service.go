@@ -21,7 +21,10 @@ type (
 		playUrlFn            playURLGenerator
 		attemptsNumber       int64
 		activatedRealmPeriod time.Duration
+		chargeForUnlockFn    chargeForUnlockFunc
 	}
+
+	chargeForUnlockFunc func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
 
 	// ServiceOption function
 	// interface to extend service via options
@@ -127,6 +130,12 @@ type (
 	QuizAnswerOption struct {
 		AnswerID   string `json:"answer_id"`
 		AnswerText string `json:"answer_text"`
+	}
+
+	EpisodeAccess struct {
+		Result          bool   `json:"result"`
+		ActivatedAt     string `json:"activated_at,omitempty"`
+		ActivatedBefore string `json:"activated_before,omitempty"`
 	}
 )
 
@@ -290,6 +299,10 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 			Time:  time.Now(),
 			Valid: true,
 		},
+		ActivatedBefore: sql.NullTime{
+			Time:  time.Now().Add(s.activatedRealmPeriod),
+			Valid: true,
+		},
 	}); err != nil {
 		return false, fmt.Errorf("could not store episode access data: %w", err)
 	}
@@ -299,18 +312,6 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 
 // VerifyUserAccessToEpisode ...
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
-	// hasAccess, err := s.cr.DoesUserHaveAccessToEpisode(ctx, repository.DoesUserHaveAccessToEpisodeParams{
-	// 	EpisodeID: eid,
-	// 	UserID:    uid,
-	// 	NotEarlierThan: sql.NullTime{
-	// 		Time:  time.Now().Add(-s.activatedRealmPeriod),
-	// 		Valid: true,
-	// 	},
-	// })
-	// if err != nil || !hasAccess {
-	// 	return false, nil
-	// }
-
 	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
 		EpisodeID: eid,
 		UserID:    uid,
@@ -322,25 +323,15 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 		return false, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
-	if !data.ActivatedAt.Valid {
+	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid {
 		return false, nil
 	}
 
-	if data.ActivatedAt.Time.Before(time.Now().Add(-s.activatedRealmPeriod)) {
-		err = s.cr.UpdateEpisodeAccessData(ctx, repository.UpdateEpisodeAccessDataParams{
-			ActivatedAt: sql.NullTime{},
-			EpisodeID:   eid,
-			UserID:      uid,
-		})
-		if err != nil {
-			log.Printf("could not nullify access to the realm: %v", err)
-			return false, nil
-		}
-
-		return false, fmt.Errorf("access to the realm is expired")
-	}
-
-	return true, nil
+	return EpisodeAccess{
+		Result:          data.ActivatedBefore.Time.After(time.Now()),
+		ActivatedAt:     data.ActivatedAt.Time.Format(time.RFC3339),
+		ActivatedBefore: data.ActivatedBefore.Time.Format(time.RFC3339),
+	}, nil
 }
 
 // GetChallengesByShowID ...
@@ -790,7 +781,22 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 }
 
 // UnlockEpisode ...
-func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID) error {
+func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID, unlockOption string) error {
+	activateBefore := time.Now()
+	var amount float64
+
+	switch unlockOption {
+	case "unlock_opt_10_2h":
+		activateBefore.Add(time.Hour * 2)
+		amount = 10
+	case "unlock_opt_100_24h":
+		activateBefore.Add(time.Hour * 24)
+		amount = 100
+	case "unlock_opt_500_week":
+		activateBefore.Add(time.Hour * 24 * 7)
+		amount = 500
+	}
+
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
 		EpisodeID: episodeID,
 		UserID:    userID,
@@ -798,8 +804,18 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 			Time:  time.Now(),
 			Valid: true,
 		},
+		ActivatedBefore: sql.NullTime{
+			Time:  activateBefore,
+			Valid: true,
+		},
 	}); err != nil {
 		return fmt.Errorf("could not store episode access data: %w", err)
+	}
+
+	if s.chargeForUnlockFn != nil && amount > 0 {
+		if err := s.chargeForUnlockFn(ctx, userID, amount, "unlock episode realm"); err != nil {
+			return fmt.Errorf("could not unlock episode realm: %w", err)
+		}
 	}
 
 	return nil

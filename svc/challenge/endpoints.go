@@ -61,7 +61,7 @@ type (
 		CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error)
 		UpdateAnswer(ctx context.Context, ao AnswerOption) error
 
-		UnlockEpisode(ctx context.Context, uid, episodeID uuid.UUID) error
+		UnlockEpisode(ctx context.Context, uid, episodeID uuid.UUID, unlockOption string) error
 	}
 
 	// AddChallengeRequest struct
@@ -132,6 +132,12 @@ type (
 	DeleteAnswerByIDRequest struct {
 		AnswerID   string `json:"answer_id"`
 		QuestionID string `json:"question_id"`
+	}
+
+	// UnlockEpisodeRequest ...
+	UnlockEpisodeRequest struct {
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		Option    string `json:"option" validate:"required"`
 	}
 )
 
@@ -656,12 +662,17 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(request.(string))
-		if err != nil {
-			return nil, fmt.Errorf("could not get answer id: %w", err)
+		req := request.(UnlockEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
 		}
 
-		if err := s.UnlockEpisode(ctx, uid, episodeID); err != nil {
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get episode id: %w", err)
+		}
+
+		if err := s.UnlockEpisode(ctx, uid, episodeID, req.Option); err != nil {
 			return false, err
 		}
 
