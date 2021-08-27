@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/svc/referrals/repository"
 
 	"github.com/google/uuid"
@@ -16,16 +17,19 @@ import (
 type (
 	// Service struct
 	Service struct {
-		rr referralsRepository
+		rr     referralsRepository
+		fb     *firebase.Interactor
+		config firebase.Config
 	}
 
 	ReferralCode struct {
-		ID         uuid.UUID `json:"id"`
-		Title      string    `json:"title"`
-		Code       string    `json:"code"`
-		IsPersonal bool      `json:"is_personal"`
-		UserID     uuid.UUID `json:"user_id"`
-		CreatedAt  time.Time `json:"created_at"`
+		ID           uuid.UUID `json:"id"`
+		Title        string    `json:"title"`
+		Code         string    `json:"code"`
+		ReferralLink string    `json:"referral_link"`
+		IsPersonal   bool      `json:"is_personal"`
+		UserID       uuid.UUID `json:"user_id"`
+		CreatedAt    time.Time `json:"created_at"`
 	}
 
 	Referral struct {
@@ -50,12 +54,15 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(rr referralsRepository) *Service {
+func NewService(rr referralsRepository, fb *firebase.Interactor, config firebase.Config) *Service {
 	if rr == nil {
 		log.Fatalln("referrals repository is not set")
 	}
+	if fb == nil {
+		log.Fatalln("firebase client is not set")
+	}
 
-	return &Service{rr: rr}
+	return &Service{rr: rr, fb: fb, config: config}
 }
 
 // GetMyReferralCode returns referral code if there is or generate new if not.
@@ -64,8 +71,32 @@ func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username
 	if err != nil {
 		return []ReferralCode{}, fmt.Errorf("could not get referral code data by user id: %w", err)
 	}
-	if len(referralCodeData) < 1 {
+	if len(referralCodeData) < 1 { // TODO: for test >0. RETURN < 1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		id := uuid.New()
+		link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{ // TODO: implement it for CRUD
+			DynamicLinkInfo: firebase.DynamicLinkInfo{
+				DomainUriPrefix: s.config.BaseFirebaseURL,
+				Link:            "https://sator.io/" + "referral/" + id.String(),
+				AndroidInfo: firebase.AndroidInfo{
+					AndroidPackageName: "com.satorio.app", // TODO: Get it from ENV.
+				},
+				IosInfo: firebase.IosInfo{
+					IosBundleId: "io.sator", // TODO: Get it from ENV.
+				},
+				//NavigationInfo: firebase.NavigationInfo{EnableForcedRedirect: true},
+			},
+			Suffix: firebase.Suffix{
+				Option: "UNGUESSABLE", // TODO: Get it from ENV.
+			},
+		})
+		if err != nil {
+			return []ReferralCode{}, fmt.Errorf("could not generate dynamic link for user = %v: %w", uid, err)
+		}
+
+		//var new firebasedynamiclinks.CreateShortDynamicLinkRequest
+		//firebasedynamiclinksService, err := firebasedynamiclinks.NewService(ctx, option.WithAPIKey("AIzaSyBQLL5_RiDMEA0U2EWz-U2c2YURin2Bi1w"))
+		//link := firebasedynamiclinksService.ShortLinks.Create()
+
 		data, err := s.rr.AddReferralCodeData(ctx, repository.AddReferralCodeDataParams{
 			ID: id,
 			Title: sql.NullString{
@@ -73,6 +104,10 @@ func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username
 				Valid:  len(username) > 0,
 			},
 			Code: id.String(),
+			ReferralLink: sql.NullString{
+				String: link.ShortLink,
+				Valid:  len(link.ShortLink) > 0,
+			},
 			IsPersonal: sql.NullBool{
 				Bool:  true,
 				Valid: true,
@@ -84,6 +119,8 @@ func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username
 		}
 		return castReferralCodeToReferralCodes(data), err
 	}
+	fmt.Println("START!!!!!!!!!44444444444444444!!!!!!!!!!!!!!!!!!")
+
 	return castToReferralCodesWithUsername(referralCodeData, username), nil
 }
 
@@ -97,12 +134,13 @@ func castToReferralCode(source repository.ReferralCode, username string) Referra
 	}
 
 	return ReferralCode{
-		ID:         source.ID,
-		Title:      source.Title.String,
-		Code:       source.Code,
-		IsPersonal: source.IsPersonal.Bool,
-		UserID:     source.UserID,
-		CreatedAt:  source.CreatedAt,
+		ID:           source.ID,
+		Title:        source.Title.String,
+		Code:         source.Code,
+		ReferralLink: source.ReferralLink.String,
+		IsPersonal:   source.IsPersonal.Bool,
+		UserID:       source.UserID,
+		CreatedAt:    source.CreatedAt,
 	}
 }
 
@@ -117,12 +155,13 @@ func castToReferralCodesWithUsername(source []repository.ReferralCode, username 
 			}
 		}
 		result = append(result, ReferralCode{
-			ID:         s.ID,
-			Title:      s.Title.String,
-			Code:       s.Code,
-			IsPersonal: s.IsPersonal.Bool,
-			UserID:     s.UserID,
-			CreatedAt:  s.CreatedAt,
+			ID:           s.ID,
+			Title:        s.Title.String,
+			Code:         s.Code,
+			ReferralLink: s.ReferralLink.String,
+			IsPersonal:   s.IsPersonal.Bool,
+			UserID:       s.UserID,
+			CreatedAt:    s.CreatedAt,
 		})
 	}
 
@@ -133,12 +172,13 @@ func castToReferralCodesWithUsername(source []repository.ReferralCode, username 
 func castReferralCodeToReferralCodes(source repository.ReferralCode) []ReferralCode {
 	result := make([]ReferralCode, 0, 1)
 	result = append(result, ReferralCode{
-		ID:         source.ID,
-		Title:      source.Title.String,
-		Code:       source.Code,
-		IsPersonal: source.IsPersonal.Bool,
-		UserID:     source.UserID,
-		CreatedAt:  source.CreatedAt,
+		ID:           source.ID,
+		Title:        source.Title.String,
+		Code:         source.Code,
+		ReferralLink: source.ReferralLink.String,
+		IsPersonal:   source.IsPersonal.Bool,
+		UserID:       source.UserID,
+		CreatedAt:    source.CreatedAt,
 	})
 
 	return result
@@ -154,6 +194,10 @@ func (s *Service) AddReferralCodeData(ctx context.Context, rc ReferralCode) (Ref
 			Valid:  len(rc.Title) > 0,
 		},
 		Code: rc.Code,
+		ReferralLink: sql.NullString{
+			String: rc.ReferralLink,
+			Valid:  len(rc.ReferralLink) > 0,
+		},
 		IsPersonal: sql.NullBool{
 			Bool:  rc.IsPersonal,
 			Valid: true,
@@ -211,6 +255,10 @@ func (s *Service) UpdateReferralCodeData(ctx context.Context, rc ReferralCode) e
 			Valid:  len(rc.Title) > 0,
 		},
 		Code: rc.Code,
+		ReferralLink: sql.NullString{
+			String: rc.ReferralLink,
+			Valid:  len(rc.ReferralLink) > 0,
+		},
 		IsPersonal: sql.NullBool{
 			Bool:  rc.IsPersonal,
 			Valid: true,
@@ -248,6 +296,7 @@ func castToListReferral(source []repository.Referral) []Referral {
 			CreatedAt:      s.CreatedAt,
 		})
 	}
+
 	return result
 }
 

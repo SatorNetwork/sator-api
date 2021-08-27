@@ -40,6 +40,8 @@ run-local: ## Run api via `go run`
     STORAGE_URL=https://sator-media-storage.nyc3.digitaloceanspaces.com \
     STORAGE_FORCE_PATH_STYLE=false \
     STORAGE_DISABLE_SSL=true \
+    BASE_FIREBASE_URL=https://satorio.page.link/ \
+    FB_WEB_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
 
 migrate: ## Run all migrations on server

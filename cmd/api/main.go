@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/firebase"
+
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
@@ -119,6 +121,9 @@ var (
 	fileStorageDisableSsl     = env.GetBool("STORAGE_DISABLE_SSL", true)
 	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
 
+	// firebase
+	baseFirebaseURL = env.MustString("BASE_FIREBASE_URL")
+	fbWebAPIKey     = env.MustString("FB_WEB_API_KEY")
 	// Episode Access
 	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
 	// period         = env.GetInt("PERIOD", 24)
@@ -275,13 +280,23 @@ func main() {
 	}
 
 	{
+		// firebase connection
+		var httpClient http.Client
+		var fbClient firebase.FBClient
+		fb := firebase.New(fbClient, httpClient, firebase.Config{
+			BaseFirebaseURL: baseFirebaseURL,
+			WebAPIKey:       fbWebAPIKey,
+		})
+
 		// Referrals service
 		referralRepository, err := referralsRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("referralRepo error: %v", err)
 		}
 		r.Mount("/ref", referrals.MakeHTTPHandler(
-			referrals.MakeEndpoints(referrals.NewService(referralRepository), jwtMdw),
+			referrals.MakeEndpoints(referrals.NewService(referralRepository, fb, firebase.Config{
+				BaseFirebaseURL: baseFirebaseURL,
+			}), jwtMdw),
 			logger,
 		))
 	}

@@ -12,27 +12,30 @@ import (
 
 const addReferralCodeData = `-- name: AddReferralCodeData :one
 INSERT INTO referral_codes (
-    id,
-    title,
-    code,
-    is_personal,
-    user_id
-)
+        id,
+        title,
+        code,
+        referral_link,
+        is_personal,
+        user_id
+    )
 VALUES (
-            $1,
-           $2,
-           $3,
-           $4,
-           $5
-       ) RETURNING id, title, code, is_personal, user_id, created_at
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6
+    ) RETURNING id, title, code, referral_link, is_personal, user_id, created_at
 `
 
 type AddReferralCodeDataParams struct {
-	ID         uuid.UUID      `json:"id"`
-	Title      sql.NullString `json:"title"`
-	Code       string         `json:"code"`
-	IsPersonal sql.NullBool   `json:"is_personal"`
-	UserID     uuid.UUID      `json:"user_id"`
+	ID           uuid.UUID      `json:"id"`
+	Title        sql.NullString `json:"title"`
+	Code         string         `json:"code"`
+	ReferralLink sql.NullString `json:"referral_link"`
+	IsPersonal   sql.NullBool   `json:"is_personal"`
+	UserID       uuid.UUID      `json:"user_id"`
 }
 
 func (q *Queries) AddReferralCodeData(ctx context.Context, arg AddReferralCodeDataParams) (ReferralCode, error) {
@@ -40,6 +43,7 @@ func (q *Queries) AddReferralCodeData(ctx context.Context, arg AddReferralCodeDa
 		arg.ID,
 		arg.Title,
 		arg.Code,
+		arg.ReferralLink,
 		arg.IsPersonal,
 		arg.UserID,
 	)
@@ -48,6 +52,7 @@ func (q *Queries) AddReferralCodeData(ctx context.Context, arg AddReferralCodeDa
 		&i.ID,
 		&i.Title,
 		&i.Code,
+		&i.ReferralLink,
 		&i.IsPersonal,
 		&i.UserID,
 		&i.CreatedAt,
@@ -66,7 +71,7 @@ func (q *Queries) DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) 
 }
 
 const getReferralCodeDataByUserID = `-- name: GetReferralCodeDataByUserID :many
-SELECT id, title, code, is_personal, user_id, created_at
+SELECT id, title, code, referral_link, is_personal, user_id, created_at
 FROM referral_codes
 WHERE user_id = $1
 `
@@ -84,6 +89,7 @@ func (q *Queries) GetReferralCodeDataByUserID(ctx context.Context, userID uuid.U
 			&i.ID,
 			&i.Title,
 			&i.Code,
+			&i.ReferralLink,
 			&i.IsPersonal,
 			&i.UserID,
 			&i.CreatedAt,
@@ -102,7 +108,7 @@ func (q *Queries) GetReferralCodeDataByUserID(ctx context.Context, userID uuid.U
 }
 
 const getReferralCodesDataList = `-- name: GetReferralCodesDataList :many
-SELECT id, title, code, is_personal, user_id, created_at
+SELECT id, title, code, referral_link, is_personal, user_id, created_at
 FROM referral_codes
 ORDER BY created_at DESC
 `
@@ -120,6 +126,7 @@ func (q *Queries) GetReferralCodesDataList(ctx context.Context) ([]ReferralCode,
 			&i.ID,
 			&i.Title,
 			&i.Code,
+			&i.ReferralLink,
 			&i.IsPersonal,
 			&i.UserID,
 			&i.CreatedAt,
@@ -141,23 +148,26 @@ const updateReferralCodeData = `-- name: UpdateReferralCodeData :exec
 UPDATE referral_codes
 SET title = $1,
     code = $2,
-    is_personal = $3,
-    user_id = $4
-WHERE id = $5
+    referral_link = $3,
+    is_personal = $4,
+    user_id = $5
+WHERE id = $6
 `
 
 type UpdateReferralCodeDataParams struct {
-	Title      sql.NullString `json:"title"`
-	Code       string         `json:"code"`
-	IsPersonal sql.NullBool   `json:"is_personal"`
-	UserID     uuid.UUID      `json:"user_id"`
-	ID         uuid.UUID      `json:"id"`
+	Title        sql.NullString `json:"title"`
+	Code         string         `json:"code"`
+	ReferralLink sql.NullString `json:"referral_link"`
+	IsPersonal   sql.NullBool   `json:"is_personal"`
+	UserID       uuid.UUID      `json:"user_id"`
+	ID           uuid.UUID      `json:"id"`
 }
 
 func (q *Queries) UpdateReferralCodeData(ctx context.Context, arg UpdateReferralCodeDataParams) error {
 	_, err := q.exec(ctx, q.updateReferralCodeDataStmt, updateReferralCodeData,
 		arg.Title,
 		arg.Code,
+		arg.ReferralLink,
 		arg.IsPersonal,
 		arg.UserID,
 		arg.ID,
