@@ -10,8 +10,8 @@ WITH avg_ratings AS (
 SELECT 
     episodes.*, 
     seasons.season_number as season_number,
-    avg_ratings.avg_rating as avg_rating,
-    avg_ratings.ratings as ratings
+    coalesce(avg_ratings.avg_rating, 0) as avg_rating,
+    coalesce(avg_ratings.ratings, 0) as ratings
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
