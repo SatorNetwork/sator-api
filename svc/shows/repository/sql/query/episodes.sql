@@ -14,7 +14,7 @@ SELECT
     avg_ratings.ratings as ratings
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
-JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
+LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
