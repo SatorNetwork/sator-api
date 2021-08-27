@@ -52,8 +52,3 @@ func (c *Client) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount f
 func (c *Client) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ wallet.Transactions, err error) {
 	return c.s.GetListTransactionsByWalletID(ctx, userID, walletID, limit, offset)
 }
-
-// WithdrawRewards ...
-func (c *Client) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
-	return c.s.WithdrawRewards(ctx, userID, amount)
-}
