@@ -24,6 +24,13 @@ type Episode struct {
 	VerificationChallengeID uuid.UUID      `json:"verification_challenge_id"`
 }
 
+type Rating struct {
+	EpisodeID uuid.UUID `json:"episode_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Rating    int32     `json:"rating"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Season struct {
 	ID           uuid.UUID `json:"id"`
 	ShowID       uuid.UUID `json:"show_id"`
