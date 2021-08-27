@@ -1261,6 +1261,10 @@ paths:
                   verification_challenge_id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  rating:
+                    type: number
+                    example: 8.76
+                    description: Average episode rating. To get percents: rating * 10 = 87.6% people like it.
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1385,6 +1389,7 @@ paths:
                 rating:
                   type: number
                   example: 5
+                  description: Episode rating from 1 to 10.
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
