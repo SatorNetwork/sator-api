@@ -1,15 +1,32 @@
 -- name: GetEpisodesByShowID :many
-SELECT episodes.*, seasons.season_number as season_number
+WITH avg_ratings AS (
+    SELECT 
+        episode_id,
+        AVG(rating)::FLOAT AS avg_rating,
+        COUNT(episode_id) AS ratings
+    FROM ratings
+    GROUP BY episode_id
+)
+SELECT 
+    episodes.*, 
+    seasons.season_number as season_number,
+    avg_ratings.avg_rating as avg_rating,
+    avg_ratings.ratings as ratings
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
+JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
+
 -- name: GetEpisodeByID :one
-SELECT episodes.*, seasons.season_number as season_number
+SELECT 
+    episodes.*, 
+    seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = $1;
+
 -- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,
@@ -33,6 +50,7 @@ VALUES (
            @challenge_id,
            @verification_challenge_id
 ) RETURNING *;
+
 -- name: UpdateEpisode :exec
 UPDATE episodes
 SET episode_number = @episode_number,
@@ -45,6 +63,7 @@ SET episode_number = @episode_number,
     description = @description,
     release_date = @release_date
 WHERE id = @id;
+
 -- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
 WHERE id = @id;

@@ -1,7 +1,11 @@
 -- name: GetEpisodeRatingByID :one
-SELECT AVG(rating)::FLOAT as avg_rating
+SELECT 
+    AVG(rating)::FLOAT AS avg_rating,
+    COUNT(episode_id) AS ratings
 FROM ratings
-WHERE episode_id = $1 group by episode_id;
+WHERE episode_id = $1 
+GROUP BY episode_id;
+
 -- name: RateEpisode :exec
 INSERT INTO ratings (
     episode_id,
@@ -11,4 +15,4 @@ INSERT INTO ratings (
     @episode_id,
     @user_id,
     @rating
-    );
+);

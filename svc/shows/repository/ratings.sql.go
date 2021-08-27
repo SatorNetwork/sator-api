@@ -10,16 +10,24 @@ import (
 )
 
 const getEpisodeRatingByID = `-- name: GetEpisodeRatingByID :one
-SELECT AVG(rating)::FLOAT as avg_rating
+SELECT 
+    AVG(rating)::FLOAT AS avg_rating,
+    COUNT(episode_id) AS ratings
 FROM ratings
-WHERE episode_id = $1 group by episode_id
+WHERE episode_id = $1 
+GROUP BY episode_id
 `
 
-func (q *Queries) GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (float64, error) {
+type GetEpisodeRatingByIDRow struct {
+	AvgRating float64 `json:"avg_rating"`
+	Ratings   int64   `json:"ratings"`
+}
+
+func (q *Queries) GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (GetEpisodeRatingByIDRow, error) {
 	row := q.queryRow(ctx, q.getEpisodeRatingByIDStmt, getEpisodeRatingByID, episodeID)
-	var avg_rating float64
-	err := row.Scan(&avg_rating)
-	return avg_rating, err
+	var i GetEpisodeRatingByIDRow
+	err := row.Scan(&i.AvgRating, &i.Ratings)
+	return i, err
 }
 
 const rateEpisode = `-- name: RateEpisode :exec
@@ -31,7 +39,7 @@ INSERT INTO ratings (
     $1,
     $2,
     $3
-    )
+)
 `
 
 type RateEpisodeParams struct {

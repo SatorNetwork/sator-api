@@ -89,7 +89,9 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getEpisodeByID = `-- name: GetEpisodeByID :one
-SELECT episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, seasons.season_number as season_number
+SELECT 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, 
+    seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = $1
@@ -133,9 +135,22 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (GetEpisodeB
 }
 
 const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
-SELECT episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, seasons.season_number as season_number
+WITH avg_ratings AS (
+    SELECT 
+        episode_id,
+        AVG(rating)::FLOAT AS avg_rating,
+        COUNT(episode_id) AS ratings
+    FROM ratings
+    GROUP BY episode_id
+)
+SELECT 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, 
+    seasons.season_number as season_number,
+    avg_ratings.avg_rating as avg_rating,
+    avg_ratings.ratings as ratings
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
+JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3
@@ -161,6 +176,8 @@ type GetEpisodesByShowIDRow struct {
 	ChallengeID             uuid.UUID      `json:"challenge_id"`
 	VerificationChallengeID uuid.UUID      `json:"verification_challenge_id"`
 	SeasonNumber            int32          `json:"season_number"`
+	AvgRating               float64        `json:"avg_rating"`
+	Ratings                 int64          `json:"ratings"`
 }
 
 func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShowIDParams) ([]GetEpisodesByShowIDRow, error) {
@@ -186,6 +203,8 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 			&i.ChallengeID,
 			&i.VerificationChallengeID,
 			&i.SeasonNumber,
+			&i.AvgRating,
+			&i.Ratings,
 		); err != nil {
 			return nil, err
 		}
