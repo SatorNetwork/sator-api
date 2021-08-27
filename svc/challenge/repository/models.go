@@ -43,9 +43,10 @@ type Challenge struct {
 }
 
 type EpisodeAccess struct {
-	EpisodeID   uuid.UUID    `json:"episode_id"`
-	UserID      uuid.UUID    `json:"user_id"`
-	ActivatedAt sql.NullTime `json:"activated_at"`
+	EpisodeID       uuid.UUID    `json:"episode_id"`
+	UserID          uuid.UUID    `json:"user_id"`
+	ActivatedAt     sql.NullTime `json:"activated_at"`
+	ActivatedBefore sql.NullTime `json:"activated_before"`
 }
 
 type PassedChallengesDatum struct {

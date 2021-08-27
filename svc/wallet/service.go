@@ -631,6 +631,57 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 	return err
 }
 
+func (s *Service) PayForService(ctx context.Context, userID uuid.UUID, amount float64, serviceInfo string) error {
+
+	err = json.Unmarshal(decoded, &toDecode)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return fmt.Errorf("could not get solana account: %w", err)
+	}
+
+	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get fee payer account: %w", err)
+	}
+	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get issuer account: %w", err)
+	}
+	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get asset account: %w", err)
+	}
+
+	for i := 0; i < 5; i++ {
+		if tx, err := s.sc.SendAssets(
+			ctx,
+			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
+			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
+			s.sc.AccountFromPrivatekey(asset.PrivateKey),
+			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
+			toDecode.RecipientAddr,
+			toDecode.Amount,
+		); err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 10)
+		} else {
+			log.Printf("successful transaction: %s", tx)
+			break
+		}
+	}
+
+	return err
+}
+
 // GetStake Mocked method for stake
 func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error) {
 	return Stake{
