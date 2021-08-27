@@ -8,6 +8,6 @@ CREATE TABLE IF NOT EXISTS attempts (
     valid BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW()
 );
-CREATE INDEX attempts_user_episode_question ON episode_access USING BTREE (user_id,episode_id,question_id);
+CREATE INDEX attempts_user_episode_question ON attempts USING BTREE (user_id,episode_id,question_id);
 -- +migrate Down
 DROP TABLE IF EXISTS attempts;
