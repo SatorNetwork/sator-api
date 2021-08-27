@@ -374,7 +374,9 @@ func decodeUnlockEpisodeRequest(_ context.Context, r *http.Request) (interface{}
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
 
-	return episodeID, nil
+	req.EpisodeID = episodeID
+
+	return req, nil
 }
 
 func encodeEpisodeAccessResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
