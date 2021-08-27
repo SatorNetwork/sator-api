@@ -1106,6 +1106,14 @@ paths:
                     release_date:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
+                    rating:
+                      type: number
+                      example: 8.76
+                      description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                    ratings_count:
+                      type: number
+                      example: 123
+                      description: "How many times episode was rated"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1269,6 +1277,10 @@ paths:
                     type: number
                     example: 8.76
                     description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                  ratings_count:
+                    type: number
+                    example: 123
+                    description: "How many times episode was rated"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
