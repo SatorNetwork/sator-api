@@ -45,18 +45,20 @@ type (
 
 	// AddReferralCodeRequest struct
 	AddReferralCodeRequest struct {
-		Title      string `json:"title,omitempty" validate:"required,gt=0"`
-		Code       string `json:"code,omitempty" validate:"required,gt=0"`
-		IsPersonal bool   `json:"is_personal,omitempty"`
+		Title        string `json:"title,omitempty" validate:"required,gt=0"`
+		Code         string `json:"code,omitempty" validate:"required,gt=0"`
+		ReferralLink string `json:"referral_link"`
+		IsPersonal   bool   `json:"is_personal,omitempty"`
 	}
 
 	// UpdateReferralCodeRequest struct
 	UpdateReferralCodeRequest struct {
-		ID         string `json:"id,omitempty" validate:"required,uuid"`
-		Title      string `json:"title,omitempty" validate:"required"`
-		Code       string `json:"code,omitempty" validate:"required"`
-		IsPersonal bool   `json:"is_personal,omitempty" validate:"required"`
-		UserID     string `json:"user_id"`
+		ID           string `json:"id,omitempty" validate:"required,uuid"`
+		Title        string `json:"title,omitempty" validate:"required"`
+		Code         string `json:"code,omitempty" validate:"required"`
+		ReferralLink string `json:"referral_link"`
+		IsPersonal   bool   `json:"is_personal,omitempty" validate:"required"`
+		UserID       string `json:"user_id"`
 	}
 )
 
@@ -153,11 +155,12 @@ func MakeUpdateReferralCodeDataEndpoint(s service, v validator.ValidateFunc) end
 		}
 
 		err = s.UpdateReferralCodeData(ctx, ReferralCode{
-			ID:         id,
-			Title:      req.Title,
-			Code:       req.Code,
-			IsPersonal: req.IsPersonal,
-			UserID:     uid,
+			ID:           id,
+			Title:        req.Title,
+			Code:         req.Code,
+			ReferralLink: req.ReferralLink,
+			IsPersonal:   req.IsPersonal,
+			UserID:       uid,
 		})
 		if err != nil {
 			return nil, err

@@ -1,18 +1,20 @@
 -- name: AddReferralCodeData :one
 INSERT INTO referral_codes (
-    id,
-    title,
-    code,
-    is_personal,
-    user_id
-)
+        id,
+        title,
+        code,
+        referral_link,
+        is_personal,
+        user_id
+    )
 VALUES (
-            @id,
-           @title,
-           @code,
-           @is_personal,
-           @user_id
-       ) RETURNING *;
+        @id,
+        @title,
+        @code,
+        @referral_link,
+        @is_personal,
+        @user_id
+    ) RETURNING *;
 -- name: GetReferralCodeDataByUserID :many
 SELECT *
 FROM referral_codes
@@ -25,6 +27,7 @@ ORDER BY created_at DESC;
 UPDATE referral_codes
 SET title = @title,
     code = @code,
+    referral_link = @referral_link,
     is_personal = @is_personal,
     user_id = @user_id
 WHERE id = @id;
