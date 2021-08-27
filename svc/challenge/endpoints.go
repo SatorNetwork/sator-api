@@ -676,6 +676,11 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return false, err
 		}
 
-		return true, nil
+		resp, err := s.VerifyUserAccessToEpisode(ctx, uid, episodeID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

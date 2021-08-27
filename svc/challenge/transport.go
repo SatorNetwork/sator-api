@@ -102,7 +102,7 @@ func MakeHTTPHandlerChallenges(e Endpoints, log logger) http.Handler {
 	r.Post("/unlock/{episode_id}", httptransport.NewServer(
 		e.UnlockEpisode,
 		decodeUnlockEpisodeRequest,
-		httpencoder.EncodeResponse,
+		encodeEpisodeAccessResponse,
 		options...,
 	).ServeHTTP)
 
