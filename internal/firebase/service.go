@@ -106,42 +106,9 @@ func (i *Interactor) GenerateDynamicLink(ctx context.Context, request DynamicLin
 		return DynamicLinkResponse{}, err
 	}
 
-	qwe, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("qwe//////////////////////")
-	fmt.Println(string(qwe))
-
-	defer func() {
-		err = errs.Combine(err, resp.Body.Close())
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("GenerateDynamicLink ERROR /////////////") // TODO:REMOVE IT!!!
-		fmt.Println(resp.StatusCode)                           // TODO:REMOVE IT!!!
-		return DynamicLinkResponse{}, err
-	}
-
-	var dynamicLinkResponse DynamicLinkResponse
-	/*	if err = json.NewDecoder(resp.Body).Decode(&dynamicLinkResponse); err != nil {
-		return DynamicLinkResponse{}, err
-	}*/
-
-	return dynamicLinkResponse, nil
-}
-
-// GenerateDynamicLink used to create firebase dynamic link.
-func (i *Interactor) GenerateDynamicLink2(ctx context.Context, request DynamicLinkRequest) (DynamicLinkResponse, error) {
-	var jsonStr = []byte(`{"longDynamicLink": "https://satorio.page.link/?link=https://www.sator.io/valeriiTEST/&apn=com.satorio.app&ibi=io.sator"}`)
-	req, err := http.NewRequest("POST", "https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key="+i.config.WebAPIKey, bytes.NewBuffer(jsonStr))
-
-	if err != nil {
-		return DynamicLinkResponse{}, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := i.http.Do(req.WithContext(ctx))
-	if err != nil {
-		return DynamicLinkResponse{}, err
-	}
+	fmt.Println("qwe//////////////////////") // TODO:REMOVE IT!!!
+	qwe, _ := ioutil.ReadAll(resp.Body)      // TODO:REMOVE IT!!!
+	fmt.Println(string(qwe))                 // TODO:REMOVE IT!!!
 
 	defer func() {
 		err = errs.Combine(err, resp.Body.Close())
@@ -155,6 +122,5 @@ func (i *Interactor) GenerateDynamicLink2(ctx context.Context, request DynamicLi
 	if err = json.NewDecoder(resp.Body).Decode(&dynamicLinkResponse); err != nil {
 		return DynamicLinkResponse{}, err
 	}
-
 	return dynamicLinkResponse, nil
 }
