@@ -16,11 +16,11 @@ VALUES ($1, $2, $3, $4, $5) RETURNING user_id, episode_id, question_id, answer_i
 `
 
 type AddAttemptParams struct {
-	UserID     uuid.UUID    `json:"user_id"`
-	EpisodeID  uuid.UUID    `json:"episode_id"`
-	QuestionID uuid.UUID    `json:"question_id"`
-	AnswerID   uuid.UUID    `json:"answer_id"`
-	Valid      sql.NullBool `json:"valid"`
+	UserID     uuid.UUID     `json:"user_id"`
+	EpisodeID  uuid.UUID     `json:"episode_id"`
+	QuestionID uuid.UUID     `json:"question_id"`
+	AnswerID   uuid.NullUUID `json:"answer_id"`
+	Valid      sql.NullBool  `json:"valid"`
 }
 
 func (q *Queries) AddAttempt(ctx context.Context, arg AddAttemptParams) (Attempt, error) {
@@ -124,10 +124,10 @@ WHERE user_id = $3 AND question_id = $4
 `
 
 type UpdateAttemptParams struct {
-	AnswerID   uuid.UUID    `json:"answer_id"`
-	Valid      sql.NullBool `json:"valid"`
-	UserID     uuid.UUID    `json:"user_id"`
-	QuestionID uuid.UUID    `json:"question_id"`
+	AnswerID   uuid.NullUUID `json:"answer_id"`
+	Valid      sql.NullBool  `json:"valid"`
+	UserID     uuid.UUID     `json:"user_id"`
+	QuestionID uuid.UUID     `json:"question_id"`
 }
 
 func (q *Queries) UpdateAttempt(ctx context.Context, arg UpdateAttemptParams) error {

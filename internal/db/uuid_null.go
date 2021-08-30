@@ -26,7 +26,10 @@ func (u UUID) Interface() interface{} {
 
 // NewUUID returns a new, properly instantiated
 // UUID object.
-func NewUUID(u uuid.UUID) UUID {
+func NewUUID(u uuid.UUID, force bool) UUID {
+	if u == uuid.Nil && !force {
+		return UUID{Valid: false}
+	}
 	return UUID{UUID: u, Valid: true}
 }
 

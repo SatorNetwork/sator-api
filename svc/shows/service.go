@@ -195,10 +195,10 @@ func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, lim
 
 	episodesPerSeasons := make(map[string][]Episode)
 	for _, e := range episodes {
-		if _, ok := episodesPerSeasons[e.SeasonID.String()]; ok {
-			episodesPerSeasons[e.SeasonID.String()] = append(episodesPerSeasons[e.SeasonID.String()], castRowsToEpisode(e))
+		if _, ok := episodesPerSeasons[e.SeasonID.UUID.String()]; ok {
+			episodesPerSeasons[e.SeasonID.UUID.String()] = append(episodesPerSeasons[e.SeasonID.UUID.String()], castRowsToEpisode(e))
 		} else {
-			episodesPerSeasons[e.SeasonID.String()] = []Episode{castRowsToEpisode(e)}
+			episodesPerSeasons[e.SeasonID.UUID.String()] = []Episode{castRowsToEpisode(e)}
 		}
 	}
 
@@ -241,14 +241,14 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating float64, ratin
 		ID:                      source.ID,
 		ShowID:                  source.ShowID,
 		EpisodeNumber:           source.EpisodeNumber,
-		SeasonID:                source.SeasonID,
+		SeasonID:                source.SeasonID.UUID,
 		SeasonNumber:            source.SeasonNumber,
 		Cover:                   source.Cover.String,
 		Title:                   source.Title,
 		Description:             source.Description.String,
 		ReleaseDate:             source.ReleaseDate.Time.String(),
-		ChallengeID:             source.ChallengeID,
-		VerificationChallengeID: source.VerificationChallengeID,
+		ChallengeID:             source.ChallengeID.UUID,
+		VerificationChallengeID: source.VerificationChallengeID.UUID,
 		Rating:                  rating,
 		RatingsCount:            ratingsCount,
 	}
@@ -260,14 +260,14 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow) Episode {
 		ID:                      source.ID,
 		ShowID:                  source.ShowID,
 		EpisodeNumber:           source.EpisodeNumber,
-		SeasonID:                source.SeasonID,
+		SeasonID:                source.SeasonID.UUID,
 		SeasonNumber:            source.SeasonNumber,
 		Cover:                   source.Cover.String,
 		Title:                   source.Title,
 		Description:             source.Description.String,
 		ReleaseDate:             source.ReleaseDate.Time.String(),
-		ChallengeID:             source.ChallengeID,
-		VerificationChallengeID: source.VerificationChallengeID,
+		ChallengeID:             source.ChallengeID.UUID,
+		VerificationChallengeID: source.VerificationChallengeID.UUID,
 		Rating:                  source.AvgRating,
 		RatingsCount:            source.Ratings,
 	}
@@ -279,14 +279,14 @@ func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
 		ID:                      source.ID,
 		ShowID:                  source.ShowID,
 		EpisodeNumber:           source.EpisodeNumber,
-		SeasonID:                source.SeasonID,
+		SeasonID:                source.SeasonID.UUID,
 		SeasonNumber:            seasonNumber,
 		Cover:                   source.Cover.String,
 		Title:                   source.Title,
 		Description:             source.Description.String,
 		ReleaseDate:             source.ReleaseDate.Time.String(),
-		ChallengeID:             source.ChallengeID,
-		VerificationChallengeID: source.VerificationChallengeID,
+		ChallengeID:             source.ChallengeID.UUID,
+		VerificationChallengeID: source.VerificationChallengeID.UUID,
 	}
 }
 
@@ -352,7 +352,7 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 
 	episode, err := s.sr.AddEpisode(ctx, repository.AddEpisodeParams{
 		ShowID:        ep.ShowID,
-		SeasonID:      ep.SeasonID,
+		SeasonID:      uuid.NullUUID{UUID: ep.SeasonID, Valid: ep.SeasonID != uuid.Nil},
 		EpisodeNumber: ep.EpisodeNumber,
 		Cover: sql.NullString{
 			String: ep.Cover,
@@ -367,8 +367,8 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 			Time:  rDate,
 			Valid: true,
 		},
-		ChallengeID:             ep.ChallengeID,
-		VerificationChallengeID: ep.VerificationChallengeID,
+		ChallengeID:             uuid.NullUUID{UUID: ep.ChallengeID, Valid: ep.ChallengeID != uuid.Nil},
+		VerificationChallengeID: uuid.NullUUID{UUID: ep.VerificationChallengeID, Valid: ep.VerificationChallengeID != uuid.Nil},
 	})
 	if err != nil {
 		return Episode{}, fmt.Errorf("could not add episode #%d for show_id=%s: %w", ep.EpisodeNumber, ep.ShowID.String(), err)
@@ -392,7 +392,7 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 	if err = s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
 		ID:            ep.ID,
 		ShowID:        ep.ShowID,
-		SeasonID:      ep.SeasonID,
+		SeasonID:      uuid.NullUUID{UUID: ep.SeasonID, Valid: ep.SeasonID != uuid.Nil},
 		EpisodeNumber: ep.EpisodeNumber,
 		Cover: sql.NullString{
 			String: ep.Cover,
@@ -407,8 +407,8 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 			Time:  rDate,
 			Valid: true,
 		},
-		ChallengeID:             ep.ChallengeID,
-		VerificationChallengeID: ep.VerificationChallengeID,
+		ChallengeID:             uuid.NullUUID{UUID: ep.ChallengeID, Valid: ep.ChallengeID != uuid.Nil},
+		VerificationChallengeID: uuid.NullUUID{UUID: ep.VerificationChallengeID, Valid: ep.VerificationChallengeID != uuid.Nil},
 	}); err != nil {
 		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
 	}

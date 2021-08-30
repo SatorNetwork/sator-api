@@ -38,14 +38,14 @@ VALUES (
 
 type AddEpisodeParams struct {
 	ShowID                  uuid.UUID      `json:"show_id"`
-	SeasonID                uuid.UUID      `json:"season_id"`
+	SeasonID                uuid.NullUUID  `json:"season_id"`
 	EpisodeNumber           int32          `json:"episode_number"`
 	Cover                   sql.NullString `json:"cover"`
 	Title                   string         `json:"title"`
 	Description             sql.NullString `json:"description"`
 	ReleaseDate             sql.NullTime   `json:"release_date"`
-	ChallengeID             uuid.UUID      `json:"challenge_id"`
-	VerificationChallengeID uuid.UUID      `json:"verification_challenge_id"`
+	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 }
 
 func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) (Episode, error) {
@@ -100,7 +100,7 @@ WHERE episodes.id = $1
 type GetEpisodeByIDRow struct {
 	ID                      uuid.UUID      `json:"id"`
 	ShowID                  uuid.UUID      `json:"show_id"`
-	SeasonID                uuid.UUID      `json:"season_id"`
+	SeasonID                uuid.NullUUID  `json:"season_id"`
 	EpisodeNumber           int32          `json:"episode_number"`
 	Cover                   sql.NullString `json:"cover"`
 	Title                   string         `json:"title"`
@@ -108,8 +108,8 @@ type GetEpisodeByIDRow struct {
 	ReleaseDate             sql.NullTime   `json:"release_date"`
 	UpdatedAt               sql.NullTime   `json:"updated_at"`
 	CreatedAt               time.Time      `json:"created_at"`
-	ChallengeID             uuid.UUID      `json:"challenge_id"`
-	VerificationChallengeID uuid.UUID      `json:"verification_challenge_id"`
+	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	SeasonNumber            int32          `json:"season_number"`
 }
 
@@ -165,7 +165,7 @@ type GetEpisodesByShowIDParams struct {
 type GetEpisodesByShowIDRow struct {
 	ID                      uuid.UUID      `json:"id"`
 	ShowID                  uuid.UUID      `json:"show_id"`
-	SeasonID                uuid.UUID      `json:"season_id"`
+	SeasonID                uuid.NullUUID  `json:"season_id"`
 	EpisodeNumber           int32          `json:"episode_number"`
 	Cover                   sql.NullString `json:"cover"`
 	Title                   string         `json:"title"`
@@ -173,8 +173,8 @@ type GetEpisodesByShowIDRow struct {
 	ReleaseDate             sql.NullTime   `json:"release_date"`
 	UpdatedAt               sql.NullTime   `json:"updated_at"`
 	CreatedAt               time.Time      `json:"created_at"`
-	ChallengeID             uuid.UUID      `json:"challenge_id"`
-	VerificationChallengeID uuid.UUID      `json:"verification_challenge_id"`
+	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	SeasonNumber            int32          `json:"season_number"`
 	AvgRating               float64        `json:"avg_rating"`
 	Ratings                 int64          `json:"ratings"`
@@ -235,10 +235,10 @@ WHERE id = $10
 
 type UpdateEpisodeParams struct {
 	EpisodeNumber           int32          `json:"episode_number"`
-	SeasonID                uuid.UUID      `json:"season_id"`
+	SeasonID                uuid.NullUUID  `json:"season_id"`
 	ShowID                  uuid.UUID      `json:"show_id"`
-	ChallengeID             uuid.UUID      `json:"challenge_id"`
-	VerificationChallengeID uuid.UUID      `json:"verification_challenge_id"`
+	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	Cover                   sql.NullString `json:"cover"`
 	Title                   string         `json:"title"`
 	Description             sql.NullString `json:"description"`
