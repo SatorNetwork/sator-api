@@ -793,13 +793,13 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 
 	switch unlockOption {
 	case "unlock_opt_10_2h":
-		activateBefore.Add(time.Hour * 2)
+		activateBefore = time.Now().Add(time.Hour * 2)
 		amount = 10
 	case "unlock_opt_100_24h":
-		activateBefore.Add(time.Hour * 24)
+		activateBefore = time.Now().Add(time.Hour * 24)
 		amount = 100
 	case "unlock_opt_500_week":
-		activateBefore.Add(time.Hour * 24 * 7)
+		activateBefore = time.Now().Add(time.Hour * 24 * 7)
 		amount = 500
 	}
 
