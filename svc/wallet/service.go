@@ -477,7 +477,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 		s.sc.AccountFromPrivatekey(asset.PrivateKey),
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
-		1000000,
+		500000000,
 	); err != nil {
 		return err
 	} else {
