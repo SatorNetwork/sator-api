@@ -324,12 +324,6 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 	}
 
 	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid || data.ActivatedBefore.Time.Before(time.Now()) {
-		log.Printf("data: %+v", data)
-		log.Printf(
-			"data.ActivatedBefore.Time.Before(time.Now()): %s before %s: %v",
-			data.ActivatedBefore.Time, time.Now(),
-			data.ActivatedBefore.Time.Before(time.Now()),
-		)
 		return false, nil
 	}
 
@@ -819,6 +813,7 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 	}
 
 	log.Printf("activateBefore 2: %s", activateBefore.String())
+	log.Printf("s.chargeForUnlockFn != nil && amount > 0: %T && %T", s.chargeForUnlockFn != nil, amount > 0)
 
 	if s.chargeForUnlockFn != nil && amount > 0 {
 		if err := s.chargeForUnlockFn(
