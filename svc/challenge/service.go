@@ -791,6 +791,13 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 	activateBefore := time.Now()
 	var amount float64
 
+	if data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+	}); err == nil && data.ActivatedBefore.Valid && data.ActivatedBefore.Time.After(time.Now()) {
+		activateBefore = data.ActivatedBefore.Time
+	}
+
 	switch unlockOption {
 	case "unlock_opt_10_2h":
 		activateBefore = time.Now().Add(time.Hour * 2)
