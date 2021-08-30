@@ -471,17 +471,24 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 
 	time.Sleep(time.Second * 60)
 
-	if tx, err := s.sc.IssueAsset(
-		ctx,
-		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
-		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
-		s.sc.AccountFromPrivatekey(asset.PrivateKey),
-		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
-		500000000,
-	); err != nil {
-		return err
-	} else {
+	for i := 0; i < 5; i++ {
+		tx, err := s.sc.IssueAsset(
+			ctx,
+			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
+			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
+			s.sc.AccountFromPrivatekey(asset.PrivateKey),
+			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
+			500000000,
+		)
+		if err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 10)
+			log.Printf("attempt #%d; trying one more time", i)
+			continue
+		}
+
 		log.Printf("issue asset (%s): %s", issuer.PublicKey.ToBase58(), tx)
+		break
 	}
 
 	return nil
