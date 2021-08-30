@@ -786,6 +786,8 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 
 // UnlockEpisode ...
 func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID, unlockOption string) error {
+	log.Printf("UnlockEpisode: user_id=%s, episode_id=%s, unlock_option=%s", userID, episodeID, unlockOption)
+
 	activateBefore := time.Now()
 	var amount float64
 
@@ -801,6 +803,15 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		amount = 500
 	}
 
+	if s.chargeForUnlockFn != nil && amount > 0 {
+		if err := s.chargeForUnlockFn(
+			ctx, userID, amount,
+			fmt.Sprintf("unlock episode realm: %s", episodeID.String()),
+		); err != nil {
+			return fmt.Errorf("could not unlock episode realm: %w", err)
+		}
+	}
+
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
 		EpisodeID: episodeID,
 		UserID:    userID,
@@ -814,12 +825,6 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		},
 	}); err != nil {
 		return fmt.Errorf("could not store episode access data: %w", err)
-	}
-
-	if s.chargeForUnlockFn != nil && amount > 0 {
-		if err := s.chargeForUnlockFn(ctx, userID, amount, "unlock episode realm"); err != nil {
-			return fmt.Errorf("could not unlock episode realm: %w", err)
-		}
 	}
 
 	return nil
