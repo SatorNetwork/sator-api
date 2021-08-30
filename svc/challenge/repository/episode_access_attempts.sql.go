@@ -120,7 +120,7 @@ func (q *Queries) GetEpisodeIDByQuestionID(ctx context.Context, arg GetEpisodeID
 const updateAttempt = `-- name: UpdateAttempt :exec
 UPDATE attempts
 SET answer_id = $1, valid = $2
-WHERE user_id = $3 AND question_id = $4 AND answer_id IS NULL
+WHERE user_id = $3 AND question_id = $4
 `
 
 type UpdateAttemptParams struct {
