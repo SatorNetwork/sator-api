@@ -71,31 +71,27 @@ func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username
 	if err != nil {
 		return []ReferralCode{}, fmt.Errorf("could not get referral code data by user id: %w", err)
 	}
-	if len(referralCodeData) < 1 { // TODO: for test >0. RETURN < 1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	if len(referralCodeData) > 0 { // TODO: for test >0. RETURN < 1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		id := uuid.New()
 		link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{ // TODO: implement it for CRUD
 			DynamicLinkInfo: firebase.DynamicLinkInfo{
 				DomainUriPrefix: s.config.BaseFirebaseURL,
-				Link:            "https://sator.io/" + "referral/" + id.String(),
+				Link:            s.config.MainSiteLink + "referral/" + id.String(),
 				AndroidInfo: firebase.AndroidInfo{
-					AndroidPackageName: "com.satorio.app", // TODO: Get it from ENV.
+					AndroidPackageName: s.config.AndroidPackageName,
 				},
 				IosInfo: firebase.IosInfo{
-					IosBundleId: "io.sator", // TODO: Get it from ENV.
+					IosBundleId: s.config.IosBundleId,
 				},
 				//NavigationInfo: firebase.NavigationInfo{EnableForcedRedirect: true},
 			},
 			Suffix: firebase.Suffix{
-				Option: "UNGUESSABLE", // TODO: Get it from ENV.
+				Option: s.config.SuffixOption,
 			},
 		})
 		if err != nil {
 			return []ReferralCode{}, fmt.Errorf("could not generate dynamic link for user = %v: %w", uid, err)
 		}
-
-		//var new firebasedynamiclinks.CreateShortDynamicLinkRequest
-		//firebasedynamiclinksService, err := firebasedynamiclinks.NewService(ctx, option.WithAPIKey("AIzaSyBQLL5_RiDMEA0U2EWz-U2c2YURin2Bi1w"))
-		//link := firebasedynamiclinksService.ShortLinks.Create()
 
 		data, err := s.rr.AddReferralCodeData(ctx, repository.AddReferralCodeDataParams{
 			ID: id,
@@ -119,7 +115,6 @@ func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username
 		}
 		return castReferralCodeToReferralCodes(data), err
 	}
-	fmt.Println("START!!!!!!!!!44444444444444444!!!!!!!!!!!!!!!!!!")
 
 	return castToReferralCodesWithUsername(referralCodeData, username), nil
 }

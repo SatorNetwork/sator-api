@@ -27,8 +27,12 @@ import "net/http"
 // Config is configuration for firebase client.
 type (
 	Config struct {
-		BaseFirebaseURL string
-		WebAPIKey       string
+		BaseFirebaseURL    string
+		WebAPIKey          string
+		MainSiteLink       string
+		AndroidPackageName string
+		IosBundleId        string
+		SuffixOption       string
 	}
 	// Interactor struct
 	Interactor struct {
