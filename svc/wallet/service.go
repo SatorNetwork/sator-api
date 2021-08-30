@@ -416,7 +416,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err := s.sc.RequestAirdrop(ctx, feePayer.PublicKey.ToBase58(), 10)
+		tx, err := s.sc.RequestAirdrop(ctx, feePayer.PublicKey.ToBase58(), 1)
 		if err != nil {
 			log.Println(err)
 			continue
