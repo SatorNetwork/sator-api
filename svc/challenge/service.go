@@ -33,7 +33,7 @@ type (
 	challengesRepository interface {
 		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
 		GetChallenges(ctx context.Context, arg repository.GetChallengesParams) ([]repository.Challenge, error)
-		GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UUID) (repository.Challenge, error)
+		GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.NullUUID) (repository.Challenge, error)
 		GetChallengeByID(ctx context.Context, id uuid.UUID) (repository.Challenge, error)
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
 		UpdateChallenge(ctx context.Context, arg repository.UpdateChallengeParams) error
@@ -227,7 +227,7 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		EpisodeID: episodeID,
 	})
 
-	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, episodeID)
+	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, uuid.NullUUID{UUID: episodeID, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
@@ -280,7 +280,7 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 	}
 
 	if err := s.cr.UpdateAttempt(ctx, repository.UpdateAttemptParams{
-		AnswerID:   answerID,
+		AnswerID:   uuid.NullUUID{UUID: answerID, Valid: answerID != uuid.Nil},
 		Valid:      sql.NullBool{Bool: isValid, Valid: true},
 		UserID:     userID,
 		QuestionID: questionID,
@@ -293,7 +293,7 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 	}
 
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
-		EpisodeID: challenge.EpisodeID,
+		EpisodeID: challenge.EpisodeID.UUID,
 		UserID:    userID,
 		ActivatedAt: sql.NullTime{
 			Time:  time.Now(),
@@ -387,7 +387,7 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
 		TimePerQuestionSec: c.TimePerQuestion.Int32,
 		Play:               playUrlFn(c.ID),
-		EpisodeID:          c.EpisodeID,
+		EpisodeID:          c.EpisodeID.UUID,
 		Kind:               c.Kind,
 		UserMaxAttempts:    c.UserMaxAttempts,
 		AttemptsLeft:       attemptsLeft,
@@ -414,7 +414,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 			Time:  time.Now().UTC(),
 			Valid: true,
 		},
-		EpisodeID:       ch.EpisodeID,
+		EpisodeID:       uuid.NullUUID{UUID: ch.EpisodeID, Valid: ch.EpisodeID != uuid.Nil},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
 	})
@@ -450,7 +450,7 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 			Int32: int32(ch.TimePerQuestionSec),
 			Valid: ch.TimePerQuestionSec > 0,
 		},
-		EpisodeID:       ch.EpisodeID,
+		EpisodeID:       uuid.NullUUID{UUID: ch.EpisodeID, Valid: ch.EpisodeID != uuid.Nil},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
 	}); err != nil {
@@ -813,6 +813,7 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 	}
 
 	log.Printf("activateBefore 2: %s", activateBefore.String())
+	log.Printf("s.chargeForUnlockFn != nil && amount > 0: %T && %T", s.chargeForUnlockFn != nil, amount > 0)
 
 	if s.chargeForUnlockFn != nil && amount > 0 {
 		if err := s.chargeForUnlockFn(

@@ -19,12 +19,12 @@ type AnswerOption struct {
 }
 
 type Attempt struct {
-	UserID     uuid.UUID    `json:"user_id"`
-	EpisodeID  uuid.UUID    `json:"episode_id"`
-	QuestionID uuid.UUID    `json:"question_id"`
-	AnswerID   uuid.UUID    `json:"answer_id"`
-	Valid      sql.NullBool `json:"valid"`
-	CreatedAt  sql.NullTime `json:"created_at"`
+	UserID     uuid.UUID     `json:"user_id"`
+	EpisodeID  uuid.UUID     `json:"episode_id"`
+	QuestionID uuid.UUID     `json:"question_id"`
+	AnswerID   uuid.NullUUID `json:"answer_id"`
+	Valid      sql.NullBool  `json:"valid"`
+	CreatedAt  sql.NullTime  `json:"created_at"`
 }
 
 type Challenge struct {
@@ -37,7 +37,7 @@ type Challenge struct {
 	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
 	CreatedAt       time.Time      `json:"created_at"`
-	EpisodeID       uuid.UUID      `json:"episode_id"`
+	EpisodeID       uuid.NullUUID  `json:"episode_id"`
 	Kind            int32          `json:"kind"`
 	UserMaxAttempts int32          `json:"user_max_attempts"`
 }

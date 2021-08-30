@@ -39,6 +39,7 @@ type (
 		GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]repository.Wallet, error)
 		GetWalletBySolanaAccountID(ctx context.Context, solanaAccountID uuid.UUID) (repository.Wallet, error)
 		GetWalletByID(ctx context.Context, id uuid.UUID) (repository.Wallet, error)
+		GetWalletByUserIDAndType(ctx context.Context, arg repository.GetWalletByUserIDAndTypeParams) (repository.Wallet, error)
 
 		AddSolanaAccount(ctx context.Context, arg repository.AddSolanaAccountParams) (repository.SolanaAccount, error)
 		GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (repository.SolanaAccount, error)
@@ -670,19 +671,25 @@ func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID 
 	}
 }
 
-// func paginateTransactions(transactions Transactions, offset, limit int) Transactions {
-// 	sort.Slice(transactions, func(i, j int) bool {
-// 		return transactions[i].CreatedAt < (transactions[j].CreatedAt)
-// 	})
+// PayForService draft
+func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error {
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     uid,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
 
-// 	if offset > len(transactions) {
-// 		offset = len(transactions)
-// 	}
+	r, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
 
-// 	end := offset + limit
-// 	if end > len(transactions) {
-// 		end = len(transactions)
-// 	}
+	// TODO: move token name to env variable or constant
+	if _, err := s.CreateTransfer(ctx, w.ID, r.PublicKey, "SAO", amount); err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
 
-// 	return transactions[offset:end]
-// }
+	return nil
+}

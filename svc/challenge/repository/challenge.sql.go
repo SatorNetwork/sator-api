@@ -45,7 +45,7 @@ type AddChallengeParams struct {
 	PlayersToStart  int32          `json:"players_to_start"`
 	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
-	EpisodeID       uuid.UUID      `json:"episode_id"`
+	EpisodeID       uuid.NullUUID  `json:"episode_id"`
 	Kind            int32          `json:"kind"`
 	UserMaxAttempts int32          `json:"user_max_attempts"`
 }
@@ -99,7 +99,7 @@ ORDER BY created_at DESC
     LIMIT 1
 `
 
-func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.UUID) (Challenge, error) {
+func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.NullUUID) (Challenge, error) {
 	row := q.queryRow(ctx, q.getChallengeByEpisodeIDStmt, getChallengeByEpisodeID, episodeID)
 	var i Challenge
 	err := row.Scan(
@@ -221,7 +221,7 @@ type UpdateChallengeParams struct {
 	PlayersToStart  int32          `json:"players_to_start"`
 	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`
-	EpisodeID       uuid.UUID      `json:"episode_id"`
+	EpisodeID       uuid.NullUUID  `json:"episode_id"`
 	Kind            int32          `json:"kind"`
 	UserMaxAttempts int32          `json:"user_max_attempts"`
 	ID              uuid.UUID      `json:"id"`
