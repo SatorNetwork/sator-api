@@ -4,12 +4,13 @@ go 1.16
 
 require (
 	github.com/aws/aws-sdk-go v1.31.4
+	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/dmitrymomot/distlock v0.1.1
 	github.com/dmitrymomot/go-env v0.1.0
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
-	github.com/ethereum/go-ethereum v1.10.5
+	github.com/ethereum/go-ethereum v1.10.8
 	github.com/go-chi/chi v4.1.1+incompatible
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/validator/v10 v10.6.1
@@ -30,6 +31,7 @@ require (
 	github.com/zeebo/errs v1.2.2
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
 	syreclabs.com/go/faker v1.2.3
 )
