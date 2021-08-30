@@ -426,7 +426,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		break
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 60)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
 		AccountType: AssetAccount.String(),
@@ -447,7 +447,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		log.Printf("convert account (%s) to asset: %s", asset.PublicKey.ToBase58(), tx)
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 60)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
 		AccountType: IssuerAccount.String(),
@@ -469,7 +469,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		log.Printf("init issuer account (%s) to user asset: %s", issuer.PublicKey.ToBase58(), tx)
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 60)
 
 	if tx, err := s.sc.IssueAsset(
 		ctx,
