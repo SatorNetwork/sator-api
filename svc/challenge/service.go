@@ -324,6 +324,12 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 	}
 
 	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid || data.ActivatedBefore.Time.Before(time.Now()) {
+		log.Printf("data: %+v", data)
+		log.Printf(
+			"data.ActivatedBefore.Time.Before(time.Now()): %s before %s: %v",
+			data.ActivatedBefore.Time, time.Now(),
+			data.ActivatedBefore.Time.Before(time.Now()),
+		)
 		return false, nil
 	}
 
