@@ -123,6 +123,36 @@ func (q *Queries) GetWalletBySolanaAccountID(ctx context.Context, solanaAccountI
 	return i, err
 }
 
+const getWalletByUserIDAndType = `-- name: GetWalletByUserIDAndType :one
+SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort, ethereum_account_id
+FROM wallets
+WHERE user_id = $1 AND wallet_type = $2
+ORDER BY sort ASC 
+LIMIT 1
+`
+
+type GetWalletByUserIDAndTypeParams struct {
+	UserID     uuid.UUID `json:"user_id"`
+	WalletType string    `json:"wallet_type"`
+}
+
+func (q *Queries) GetWalletByUserIDAndType(ctx context.Context, arg GetWalletByUserIDAndTypeParams) (Wallet, error) {
+	row := q.queryRow(ctx, q.getWalletByUserIDAndTypeStmt, getWalletByUserIDAndType, arg.UserID, arg.WalletType)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SolanaAccountID,
+		&i.Status,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.WalletType,
+		&i.Sort,
+		&i.EthereumAccountID,
+	)
+	return i, err
+}
+
 const getWalletsByUserID = `-- name: GetWalletsByUserID :many
 SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort, ethereum_account_id
 FROM wallets

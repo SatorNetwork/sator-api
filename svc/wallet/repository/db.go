@@ -58,6 +58,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getWalletBySolanaAccountIDStmt, err = db.PrepareContext(ctx, getWalletBySolanaAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWalletBySolanaAccountID: %w", err)
 	}
+	if q.getWalletByUserIDAndTypeStmt, err = db.PrepareContext(ctx, getWalletByUserIDAndType); err != nil {
+		return nil, fmt.Errorf("error preparing query GetWalletByUserIDAndType: %w", err)
+	}
 	if q.getWalletsByUserIDStmt, err = db.PrepareContext(ctx, getWalletsByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWalletsByUserID: %w", err)
 	}
@@ -126,6 +129,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getWalletBySolanaAccountIDStmt: %w", cerr)
 		}
 	}
+	if q.getWalletByUserIDAndTypeStmt != nil {
+		if cerr := q.getWalletByUserIDAndTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getWalletByUserIDAndTypeStmt: %w", cerr)
+		}
+	}
 	if q.getWalletsByUserIDStmt != nil {
 		if cerr := q.getWalletsByUserIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getWalletsByUserIDStmt: %w", cerr)
@@ -182,6 +190,7 @@ type Queries struct {
 	getWalletByEthereumAccountIDStmt      *sql.Stmt
 	getWalletByIDStmt                     *sql.Stmt
 	getWalletBySolanaAccountIDStmt        *sql.Stmt
+	getWalletByUserIDAndTypeStmt          *sql.Stmt
 	getWalletsByUserIDStmt                *sql.Stmt
 }
 
@@ -201,6 +210,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getWalletByEthereumAccountIDStmt:      q.getWalletByEthereumAccountIDStmt,
 		getWalletByIDStmt:                     q.getWalletByIDStmt,
 		getWalletBySolanaAccountIDStmt:        q.getWalletBySolanaAccountIDStmt,
+		getWalletByUserIDAndTypeStmt:          q.getWalletByUserIDAndTypeStmt,
 		getWalletsByUserIDStmt:                q.getWalletsByUserIDStmt,
 	}
 }

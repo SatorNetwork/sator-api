@@ -69,7 +69,7 @@ type (
 		ShowID             string  `json:"show_id" validate:"required,uuid"`
 		Title              string  `json:"title" validate:"required,gt=0"`
 		Description        string  `json:"description"`
-		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gte=0"`
+		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"gte=0"`
 		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
 		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
 		EpisodeID          string  `json:"episode_id,omitempty"`
@@ -83,7 +83,7 @@ type (
 		ShowID             string  `json:"show_id" validate:"required,uuid"`
 		Title              string  `json:"title" validate:"required,gt=0"`
 		Description        string  `json:"description"`
-		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gte=0"`
+		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"gte=0"`
 		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
 		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
 		EpisodeID          string  `json:"episode_id"`

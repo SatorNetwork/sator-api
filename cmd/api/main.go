@@ -302,6 +302,7 @@ func main() {
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
+			challenge.WithChargeForUnlockFunc(walletSvcClient.PayForService),
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(
