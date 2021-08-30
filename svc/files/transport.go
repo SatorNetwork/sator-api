@@ -99,7 +99,11 @@ func decodeGetImageByIDRequest(_ context.Context, r *http.Request) (interface{},
 
 func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	rules := govalidator.MapData{
-		"file:image": []string{"required", "ext:png", "size:2097152", "mime:image/png"},
+		"file:image": []string{
+			"required",
+			"size:2097152",
+			"mime:image/png,image/jpeg",
+		},
 	}
 	if err := utils.Validate(r, rules, nil); err != nil {
 		return nil, err

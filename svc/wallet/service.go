@@ -123,6 +123,11 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
+		if w.WalletType == WalletTypeEthereum {
+			// disable etherium wallet
+			continue
+		}
+
 		wli := WalletsListItem{
 			ID:    w.ID.String(),
 			Type:  w.WalletType,
@@ -215,7 +220,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				},
 				{
 					Currency: "USD",
-					Amount:   bal * 1.25, // FIXME: setup currency rate
+					Amount:   bal * 0.04, // FIXME: setup currency rate
 				},
 			}
 		}
@@ -228,7 +233,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				},
 				{
 					Currency: "USD",
-					Amount:   bal * 34.5, // FIXME: setup currency rate
+					Amount:   bal * 70, // FIXME: setup currency rate
 				},
 			}
 		}
@@ -249,11 +254,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
-			{
-				Type: ActionStakeTokens.String(),
-				Name: ActionStakeTokens.Name(),
-				URL:  "",
-			},
+			// {
+			// 	Type: ActionStakeTokens.String(),
+			// 	Name: ActionStakeTokens.Name(),
+			// 	URL:  "",
+			// },
 		},
 		Balance: balance,
 	}, nil
@@ -314,6 +319,8 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
 	}
 
+	/** Disabled untill the next release **
+
 	ethAccount, err := s.ec.CreateAccount()
 	if err != nil {
 		return fmt.Errorf("could not create new eth account for user with id=%s: %w", userID.String(), err)
@@ -345,6 +352,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	}); err != nil {
 		return fmt.Errorf("could not create new ethereum wallet for user with id=%s: %w", userID.String(), err)
 	}
+	**/
 
 	return nil
 }
@@ -544,14 +552,14 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	toEncode.Amount = amount
 	toEncode.RecipientAddr = recipientPK
 
-	log.Printf("toEncode: %+v", toEncode)
+	// log.Printf("toEncode: %+v", toEncode)
 
 	encodedData, err := json.Marshal(toEncode)
 	if err != nil {
 		return PreparedTransferTransaction{}, fmt.Errorf("could not marshal amount and recipient pk: %w", err)
 	}
 
-	log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
+	// log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
 
 	return PreparedTransferTransaction{
 		AssetName:       asset,

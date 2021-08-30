@@ -21,10 +21,14 @@ type (
 		SetupNewQuizHub(ctx context.Context, qid uuid.UUID) (*Hub, error)
 		StoreAnswer(ctx context.Context, userID, quizId, questionID, answerID uuid.UUID) error
 	}
+
+	challengesClient interface {
+		StoreChallengeAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
+	}
 )
 
 // QuizWsHandler handles websocket connections
-func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID)) http.HandlerFunc {
+func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challengesClient, botsTimeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := chi.URLParam(r, "token")
 		tokenPayload, err := s.ParseQuizToken(r.Context(), token)
@@ -61,8 +65,14 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID)) http.Handle
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		if err := c.StoreChallengeAttempt(ctx, quizHub.ChallengeID, uid); err != nil {
+			log.Printf("could not store challenge attempt: user_id=%s, challenge_id=%s, error: %v",
+				uid.String(), quizHub.ChallengeID.String(), err)
+		}
+
 		defer func() {
-			log.Printf("Defer: %v, QuizID: %v", uid, quizID) // TODO: Remove it!
+			// log.Printf("Defer: %v, QuizID: %v", uid, quizID) // TODO: Remove it!
 			quizHub.RemovePlayer(uid)
 			callback(uid, quizID)
 		}()
@@ -152,7 +162,11 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID)) http.Handle
 		}
 
 		go func() {
-			time.Sleep(time.Second * 5)
+			if botsTimeout > 0 {
+				time.Sleep(botsTimeout)
+			} else {
+				time.Sleep(time.Second * 5)
+			}
 
 			for _, u := range fakePlayers {
 				time.Sleep(time.Second)

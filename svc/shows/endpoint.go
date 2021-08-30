@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -29,13 +30,15 @@ type (
 		GetEpisodeByID      endpoint.Endpoint
 		GetEpisodesByShowID endpoint.Endpoint
 		UpdateEpisode       endpoint.Endpoint
+
+		RateEpisode endpoint.Endpoint
 	}
 
 	service interface {
 		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
-		GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
@@ -48,6 +51,8 @@ type (
 		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
+
+		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
 	}
 
 	// PaginationRequest struct
@@ -101,27 +106,29 @@ type (
 
 	// AddEpisodeRequest struct
 	AddEpisodeRequest struct {
-		ShowID        string `json:"show_id" validate:"required,uuid"`
-		SeasonID      string `json:"season_id" validate:"required,uuid"`
-		EpisodeNumber int32  `json:"episode_number"`
-		Cover         string `json:"cover"`
-		Title         string `json:"title" validate:"required,gt=0"`
-		Description   string `json:"description"`
-		ReleaseDate   string `json:"release_date"`
-		ChallengeID   string `json:"challenge_id"`
+		ShowID                  string `json:"show_id" validate:"required,uuid"`
+		SeasonID                string `json:"season_id" validate:"required,uuid"`
+		EpisodeNumber           int32  `json:"episode_number"`
+		Cover                   string `json:"cover,omitempty"`
+		Title                   string `json:"title" validate:"required,gt=0"`
+		Description             string `json:"description,omitempty"`
+		ReleaseDate             string `json:"release_date,omitempty"`
+		ChallengeID             string `json:"challenge_id,omitempty"`
+		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 	}
 
 	// UpdateEpisodeRequest struct
 	UpdateEpisodeRequest struct {
-		ID            string `json:"id" validate:"required,uuid"`
-		ShowID        string `json:"show_id" validate:"required,uuid"`
-		SeasonID      string `json:"season_id" validate:"required,uuid"`
-		EpisodeNumber int32  `json:"episode_number"`
-		Cover         string `json:"cover"`
-		Title         string `json:"title" validate:"required,gt=0"`
-		Description   string `json:"description" validate:"required,gt=0"`
-		ReleaseDate   string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
-		ChallengeID   string `json:"challenge_id"`
+		ID                      string `json:"id" validate:"required,uuid"`
+		ShowID                  string `json:"show_id" validate:"required,uuid"`
+		SeasonID                string `json:"season_id" validate:"required,uuid"`
+		EpisodeNumber           int32  `json:"episode_number"`
+		Cover                   string `json:"cover,omitempty"`
+		Title                   string `json:"title" validate:"required,gt=0"`
+		Description             string `json:"description" validate:"required,gt=0"`
+		ReleaseDate             string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
+		ChallengeID             string `json:"challenge_id,omitempty"`
+		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
@@ -140,6 +147,12 @@ type (
 	DeleteSeasonByIDRequest struct {
 		SeasonID string `json:"season_id" validate:"required,uuid"`
 		ShowID   string `json:"show_id" validate:"required,uuid"`
+	}
+
+	// RateEpisodeRequest struct
+	RateEpisodeRequest struct {
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		Rating    int32  `json:"rating" validate:"required,gte=1,lte=10"`
 	}
 )
 
@@ -180,6 +193,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetEpisodeByID:      MakeGetEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
+
+		RateEpisode: MakeRateEpisodeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -201,6 +216,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
+
+			e.RateEpisode = mdw(e.RateEpisode)
 		}
 	}
 
@@ -227,6 +244,11 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 // MakeGetShowChallengesEndpoint ...
 func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(GetShowChallengesRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -237,7 +259,7 @@ func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetShowChallenges(ctx, showID, req.Limit(), req.Offset())
+		resp, err := s.GetShowChallenges(ctx, showID, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
@@ -373,20 +395,31 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		challengeID, err := uuid.Parse(req.ChallengeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		var challengeID, verificationChallengeID uuid.UUID
+		if req.ChallengeID != "" {
+			challengeID, err = uuid.Parse(req.ChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get challenge id: %w", err)
+			}
+		}
+
+		if req.VerificationChallengeID != "" {
+			verificationChallengeID, err = uuid.Parse(req.VerificationChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get verification challenge id: %w", err)
+			}
 		}
 
 		resp, err := s.AddEpisode(ctx, Episode{
-			ShowID:        showID,
-			SeasonID:      seasonID,
-			ChallengeID:   challengeID,
-			EpisodeNumber: req.EpisodeNumber,
-			Cover:         req.Cover,
-			Title:         req.Title,
-			Description:   req.Description,
-			ReleaseDate:   req.ReleaseDate,
+			ShowID:                  showID,
+			SeasonID:                seasonID,
+			ChallengeID:             challengeID,
+			VerificationChallengeID: verificationChallengeID,
+			EpisodeNumber:           req.EpisodeNumber,
+			Cover:                   req.Cover,
+			Title:                   req.Title,
+			Description:             req.Description,
+			ReleaseDate:             req.ReleaseDate,
 		})
 		if err != nil {
 			return nil, err
@@ -419,21 +452,32 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get season id: %w", err)
 		}
 
-		challengeID, err := uuid.Parse(req.ChallengeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get challenge id: %w", err)
+		var challengeID, verificationChallengeID uuid.UUID
+		if req.ChallengeID != "" {
+			challengeID, err = uuid.Parse(req.ChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get challenge id: %w", err)
+			}
+		}
+
+		if req.VerificationChallengeID != "" {
+			verificationChallengeID, err = uuid.Parse(req.VerificationChallengeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get verification challenge id: %w", err)
+			}
 		}
 
 		err = s.UpdateEpisode(ctx, Episode{
-			ID:            id,
-			ShowID:        showID,
-			SeasonID:      seasonID,
-			EpisodeNumber: req.EpisodeNumber,
-			Cover:         req.Cover,
-			Title:         req.Title,
-			Description:   req.Description,
-			ReleaseDate:   req.ReleaseDate,
-			ChallengeID:   challengeID,
+			ID:                      id,
+			ShowID:                  showID,
+			SeasonID:                seasonID,
+			EpisodeNumber:           req.EpisodeNumber,
+			Cover:                   req.Cover,
+			Title:                   req.Title,
+			Description:             req.Description,
+			ReleaseDate:             req.ReleaseDate,
+			ChallengeID:             challengeID,
+			VerificationChallengeID: verificationChallengeID,
 		})
 		if err != nil {
 			return nil, err
@@ -461,8 +505,7 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		err = s.DeleteEpisodeByID(ctx, showID, episodeID)
-		if err != nil {
+		if err := s.DeleteEpisodeByID(ctx, showID, episodeID); err != nil {
 			return nil, err
 		}
 
@@ -563,6 +606,33 @@ func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.
 		}
 
 		err = s.DeleteSeasonByID(ctx, showID, seasonID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeRateEpisodeEndpoint ...
+func MakeRateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(RateEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		err = s.RateEpisode(ctx, episodeID, uid, req.Rating)
 		if err != nil {
 			return nil, err
 		}

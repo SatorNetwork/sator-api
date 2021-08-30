@@ -3,7 +3,7 @@ package challenge
 import "time"
 
 // WithCustomVerificationAttempts ...
-// Overvrites default number of varification attempts
+// Overwrites default number of verification attempts.
 func WithCustomVerificationAttempts(n int) ServiceOption {
 	return func(s *Service) {
 		s.attemptsNumber = int64(n)
@@ -11,9 +11,16 @@ func WithCustomVerificationAttempts(n int) ServiceOption {
 }
 
 // WithCustomActivatedPeriod ...
-// Overvrites default period while realm is activated
+// Overwrites default period while realm is activated.
 func WithCustomActivatedPeriod(p time.Duration) ServiceOption {
 	return func(s *Service) {
 		s.activatedRealmPeriod = p
+	}
+}
+
+// WithChargeForUnlockFunc ...
+func WithChargeForUnlockFunc(fn chargeForUnlockFunc) ServiceOption {
+	return func(s *Service) {
+		s.chargeForUnlockFn = fn
 	}
 }

@@ -65,7 +65,8 @@ func (q *Queries) CountAttempts(ctx context.Context, arg CountAttemptsParams) (i
 const getAskedQuestionsByEpisodeID = `-- name: GetAskedQuestionsByEpisodeID :many
 SELECT question_id
 FROM attempts
-WHERE user_id = $1 AND episode_id = $2
+WHERE user_id = $1 AND episode_id = $2 
+GROUP BY question_id
 `
 
 type GetAskedQuestionsByEpisodeIDParams struct {

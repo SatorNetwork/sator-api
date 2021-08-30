@@ -35,6 +35,8 @@ import (
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
+	"github.com/SatorNetwork/sator-api/svc/referrals"
+	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
@@ -84,7 +86,8 @@ var (
 	masterOTPHash = env.GetString("MASTER_OTP_HASH", "")
 
 	// Quiz
-	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
+	quizWsConnURL   = env.MustString("QUIZ_WS_CONN_URL")
+	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
@@ -272,6 +275,18 @@ func main() {
 		))
 	}
 
+	{
+		// Referrals service
+		referralRepository, err := referralsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("referralRepo error: %v", err)
+		}
+		r.Mount("/ref", referrals.MakeHTTPHandler(
+			referrals.MakeEndpoints(referrals.NewService(referralRepository), jwtMdw),
+			logger,
+		))
+	}
+
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
@@ -373,7 +388,12 @@ func main() {
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,
-			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction)),
+			quiz.QuizWsHandler(
+				quizSvc,
+				invitationsService.SendReward(rewardService.AddTransaction),
+				challengeSvcClient,
+				quizBotsTimeout,
+			),
 		))
 
 		// run quiz service

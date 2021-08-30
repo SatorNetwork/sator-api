@@ -70,6 +70,16 @@ func (q *Queries) DeleteAnswerByID(ctx context.Context, arg DeleteAnswerByIDPara
 	return err
 }
 
+const deleteAnswersByQuestionID = `-- name: DeleteAnswersByQuestionID :exec
+DELETE FROM answer_options
+WHERE question_id = $1
+`
+
+func (q *Queries) DeleteAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteAnswersByQuestionIDStmt, deleteAnswersByQuestionID, questionID)
+	return err
+}
+
 const getAnswerByID = `-- name: GetAnswerByID :one
 SELECT id, question_id, answer_option, is_correct, updated_at, created_at
 FROM answer_options

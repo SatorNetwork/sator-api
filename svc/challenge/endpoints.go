@@ -3,7 +3,6 @@ package challenge
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
@@ -40,13 +39,12 @@ type (
 	}
 
 	service interface {
-		GetChallengeByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-		GetChallengesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (interface{}, error)
+		GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		AddChallenge(ctx context.Context, ch Challenge) (Challenge, error)
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
 		UpdateChallenge(ctx context.Context, ch Challenge) error
 
-		// FIXME: needs refactoring!
 		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error)
 		CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error)
 		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error)
@@ -59,10 +57,11 @@ type (
 
 		AddQuestionOption(ctx context.Context, ao AnswerOption) (AnswerOption, error)
 		DeleteAnswerByID(ctx context.Context, id, questionID uuid.UUID) error
+		DeleteAnswersByQuestionID(ctx context.Context, questionID uuid.UUID) error
 		CheckAnswer(ctx context.Context, aid, qid uuid.UUID) (bool, error)
 		UpdateAnswer(ctx context.Context, ao AnswerOption) error
 
-		UnlockEpisode(ctx context.Context, uid, episodeID uuid.UUID) error
+		UnlockEpisode(ctx context.Context, uid, episodeID uuid.UUID, unlockOption string) error
 	}
 
 	// AddChallengeRequest struct
@@ -70,11 +69,12 @@ type (
 		ShowID             string  `json:"show_id" validate:"required,uuid"`
 		Title              string  `json:"title" validate:"required,gt=0"`
 		Description        string  `json:"description"`
-		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
-		PlayersToStart     int32   `json:"players_to_start" validate:"required"`
-		TimePerQuestionSec int64   `json:"time_per_question_sec"`
-		EpisodeID          string  `json:"episode_id" validate:"uuid"`
-		Kind               int32   `json:"kind"`
+		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gte=0"`
+		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
+		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
+		EpisodeID          string  `json:"episode_id,omitempty"`
+		Kind               int     `json:"kind"`
+		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -83,11 +83,12 @@ type (
 		ShowID             string  `json:"show_id" validate:"required,uuid"`
 		Title              string  `json:"title" validate:"required,gt=0"`
 		Description        string  `json:"description"`
-		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gt=0"`
-		PlayersToStart     int32   `json:"players_to_start" validate:"required"`
-		TimePerQuestionSec int64   `json:"time_per_question_sec"`
-		EpisodeID          string  `json:"episode_id" validate:"uuid"`
-		Kind               int32   `json:"kind"`
+		PrizePoolAmount    float64 `json:"prize_pool_amount" validate:"required,gte=0"`
+		PlayersToStart     int     `json:"players_to_start" validate:"required,gt=0"`
+		TimePerQuestionSec int     `json:"time_per_question_sec" validate:"required,gt=0"`
+		EpisodeID          string  `json:"episode_id"`
+		Kind               int     `json:"kind"`
+		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
 	}
 
 	CheckAnswerRequest struct {
@@ -97,24 +98,26 @@ type (
 
 	// AddQuestionRequest struct
 	AddQuestionRequest struct {
-		ChallengeID string `json:"challenge_id" validate:"required,uuid"`
-		Question    string `json:"question" validate:"required,gt=0"`
-		Order       int32  `json:"order" validate:"required,gt=0"`
+		ChallengeID   string                `json:"challenge_id" validate:"required,uuid"`
+		Question      string                `json:"question" validate:"required,gt=0"`
+		Order         int32                 `json:"order,omitempty"`
+		AnswerOptions []AnswerOptionRequest `json:"answer_options,omitempty"`
 	}
 
 	// UpdateQuestionRequest struct
 	UpdateQuestionRequest struct {
-		ID          string `json:"id" validate:"required,uuid"`
-		ChallengeID string `json:"challenge_id" validate:"required,uuid"`
-		Question    string `json:"question" validate:"required,gt=0"`
-		Order       int32  `json:"order" validate:"required,gt=0"`
+		ID            string                `json:"id" validate:"required,uuid"`
+		ChallengeID   string                `json:"challenge_id" validate:"required,uuid"`
+		Question      string                `json:"question" validate:"required,gt=0"`
+		Order         int32                 `json:"order,omitempty"`
+		AnswerOptions []AnswerOptionRequest `json:"answer_options,omitempty"`
 	}
 
 	// AnswerOptionRequest struct
 	AnswerOptionRequest struct {
-		QuestionID string `json:"question_id" validate:"required,uuid"`
+		QuestionID string `json:"question_id,omitempty"`
 		Option     string `json:"option" validate:"required,gt=0"`
-		IsCorrect  string `json:"is_correct" validate:"required,gt=0"`
+		IsCorrect  bool   `json:"is_correct" validate:"required"`
 	}
 
 	// UpdateAnswerRequest struct
@@ -122,13 +125,19 @@ type (
 		ID         string `json:"id" validate:"required,uuid"`
 		QuestionID string `json:"question_id" validate:"required,uuid"`
 		Option     string `json:"option" validate:"required,gt=0"`
-		IsCorrect  string `json:"is_correct" validate:"required,gt=0"`
+		IsCorrect  bool   `json:"is_correct" validate:"required"`
 	}
 
 	// DeleteAnswerByIDRequest struct
 	DeleteAnswerByIDRequest struct {
 		AnswerID   string `json:"answer_id"`
 		QuestionID string `json:"question_id"`
+	}
+
+	// UnlockEpisodeRequest ...
+	UnlockEpisodeRequest struct {
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		Option    string `json:"option" validate:"required"`
 	}
 )
 
@@ -268,12 +277,17 @@ func MakeVerifyUserAccessToEpisodeEndpoint(s service) endpoint.Endpoint {
 // MakeGetChallengeByIdEndpoint ...
 func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetChallengeByID(ctx, id)
+		resp, err := s.GetChallengeByID(ctx, id, uid)
 		if err != nil {
 			return nil, err
 		}
@@ -295,9 +309,12 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(req.EpisodeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get episode id: %w", err)
+		var episodeID uuid.UUID
+		if req.EpisodeID != "" {
+			episodeID, err = uuid.Parse(req.EpisodeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get episode id: %w", err)
+			}
 		}
 
 		resp, err := s.AddChallenge(ctx, Challenge{
@@ -305,10 +322,11 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			Title:              req.Title,
 			Description:        req.Description,
 			PrizePoolAmount:    req.PrizePoolAmount,
-			Players:            req.PlayersToStart,
-			TimePerQuestionSec: req.TimePerQuestionSec,
+			Players:            int32(req.PlayersToStart),
+			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			EpisodeID:          episodeID,
-			Kind:               req.Kind,
+			Kind:               int32(req.Kind),
+			UserMaxAttempts:    int32(req.UserMaxAttempts),
 		})
 		if err != nil {
 			return nil, err
@@ -353,9 +371,12 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(req.EpisodeID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get episode id: %w", err)
+		var episodeID uuid.UUID
+		if req.EpisodeID != "" {
+			episodeID, err = uuid.Parse(req.EpisodeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get episode id: %w", err)
+			}
 		}
 
 		err = s.UpdateChallenge(ctx, Challenge{
@@ -364,10 +385,11 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			Title:              req.Title,
 			Description:        req.Description,
 			PrizePoolAmount:    req.PrizePoolAmount,
-			Players:            req.PlayersToStart,
-			TimePerQuestionSec: req.TimePerQuestionSec,
+			Players:            int32(req.PlayersToStart),
+			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			EpisodeID:          episodeID,
-			Kind:               req.Kind,
+			Kind:               int32(req.Kind),
+			UserMaxAttempts:    int32(req.UserMaxAttempts),
 		})
 		if err != nil {
 			return nil, err
@@ -399,6 +421,25 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			return nil, err
 		}
 
+		if len(req.AnswerOptions) == 4 {
+			answerOptions := make([]AnswerOption, 0, len(req.AnswerOptions))
+
+			for _, answ := range req.AnswerOptions {
+				ao, err := s.AddQuestionOption(ctx, AnswerOption{
+					QuestionID: resp.ID,
+					Option:     answ.Option,
+					IsCorrect:  answ.IsCorrect,
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				answerOptions = append(answerOptions, ao)
+			}
+
+			resp.AnswerOptions = answerOptions
+		}
+
 		return resp, nil
 	}
 }
@@ -416,15 +457,10 @@ func MakeAddQuestionOptionEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		isCorrect, err := strconv.ParseBool(req.IsCorrect)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bool from string %w", err)
-		}
-
 		resp, err := s.AddQuestionOption(ctx, AnswerOption{
 			QuestionID: questionID,
 			Option:     req.Option,
-			IsCorrect:  isCorrect,
+			IsCorrect:  req.IsCorrect,
 		})
 		if err != nil {
 			return nil, err
@@ -505,6 +541,22 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, err
 		}
 
+		if len(req.AnswerOptions) == 4 {
+			if err := s.DeleteAnswersByQuestionID(ctx, id); err != nil {
+				return nil, err
+			}
+
+			for _, answ := range req.AnswerOptions {
+				if _, err := s.AddQuestionOption(ctx, AnswerOption{
+					QuestionID: id,
+					Option:     answ.Option,
+					IsCorrect:  answ.IsCorrect,
+				}); err != nil {
+					return nil, err
+				}
+			}
+		}
+
 		return true, nil
 	}
 }
@@ -527,16 +579,11 @@ func MakeUpdateAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		isCorrect, err := strconv.ParseBool(req.IsCorrect)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bool from string %w", err)
-		}
-
 		if err = s.UpdateAnswer(ctx, AnswerOption{
 			ID:         id,
 			QuestionID: questionID,
 			Option:     req.Option,
-			IsCorrect:  isCorrect,
+			IsCorrect:  req.IsCorrect,
 		}); err != nil {
 			return nil, err
 		}
@@ -615,15 +662,25 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		episodeID, err := uuid.Parse(request.(string))
-		if err != nil {
-			return nil, fmt.Errorf("could not get answer id: %w", err)
+		req := request.(UnlockEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
 		}
 
-		if err := s.UnlockEpisode(ctx, uid, episodeID); err != nil {
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get episode id: %w", err)
+		}
+
+		if err := s.UnlockEpisode(ctx, uid, episodeID, req.Option); err != nil {
 			return false, err
 		}
 
-		return true, nil
+		resp, err := s.VerifyUserAccessToEpisode(ctx, uid, episodeID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

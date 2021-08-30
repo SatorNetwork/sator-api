@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 
@@ -39,16 +40,19 @@ type (
 	}
 
 	Episode struct {
-		ID            uuid.UUID `json:"id"`
-		ShowID        uuid.UUID `json:"show_id"`
-		SeasonID      uuid.UUID `json:"season_id"`
-		SeasonNumber  int32     `json:"season_number"`
-		EpisodeNumber int32     `json:"episode_number"`
-		Cover         string    `json:"cover"`
-		Title         string    `json:"title"`
-		Description   string    `json:"description"`
-		ReleaseDate   string    `json:"release_date"`
-		ChallengeID   uuid.UUID `json:"challenge_id"`
+		ID                      uuid.UUID `json:"id"`
+		ShowID                  uuid.UUID `json:"show_id"`
+		SeasonID                uuid.UUID `json:"season_id"`
+		SeasonNumber            int32     `json:"season_number"`
+		EpisodeNumber           int32     `json:"episode_number"`
+		Cover                   string    `json:"cover"`
+		Title                   string    `json:"title"`
+		Description             string    `json:"description"`
+		ReleaseDate             string    `json:"release_date"`
+		ChallengeID             uuid.UUID `json:"challenge_id"`
+		VerificationChallengeID uuid.UUID `json:"verification_challenge_id"`
+		Rating                  float64   `json:"rating"`
+		RatingsCount            int64     `json:"ratings_count"`
 	}
 
 	showsRepository interface {
@@ -72,11 +76,15 @@ type (
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.GetEpisodesByShowIDRow, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
+
+		// Episodes rating
+		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
+		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
 	}
 
 	// Challenges service client
 	challengesClient interface {
-		GetListByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetListByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 	}
 )
 
@@ -106,8 +114,8 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 }
 
 // GetShowChallenges returns challenges by show id.
-func (s *Service) GetShowChallenges(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
-	challenges, err := s.chc.GetListByShowID(ctx, showID, limit, offset)
+func (s *Service) GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error) {
+	challenges, err := s.chc.GetListByShowID(ctx, showID, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenges list by show id: %w", err)
 	}
@@ -206,6 +214,7 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 			SeasonNumber: s.SeasonNumber,
 			Title:        fmt.Sprintf("Season %d", s.SeasonNumber),
 			Episodes:     episodes[s.ID.String()],
+			ShowID:       s.ShowID,
 		})
 	}
 	return result
@@ -218,52 +227,66 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUI
 		return nil, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
 	}
 
-	return castRowToEpisode(episode), nil
+	avgRating, ratingsCount, err := s.getAverageEpisodesRatingByID(ctx, episodeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
+	}
+
+	return castRowToEpisode(episode, avgRating, ratingsCount), nil
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure
-func castRowToEpisode(source repository.GetEpisodeByIDRow) Episode {
+func castRowToEpisode(source repository.GetEpisodeByIDRow, rating float64, ratingsCount int64) Episode {
 	return Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonNumber:  source.SeasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		ChallengeID:   source.ChallengeID,
+		ID:                      source.ID,
+		ShowID:                  source.ShowID,
+		EpisodeNumber:           source.EpisodeNumber,
+		SeasonID:                source.SeasonID,
+		SeasonNumber:            source.SeasonNumber,
+		Cover:                   source.Cover.String,
+		Title:                   source.Title,
+		Description:             source.Description.String,
+		ReleaseDate:             source.ReleaseDate.Time.String(),
+		ChallengeID:             source.ChallengeID,
+		VerificationChallengeID: source.VerificationChallengeID,
+		Rating:                  rating,
+		RatingsCount:            ratingsCount,
 	}
 }
 
 // Cast repository.GetEpisodesByShowIDRow to service Episode structure
 func castRowsToEpisode(source repository.GetEpisodesByShowIDRow) Episode {
 	return Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonNumber:  source.SeasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		ChallengeID:   source.ChallengeID,
+		ID:                      source.ID,
+		ShowID:                  source.ShowID,
+		EpisodeNumber:           source.EpisodeNumber,
+		SeasonID:                source.SeasonID,
+		SeasonNumber:            source.SeasonNumber,
+		Cover:                   source.Cover.String,
+		Title:                   source.Title,
+		Description:             source.Description.String,
+		ReleaseDate:             source.ReleaseDate.Time.String(),
+		ChallengeID:             source.ChallengeID,
+		VerificationChallengeID: source.VerificationChallengeID,
+		Rating:                  source.AvgRating,
+		RatingsCount:            source.Ratings,
 	}
 }
 
 // Cast repository.Episode to service Episode structure
 func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
 	return Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonID:      source.SeasonID,
-		SeasonNumber:  seasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		ChallengeID:   source.ChallengeID,
+		ID:                      source.ID,
+		ShowID:                  source.ShowID,
+		EpisodeNumber:           source.EpisodeNumber,
+		SeasonID:                source.SeasonID,
+		SeasonNumber:            seasonNumber,
+		Cover:                   source.Cover.String,
+		Title:                   source.Title,
+		Description:             source.Description.String,
+		ReleaseDate:             source.ReleaseDate.Time.String(),
+		ChallengeID:             source.ChallengeID,
+		VerificationChallengeID: source.VerificationChallengeID,
 	}
 }
 
@@ -344,7 +367,8 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 			Time:  rDate,
 			Valid: true,
 		},
-		ChallengeID: ep.ChallengeID,
+		ChallengeID:             ep.ChallengeID,
+		VerificationChallengeID: ep.VerificationChallengeID,
 	})
 	if err != nil {
 		return Episode{}, fmt.Errorf("could not add episode #%d for show_id=%s: %w", ep.EpisodeNumber, ep.ShowID.String(), err)
@@ -383,7 +407,8 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 			Time:  rDate,
 			Valid: true,
 		},
-		ChallengeID: ep.ChallengeID,
+		ChallengeID:             ep.ChallengeID,
+		VerificationChallengeID: ep.VerificationChallengeID,
 	}); err != nil {
 		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
 	}
@@ -417,8 +442,9 @@ func (s *Service) AddSeason(ctx context.Context, ss Season) (Season, error) {
 func castToSeason(source repository.Season) Season {
 	return Season{
 		ID:           source.ID,
-		ShowID:       source.ShowID,
+		Title:        fmt.Sprintf("Season %d", source.SeasonNumber),
 		SeasonNumber: source.SeasonNumber,
+		ShowID:       source.ShowID,
 	}
 }
 
@@ -429,6 +455,30 @@ func (s *Service) DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UU
 		ShowID: showID,
 	}); err != nil {
 		return fmt.Errorf("could not delete season with id=%s:%w", seasonID, err)
+	}
+
+	return nil
+}
+
+// getAverageEpisodesRatingByID returns average episode rating.
+func (s *Service) getAverageEpisodesRatingByID(ctx context.Context, episodeID uuid.UUID) (float64, int64, error) {
+	rating, err := s.sr.GetEpisodeRatingByID(ctx, episodeID)
+	if err != nil && !db.IsNotFoundError(err) {
+		return 0, 0, fmt.Errorf("could not get average episode rating by ID= %v: %w", episodeID, err)
+	}
+
+	return rating.AvgRating, rating.Ratings, nil
+}
+
+// RateEpisode ...
+func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error {
+	err := s.sr.RateEpisode(ctx, repository.RateEpisodeParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+		Rating:    rating,
+	})
+	if err != nil {
+		return fmt.Errorf("could not rate episode with episodeID=%s: %w", episodeID, err)
 	}
 
 	return nil
