@@ -798,6 +798,8 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		activateBefore = data.ActivatedBefore.Time
 	}
 
+	log.Printf("activateBefore 1: %s", activateBefore.String())
+
 	switch unlockOption {
 	case "unlock_opt_10_2h":
 		activateBefore = time.Now().Add(time.Hour * 2)
@@ -809,6 +811,8 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		activateBefore = time.Now().Add(time.Hour * 24 * 7)
 		amount = 500
 	}
+
+	log.Printf("activateBefore 2: %s", activateBefore.String())
 
 	if s.chargeForUnlockFn != nil && amount > 0 {
 		if err := s.chargeForUnlockFn(
