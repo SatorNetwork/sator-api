@@ -323,7 +323,7 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 		return false, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
-	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid || data.ActivatedBefore.Time.After(time.Now()) {
+	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid || data.ActivatedBefore.Time.Before(time.Now()) {
 		return false, nil
 	}
 
