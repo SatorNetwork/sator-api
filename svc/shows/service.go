@@ -478,6 +478,9 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 		Rating:    rating,
 	})
 	if err != nil {
+		if db.IsDuplicateError(err) {
+			return fmt.Errorf("you already rate this episode")
+		}
 		return fmt.Errorf("could not rate episode with episodeID=%s: %w", episodeID, err)
 	}
 
