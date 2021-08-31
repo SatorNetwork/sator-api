@@ -630,7 +630,7 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challen
 		return nil, fmt.Errorf("could not found any question for this episode. Try unlock with SAO")
 	}
 
-	return &qlist[rand.Intn(len(qlist)-1)], nil
+	return &qlist[rand.Intn(len(qlist))-1], nil
 }
 
 // CheckAnswer checks answer
