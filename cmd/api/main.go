@@ -220,7 +220,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("rewardsRepo error: %v", err)
 	}
-	rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
+	rewardService := rewards.NewService(
+		rewardsRepository,
+		walletSvcClient,
+		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
+	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
 		rewards.MakeEndpoints(rewardService, jwtMdw),
