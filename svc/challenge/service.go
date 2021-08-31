@@ -171,7 +171,7 @@ func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOpti
 func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (Challenge, error) {
 	challenge, err := s.cr.GetChallengeByID(ctx, challengeID)
 	if err != nil {
-		return Challenge{}, fmt.Errorf("could not get challenge by challengeID: %w", err)
+		return Challenge{}, fmt.Errorf("could not get challenge by challengeID=%s: %w", challengeID, err)
 	}
 
 	var attemptsLeft int32
