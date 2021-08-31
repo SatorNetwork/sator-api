@@ -81,22 +81,22 @@ type (
 	// Challenge struct
 	// Fields were rearranged to optimize memory usage.
 	Challenge struct {
-		ID                 uuid.UUID `json:"id"`
-		ShowID             uuid.UUID `json:"show_id"`
-		Title              string    `json:"title"`
-		Description        string    `json:"description"`
-		PrizePool          string    `json:"prize_pool"`
-		PrizePoolAmount    float64   `json:"prize_pool_amount"`
-		Players            int32     `json:"players"`
-		Winners            string    `json:"winners"`
-		TimePerQuestion    string    `json:"time_per_question"`
-		TimePerQuestionSec int32     `json:"time_per_question_sec"`
-		Play               string    `json:"play"`
-		EpisodeID          uuid.UUID `json:"episode_id"`
-		Kind               int32     `json:"kind"`
-		UserMaxAttempts    int32     `json:"user_max_attempts"`
-		AttemptsLeft       int32     `json:"attempts_left"`
-		ReceivedReward     float64   `json:"received_reward"`
+		ID                 uuid.UUID  `json:"id"`
+		ShowID             uuid.UUID  `json:"show_id"`
+		Title              string     `json:"title"`
+		Description        string     `json:"description"`
+		PrizePool          string     `json:"prize_pool"`
+		PrizePoolAmount    float64    `json:"prize_pool_amount"`
+		Players            int32      `json:"players"`
+		Winners            string     `json:"winners"`
+		TimePerQuestion    string     `json:"time_per_question"`
+		TimePerQuestionSec int32      `json:"time_per_question_sec"`
+		Play               string     `json:"play"`
+		EpisodeID          *uuid.UUID `json:"episode_id"`
+		Kind               int32      `json:"kind"`
+		UserMaxAttempts    int32      `json:"user_max_attempts"`
+		AttemptsLeft       int32      `json:"attempts_left"`
+		ReceivedReward     float64    `json:"received_reward"`
 	}
 
 	// Question struct
@@ -376,7 +376,7 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 }
 
 func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64) Challenge {
-	return Challenge{
+	ch := Challenge{
 		ID:                 c.ID,
 		ShowID:             c.ShowID,
 		Title:              c.Title,
@@ -387,17 +387,22 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
 		TimePerQuestionSec: c.TimePerQuestion.Int32,
 		Play:               playUrlFn(c.ID),
-		EpisodeID:          c.EpisodeID.UUID,
 		Kind:               c.Kind,
 		UserMaxAttempts:    c.UserMaxAttempts,
 		AttemptsLeft:       attemptsLeft,
 		ReceivedReward:     receivedReward,
 	}
+
+	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
+		ch.EpisodeID = &c.EpisodeID.UUID
+	}
+
+	return ch
 }
 
 // AddChallenge ..
 func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, error) {
-	challenge, err := s.cr.AddChallenge(ctx, repository.AddChallengeParams{
+	params := repository.AddChallengeParams{
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
 		Description: sql.NullString{
@@ -414,10 +419,15 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 			Time:  time.Now().UTC(),
 			Valid: true,
 		},
-		EpisodeID:       uuid.NullUUID{UUID: ch.EpisodeID, Valid: ch.EpisodeID != uuid.Nil},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
-	})
+	}
+
+	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
+		params.EpisodeID = uuid.NullUUID{UUID: *ch.EpisodeID, Valid: true}
+	}
+
+	challenge, err := s.cr.AddChallenge(ctx, params)
 	if err != nil {
 		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
@@ -436,7 +446,7 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 
 // UpdateChallenge ..
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
-	if err := s.cr.UpdateChallenge(ctx, repository.UpdateChallengeParams{
+	params := repository.UpdateChallengeParams{
 		ID:     ch.ID,
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
@@ -450,10 +460,15 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 			Int32: int32(ch.TimePerQuestionSec),
 			Valid: ch.TimePerQuestionSec > 0,
 		},
-		EpisodeID:       uuid.NullUUID{UUID: ch.EpisodeID, Valid: ch.EpisodeID != uuid.Nil},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
-	}); err != nil {
+	}
+
+	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
+		params.EpisodeID = uuid.NullUUID{UUID: *ch.EpisodeID, Valid: true}
+	}
+
+	if err := s.cr.UpdateChallenge(ctx, params); err != nil {
 		return fmt.Errorf("could not update challenge with id=%s:%w", ch.ID, err)
 	}
 

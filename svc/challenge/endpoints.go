@@ -309,25 +309,26 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		var episodeID uuid.UUID
-		if req.EpisodeID != "" {
-			episodeID, err = uuid.Parse(req.EpisodeID)
-			if err != nil {
-				return nil, fmt.Errorf("could not get episode id: %w", err)
-			}
-		}
-
-		resp, err := s.AddChallenge(ctx, Challenge{
+		payload := Challenge{
 			ShowID:             showID,
 			Title:              req.Title,
 			Description:        req.Description,
 			PrizePoolAmount:    req.PrizePoolAmount,
 			Players:            int32(req.PlayersToStart),
 			TimePerQuestionSec: int32(req.TimePerQuestionSec),
-			EpisodeID:          episodeID,
 			Kind:               int32(req.Kind),
 			UserMaxAttempts:    int32(req.UserMaxAttempts),
-		})
+		}
+
+		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
+			episodeID, err := uuid.Parse(req.EpisodeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get episode id: %w", err)
+			}
+			payload.EpisodeID = &episodeID
+		}
+
+		resp, err := s.AddChallenge(ctx, payload)
 		if err != nil {
 			return nil, err
 		}
@@ -371,15 +372,7 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		var episodeID uuid.UUID
-		if req.EpisodeID != "" {
-			episodeID, err = uuid.Parse(req.EpisodeID)
-			if err != nil {
-				return nil, fmt.Errorf("could not get episode id: %w", err)
-			}
-		}
-
-		err = s.UpdateChallenge(ctx, Challenge{
+		payload := Challenge{
 			ID:                 id,
 			ShowID:             showID,
 			Title:              req.Title,
@@ -387,10 +380,19 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			PrizePoolAmount:    req.PrizePoolAmount,
 			Players:            int32(req.PlayersToStart),
 			TimePerQuestionSec: int32(req.TimePerQuestionSec),
-			EpisodeID:          episodeID,
 			Kind:               int32(req.Kind),
 			UserMaxAttempts:    int32(req.UserMaxAttempts),
-		})
+		}
+
+		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
+			episodeID, err := uuid.Parse(req.EpisodeID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get episode id: %w", err)
+			}
+			payload.EpisodeID = &episodeID
+		}
+
+		err = s.UpdateChallenge(ctx, payload)
 		if err != nil {
 			return nil, err
 		}
