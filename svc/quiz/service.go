@@ -64,7 +64,7 @@ type (
 		GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
 		CheckAnswer(ctx context.Context, answerID, qui uuid.UUID) (bool, error)
 
-		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
+		//GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
 		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
 	}
@@ -129,22 +129,6 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	s.mutex.Lock(key, time.Second*3)
 	defer s.mutex.Unlock(key)
 
-	fmt.Println("called GetQuizLink |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	fmt.Println("uid |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")                // TODO: Remove it!
-	fmt.Println(uid.String())                                                                       // TODO: Remove it!
-	fmt.Println("challengeID |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")        // TODO: Remove it!
-	fmt.Println(challengeID.String())                                                               // TODO: Remove it!
-
-	//receivedReward, err := s.challenges.GetChallengeReceivedRewardAmount(ctx, uid, challengeID)
-	//if err != nil && !db.IsNotFoundError(err) {
-	//	return nil, fmt.Errorf("could not get received reward amount: %w", err)
-	//}
-	//fmt.Println("receivedReward |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	//fmt.Println(receivedReward)                                                                 // TODO: Remove it!
-	//if receivedReward > 0 {
-	//	return nil, errors.New("reward has been already received for this challenge")
-	//}
-
 	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
@@ -156,9 +140,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	if err != nil {
 		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
 	}
-	fmt.Println("attempts |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	fmt.Println(attempts)                                                                 // TODO: Remove it!
-		if attempts >= int64(challengeByID.UserMaxAttempts) {
+	if attempts >= int64(challengeByID.UserMaxAttempts) {
 		return nil, errors.New("no more attempts left")
 	}
 

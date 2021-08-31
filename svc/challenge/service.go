@@ -169,11 +169,6 @@ func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOpti
 
 // GetByID ...
 func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (Challenge, error) {
-	fmt.Println("called GetByID |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	fmt.Println("userID |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")         // TODO: Remove it!
-	fmt.Println(userID.String())                                                                // TODO: Remove it!
-	fmt.Println("challengeID |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")    // TODO: Remove it!
-	fmt.Println(challengeID.String())                                                           // TODO: Remove it!
 	challenge, err := s.cr.GetChallengeByID(ctx, challengeID)
 	if err != nil {
 		return Challenge{}, fmt.Errorf("could not get challenge by challengeID=%s: %w", challengeID, err)
@@ -185,8 +180,6 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 		UserID:      userID,
 		ChallengeID: challengeID,
 	})
-	fmt.Println("GetChallengeReceivedRewardAmount\n receivedReward |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	fmt.Println(receivedReward)                                                                                                    // TODO: Remove it!
 	if err != nil && !db.IsNotFoundError(err) {
 		return Challenge{}, fmt.Errorf("could not get received reward amount: %w", err)
 	}
@@ -196,8 +189,6 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 			UserID:      userID,
 			ChallengeID: challengeID,
 		})
-		fmt.Println("CountPassedChallengeAttempts\n attempts |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-		fmt.Println(attempts)                                                                                                // TODO: Remove it!
 		if err != nil {
 			return Challenge{}, fmt.Errorf("could not get passed challenge attempts: %w", err)
 		}
@@ -206,10 +197,7 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 			attemptsLeft = 0
 		}
 	}
-	fmt.Println("castToChallenge\n attemptsLeft |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")   // TODO: Remove it!
-	fmt.Println(attemptsLeft)                                                                                     // TODO: Remove it!
-	fmt.Println("castToChallenge\n receivedReward |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	fmt.Println(receivedReward)                                                                                   // TODO: Remove it!
+
 	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward), nil
 }
 
@@ -897,22 +885,22 @@ func (s *Service) StoreChallengeReceivedRewardAmount(ctx context.Context, challe
 	return nil
 }
 
-// GetChallengeReceivedRewardAmount ...
-func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
-	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
-		UserID:      userID,
-		ChallengeID: challengeID,
-	})
-	if err != nil {
-		if db.IsNotFoundError(err) {
-			return 0, nil
-		}
-
-		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
-	}
-
-	return amount, nil
-}
+//// GetChallengeReceivedRewardAmount ...
+//func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
+//	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+//		UserID:      userID,
+//		ChallengeID: challengeID,
+//	})
+//	if err != nil {
+//		if db.IsNotFoundError(err) {
+//			return 0, nil
+//		}
+//
+//		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
+//	}
+//
+//	return amount, nil
+//}
 
 // GetPassedChallengeAttempts ...
 func (s *Service) GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error) {
