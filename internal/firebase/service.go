@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/zeebo/errs"
@@ -106,10 +104,6 @@ func (i *Interactor) GenerateDynamicLink(ctx context.Context, request DynamicLin
 		return DynamicLinkResponse{}, err
 	}
 
-	fmt.Println("qwe//////////////////////") // TODO:REMOVE IT!!!
-	qwe, _ := ioutil.ReadAll(resp.Body)      // TODO:REMOVE IT!!!
-	fmt.Println(string(qwe))                 // TODO:REMOVE IT!!!
-
 	defer func() {
 		err = errs.Combine(err, resp.Body.Close())
 	}()
@@ -122,5 +116,6 @@ func (i *Interactor) GenerateDynamicLink(ctx context.Context, request DynamicLin
 	if err = json.NewDecoder(resp.Body).Decode(&dynamicLinkResponse); err != nil {
 		return DynamicLinkResponse{}, err
 	}
+
 	return dynamicLinkResponse, nil
 }

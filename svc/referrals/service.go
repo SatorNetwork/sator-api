@@ -71,9 +71,9 @@ func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username
 	if err != nil {
 		return []ReferralCode{}, fmt.Errorf("could not get referral code data by user id: %w", err)
 	}
-	if len(referralCodeData) > 0 { // TODO: for test >0. RETURN < 1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	if len(referralCodeData) < 1 {
 		id := uuid.New()
-		link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{ // TODO: implement it for CRUD
+		link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{
 			DynamicLinkInfo: firebase.DynamicLinkInfo{
 				DomainUriPrefix: s.config.BaseFirebaseURL,
 				Link:            s.config.MainSiteLink + "referral/" + id.String(),
@@ -182,6 +182,26 @@ func castReferralCodeToReferralCodes(source repository.ReferralCode) []ReferralC
 // AddReferralCodeData used to store new referral code.
 func (s *Service) AddReferralCodeData(ctx context.Context, rc ReferralCode) (ReferralCode, error) {
 	id := uuid.New()
+	link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{
+		DynamicLinkInfo: firebase.DynamicLinkInfo{
+			DomainUriPrefix: s.config.BaseFirebaseURL,
+			Link:            s.config.MainSiteLink + "referral/" + id.String(),
+			AndroidInfo: firebase.AndroidInfo{
+				AndroidPackageName: s.config.AndroidPackageName,
+			},
+			IosInfo: firebase.IosInfo{
+				IosBundleId: s.config.IosBundleId,
+			},
+			//NavigationInfo: firebase.NavigationInfo{EnableForcedRedirect: true},
+		},
+		Suffix: firebase.Suffix{
+			Option: s.config.SuffixOption,
+		},
+	})
+	if err != nil {
+		return ReferralCode{}, fmt.Errorf("could not generate dynamic link: %w", err)
+	}
+
 	referralCode, err := s.rr.AddReferralCodeData(ctx, repository.AddReferralCodeDataParams{
 		ID: id,
 		Title: sql.NullString{
@@ -190,8 +210,8 @@ func (s *Service) AddReferralCodeData(ctx context.Context, rc ReferralCode) (Ref
 		},
 		Code: rc.Code,
 		ReferralLink: sql.NullString{
-			String: rc.ReferralLink,
-			Valid:  len(rc.ReferralLink) > 0,
+			String: link.ShortLink,
+			Valid:  len(link.ShortLink) > 0,
 		},
 		IsPersonal: sql.NullBool{
 			Bool:  rc.IsPersonal,
@@ -200,7 +220,7 @@ func (s *Service) AddReferralCodeData(ctx context.Context, rc ReferralCode) (Ref
 		UserID: rc.UserID,
 	})
 	if err != nil {
-		return ReferralCode{}, fmt.Errorf("could not store referral code = %v: %w", err)
+		return ReferralCode{}, fmt.Errorf("could not store referral code: %w", err)
 	}
 
 	return castToReferralCode(referralCode, ""), nil

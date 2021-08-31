@@ -13,9 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/firebase"
-
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
+	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -303,7 +302,7 @@ func main() {
 		}
 		r.Mount("/ref", referrals.MakeHTTPHandler(
 			referrals.MakeEndpoints(referrals.NewService(referralRepository, fb, firebase.Config{
-				BaseFirebaseURL: baseFirebaseURL,
+				BaseFirebaseURL:    baseFirebaseURL,
 				WebAPIKey:          fbWebAPIKey,
 				MainSiteLink:       mainSiteLink,
 				AndroidPackageName: androidPackageName,

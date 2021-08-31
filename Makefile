@@ -45,7 +45,7 @@ run-local: ## Run api via `go run`
     ANDROID_PACKAGE_NAME=com.satorio.app \
     IOS_BUNDLE_ID=io.sator \
     SUFFIX_OPTION=UNGUESSABLE \
-    FB_WEB_API_KEY=XXXXXXXXXXXXXXXXXXXXX \
+    FB_WEB_API_KEY=XXXXXXXXXXXXXXXXXXXXXX \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go
 
 migrate: ## Run all migrations on server
