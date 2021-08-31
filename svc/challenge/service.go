@@ -623,8 +623,11 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challen
 		}
 	}
 
-	if len(qlist) == 1 {
+	switch len(qlist) {
+	case 1:
 		return &qlist[0], nil
+	case 0:
+		return nil, fmt.Errorf("could not found any question for this episode. Try unlock with SAO")
 	}
 
 	return &qlist[rand.Intn(len(qlist)-1)], nil
