@@ -135,19 +135,22 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	fmt.Println("challengeID |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")        // TODO: Remove it!
 	fmt.Println(challengeID.String())                                                               // TODO: Remove it!
 
-	receivedReward, err := s.challenges.GetChallengeReceivedRewardAmount(ctx, uid, challengeID)
-	if err != nil && !db.IsNotFoundError(err) {
-		return nil, fmt.Errorf("could not get received reward amount: %w", err)
-	}
-	fmt.Println("receivedReward |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
-	fmt.Println(receivedReward)                                                                 // TODO: Remove it!
-	if receivedReward > 0 {
-		return nil, errors.New("reward has been already received for this challenge")
-	}
+	//receivedReward, err := s.challenges.GetChallengeReceivedRewardAmount(ctx, uid, challengeID)
+	//if err != nil && !db.IsNotFoundError(err) {
+	//	return nil, fmt.Errorf("could not get received reward amount: %w", err)
+	//}
+	//fmt.Println("receivedReward |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
+	//fmt.Println(receivedReward)                                                                 // TODO: Remove it!
+	//if receivedReward > 0 {
+	//	return nil, errors.New("reward has been already received for this challenge")
+	//}
 
 	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+	if challengeByID.ReceivedReward > 0 {
+		return nil, errors.New("reward has been already received for this challenge")
 	}
 	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
 	if err != nil {
@@ -156,7 +159,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	fmt.Println("attempts |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
 	fmt.Println(attempts)                                                                 // TODO: Remove it!
 		if attempts >= int64(challengeByID.UserMaxAttempts) {
-		return nil, fmt.Errorf("no more attempts left: %w", err)
+		return nil, errors.New("no more attempts left")
 	}
 
 	quiz, err := s.repo.GetQuizByChallengeID(ctx, challengeID)
