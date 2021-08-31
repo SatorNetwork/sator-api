@@ -125,7 +125,7 @@ type (
 		EpisodeNumber           int32  `json:"episode_number"`
 		Cover                   string `json:"cover,omitempty"`
 		Title                   string `json:"title" validate:"required,gt=0"`
-		Description             string `json:"description" validate:"required,gt=0"`
+		Description             string `json:"description,omitempty"`
 		ReleaseDate             string `json:"release_date" validate:"datetime=2006-01-02T15:04:05Z"`
 		ChallengeID             string `json:"challenge_id,omitempty"`
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
