@@ -395,32 +395,37 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		var challengeID, verificationChallengeID uuid.UUID
+		payload := Episode{
+			ShowID:        showID,
+			SeasonID:      seasonID,
+			EpisodeNumber: req.EpisodeNumber,
+			Cover:         req.Cover,
+			Title:         req.Title,
+			Description:   req.Description,
+			ReleaseDate:   req.ReleaseDate,
+		}
+
 		if req.ChallengeID != "" {
-			challengeID, err = uuid.Parse(req.ChallengeID)
+			challengeID, err := uuid.Parse(req.ChallengeID)
 			if err != nil {
 				return nil, fmt.Errorf("could not get challenge id: %w", err)
+			}
+			if challengeID != uuid.Nil {
+				payload.ChallengeID = &challengeID
 			}
 		}
 
 		if req.VerificationChallengeID != "" {
-			verificationChallengeID, err = uuid.Parse(req.VerificationChallengeID)
+			verificationChallengeID, err := uuid.Parse(req.VerificationChallengeID)
 			if err != nil {
 				return nil, fmt.Errorf("could not get verification challenge id: %w", err)
 			}
+			if verificationChallengeID != uuid.Nil {
+				payload.VerificationChallengeID = &verificationChallengeID
+			}
 		}
 
-		resp, err := s.AddEpisode(ctx, Episode{
-			ShowID:                  showID,
-			SeasonID:                seasonID,
-			ChallengeID:             challengeID,
-			VerificationChallengeID: verificationChallengeID,
-			EpisodeNumber:           req.EpisodeNumber,
-			Cover:                   req.Cover,
-			Title:                   req.Title,
-			Description:             req.Description,
-			ReleaseDate:             req.ReleaseDate,
-		})
+		resp, err := s.AddEpisode(ctx, payload)
 		if err != nil {
 			return nil, err
 		}
@@ -452,34 +457,38 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, fmt.Errorf("could not get season id: %w", err)
 		}
 
-		var challengeID, verificationChallengeID uuid.UUID
+		payload := Episode{
+			ID:            id,
+			ShowID:        showID,
+			SeasonID:      seasonID,
+			EpisodeNumber: req.EpisodeNumber,
+			Cover:         req.Cover,
+			Title:         req.Title,
+			Description:   req.Description,
+			ReleaseDate:   req.ReleaseDate,
+		}
+
 		if req.ChallengeID != "" {
-			challengeID, err = uuid.Parse(req.ChallengeID)
+			challengeID, err := uuid.Parse(req.ChallengeID)
 			if err != nil {
 				return nil, fmt.Errorf("could not get challenge id: %w", err)
+			}
+			if challengeID != uuid.Nil {
+				payload.ChallengeID = &challengeID
 			}
 		}
 
 		if req.VerificationChallengeID != "" {
-			verificationChallengeID, err = uuid.Parse(req.VerificationChallengeID)
+			verificationChallengeID, err := uuid.Parse(req.VerificationChallengeID)
 			if err != nil {
 				return nil, fmt.Errorf("could not get verification challenge id: %w", err)
 			}
+			if verificationChallengeID != uuid.Nil {
+				payload.VerificationChallengeID = &verificationChallengeID
+			}
 		}
 
-		err = s.UpdateEpisode(ctx, Episode{
-			ID:                      id,
-			ShowID:                  showID,
-			SeasonID:                seasonID,
-			EpisodeNumber:           req.EpisodeNumber,
-			Cover:                   req.Cover,
-			Title:                   req.Title,
-			Description:             req.Description,
-			ReleaseDate:             req.ReleaseDate,
-			ChallengeID:             challengeID,
-			VerificationChallengeID: verificationChallengeID,
-		})
-		if err != nil {
+		if err := s.UpdateEpisode(ctx, payload); err != nil {
 			return nil, err
 		}
 
