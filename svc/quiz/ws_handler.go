@@ -65,6 +65,11 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		fmt.Println("called QuizWsHandler |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||") // TODO: Remove it!
+		fmt.Println("uid |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")                  // TODO: Remove it!
+		fmt.Println(uid.String())                                                                         // TODO: Remove it!
+		fmt.Println("quizHub.ChallengeID |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")  // TODO: Remove it!
+		fmt.Println(quizHub.ChallengeID.String())                                                         // TODO: Remove it!
 
 		if err := c.StoreChallengeAttempt(ctx, quizHub.ChallengeID, uid); err != nil {
 			log.Printf("could not store challenge attempt: user_id=%s, challenge_id=%s, error: %v",
