@@ -281,6 +281,11 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return nil, fmt.Errorf("could not get question by id: %w", err)
 	}
 
+	// challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	// }
+
 	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge list by show id: %w", err)
@@ -319,7 +324,7 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return false, fmt.Errorf("could not store episode access data: %w", err)
 	}
 
-	return s.VerifyUserAccessToEpisode(ctx, userID, epID)
+	return true, nil
 }
 
 // VerifyUserAccessToEpisode ...
