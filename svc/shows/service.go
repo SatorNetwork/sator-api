@@ -40,19 +40,19 @@ type (
 	}
 
 	Episode struct {
-		ID                      uuid.UUID `json:"id"`
-		ShowID                  uuid.UUID `json:"show_id"`
-		SeasonID                uuid.UUID `json:"season_id"`
-		SeasonNumber            int32     `json:"season_number"`
-		EpisodeNumber           int32     `json:"episode_number"`
-		Cover                   string    `json:"cover"`
-		Title                   string    `json:"title"`
-		Description             string    `json:"description"`
-		ReleaseDate             string    `json:"release_date"`
-		ChallengeID             uuid.UUID `json:"challenge_id"`
-		VerificationChallengeID uuid.UUID `json:"verification_challenge_id"`
-		Rating                  float64   `json:"rating"`
-		RatingsCount            int64     `json:"ratings_count"`
+		ID                      uuid.UUID  `json:"id"`
+		ShowID                  uuid.UUID  `json:"show_id"`
+		SeasonID                uuid.UUID  `json:"season_id"`
+		SeasonNumber            int32      `json:"season_number"`
+		EpisodeNumber           int32      `json:"episode_number"`
+		Cover                   string     `json:"cover"`
+		Title                   string     `json:"title"`
+		Description             string     `json:"description"`
+		ReleaseDate             string     `json:"release_date"`
+		ChallengeID             *uuid.UUID `json:"challenge_id"`
+		VerificationChallengeID *uuid.UUID `json:"verification_challenge_id"`
+		Rating                  float64    `json:"rating"`
+		RatingsCount            int64      `json:"ratings_count"`
 	}
 
 	showsRepository interface {
@@ -237,57 +237,81 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUI
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure
 func castRowToEpisode(source repository.GetEpisodeByIDRow, rating float64, ratingsCount int64) Episode {
-	return Episode{
-		ID:                      source.ID,
-		ShowID:                  source.ShowID,
-		EpisodeNumber:           source.EpisodeNumber,
-		SeasonID:                source.SeasonID.UUID,
-		SeasonNumber:            source.SeasonNumber,
-		Cover:                   source.Cover.String,
-		Title:                   source.Title,
-		Description:             source.Description.String,
-		ReleaseDate:             source.ReleaseDate.Time.String(),
-		ChallengeID:             source.ChallengeID.UUID,
-		VerificationChallengeID: source.VerificationChallengeID.UUID,
-		Rating:                  rating,
-		RatingsCount:            ratingsCount,
+	ep := Episode{
+		ID:            source.ID,
+		ShowID:        source.ShowID,
+		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID.UUID,
+		SeasonNumber:  source.SeasonNumber,
+		Cover:         source.Cover.String,
+		Title:         source.Title,
+		Description:   source.Description.String,
+		ReleaseDate:   source.ReleaseDate.Time.String(),
+		Rating:        rating,
+		RatingsCount:  ratingsCount,
 	}
+
+	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
+		ep.ChallengeID = &source.ChallengeID.UUID
+	}
+
+	if source.VerificationChallengeID.Valid && source.VerificationChallengeID.UUID != uuid.Nil {
+		ep.VerificationChallengeID = &source.VerificationChallengeID.UUID
+	}
+
+	return ep
 }
 
 // Cast repository.GetEpisodesByShowIDRow to service Episode structure
 func castRowsToEpisode(source repository.GetEpisodesByShowIDRow) Episode {
-	return Episode{
-		ID:                      source.ID,
-		ShowID:                  source.ShowID,
-		EpisodeNumber:           source.EpisodeNumber,
-		SeasonID:                source.SeasonID.UUID,
-		SeasonNumber:            source.SeasonNumber,
-		Cover:                   source.Cover.String,
-		Title:                   source.Title,
-		Description:             source.Description.String,
-		ReleaseDate:             source.ReleaseDate.Time.String(),
-		ChallengeID:             source.ChallengeID.UUID,
-		VerificationChallengeID: source.VerificationChallengeID.UUID,
-		Rating:                  source.AvgRating,
-		RatingsCount:            source.Ratings,
+	ep := Episode{
+		ID:            source.ID,
+		ShowID:        source.ShowID,
+		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID.UUID,
+		SeasonNumber:  source.SeasonNumber,
+		Cover:         source.Cover.String,
+		Title:         source.Title,
+		Description:   source.Description.String,
+		ReleaseDate:   source.ReleaseDate.Time.String(),
+		Rating:        source.AvgRating,
+		RatingsCount:  source.Ratings,
 	}
+
+	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
+		ep.ChallengeID = &source.ChallengeID.UUID
+	}
+
+	if source.VerificationChallengeID.Valid && source.VerificationChallengeID.UUID != uuid.Nil {
+		ep.VerificationChallengeID = &source.VerificationChallengeID.UUID
+	}
+
+	return ep
 }
 
 // Cast repository.Episode to service Episode structure
 func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
-	return Episode{
-		ID:                      source.ID,
-		ShowID:                  source.ShowID,
-		EpisodeNumber:           source.EpisodeNumber,
-		SeasonID:                source.SeasonID.UUID,
-		SeasonNumber:            seasonNumber,
-		Cover:                   source.Cover.String,
-		Title:                   source.Title,
-		Description:             source.Description.String,
-		ReleaseDate:             source.ReleaseDate.Time.String(),
-		ChallengeID:             source.ChallengeID.UUID,
-		VerificationChallengeID: source.VerificationChallengeID.UUID,
+	ep := Episode{
+		ID:            source.ID,
+		ShowID:        source.ShowID,
+		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID.UUID,
+		SeasonNumber:  seasonNumber,
+		Cover:         source.Cover.String,
+		Title:         source.Title,
+		Description:   source.Description.String,
+		ReleaseDate:   source.ReleaseDate.Time.String(),
 	}
+
+	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
+		ep.ChallengeID = &source.ChallengeID.UUID
+	}
+
+	if source.VerificationChallengeID.Valid && source.VerificationChallengeID.UUID != uuid.Nil {
+		ep.VerificationChallengeID = &source.VerificationChallengeID.UUID
+	}
+
+	return ep
 }
 
 // AddShow ...
@@ -350,7 +374,7 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, fmt.Errorf("could not add parse date from string: %w", err)
 	}
 
-	episode, err := s.sr.AddEpisode(ctx, repository.AddEpisodeParams{
+	params := repository.AddEpisodeParams{
 		ShowID:        ep.ShowID,
 		SeasonID:      uuid.NullUUID{UUID: ep.SeasonID, Valid: ep.SeasonID != uuid.Nil},
 		EpisodeNumber: ep.EpisodeNumber,
@@ -367,9 +391,17 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 			Time:  rDate,
 			Valid: true,
 		},
-		ChallengeID:             uuid.NullUUID{UUID: ep.ChallengeID, Valid: ep.ChallengeID != uuid.Nil},
-		VerificationChallengeID: uuid.NullUUID{UUID: ep.VerificationChallengeID, Valid: ep.VerificationChallengeID != uuid.Nil},
-	})
+	}
+
+	if ep.ChallengeID != nil && *ep.ChallengeID != uuid.Nil {
+		params.ChallengeID = uuid.NullUUID{UUID: *ep.ChallengeID, Valid: true}
+	}
+
+	if ep.VerificationChallengeID != nil && *ep.VerificationChallengeID != uuid.Nil {
+		params.VerificationChallengeID = uuid.NullUUID{UUID: *ep.VerificationChallengeID, Valid: true}
+	}
+
+	episode, err := s.sr.AddEpisode(ctx, params)
 	if err != nil {
 		return Episode{}, fmt.Errorf("could not add episode #%d for show_id=%s: %w", ep.EpisodeNumber, ep.ShowID.String(), err)
 	}
@@ -389,7 +421,7 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		return fmt.Errorf("could not add parse date from string: %w", err)
 	}
 
-	if err = s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
+	params := repository.UpdateEpisodeParams{
 		ID:            ep.ID,
 		ShowID:        ep.ShowID,
 		SeasonID:      uuid.NullUUID{UUID: ep.SeasonID, Valid: ep.SeasonID != uuid.Nil},
@@ -407,9 +439,17 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 			Time:  rDate,
 			Valid: true,
 		},
-		ChallengeID:             uuid.NullUUID{UUID: ep.ChallengeID, Valid: ep.ChallengeID != uuid.Nil},
-		VerificationChallengeID: uuid.NullUUID{UUID: ep.VerificationChallengeID, Valid: ep.VerificationChallengeID != uuid.Nil},
-	}); err != nil {
+	}
+
+	if ep.ChallengeID != nil && *ep.ChallengeID != uuid.Nil {
+		params.ChallengeID = uuid.NullUUID{UUID: *ep.ChallengeID, Valid: true}
+	}
+
+	if ep.VerificationChallengeID != nil && *ep.VerificationChallengeID != uuid.Nil {
+		params.VerificationChallengeID = uuid.NullUUID{UUID: *ep.VerificationChallengeID, Valid: true}
+	}
+
+	if err = s.sr.UpdateEpisode(ctx, params); err != nil {
 		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
 	}
 
