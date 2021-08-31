@@ -35,6 +35,7 @@ type (
 	// FIXME: remove it when the app will be fixed
 	showsRepository interface {
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetEpisodeByIDRow, error)
+		GetEpisodeIDByVerificationChallengeID(ctx context.Context, verificationChallengeID uuid.NullUUID) (uuid.UUID, error)
 	}
 
 	challengesRepository interface {
@@ -280,10 +281,10 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return nil, fmt.Errorf("could not get question by id: %w", err)
 	}
 
-	challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get challenge by id: %w", err)
-	}
+	// challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	// }
 
 	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
 	if err != nil {
@@ -303,8 +304,13 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return false, nil
 	}
 
+	epID, err := s.showRepo.GetEpisodeIDByVerificationChallengeID(ctx, uuid.NullUUID{UUID: question.ChallengeID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("could not get episode id: %w", err)
+	}
+
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
-		EpisodeID: challenge.EpisodeID.UUID,
+		EpisodeID: epID,
 		UserID:    userID,
 		ActivatedAt: sql.NullTime{
 			Time:  time.Now(),
@@ -838,8 +844,6 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		activateBefore = time.Now().Add(time.Hour * 24 * 7)
 		amount = 500
 	}
-
-	log.Printf("s.chargeForUnlockFn != nil && amount > 0: %v && %v", s.chargeForUnlockFn != nil, amount > 0)
 
 	if s.chargeForUnlockFn != nil && amount > 0 {
 		if err := s.chargeForUnlockFn(

@@ -67,3 +67,9 @@ WHERE id = @id;
 -- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
 WHERE id = @id;
+
+
+-- name: GetEpisodeIDByVerificationChallengeID :one
+SELECT id
+FROM episodes
+WHERE verification_challenge_id = $1;
