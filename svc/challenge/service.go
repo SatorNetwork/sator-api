@@ -880,6 +880,7 @@ func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challeng
 		if db.IsNotFoundError(err) {
 			return 0, nil
 		}
+
 		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
 	}
 
