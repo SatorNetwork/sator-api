@@ -10,6 +10,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	showRepository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 
 	"github.com/google/uuid"
 )
@@ -22,6 +23,7 @@ type (
 		attemptsNumber       int64
 		activatedRealmPeriod time.Duration
 		chargeForUnlockFn    chargeForUnlockFunc
+		showRepo             showsRepository
 	}
 
 	chargeForUnlockFunc func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -29,6 +31,11 @@ type (
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
+
+	// FIXME: remove it when the app will be fixed
+	showsRepository interface {
+		GetEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetEpisodeByIDRow, error)
+	}
 
 	challengesRepository interface {
 		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
@@ -148,13 +155,14 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
+func NewService(cr challengesRepository, showRepo showsRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
 
 	s := &Service{
 		cr:                   cr,
+		showRepo:             showRepo,
 		playUrlFn:            fn,
 		attemptsNumber:       2,
 		activatedRealmPeriod: time.Hour * 24,
@@ -222,16 +230,19 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		}
 	}
 
-	askedQuestions, _ := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
-		UserID:    userID,
-		EpisodeID: episodeID,
-	})
-
-	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, uuid.NullUUID{UUID: episodeID, Valid: true})
+	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
+	}
+	challenge, err := s.cr.GetChallengeByID(ctx, ep.VerificationChallengeID.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
+	askedQuestions, _ := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+	})
 	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID, askedQuestions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)

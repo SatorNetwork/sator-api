@@ -292,6 +292,14 @@ func main() {
 
 	// Shows service
 	{
+
+		// Show repo
+		// FIXME: remove it when the app will be fixed
+		showRepo, err := showsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("showsRepo error: %v", err)
+		}
+
 		// Challenges service
 		challengeRepository, err := challengeRepo.Prepare(ctx, db)
 		if err != nil {
@@ -299,6 +307,7 @@ func main() {
 		}
 		challengeSvc := challenge.NewService(
 			challengeRepository,
+			showRepo,
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
@@ -316,10 +325,6 @@ func main() {
 		))
 
 		// Shows service
-		showRepo, err := showsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("showsRepo error: %v", err)
-		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
 			logger,
