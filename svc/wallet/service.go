@@ -685,6 +685,24 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not get wallet balance")
+	}
+
+	if bal < amount {
+		return fmt.Errorf("not enough balance for payment: %v", bal)
+	}
+
+	// Get account to send payment
 	r, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
 	if err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
