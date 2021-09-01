@@ -87,7 +87,7 @@ func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relation
 	return func(userID, quizID uuid.UUID) {
 		log.Printf("SendReward CALLED") // TODO: Remove it!
 		var ctx context.Context
-
+		log.Printf("userID: %v", userID) // TODO: Remove it!
 		invitation, err := s.ir.GetInvitationByInviteeID(ctx, userID)
 		if err != nil {
 			if !db.IsNotFoundError(err) {
