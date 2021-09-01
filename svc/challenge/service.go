@@ -217,6 +217,15 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 // GetVerificationQuestionByEpisodeID ...
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error) {
+	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
+	}
+	challenge, err := s.cr.GetChallengeByID(ctx, ep.VerificationChallengeID.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
 	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
 		UserID:    userID,
 		EpisodeID: episodeID,
@@ -226,18 +235,9 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		},
 	})
 	if err == nil {
-		if numberAttempts >= s.attemptsNumber {
+		if numberAttempts >= int64(challenge.UserMaxAttempts) {
 			return nil, fmt.Errorf("user has no more attempts to pass verification question")
 		}
-	}
-
-	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
-	if err != nil {
-		return nil, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
-	}
-	challenge, err := s.cr.GetChallengeByID(ctx, ep.VerificationChallengeID.UUID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get challenge by id: %w", err)
 	}
 
 	askedQuestions, _ := s.cr.GetAskedQuestionsByEpisodeID(ctx, repository.GetAskedQuestionsByEpisodeIDParams{
