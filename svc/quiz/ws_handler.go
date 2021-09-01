@@ -72,10 +72,10 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 		}
 
 		defer func() {
-			quizHub.RemovePlayer(uid)
-			log.Printf("Defer: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
 			callback(uid, quizID)
 			log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////") // TODO: Remove it!
+			log.Printf("Defer: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
+			quizHub.RemovePlayer(uid)
 		}()
 
 		fakePlayers := make([]struct {
