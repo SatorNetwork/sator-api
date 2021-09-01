@@ -43,6 +43,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEpisodeByIDStmt, err = db.PrepareContext(ctx, getEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeByID: %w", err)
 	}
+	if q.getEpisodeIDByVerificationChallengeIDStmt, err = db.PrepareContext(ctx, getEpisodeIDByVerificationChallengeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEpisodeIDByVerificationChallengeID: %w", err)
+	}
 	if q.getEpisodeRatingByIDStmt, err = db.PrepareContext(ctx, getEpisodeRatingByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeRatingByID: %w", err)
 	}
@@ -111,6 +114,11 @@ func (q *Queries) Close() error {
 	if q.getEpisodeByIDStmt != nil {
 		if cerr := q.getEpisodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEpisodeByIDStmt: %w", cerr)
+		}
+	}
+	if q.getEpisodeIDByVerificationChallengeIDStmt != nil {
+		if cerr := q.getEpisodeIDByVerificationChallengeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEpisodeIDByVerificationChallengeIDStmt: %w", cerr)
 		}
 	}
 	if q.getEpisodeRatingByIDStmt != nil {
@@ -200,47 +208,49 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                       DBTX
-	tx                       *sql.Tx
-	addEpisodeStmt           *sql.Stmt
-	addSeasonStmt            *sql.Stmt
-	addShowStmt              *sql.Stmt
-	deleteEpisodeByIDStmt    *sql.Stmt
-	deleteSeasonByIDStmt     *sql.Stmt
-	deleteShowByIDStmt       *sql.Stmt
-	getEpisodeByIDStmt       *sql.Stmt
-	getEpisodeRatingByIDStmt *sql.Stmt
-	getEpisodesByShowIDStmt  *sql.Stmt
-	getSeasonByIDStmt        *sql.Stmt
-	getSeasonsByShowIDStmt   *sql.Stmt
-	getShowByIDStmt          *sql.Stmt
-	getShowsStmt             *sql.Stmt
-	getShowsByCategoryStmt   *sql.Stmt
-	rateEpisodeStmt          *sql.Stmt
-	updateEpisodeStmt        *sql.Stmt
-	updateShowStmt           *sql.Stmt
+	db                                        DBTX
+	tx                                        *sql.Tx
+	addEpisodeStmt                            *sql.Stmt
+	addSeasonStmt                             *sql.Stmt
+	addShowStmt                               *sql.Stmt
+	deleteEpisodeByIDStmt                     *sql.Stmt
+	deleteSeasonByIDStmt                      *sql.Stmt
+	deleteShowByIDStmt                        *sql.Stmt
+	getEpisodeByIDStmt                        *sql.Stmt
+	getEpisodeIDByVerificationChallengeIDStmt *sql.Stmt
+	getEpisodeRatingByIDStmt                  *sql.Stmt
+	getEpisodesByShowIDStmt                   *sql.Stmt
+	getSeasonByIDStmt                         *sql.Stmt
+	getSeasonsByShowIDStmt                    *sql.Stmt
+	getShowByIDStmt                           *sql.Stmt
+	getShowsStmt                              *sql.Stmt
+	getShowsByCategoryStmt                    *sql.Stmt
+	rateEpisodeStmt                           *sql.Stmt
+	updateEpisodeStmt                         *sql.Stmt
+	updateShowStmt                            *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                       tx,
-		tx:                       tx,
-		addEpisodeStmt:           q.addEpisodeStmt,
-		addSeasonStmt:            q.addSeasonStmt,
-		addShowStmt:              q.addShowStmt,
-		deleteEpisodeByIDStmt:    q.deleteEpisodeByIDStmt,
-		deleteSeasonByIDStmt:     q.deleteSeasonByIDStmt,
-		deleteShowByIDStmt:       q.deleteShowByIDStmt,
-		getEpisodeByIDStmt:       q.getEpisodeByIDStmt,
-		getEpisodeRatingByIDStmt: q.getEpisodeRatingByIDStmt,
-		getEpisodesByShowIDStmt:  q.getEpisodesByShowIDStmt,
-		getSeasonByIDStmt:        q.getSeasonByIDStmt,
-		getSeasonsByShowIDStmt:   q.getSeasonsByShowIDStmt,
-		getShowByIDStmt:          q.getShowByIDStmt,
-		getShowsStmt:             q.getShowsStmt,
-		getShowsByCategoryStmt:   q.getShowsByCategoryStmt,
-		rateEpisodeStmt:          q.rateEpisodeStmt,
-		updateEpisodeStmt:        q.updateEpisodeStmt,
-		updateShowStmt:           q.updateShowStmt,
+		db:                    tx,
+		tx:                    tx,
+		addEpisodeStmt:        q.addEpisodeStmt,
+		addSeasonStmt:         q.addSeasonStmt,
+		addShowStmt:           q.addShowStmt,
+		deleteEpisodeByIDStmt: q.deleteEpisodeByIDStmt,
+		deleteSeasonByIDStmt:  q.deleteSeasonByIDStmt,
+		deleteShowByIDStmt:    q.deleteShowByIDStmt,
+		getEpisodeByIDStmt:    q.getEpisodeByIDStmt,
+		getEpisodeIDByVerificationChallengeIDStmt: q.getEpisodeIDByVerificationChallengeIDStmt,
+		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
+		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
+		getSeasonByIDStmt:                         q.getSeasonByIDStmt,
+		getSeasonsByShowIDStmt:                    q.getSeasonsByShowIDStmt,
+		getShowByIDStmt:                           q.getShowByIDStmt,
+		getShowsStmt:                              q.getShowsStmt,
+		getShowsByCategoryStmt:                    q.getShowsByCategoryStmt,
+		rateEpisodeStmt:                           q.rateEpisodeStmt,
+		updateEpisodeStmt:                         q.updateEpisodeStmt,
+		updateShowStmt:                            q.updateShowStmt,
 	}
 }

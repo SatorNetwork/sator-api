@@ -134,6 +134,19 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (GetEpisodeB
 	return i, err
 }
 
+const getEpisodeIDByVerificationChallengeID = `-- name: GetEpisodeIDByVerificationChallengeID :one
+SELECT id
+FROM episodes
+WHERE verification_challenge_id = $1
+`
+
+func (q *Queries) GetEpisodeIDByVerificationChallengeID(ctx context.Context, verificationChallengeID uuid.NullUUID) (uuid.UUID, error) {
+	row := q.queryRow(ctx, q.getEpisodeIDByVerificationChallengeIDStmt, getEpisodeIDByVerificationChallengeID, verificationChallengeID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
 WITH avg_ratings AS (
     SELECT 

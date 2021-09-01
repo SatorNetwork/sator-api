@@ -10,6 +10,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	showRepository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 
 	"github.com/google/uuid"
 )
@@ -22,6 +23,7 @@ type (
 		attemptsNumber       int64
 		activatedRealmPeriod time.Duration
 		chargeForUnlockFn    chargeForUnlockFunc
+		showRepo             showsRepository
 	}
 
 	chargeForUnlockFunc func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -29,6 +31,12 @@ type (
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
+
+	// FIXME: remove it when the app will be fixed
+	showsRepository interface {
+		GetEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetEpisodeByIDRow, error)
+		GetEpisodeIDByVerificationChallengeID(ctx context.Context, verificationChallengeID uuid.NullUUID) (uuid.UUID, error)
+	}
 
 	challengesRepository interface {
 		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
@@ -148,13 +156,14 @@ func DefaultPlayURLGenerator(baseURL string) playURLGenerator {
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(cr challengesRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
+func NewService(cr challengesRepository, showRepo showsRepository, fn playURLGenerator, opt ...ServiceOption) *Service {
 	if cr == nil {
 		log.Fatalln("challenges repository is not set")
 	}
 
 	s := &Service{
 		cr:                   cr,
+		showRepo:             showRepo,
 		playUrlFn:            fn,
 		attemptsNumber:       2,
 		activatedRealmPeriod: time.Hour * 24,
@@ -208,6 +217,15 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 // GetVerificationQuestionByEpisodeID ...
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error) {
+	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
+	}
+	challenge, err := s.cr.GetChallengeByID(ctx, ep.VerificationChallengeID.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
 	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
 		UserID:    userID,
 		EpisodeID: episodeID,
@@ -217,7 +235,7 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		},
 	})
 	if err == nil {
-		if numberAttempts >= s.attemptsNumber {
+		if numberAttempts >= int64(challenge.UserMaxAttempts) {
 			return nil, fmt.Errorf("user has no more attempts to pass verification question")
 		}
 	}
@@ -226,12 +244,6 @@ func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episod
 		UserID:    userID,
 		EpisodeID: episodeID,
 	})
-
-	challenge, err := s.cr.GetChallengeByEpisodeID(ctx, uuid.NullUUID{UUID: episodeID, Valid: true})
-	if err != nil {
-		return nil, fmt.Errorf("could not get challenge by id: %w", err)
-	}
-
 	q, err := s.GetOneRandomQuestionByChallengeID(ctx, challenge.ID, askedQuestions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge by id: %w", err)
@@ -269,10 +281,10 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return nil, fmt.Errorf("could not get question by id: %w", err)
 	}
 
-	challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get challenge by id: %w", err)
-	}
+	// challenge, err := s.cr.GetChallengeByID(ctx, question.ChallengeID)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	// }
 
 	isValid, err := s.CheckAnswer(ctx, answerID, questionID)
 	if err != nil {
@@ -292,8 +304,13 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 		return false, nil
 	}
 
+	epID, err := s.showRepo.GetEpisodeIDByVerificationChallengeID(ctx, uuid.NullUUID{UUID: question.ChallengeID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("could not get episode id: %w", err)
+	}
+
 	if _, err := s.cr.AddEpisodeAccessData(ctx, repository.AddEpisodeAccessDataParams{
-		EpisodeID: challenge.EpisodeID.UUID,
+		EpisodeID: epID,
 		UserID:    userID,
 		ActivatedAt: sql.NullTime{
 			Time:  time.Now(),
@@ -816,8 +833,6 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		activateBefore = data.ActivatedBefore.Time
 	}
 
-	log.Printf("activateBefore 1: %s", activateBefore.String())
-
 	switch unlockOption {
 	case "unlock_opt_10_2h":
 		activateBefore = time.Now().Add(time.Hour * 2)
@@ -829,9 +844,6 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 		activateBefore = time.Now().Add(time.Hour * 24 * 7)
 		amount = 500
 	}
-
-	log.Printf("activateBefore 2: %s", activateBefore.String())
-	log.Printf("s.chargeForUnlockFn != nil && amount > 0: %T && %T", s.chargeForUnlockFn != nil, amount > 0)
 
 	if s.chargeForUnlockFn != nil && amount > 0 {
 		if err := s.chargeForUnlockFn(

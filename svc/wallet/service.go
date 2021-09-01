@@ -595,6 +595,10 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 		return fmt.Errorf("could not unmarshal: %w", err)
 	}
 
+	return s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount)
+}
+
+func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64) error {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return fmt.Errorf("could not get wallet: %w", err)
@@ -625,8 +629,8 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
 			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
-			toDecode.RecipientAddr,
-			toDecode.Amount,
+			recipientAddr,
+			amount,
 		); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 10)
@@ -681,13 +685,30 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not get wallet balance")
+	}
+
+	if bal < amount {
+		return fmt.Errorf("not enough balance for payment: %v", bal)
+	}
+
+	// Get account to send payment
 	r, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
 	if err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
-	// TODO: move token name to env variable or constant
-	if _, err := s.CreateTransfer(ctx, w.ID, r.PublicKey, "SAO", amount); err != nil {
+	if err := s.execTransfer(ctx, w.ID, r.PublicKey, amount); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
