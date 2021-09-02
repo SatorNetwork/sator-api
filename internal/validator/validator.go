@@ -44,11 +44,7 @@ func ValidateStruct() func(s interface{}) error {
 
 	en := en.New()
 	uni = ut.New(en, en)
-
-	// this is usually know or extracted from http 'Accept-Language' header
-	// also see uni.FindTranslator(...)
 	trans, _ := uni.GetTranslator("en")
-
 	validate := validator.New()
 	en_translations.RegisterDefaultTranslations(validate, trans)
 
