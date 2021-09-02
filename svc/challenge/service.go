@@ -582,7 +582,8 @@ func (s *Service) GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (
 func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challengeID uuid.UUID, excludeIDs ...uuid.UUID) (*Question, error) {
 	var questions []repository.Question
 	var err error
-	if len(excludeIDs) > 1 {
+
+	if len(excludeIDs) > 0 {
 		questions, err = s.cr.GetQuestionsByChallengeIDWithExceptions(ctx, repository.GetQuestionsByChallengeIDWithExceptionsParams{
 			ChallengeID: challengeID,
 			QuestionIds: excludeIDs,
@@ -605,64 +606,27 @@ func (s *Service) GetOneRandomQuestionByChallengeID(ctx context.Context, challen
 		}
 	}
 
-	idsSlice := make([]uuid.UUID, 0, len(questions))
-	for _, v := range questions {
-		idsSlice = append(idsSlice, v.ID)
+	var q repository.Question
+	switch len(questions) {
+	case 0:
+		return nil, fmt.Errorf("no more verification question")
+	case 1:
+		q = questions[0]
+	default:
+		q = questions[rand.Intn(len(questions))]
 	}
 
-	answers, err := s.cr.GetAnswersByIDs(ctx, idsSlice)
+	answers, err := s.cr.GetAnswersByQuestionID(ctx, q.ID)
 	if err != nil {
-		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get answers: %w", err)
-		}
-		return nil, fmt.Errorf("could not found answers with ids %s: %w", challengeID.String(), err)
+		return nil, fmt.Errorf("could not get answer options: %w", err)
 	}
 
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
 
-	answMap := make(map[string][]AnswerOption)
-	for _, v := range answers {
-		if _, ok := answMap[v.QuestionID.String()]; ok {
-			answMap[v.QuestionID.String()] = append(answMap[v.QuestionID.String()], AnswerOption{
-				ID:         v.ID,
-				QuestionID: v.QuestionID,
-				Option:     v.AnswerOption,
-				IsCorrect:  v.IsCorrect.Bool,
-			})
-		} else {
-			answMap[v.QuestionID.String()] = []AnswerOption{
-				{
-					ID:         v.ID,
-					QuestionID: v.QuestionID,
-					Option:     v.AnswerOption,
-					IsCorrect:  v.IsCorrect.Bool,
-				},
-			}
-		}
-	}
+	result := castToQuestionWithAnswers(q, answers)
 
-	qlist := make([]Question, 0, len(questions))
-	for _, v := range questions {
-		if opt, ok := answMap[v.ID.String()]; ok {
-			qlist = append(qlist, Question{
-				ID:            v.ID,
-				ChallengeID:   v.ChallengeID,
-				Question:      v.Question,
-				Order:         v.QuestionOrder,
-				AnswerOptions: opt,
-			})
-		}
-	}
-
-	switch len(qlist) {
-	case 1:
-		return &qlist[0], nil
-	case 0:
-		return nil, fmt.Errorf("could not found any question for this episode. Try unlock with SAO")
-	}
-
-	return &qlist[rand.Intn(len(qlist))-1], nil
+	return &result, nil
 }
 
 // CheckAnswer checks answer
