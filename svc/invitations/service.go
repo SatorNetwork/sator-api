@@ -85,9 +85,11 @@ func NewService(ir invitationsRepository, m mailer, rc rewardsClient, config Con
 // SendReward ...
 func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error) func(userID, quizID uuid.UUID) {
 	return func(userID, quizID uuid.UUID) {
-		log.Printf("SendReward CALLED") // TODO: Remove it!
-		var ctx context.Context
 
+		log.Printf("SendReward CALLED")  // TODO: Remove it!
+		log.Printf("userID: %v", userID) // TODO: Remove it!
+
+		ctx := context.TODO()
 		invitation, err := s.ir.GetInvitationByInviteeID(ctx, userID)
 		if err != nil {
 			if !db.IsNotFoundError(err) {

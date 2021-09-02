@@ -66,16 +66,19 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 			return
 		}
 
+		defer func() {
+			callback(uid, quizID)
+			log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////")                   // TODO: Remove it!
+			log.Printf("Defer: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
+		}()
+
 		if err := c.StoreChallengeAttempt(ctx, quizHub.ChallengeID, uid); err != nil {
 			log.Printf("could not store challenge attempt: user_id=%s, challenge_id=%s, error: %v",
 				uid.String(), quizHub.ChallengeID.String(), err)
 		}
 
 		defer func() {
-			log.Printf("Defer: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
 			quizHub.RemovePlayer(uid)
-			callback(uid, quizID)
-			log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////") // TODO: Remove it!
 		}()
 
 		fakePlayers := make([]struct {
