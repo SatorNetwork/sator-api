@@ -5,7 +5,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	en_translations "github.com/go-playground/validator/v10/translations/en"
 )
 
 type (
@@ -35,9 +38,19 @@ func (v ValidationError) Error() string {
 func ValidateStruct() func(s interface{}) error {
 	// Init validator
 	var (
-		errStr   string
-		validate = validator.New()
+		uni    *ut.UniversalTranslator
+		errStr string
 	)
+
+	en := en.New()
+	uni = ut.New(en, en)
+
+	// this is usually know or extracted from http 'Accept-Language' header
+	// also see uni.FindTranslator(...)
+	trans, _ := uni.GetTranslator("en")
+
+	validate := validator.New()
+	en_translations.RegisterDefaultTranslations(validate, trans)
 
 	return func(s interface{}) error {
 		errs := url.Values{}
@@ -49,7 +62,7 @@ func ValidateStruct() func(s interface{}) error {
 			case validator.ValidationErrors:
 				errStr = err.Error()
 				for _, verr := range e {
-					errs.Add(strings.ToLower(verr.Field()), verr.Tag())
+					errs.Add(strings.ToLower(verr.Field()), verr.Translate(trans))
 				}
 			}
 
