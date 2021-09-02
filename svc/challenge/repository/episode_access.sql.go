@@ -78,7 +78,7 @@ const getEpisodeAccessData = `-- name: GetEpisodeAccessData :one
 SELECT episode_id, user_id, activated_at, activated_before
 FROM episode_access
 WHERE episode_id = $1 AND user_id = $2
-ORDER BY activated_at, activated_before DESC
+ORDER BY activated_before DESC, activated_at DESC
 LIMIT 1
 `
 

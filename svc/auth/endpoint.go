@@ -79,8 +79,8 @@ type (
 	// SignUpRequest struct
 	SignUpRequest struct {
 		Email    string `json:"email" validate:"required,email"`
-		Password string `json:"password" validate:"required"`
-		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required,gte=8"`
+		Username string `json:"username" validate:"required,alphanum,gte=5"`
 	}
 
 	// ForgotPasswordRequest struct

@@ -2,7 +2,7 @@
 SELECT *
 FROM episode_access
 WHERE episode_id = $1 AND user_id = $2
-ORDER BY activated_at, activated_before DESC
+ORDER BY activated_before DESC, activated_at DESC
 LIMIT 1;
 -- name: AddEpisodeAccessData :one
 INSERT INTO episode_access (episode_id, user_id, activated_at, activated_before)
