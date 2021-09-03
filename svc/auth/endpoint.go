@@ -192,8 +192,8 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
 				return nil, validator.NewValidationError(url.Values{
-					"email":    []string{"invalid email address"},
-					"password": []string{"invalid password"},
+					"email":    []string{"Invalid email address"},
+					"password": []string{"Invalid password"},
 				})
 			}
 			return nil, err
