@@ -94,6 +94,7 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 				Username: faker.Internet().UserName(),
 			})
 		}
+    
 // 		callback(uid, quizID)
 // 		log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////")                 // TODO: Remove it!
 // 		log.Printf("uid: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
