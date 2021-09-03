@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/resizer"
+
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
@@ -354,7 +356,7 @@ func main() {
 			log.Fatalf("mediaServiceRepo error: %v", err)
 		}
 		r.Mount("/files", files.MakeHTTPHandler(
-			files.MakeEndpoints(files.NewService(mediaServiceRepo, db, stor), jwtMdw),
+			files.MakeEndpoints(files.NewService(mediaServiceRepo, db, stor, resizer.Resize), jwtMdw),
 			logger,
 		))
 	}

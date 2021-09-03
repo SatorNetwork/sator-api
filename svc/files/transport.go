@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/thedevsaddam/govalidator"
@@ -104,11 +105,23 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 			"size:2097152",
 			"mime:image/png,image/jpeg",
 		},
+		"height": []string{
+			"required",
+			"numeric",
+			"numeric_between:32,512",
+		},
+		"width": []string{
+			"required",
+			"numeric",
+			"numeric_between:32,512",
+		},
 	}
 	if err := utils.Validate(r, rules, nil); err != nil {
 		return nil, err
 	}
 
+	height, _ := strconv.Atoi(r.FormValue("height"))
+	width, _ := strconv.Atoi(r.FormValue("width"))
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
@@ -118,6 +131,8 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 	var req AddImageRequest
 	req.File = file
 	req.FileHeader = header
+	req.Height = height
+	req.Width = width
 
 	return req, nil
 }
