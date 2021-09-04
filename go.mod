@@ -31,6 +31,5 @@ require (
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
-	google.golang.org/api v0.15.0
 	syreclabs.com/go/faker v1.2.3
 )
