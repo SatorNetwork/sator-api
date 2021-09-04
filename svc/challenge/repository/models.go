@@ -55,12 +55,6 @@ type PassedChallengesDatum struct {
 	RewardAmount float64   `json:"reward_amount"`
 }
 
-type PassedChallengesDatum struct {
-	UserID       uuid.UUID `json:"user_id"`
-	ChallengeID  uuid.UUID `json:"challenge_id"`
-	RewardAmount float64   `json:"reward_amount"`
-}
-
 type Question struct {
 	ID            uuid.UUID    `json:"id"`
 	ChallengeID   uuid.UUID    `json:"challenge_id"`
