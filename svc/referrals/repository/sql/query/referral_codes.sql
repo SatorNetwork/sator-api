@@ -19,10 +19,16 @@ VALUES (
 SELECT *
 FROM referral_codes
 WHERE user_id = $1;
+-- name: GetReferralCodeDataByCode :one
+SELECT *
+FROM referral_codes
+WHERE code = $1 
+LIMIT 1;
 -- name: GetReferralCodesDataList :many
 SELECT *
 FROM referral_codes
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2;
 -- name: UpdateReferralCodeData :exec
 UPDATE referral_codes
 SET title = @title,

@@ -89,8 +89,11 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	return r
 }
 
-func decodeGetReferralCodesDataListRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
-	return nil, nil
+func decodeGetReferralCodesDataListRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
 }
 
 func decodeGetMyReferralCodeRequest(ctx context.Context, _ *http.Request) (interface{}, error) {

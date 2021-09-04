@@ -70,6 +70,28 @@ func (q *Queries) DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) 
 	return err
 }
 
+const getReferralCodeDataByCode = `-- name: GetReferralCodeDataByCode :one
+SELECT id, title, code, referral_link, is_personal, user_id, created_at
+FROM referral_codes
+WHERE code = $1 
+LIMIT 1
+`
+
+func (q *Queries) GetReferralCodeDataByCode(ctx context.Context, code string) (ReferralCode, error) {
+	row := q.queryRow(ctx, q.getReferralCodeDataByCodeStmt, getReferralCodeDataByCode, code)
+	var i ReferralCode
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Code,
+		&i.ReferralLink,
+		&i.IsPersonal,
+		&i.UserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getReferralCodeDataByUserID = `-- name: GetReferralCodeDataByUserID :many
 SELECT id, title, code, referral_link, is_personal, user_id, created_at
 FROM referral_codes
@@ -111,10 +133,16 @@ const getReferralCodesDataList = `-- name: GetReferralCodesDataList :many
 SELECT id, title, code, referral_link, is_personal, user_id, created_at
 FROM referral_codes
 ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2
 `
 
-func (q *Queries) GetReferralCodesDataList(ctx context.Context) ([]ReferralCode, error) {
-	rows, err := q.query(ctx, q.getReferralCodesDataListStmt, getReferralCodesDataList)
+type GetReferralCodesDataListParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetReferralCodesDataList(ctx context.Context, arg GetReferralCodesDataListParams) ([]ReferralCode, error) {
+	rows, err := q.query(ctx, q.getReferralCodesDataListStmt, getReferralCodesDataList, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

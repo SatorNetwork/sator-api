@@ -34,6 +34,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getReferralCodeByIDStmt, err = db.PrepareContext(ctx, getReferralCodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetReferralCodeByID: %w", err)
 	}
+	if q.getReferralCodeDataByCodeStmt, err = db.PrepareContext(ctx, getReferralCodeDataByCode); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReferralCodeDataByCode: %w", err)
+	}
 	if q.getReferralCodeDataByUserIDStmt, err = db.PrepareContext(ctx, getReferralCodeDataByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetReferralCodeDataByUserID: %w", err)
 	}
@@ -69,6 +72,11 @@ func (q *Queries) Close() error {
 	if q.getReferralCodeByIDStmt != nil {
 		if cerr := q.getReferralCodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getReferralCodeByIDStmt: %w", cerr)
+		}
+	}
+	if q.getReferralCodeDataByCodeStmt != nil {
+		if cerr := q.getReferralCodeDataByCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReferralCodeDataByCodeStmt: %w", cerr)
 		}
 	}
 	if q.getReferralCodeDataByUserIDStmt != nil {
@@ -134,6 +142,7 @@ type Queries struct {
 	addReferralCodeDataStmt                *sql.Stmt
 	deleteReferralCodeDataByIDStmt         *sql.Stmt
 	getReferralCodeByIDStmt                *sql.Stmt
+	getReferralCodeDataByCodeStmt          *sql.Stmt
 	getReferralCodeDataByUserIDStmt        *sql.Stmt
 	getReferralCodesDataListStmt           *sql.Stmt
 	getReferralsWithPaginationByUserIDStmt *sql.Stmt
@@ -148,6 +157,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addReferralCodeDataStmt:                q.addReferralCodeDataStmt,
 		deleteReferralCodeDataByIDStmt:         q.deleteReferralCodeDataByIDStmt,
 		getReferralCodeByIDStmt:                q.getReferralCodeByIDStmt,
+		getReferralCodeDataByCodeStmt:          q.getReferralCodeDataByCodeStmt,
 		getReferralCodeDataByUserIDStmt:        q.getReferralCodeDataByUserIDStmt,
 		getReferralCodesDataListStmt:           q.getReferralCodesDataListStmt,
 		getReferralsWithPaginationByUserIDStmt: q.getReferralsWithPaginationByUserIDStmt,

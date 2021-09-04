@@ -29,7 +29,7 @@ type (
 		AddReferralCodeData(ctx context.Context, rc ReferralCode) (ReferralCode, error)
 		DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) error
 		GetMyReferralCode(ctx context.Context, uid uuid.UUID, username string) ([]ReferralCode, error)
-		GetReferralCodesDataList(ctx context.Context) ([]ReferralCode, error)
+		GetReferralCodesDataList(ctx context.Context, limit, offset int32) ([]ReferralCode, error)
 		UpdateReferralCodeData(ctx context.Context, rc ReferralCode) error
 
 		// Referrals
@@ -85,7 +85,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		AddReferralCodeData:        MakeAddReferralCodeDataEndpoint(s, validateFunc),
 		DeleteReferralCodeDataByID: MakeDeleteReferralCodeDataByIDEndpoint(s),
 		GetMyReferralCode:          MakeGetMyReferralCodeEndpoint(s),
-		GetReferralCodesDataList:   MakeGetReferralCodesDataListEndpoint(s),
+		GetReferralCodesDataList:   MakeGetReferralCodesDataListEndpoint(s, validateFunc),
 		UpdateReferralCodeData:     MakeUpdateReferralCodeDataEndpoint(s, validateFunc),
 
 		GetReferralsWithPaginationByUserID: MakeGetReferralsWithPaginationByUserIDEndpoint(s, validateFunc),
@@ -188,9 +188,14 @@ func MakeDeleteReferralCodeDataByIDEndpoint(s service) endpoint.Endpoint {
 }
 
 // MakeGetReferralCodesDataListEndpoint ...
-func MakeGetReferralCodesDataListEndpoint(s service) endpoint.Endpoint {
+func MakeGetReferralCodesDataListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		resp, err := s.GetReferralCodesDataList(ctx)
+		req := request.(PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetReferralCodesDataList(ctx, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}

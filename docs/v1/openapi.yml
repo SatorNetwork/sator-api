@@ -2963,7 +2963,23 @@ paths:
       summary: Get referral codes list.
       security:
         - bearerAuth: [ ]
-
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: Returns referral codes data.

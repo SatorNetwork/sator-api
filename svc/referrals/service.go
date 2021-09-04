@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/svc/referrals/repository"
 
@@ -43,7 +44,8 @@ type (
 		AddReferralCodeData(ctx context.Context, arg repository.AddReferralCodeDataParams) (repository.ReferralCode, error)
 		DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) error
 		GetReferralCodeDataByUserID(ctx context.Context, userID uuid.UUID) ([]repository.ReferralCode, error)
-		GetReferralCodesDataList(ctx context.Context) ([]repository.ReferralCode, error)
+		GetReferralCodeDataByCode(ctx context.Context, code string) (repository.ReferralCode, error)
+		GetReferralCodesDataList(ctx context.Context, arg repository.GetReferralCodesDataListParams) ([]repository.ReferralCode, error)
 		UpdateReferralCodeData(ctx context.Context, arg repository.UpdateReferralCodeDataParams) error
 
 		// Referrals
@@ -236,10 +238,13 @@ func (s *Service) DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) 
 }
 
 // GetReferralCodesDataList returns referral codes list.
-func (s *Service) GetReferralCodesDataList(ctx context.Context) ([]ReferralCode, error) {
-	referralCodes, err := s.rr.GetReferralCodesDataList(ctx)
+func (s *Service) GetReferralCodesDataList(ctx context.Context, limit, offset int32) ([]ReferralCode, error) {
+	referralCodes, err := s.rr.GetReferralCodesDataList(ctx, repository.GetReferralCodesDataListParams{
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
-		return []ReferralCode{}, fmt.Errorf("could not get referral codes list: %w", err)
+		return nil, fmt.Errorf("could not get referral codes list: %w", err)
 	}
 
 	return castToReferralCodes(referralCodes), nil
@@ -317,26 +322,24 @@ func castToListReferral(source []repository.Referral) []Referral {
 
 // StoreUserWithValidCode used to validate referral code and store current user.
 func (s *Service) StoreUserWithValidCode(ctx context.Context, uid uuid.UUID, code string) (bool, error) {
-	list, err := s.rr.GetReferralCodesDataList(ctx)
+	rc, err := s.rr.GetReferralCodeDataByCode(ctx, code)
 	if err != nil {
-		return false, fmt.Errorf("could not get referral codes list: %w", err)
-	}
-	for _, v := range list {
-		if v.Code == code {
-			if v.UserID == uid {
-				return false, errors.New("could not referral yourself")
-			}
-			err := s.rr.AddReferral(ctx, repository.AddReferralParams{
-				ReferralCodeID: v.ID,
-				UserID:         uid,
-			})
-			if err != nil {
-				return false, fmt.Errorf("could not store referral with id = %v, and code = %v: %w", uid, code, err)
-			}
-
-			return true, nil
+		if db.IsNotFoundError(err) {
+			return false, fmt.Errorf("could not found referral code %s", code)
 		}
+		return false, fmt.Errorf("could not get referral code %s: %w", code, err)
 	}
 
-	return false, fmt.Errorf("referral code = %v is not found: %w", code, err)
+	if rc.UserID == uid {
+		return false, errors.New("it's your own referral code")
+	}
+
+	if err := s.rr.AddReferral(ctx, repository.AddReferralParams{
+		ReferralCodeID: rc.ID,
+		UserID:         uid,
+	}); err != nil {
+		return false, fmt.Errorf("could not store referral with id = %v, and code = %s: %w", uid, code, err)
+	}
+
+	return true, nil
 }
