@@ -24,6 +24,7 @@ type (
 
 		StoreChallengeAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
 		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
+		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
 	}
 )
@@ -84,6 +85,16 @@ func (c *Client) StoreChallengeAttempt(ctx context.Context, challengeID, userID 
 // StoreChallengeReceivedRewardAmount user to store challenge received reward amount.
 func (c *Client) StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error {
 	return c.s.StoreChallengeReceivedRewardAmount(ctx, challengeID, userID, rewardAmount)
+}
+
+// GetChallengeReceivedRewardAmount user to store challenge received reward amount.
+func (c *Client) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
+	res, err := c.s.GetChallengeReceivedRewardAmount(ctx, challengeID, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return res, nil
 }
 
 // GetPassedChallengeAttempts user to get challenge attempts passed.
