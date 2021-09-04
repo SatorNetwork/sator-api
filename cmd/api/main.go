@@ -122,12 +122,13 @@ var (
 	fileStorageForcePathStyle = env.GetBool("STORAGE_FORCE_PATH_STYLE", false)
 
 	// firebase
-	baseFirebaseURL    = env.MustString("BASE_FIREBASE_URL")
-	fbWebAPIKey        = env.MustString("FB_WEB_API_KEY")
-	mainSiteLink       = env.MustString("MAIN_SITE_LINK")
-	androidPackageName = env.MustString("ANDROID_PACKAGE_NAME")
-	iosBundleId        = env.MustString("IOS_BUNDLE_ID")
-	suffixOption       = env.MustString("SUFFIX_OPTION")
+	baseFirebaseURL    = env.MustString("FIREBASE_BASE_URL")
+	fbWebAPIKey        = env.MustString("FIREBASE_WEB_API_KEY")
+	mainSiteLink       = env.MustString("FIREBASE_MAIN_SITE_LINK")
+	androidPackageName = env.MustString("FIREBASE_ANDROID_PACKAGE_NAME")
+	iosBundleId        = env.MustString("FIREBASE_IOS_BUNDLE_ID")
+	suffixOption       = env.MustString("FIREBASE_SUFFIX_OPTION")
+
 	// Episode Access
 	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
 	// period         = env.GetInt("PERIOD", 24)
