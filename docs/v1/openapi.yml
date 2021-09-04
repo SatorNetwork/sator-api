@@ -2792,6 +2792,9 @@ paths:
                   code:
                     type: string
                     example: "code"
+                  referral_link:
+                    type: string
+                    example: https://link.to.download.app/RefCode
                   is_personal:
                     type: boolean
                     example: true
@@ -2856,6 +2859,9 @@ paths:
                   code:
                     type: string
                     example: "code"
+                  referral_link:
+                    type: string
+                    example: https://link.to.download.app/RefCode
                   is_personal:
                     type: boolean
                     example: true
@@ -2940,6 +2946,9 @@ paths:
                   code:
                     type: string
                     example: "code"
+                  referral_link:
+                    type: string
+                    example: https://link.to.download.app/RefCode
                   is_personal:
                     type: boolean
                     example: true
@@ -2990,25 +2999,28 @@ paths:
                 items:
                   type: object
                   properties:
-                   id:
-                     type: string
-                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                   title:
-                     type: string
-                     example: "title"
-                   code:
-                     type: string
-                     example: "code"
-                   is_personal:
-                     type: boolean
-                     example: true
-                   user_id:
-                     type: string
-                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                   created_at:
-                     type: string
-                     example: "2006-01-02T15:04:05Z07:00"
-                     description: "RFC3339"
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "title"
+                    code:
+                      type: string
+                      example: "code"
+                    referral_link:
+                      type: string
+                      example: https://link.to.download.app/RefCode
+                    is_personal:
+                      type: boolean
+                      example: true
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
