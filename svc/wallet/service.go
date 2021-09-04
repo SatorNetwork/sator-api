@@ -39,6 +39,7 @@ type (
 		GetWalletsByUserID(ctx context.Context, userID uuid.UUID) ([]repository.Wallet, error)
 		GetWalletBySolanaAccountID(ctx context.Context, solanaAccountID uuid.UUID) (repository.Wallet, error)
 		GetWalletByID(ctx context.Context, id uuid.UUID) (repository.Wallet, error)
+		GetWalletByUserIDAndType(ctx context.Context, arg repository.GetWalletByUserIDAndTypeParams) (repository.Wallet, error)
 
 		AddSolanaAccount(ctx context.Context, arg repository.AddSolanaAccountParams) (repository.SolanaAccount, error)
 		GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (repository.SolanaAccount, error)
@@ -123,6 +124,11 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
+		if w.WalletType == WalletTypeEthereum {
+			// disable etherium wallet
+			continue
+		}
+
 		wli := WalletsListItem{
 			ID:    w.ID.String(),
 			Type:  w.WalletType,
@@ -215,7 +221,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				},
 				{
 					Currency: "USD",
-					Amount:   bal * 1.25, // FIXME: setup currency rate
+					Amount:   bal * 0.04, // FIXME: setup currency rate
 				},
 			}
 		}
@@ -228,7 +234,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				},
 				{
 					Currency: "USD",
-					Amount:   bal * 34.5, // FIXME: setup currency rate
+					Amount:   bal * 70, // FIXME: setup currency rate
 				},
 			}
 		}
@@ -249,11 +255,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
-			{
-				Type: ActionStakeTokens.String(),
-				Name: ActionStakeTokens.Name(),
-				URL:  "",
-			},
+			// {
+			// 	Type: ActionStakeTokens.String(),
+			// 	Name: ActionStakeTokens.Name(),
+			// 	URL:  "",
+			// },
 		},
 		Balance: balance,
 	}, nil
@@ -314,6 +320,8 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
 	}
 
+	/** Disabled untill the next release **
+
 	ethAccount, err := s.ec.CreateAccount()
 	if err != nil {
 		return fmt.Errorf("could not create new eth account for user with id=%s: %w", userID.String(), err)
@@ -345,6 +353,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	}); err != nil {
 		return fmt.Errorf("could not create new ethereum wallet for user with id=%s: %w", userID.String(), err)
 	}
+	**/
 
 	return nil
 }
@@ -408,7 +417,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err := s.sc.RequestAirdrop(ctx, feePayer.PublicKey.ToBase58(), 10)
+		tx, err := s.sc.RequestAirdrop(ctx, feePayer.PublicKey.ToBase58(), 1)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -418,7 +427,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		break
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 60)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
 		AccountType: AssetAccount.String(),
@@ -439,7 +448,7 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		log.Printf("convert account (%s) to asset: %s", asset.PublicKey.ToBase58(), tx)
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 60)
 
 	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
 		AccountType: IssuerAccount.String(),
@@ -461,19 +470,26 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		log.Printf("init issuer account (%s) to user asset: %s", issuer.PublicKey.ToBase58(), tx)
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 60)
 
-	if tx, err := s.sc.IssueAsset(
-		ctx,
-		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
-		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
-		s.sc.AccountFromPrivatekey(asset.PrivateKey),
-		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
-		1000000,
-	); err != nil {
-		return err
-	} else {
+	for i := 0; i < 5; i++ {
+		tx, err := s.sc.IssueAsset(
+			ctx,
+			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
+			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
+			s.sc.AccountFromPrivatekey(asset.PrivateKey),
+			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
+			500000000,
+		)
+		if err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 10)
+			log.Printf("attempt #%d; trying one more time", i)
+			continue
+		}
+
 		log.Printf("issue asset (%s): %s", issuer.PublicKey.ToBase58(), tx)
+		break
 	}
 
 	return nil
@@ -544,14 +560,14 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	toEncode.Amount = amount
 	toEncode.RecipientAddr = recipientPK
 
-	log.Printf("toEncode: %+v", toEncode)
+	// log.Printf("toEncode: %+v", toEncode)
 
 	encodedData, err := json.Marshal(toEncode)
 	if err != nil {
 		return PreparedTransferTransaction{}, fmt.Errorf("could not marshal amount and recipient pk: %w", err)
 	}
 
-	log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
+	// log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
 
 	return PreparedTransferTransaction{
 		AssetName:       asset,
@@ -579,6 +595,10 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 		return fmt.Errorf("could not unmarshal: %w", err)
 	}
 
+	return s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount)
+}
+
+func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64) error {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return fmt.Errorf("could not get wallet: %w", err)
@@ -609,8 +629,8 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
 			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
-			toDecode.RecipientAddr,
-			toDecode.Amount,
+			recipientAddr,
+			amount,
 		); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 10)
@@ -655,19 +675,42 @@ func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID 
 	}
 }
 
-// func paginateTransactions(transactions Transactions, offset, limit int) Transactions {
-// 	sort.Slice(transactions, func(i, j int) bool {
-// 		return transactions[i].CreatedAt < (transactions[j].CreatedAt)
-// 	})
+// PayForService draft
+func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error {
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     uid,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
 
-// 	if offset > len(transactions) {
-// 		offset = len(transactions)
-// 	}
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
 
-// 	end := offset + limit
-// 	if end > len(transactions) {
-// 		end = len(transactions)
-// 	}
+	bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not get wallet balance")
+	}
 
-// 	return transactions[offset:end]
-// }
+	if bal < amount {
+		return fmt.Errorf("not enough balance for payment: %v", bal)
+	}
+
+	// Get account to send payment
+	r, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
+
+	if err := s.execTransfer(ctx, w.ID, r.PublicKey, amount); err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
+
+	return nil
+}

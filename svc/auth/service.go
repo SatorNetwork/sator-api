@@ -42,6 +42,7 @@ type (
 		// user
 		CreateUser(ctx context.Context, arg repository.CreateUserParams) (repository.User, error)
 		GetUserByEmail(ctx context.Context, email string) (repository.User, error)
+		GetUserByUsername(ctx context.Context, username string) (repository.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (repository.User, error)
 		UpdateUserEmail(ctx context.Context, arg repository.UpdateUserEmailParams) error
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
@@ -144,6 +145,15 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
 		return "", validator.NewValidationError(url.Values{
 			"email": []string{"email is already taken"},
+		})
+	} else if !db.IsNotFoundError(err) {
+		return "", fmt.Errorf("could not create a new account: %w", err)
+	}
+
+	// Check if the passed username is not taken yet
+	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
+		return "", validator.NewValidationError(url.Values{
+			"username": []string{"username is already taken"},
 		})
 	} else if !db.IsNotFoundError(err) {
 		return "", fmt.Errorf("could not create a new account: %w", err)

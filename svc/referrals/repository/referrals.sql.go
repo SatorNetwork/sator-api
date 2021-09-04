@@ -30,6 +30,19 @@ func (q *Queries) AddReferral(ctx context.Context, arg AddReferralParams) error 
 	return err
 }
 
+const getReferralCodeByID = `-- name: GetReferralCodeByID :one
+SELECT referral_code_id
+FROM referrals
+WHERE user_id = $1
+`
+
+func (q *Queries) GetReferralCodeByID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
+	row := q.queryRow(ctx, q.getReferralCodeByIDStmt, getReferralCodeByID, userID)
+	var referral_code_id uuid.UUID
+	err := row.Scan(&referral_code_id)
+	return referral_code_id, err
+}
+
 const getReferralsWithPaginationByUserID = `-- name: GetReferralsWithPaginationByUserID :many
 SELECT referral_code_id, user_id, created_at
 FROM referrals

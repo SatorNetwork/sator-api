@@ -13,3 +13,7 @@ VALUES (
     @referral_code_id,
     @user_id
 );
+-- name: GetReferralCodeByID :one
+SELECT referral_code_id
+FROM referrals
+WHERE user_id = $1;

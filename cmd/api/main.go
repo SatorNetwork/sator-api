@@ -87,7 +87,8 @@ var (
 	masterOTPHash = env.GetString("MASTER_OTP_HASH", "")
 
 	// Quiz
-	quizWsConnURL = env.MustString("QUIZ_WS_CONN_URL")
+	quizWsConnURL   = env.MustString("QUIZ_WS_CONN_URL")
+	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
@@ -227,7 +228,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("rewardsRepo error: %v", err)
 	}
-	rewardService := rewards.NewService(rewardsRepository, walletSvcClient)
+	rewardService := rewards.NewService(
+		rewardsRepository,
+		walletSvcClient,
+		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
+	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
 		rewards.MakeEndpoints(rewardService, jwtMdw),
@@ -318,6 +323,14 @@ func main() {
 
 	// Shows service
 	{
+
+		// Show repo
+		// FIXME: remove it when the app will be fixed
+		showRepo, err := showsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("showsRepo error: %v", err)
+		}
+
 		// Challenges service
 		challengeRepository, err := challengeRepo.Prepare(ctx, db)
 		if err != nil {
@@ -325,9 +338,11 @@ func main() {
 		}
 		challengeSvc := challenge.NewService(
 			challengeRepository,
+			showRepo,
 			challenge.DefaultPlayURLGenerator(
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(appBaseURL, "/")),
 			),
+			challenge.WithChargeForUnlockFunc(walletSvcClient.PayForService),
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(
@@ -341,10 +356,6 @@ func main() {
 		))
 
 		// Shows service
-		showRepo, err := showsRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("showsRepo error: %v", err)
-		}
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
 			logger,
@@ -414,7 +425,12 @@ func main() {
 		r.Mount("/quiz", quiz.MakeHTTPHandler(
 			quiz.MakeEndpoints(quizSvc, jwtMdw),
 			logger,
-			quiz.QuizWsHandler(quizSvc, invitationsService.SendReward(rewardService.AddTransaction), challengeSvcClient),
+			quiz.QuizWsHandler(
+				quizSvc,
+				invitationsService.SendReward(rewardService.AddTransaction),
+				challengeSvcClient,
+				quizBotsTimeout,
+			),
 		))
 
 		// run quiz service

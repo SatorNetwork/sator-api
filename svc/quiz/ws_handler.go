@@ -28,7 +28,7 @@ type (
 )
 
 // QuizWsHandler handles websocket connections
-func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challengesClient) http.HandlerFunc {
+func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challengesClient, botsTimeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := chi.URLParam(r, "token")
 		tokenPayload, err := s.ParseQuizToken(r.Context(), token)
@@ -72,9 +72,18 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 		}
 
 		defer func() {
-			log.Printf("Defer: %v, QuizID: %v", uid, quizID) // TODO: Remove it!
-			quizHub.RemovePlayer(uid)
 			callback(uid, quizID)
+			// log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////")                   // TODO: Remove it!
+			// log.Printf("Defer: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
+		}()
+
+		if err := c.StoreChallengeAttempt(ctx, quizHub.ChallengeID, uid); err != nil {
+			log.Printf("could not store challenge attempt: user_id=%s, challenge_id=%s, error: %v",
+				uid.String(), quizHub.ChallengeID.String(), err)
+		}
+
+		defer func() {
+			quizHub.RemovePlayer(uid)
 		}()
 
 		fakePlayers := make([]struct {
@@ -90,6 +99,10 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 				Username: faker.Internet().UserName(),
 			})
 		}
+
+		// 		callback(uid, quizID)
+		// 		log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////")                 // TODO: Remove it!
+		// 		log.Printf("uid: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
 
 		var g run.Group
 		{
@@ -162,7 +175,11 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 		}
 
 		go func() {
-			time.Sleep(time.Second * 5)
+			if botsTimeout > 0 {
+				time.Sleep(botsTimeout)
+			} else {
+				time.Sleep(time.Second * 5)
+			}
 
 			for _, u := range fakePlayers {
 				time.Sleep(time.Second)

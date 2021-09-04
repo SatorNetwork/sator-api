@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
@@ -79,8 +81,8 @@ type (
 	// SignUpRequest struct
 	SignUpRequest struct {
 		Email    string `json:"email" validate:"required,email"`
-		Password string `json:"password" validate:"required"`
-		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required,gte=8"`
+		Username string `json:"username" validate:"required,alphanum,gte=5"`
 	}
 
 	// ForgotPasswordRequest struct
@@ -188,6 +190,12 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 
 		token, err := s.Login(ctx, req.Email, req.Password)
 		if err != nil {
+			if errors.Is(err, ErrInvalidCredentials) {
+				return nil, validator.NewValidationError(url.Values{
+					"email":    []string{"Invalid email address"},
+					"password": []string{"Invalid password"},
+				})
+			}
 			return nil, err
 		}
 

@@ -11,20 +11,31 @@ import (
 )
 
 const addEpisodeAccessData = `-- name: AddEpisodeAccessData :one
-INSERT INTO episode_access (episode_id, user_id, activated_at)
-VALUES ($1, $2, $3) RETURNING episode_id, user_id, activated_at
+INSERT INTO episode_access (episode_id, user_id, activated_at, activated_before)
+VALUES ($1, $2, $3, $4) RETURNING episode_id, user_id, activated_at, activated_before
 `
 
 type AddEpisodeAccessDataParams struct {
-	EpisodeID   uuid.UUID    `json:"episode_id"`
-	UserID      uuid.UUID    `json:"user_id"`
-	ActivatedAt sql.NullTime `json:"activated_at"`
+	EpisodeID       uuid.UUID    `json:"episode_id"`
+	UserID          uuid.UUID    `json:"user_id"`
+	ActivatedAt     sql.NullTime `json:"activated_at"`
+	ActivatedBefore sql.NullTime `json:"activated_before"`
 }
 
 func (q *Queries) AddEpisodeAccessData(ctx context.Context, arg AddEpisodeAccessDataParams) (EpisodeAccess, error) {
-	row := q.queryRow(ctx, q.addEpisodeAccessDataStmt, addEpisodeAccessData, arg.EpisodeID, arg.UserID, arg.ActivatedAt)
+	row := q.queryRow(ctx, q.addEpisodeAccessDataStmt, addEpisodeAccessData,
+		arg.EpisodeID,
+		arg.UserID,
+		arg.ActivatedAt,
+		arg.ActivatedBefore,
+	)
 	var i EpisodeAccess
-	err := row.Scan(&i.EpisodeID, &i.UserID, &i.ActivatedAt)
+	err := row.Scan(
+		&i.EpisodeID,
+		&i.UserID,
+		&i.ActivatedAt,
+		&i.ActivatedBefore,
+	)
 	return i, err
 }
 
@@ -45,30 +56,29 @@ func (q *Queries) DeleteEpisodeAccessData(ctx context.Context, arg DeleteEpisode
 
 const doesUserHaveAccessToEpisode = `-- name: DoesUserHaveAccessToEpisode :one
 SELECT EXISTS (
-    SELECT episode_id, user_id, activated_at 
+    SELECT episode_id, user_id, activated_at, activated_before 
     FROM episode_access
-    WHERE episode_id = $1 AND user_id = $2 AND activated_at > $3
+    WHERE episode_id = $1 AND user_id = $2 AND activated_before > NOW()
 )
 `
 
 type DoesUserHaveAccessToEpisodeParams struct {
-	EpisodeID      uuid.UUID    `json:"episode_id"`
-	UserID         uuid.UUID    `json:"user_id"`
-	NotEarlierThan sql.NullTime `json:"not_earlier_than"`
+	EpisodeID uuid.UUID `json:"episode_id"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) DoesUserHaveAccessToEpisode(ctx context.Context, arg DoesUserHaveAccessToEpisodeParams) (bool, error) {
-	row := q.queryRow(ctx, q.doesUserHaveAccessToEpisodeStmt, doesUserHaveAccessToEpisode, arg.EpisodeID, arg.UserID, arg.NotEarlierThan)
+	row := q.queryRow(ctx, q.doesUserHaveAccessToEpisodeStmt, doesUserHaveAccessToEpisode, arg.EpisodeID, arg.UserID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
 }
 
 const getEpisodeAccessData = `-- name: GetEpisodeAccessData :one
-SELECT episode_id, user_id, activated_at
+SELECT episode_id, user_id, activated_at, activated_before
 FROM episode_access
 WHERE episode_id = $1 AND user_id = $2
-ORDER BY activated_at DESC
+ORDER BY activated_before DESC, activated_at DESC
 LIMIT 1
 `
 
@@ -80,23 +90,34 @@ type GetEpisodeAccessDataParams struct {
 func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccessDataParams) (EpisodeAccess, error) {
 	row := q.queryRow(ctx, q.getEpisodeAccessDataStmt, getEpisodeAccessData, arg.EpisodeID, arg.UserID)
 	var i EpisodeAccess
-	err := row.Scan(&i.EpisodeID, &i.UserID, &i.ActivatedAt)
+	err := row.Scan(
+		&i.EpisodeID,
+		&i.UserID,
+		&i.ActivatedAt,
+		&i.ActivatedBefore,
+	)
 	return i, err
 }
 
 const updateEpisodeAccessData = `-- name: UpdateEpisodeAccessData :exec
 UPDATE episode_access
-SET activated_at = $1
-WHERE episode_id = $2 AND user_id = $3
+SET activated_at = $1, activated_before = $2
+WHERE episode_id = $3 AND user_id = $4
 `
 
 type UpdateEpisodeAccessDataParams struct {
-	ActivatedAt sql.NullTime `json:"activated_at"`
-	EpisodeID   uuid.UUID    `json:"episode_id"`
-	UserID      uuid.UUID    `json:"user_id"`
+	ActivatedAt     sql.NullTime `json:"activated_at"`
+	ActivatedBefore sql.NullTime `json:"activated_before"`
+	EpisodeID       uuid.UUID    `json:"episode_id"`
+	UserID          uuid.UUID    `json:"user_id"`
 }
 
 func (q *Queries) UpdateEpisodeAccessData(ctx context.Context, arg UpdateEpisodeAccessDataParams) error {
-	_, err := q.exec(ctx, q.updateEpisodeAccessDataStmt, updateEpisodeAccessData, arg.ActivatedAt, arg.EpisodeID, arg.UserID)
+	_, err := q.exec(ctx, q.updateEpisodeAccessDataStmt, updateEpisodeAccessData,
+		arg.ActivatedAt,
+		arg.ActivatedBefore,
+		arg.EpisodeID,
+		arg.UserID,
+	)
 	return err
 }

@@ -10,17 +10,25 @@ import (
 )
 
 type Episode struct {
-	ID            uuid.UUID      `json:"id"`
-	ShowID        uuid.UUID      `json:"show_id"`
-	SeasonID      uuid.UUID      `json:"season_id"`
-	EpisodeNumber int32          `json:"episode_number"`
-	Cover         sql.NullString `json:"cover"`
-	Title         string         `json:"title"`
-	Description   sql.NullString `json:"description"`
-	ReleaseDate   sql.NullTime   `json:"release_date"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
-	CreatedAt     time.Time      `json:"created_at"`
-	ChallengeID   uuid.UUID      `json:"challenge_id"`
+	ID                      uuid.UUID      `json:"id"`
+	ShowID                  uuid.UUID      `json:"show_id"`
+	SeasonID                uuid.NullUUID  `json:"season_id"`
+	EpisodeNumber           int32          `json:"episode_number"`
+	Cover                   sql.NullString `json:"cover"`
+	Title                   string         `json:"title"`
+	Description             sql.NullString `json:"description"`
+	ReleaseDate             sql.NullTime   `json:"release_date"`
+	UpdatedAt               sql.NullTime   `json:"updated_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
+}
+
+type Rating struct {
+	EpisodeID uuid.UUID `json:"episode_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Rating    int32     `json:"rating"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Season struct {

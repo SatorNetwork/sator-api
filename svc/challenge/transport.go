@@ -15,6 +15,11 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+const (
+	contentTypeHeader = "Content-Type"
+	contentType       = "application/json; charset=utf-8"
+)
+
 type (
 	logger interface {
 		Log(keyvals ...interface{}) error
@@ -48,7 +53,7 @@ func MakeHTTPHandlerChallenges(e Endpoints, log logger) http.Handler {
 	r.Get("/{episode_id}/is-activated", httptransport.NewServer(
 		e.VerifyUserAccessToEpisode,
 		decodeIsEpisodeActivatedRequest,
-		httpencoder.EncodeResponse,
+		encodeEpisodeAccessResponse,
 		options...,
 	).ServeHTTP)
 
@@ -97,7 +102,7 @@ func MakeHTTPHandlerChallenges(e Endpoints, log logger) http.Handler {
 	r.Post("/unlock/{episode_id}", httptransport.NewServer(
 		e.UnlockEpisode,
 		decodeUnlockEpisodeRequest,
-		httpencoder.EncodeResponse,
+		encodeEpisodeAccessResponse,
 		options...,
 	).ServeHTTP)
 
@@ -364,5 +369,21 @@ func decodeUnlockEpisodeRequest(_ context.Context, r *http.Request) (interface{}
 		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
 	}
 
-	return episodeID, nil
+	var req UnlockEpisodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	req.EpisodeID = episodeID
+
+	return req, nil
+}
+
+func encodeEpisodeAccessResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if _, ok := response.(EpisodeAccess); !ok {
+		return httpencoder.EncodeResponse(ctx, w, response)
+	}
+
+	w.Header().Set(contentTypeHeader, contentType)
+	return json.NewEncoder(w).Encode(response)
 }

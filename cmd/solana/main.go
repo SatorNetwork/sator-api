@@ -10,7 +10,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/go-env"
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/zeebo/errs"
 
 	_ "github.com/lib/pq" // init pg driver
@@ -21,6 +20,9 @@ var (
 	dbConnString   = env.MustString("DATABASE_URL")
 	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 10)
 	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
+
+	// Solana
+	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
 )
 
 func main() {
@@ -52,7 +54,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("walletRepo error: %v", err)
 	}
-	walletService := wallet.NewService(repo, solana.New(client.DevnetRPCEndpoint), ethereumClient)
+	walletService := wallet.NewService(repo, solana.New(solanaApiBaseUrl), ethereumClient)
 
 	if err := walletService.Bootstrap(ctx); err != nil {
 		log.Fatalf("walletService error: %v", err)

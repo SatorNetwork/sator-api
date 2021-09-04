@@ -852,15 +852,16 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - "title"
+                - "cover"
               properties:
                 title:
                   type: string
                   example: "title"
-                  required: true
                 cover:
                   type: string
                   example: "cover"
-                  required: true
                 has_new_episode:
                   type: boolean
                   example: true
@@ -877,6 +878,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - "title"
+                  - "cover"
                 properties:
                   id:
                     type: string
@@ -884,11 +888,9 @@ paths:
                   title:
                     type: string
                     example: "title"
-                    required: true
                   cover:
                     type: string
                     example: "cover"
-                    required: true
                   has_new_episode:
                     type: boolean
                     example: true
@@ -1061,6 +1063,7 @@ paths:
   /shows/{show_id}/episodes:
     get:
       tags:
+        - "Shows"
         - "Episodes"
       summary: Get episodes by show id.
       security:
@@ -1103,6 +1106,14 @@ paths:
                     release_date:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
+                    rating:
+                      type: number
+                      example: 8.76
+                      description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                    ratings_count:
+                      type: number
+                      example: 123
+                      description: "How many times episode was rated"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1110,6 +1121,7 @@ paths:
 
     post:
       tags:
+        - "Shows"
         - "Episodes"
       summary: Used for create new episode.
       security:
@@ -1127,6 +1139,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - "title"
               properties:
                 episode_number:
                   type: number
@@ -1137,7 +1151,6 @@ paths:
                 title:
                   type: string
                   example: "Peaky Blinders"
-                  required: true
                 description:
                   type: string
                   example: "description"
@@ -1157,6 +1170,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - "title"
                 properties:
                   id:
                     type: string
@@ -1179,7 +1194,6 @@ paths:
                   title:
                     type: string
                     example: "Peaky Blinders"
-                    required: true
                   description:
                     type: string
                     example: "description"
@@ -1200,6 +1214,7 @@ paths:
   /shows/{show_id}/episodes/{episode_id}:
     get:
       tags:
+        - "Shows"
         - "Episodes"
       summary: Get episode by id.
       security:
@@ -1252,12 +1267,24 @@ paths:
                   challenge_id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  verification_challenge_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  rating:
+                    type: number
+                    example: 8.76
+                    description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                  ratings_count:
+                    type: number
+                    example: 123
+                    description: "How many times episode was rated"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
     put:
       tags:
+        - "Shows"
         - "Episodes"
       summary: Used for update episode.
       security:
@@ -1315,6 +1342,7 @@ paths:
 
     delete:
       tags:
+        - "Shows"
         - "Episodes"
       summary: Used for delete episode by id.
       security:
@@ -1342,9 +1370,53 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+
+  /shows/{show_id}/episodes/{episode_id}/rate:
+    post:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Used to rate episode.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                  example: 5
+                  description: Episode rating from 1 to 10.
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/{show_id}/seasons:
     post:
       tags:
+        - "Shows"
         - "Seasons"
       summary: Used for create new season.
       security:
@@ -1397,6 +1469,7 @@ paths:
   /shows/{show_id}/seasons/{season_id}:
     delete:
       tags:
+        - "Shows"
         - "Seasons"
       summary: Used for delete season by id.
       security:
@@ -1423,6 +1496,7 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
 
   /challenges/{challenge_id}:
     get:
@@ -1764,6 +1838,14 @@ paths:
                   result:
                     type: boolean
                     example: true
+                  activated_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z"
+                    description: "RFC3339 timestamp when realm was activated"
+                  activated_before:
+                    type: string
+                    example: "2006-01-02T15:04:05Z"
+                    description: "RFC3339 timestamp when realm access ends"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -2225,6 +2307,17 @@ paths:
                 order:
                   type: integer
                   example: 2
+                answer_options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      option: 
+                        type: string
+                        description: Answer option
+                      is_correct:
+                        type: boolean
+                        example: true
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -2347,6 +2440,17 @@ paths:
                 order:
                   type: integer
                   example: 1
+                answer_options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      option: 
+                        type: string
+                        description: Answer option
+                      is_correct:
+                        type: boolean
+                        example: true
       responses:
         "200":
           description: Returns question details.
@@ -2402,8 +2506,8 @@ paths:
                   type: string
                   example: "option"
                 is_correct:
-                  type: string
-                  example: "true"
+                  type: boolean
+                  example: true
       responses:
         "200":
           description: Returns answer details.
@@ -2464,8 +2568,8 @@ paths:
                   type: string
                   example: "option"
                 is_correct:
-                  type: string
-                  example: "true"
+                  type: boolean
+                  example: true
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -2805,19 +2909,20 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - title
+                - code
+                - is_personal
               properties:
                 title:
                   type: string
                   example: "title"
-                  required: true
                 code:
                   type: string
                   example: "code"
-                  required: true
                 is_personal:
                   type: boolean
                   example: true
-                  required: true
       responses:
         "200":
           description: Returns qrcode data.

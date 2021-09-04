@@ -16,11 +16,11 @@ VALUES ($1, $2, $3, $4, $5) RETURNING user_id, episode_id, question_id, answer_i
 `
 
 type AddAttemptParams struct {
-	UserID     uuid.UUID    `json:"user_id"`
-	EpisodeID  uuid.UUID    `json:"episode_id"`
-	QuestionID uuid.UUID    `json:"question_id"`
-	AnswerID   uuid.UUID    `json:"answer_id"`
-	Valid      sql.NullBool `json:"valid"`
+	UserID     uuid.UUID     `json:"user_id"`
+	EpisodeID  uuid.UUID     `json:"episode_id"`
+	QuestionID uuid.UUID     `json:"question_id"`
+	AnswerID   uuid.NullUUID `json:"answer_id"`
+	Valid      sql.NullBool  `json:"valid"`
 }
 
 func (q *Queries) AddAttempt(ctx context.Context, arg AddAttemptParams) (Attempt, error) {
@@ -65,7 +65,8 @@ func (q *Queries) CountAttempts(ctx context.Context, arg CountAttemptsParams) (i
 const getAskedQuestionsByEpisodeID = `-- name: GetAskedQuestionsByEpisodeID :many
 SELECT question_id
 FROM attempts
-WHERE user_id = $1 AND episode_id = $2
+WHERE user_id = $1 AND episode_id = $2 
+GROUP BY question_id
 `
 
 type GetAskedQuestionsByEpisodeIDParams struct {
@@ -119,14 +120,14 @@ func (q *Queries) GetEpisodeIDByQuestionID(ctx context.Context, arg GetEpisodeID
 const updateAttempt = `-- name: UpdateAttempt :exec
 UPDATE attempts
 SET answer_id = $1, valid = $2
-WHERE user_id = $3 AND question_id = $4 AND answer_id IS NULL
+WHERE user_id = $3 AND question_id = $4
 `
 
 type UpdateAttemptParams struct {
-	AnswerID   uuid.UUID    `json:"answer_id"`
-	Valid      sql.NullBool `json:"valid"`
-	UserID     uuid.UUID    `json:"user_id"`
-	QuestionID uuid.UUID    `json:"question_id"`
+	AnswerID   uuid.NullUUID `json:"answer_id"`
+	Valid      sql.NullBool  `json:"valid"`
+	UserID     uuid.UUID     `json:"user_id"`
+	QuestionID uuid.UUID     `json:"question_id"`
 }
 
 func (q *Queries) UpdateAttempt(ctx context.Context, arg UpdateAttemptParams) error {

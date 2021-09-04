@@ -1,7 +1,8 @@
 -- name: GetAskedQuestionsByEpisodeID :many
 SELECT question_id
 FROM attempts
-WHERE user_id = $1 AND episode_id = $2;
+WHERE user_id = $1 AND episode_id = $2 
+GROUP BY question_id;
 -- name: GetEpisodeIDByQuestionID :one
 SELECT episode_id
 FROM attempts
@@ -18,4 +19,4 @@ WHERE user_id = $1 AND episode_id = $2 AND created_at > $3 AND answer_id IS NOT 
 -- name: UpdateAttempt :exec
 UPDATE attempts
 SET answer_id = @answer_id, valid = @valid
-WHERE user_id = @user_id AND question_id = @question_id AND answer_id IS NULL;
+WHERE user_id = @user_id AND question_id = @question_id;
