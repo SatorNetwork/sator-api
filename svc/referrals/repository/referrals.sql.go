@@ -9,6 +9,27 @@ import (
 	"github.com/google/uuid"
 )
 
+const addReferral = `-- name: AddReferral :exec
+INSERT INTO referrals (
+    referral_code_id,
+    user_id
+)
+VALUES (
+    $1,
+    $2
+)
+`
+
+type AddReferralParams struct {
+	ReferralCodeID uuid.UUID `json:"referral_code_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) AddReferral(ctx context.Context, arg AddReferralParams) error {
+	_, err := q.exec(ctx, q.addReferralStmt, addReferral, arg.ReferralCodeID, arg.UserID)
+	return err
+}
+
 const getReferralCodeByID = `-- name: GetReferralCodeByID :one
 SELECT referral_code_id
 FROM referrals
@@ -20,4 +41,41 @@ func (q *Queries) GetReferralCodeByID(ctx context.Context, userID uuid.UUID) (uu
 	var referral_code_id uuid.UUID
 	err := row.Scan(&referral_code_id)
 	return referral_code_id, err
+}
+
+const getReferralsWithPaginationByUserID = `-- name: GetReferralsWithPaginationByUserID :many
+SELECT referral_code_id, user_id, created_at
+FROM referrals
+WHERE user_id = $1
+ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3
+`
+
+type GetReferralsWithPaginationByUserIDParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) GetReferralsWithPaginationByUserID(ctx context.Context, arg GetReferralsWithPaginationByUserIDParams) ([]Referral, error) {
+	rows, err := q.query(ctx, q.getReferralsWithPaginationByUserIDStmt, getReferralsWithPaginationByUserID, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Referral
+	for rows.Next() {
+		var i Referral
+		if err := rows.Scan(&i.ReferralCodeID, &i.UserID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

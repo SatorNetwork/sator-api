@@ -861,22 +861,21 @@ func (s *Service) StoreChallengeReceivedRewardAmount(ctx context.Context, challe
 	return nil
 }
 
-//// GetChallengeReceivedRewardAmount ...
-//func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
-//	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
-//		UserID:      userID,
-//		ChallengeID: challengeID,
-//	})
-//	if err != nil {
-//		if db.IsNotFoundError(err) {
-//			return 0, nil
-//		}
-//
-//		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
-//	}
-//
-//	return amount, nil
-//}
+// GetChallengeReceivedRewardAmount ...
+func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
+	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+		UserID:      userID,
+		ChallengeID: challengeID,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
+	}
+
+	return amount, nil
+}
 
 // GetPassedChallengeAttempts ...
 func (s *Service) GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error) {
