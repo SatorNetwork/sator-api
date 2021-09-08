@@ -1114,6 +1114,18 @@ paths:
                       type: number
                       example: 123
                       description: "How many times episode was rated"
+                    active_users:
+                      type: number
+                      example: 12
+                      description: "How  many users have access to episode"
+                    user_rewards_amount:
+                      type: number
+                      example: 12
+                      description: "episode received reward amount by user"
+                    total_rewards_amount:
+                      type: number
+                      example: 12
+                      description: "episode received reward amount by all users"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1278,6 +1290,18 @@ paths:
                     type: number
                     example: 123
                     description: "How many times episode was rated"
+                  active_users:
+                    type: number
+                    example: 12
+                    description: "How  many users have access to episode"
+                  user_rewards_amount:
+                    type: number
+                    example: 12
+                    description: "episode received reward amount by user"
+                  total_rewards_amount:
+                    type: number
+                    example: 12
+                    description: "episode received reward amount by all users"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

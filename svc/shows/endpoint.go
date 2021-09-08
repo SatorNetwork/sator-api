@@ -48,8 +48,8 @@ type (
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
-		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
+		GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (interface{}, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
@@ -525,6 +525,11 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetEpisodeByIDEndpoint ...
 func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(GetEpisodeByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -540,7 +545,7 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetEpisodeByID(ctx, showID, episodeID)
+		resp, err := s.GetEpisodeByID(ctx, showID, episodeID, uid)
 		if err != nil {
 			return nil, err
 		}
@@ -552,6 +557,11 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeGetEpisodesByShowIDEndpoint ...
 func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(GetEpisodesByShowIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -562,7 +572,7 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		resp, err := s.GetEpisodesByShowID(ctx, showID, req.Limit(), req.Offset())
+		resp, err := s.GetEpisodesByShowID(ctx, showID, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}

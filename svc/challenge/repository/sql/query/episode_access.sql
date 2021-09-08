@@ -20,3 +20,11 @@ SELECT EXISTS (
     FROM episode_access
     WHERE episode_id = @episode_id AND user_id = @user_id AND activated_before > NOW()
 );
+-- name: NumberUsersWhoHaveAccessToEpisode :one
+SELECT COUNT(
+    EXISTS (
+               SELECT *
+               FROM episode_access
+               WHERE episode_id = @episode_id AND activated_before > NOW()
+           )
+    )::INT;
