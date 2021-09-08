@@ -9,7 +9,12 @@ WHERE user_id = @user_id AND challenge_id = @challenge_id;
 SELECT COUNT (*)
 FROM passed_challenges_data
 WHERE user_id = $1 AND challenge_id = $2;
--- name: GetChallengeReceivedRewardAmount :one
+-- name: GetChallengeReceivedRewardAmountByUserID :one
 SELECT reward_amount
 FROM passed_challenges_data
 WHERE user_id = $1 AND challenge_id = $2;
+-- name: GetChallengeReceivedRewardAmount :one
+SELECT SUM(COALESCE(reward_amount, 0))::DOUBLE PRECISION
+FROM passed_challenges_data
+WHERE challenge_id = $1
+GROUP BY challenge_id;

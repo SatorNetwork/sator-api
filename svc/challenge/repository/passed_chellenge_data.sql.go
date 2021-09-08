@@ -45,18 +45,32 @@ func (q *Queries) CountPassedChallengeAttempts(ctx context.Context, arg CountPas
 }
 
 const getChallengeReceivedRewardAmount = `-- name: GetChallengeReceivedRewardAmount :one
+SELECT SUM(COALESCE(reward_amount, 0))::DOUBLE PRECISION
+FROM passed_challenges_data
+WHERE challenge_id = $1
+GROUP BY challenge_id
+`
+
+func (q *Queries) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error) {
+	row := q.queryRow(ctx, q.getChallengeReceivedRewardAmountStmt, getChallengeReceivedRewardAmount, challengeID)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const getChallengeReceivedRewardAmountByUserID = `-- name: GetChallengeReceivedRewardAmountByUserID :one
 SELECT reward_amount
 FROM passed_challenges_data
 WHERE user_id = $1 AND challenge_id = $2
 `
 
-type GetChallengeReceivedRewardAmountParams struct {
+type GetChallengeReceivedRewardAmountByUserIDParams struct {
 	UserID      uuid.UUID `json:"user_id"`
 	ChallengeID uuid.UUID `json:"challenge_id"`
 }
 
-func (q *Queries) GetChallengeReceivedRewardAmount(ctx context.Context, arg GetChallengeReceivedRewardAmountParams) (float64, error) {
-	row := q.queryRow(ctx, q.getChallengeReceivedRewardAmountStmt, getChallengeReceivedRewardAmount, arg.UserID, arg.ChallengeID)
+func (q *Queries) GetChallengeReceivedRewardAmountByUserID(ctx context.Context, arg GetChallengeReceivedRewardAmountByUserIDParams) (float64, error) {
+	row := q.queryRow(ctx, q.getChallengeReceivedRewardAmountByUserIDStmt, getChallengeReceivedRewardAmountByUserID, arg.UserID, arg.ChallengeID)
 	var reward_amount float64
 	err := row.Scan(&reward_amount)
 	return reward_amount, err
