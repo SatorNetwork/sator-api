@@ -40,22 +40,22 @@ type (
 	}
 
 	Episode struct {
-		ID                                uuid.UUID  `json:"id"`
-		ShowID                            uuid.UUID  `json:"show_id"`
-		SeasonID                          uuid.UUID  `json:"season_id"`
-		SeasonNumber                      int32      `json:"season_number"`
-		EpisodeNumber                     int32      `json:"episode_number"`
-		Cover                             string     `json:"cover"`
-		Title                             string     `json:"title"`
-		Description                       string     `json:"description"`
-		ReleaseDate                       string     `json:"release_date"`
-		ChallengeID                       *uuid.UUID `json:"challenge_id"`
-		VerificationChallengeID           *uuid.UUID `json:"verification_challenge_id"`
-		Rating                            float64    `json:"rating"`
-		RatingsCount                      int64      `json:"ratings_count"`
-		NumberUsersWhoHaveAccessToEpisode int32      `json:"number_users_who_have_access_to_episode"`
-		ReceivedRewardAmountByUser        float64    `json:"received_reward_amount_by_user"`
-		ReceivedRewardAmount              float64    `json:"received_reward_amount"`
+		ID                      uuid.UUID  `json:"id"`
+		ShowID                  uuid.UUID  `json:"show_id"`
+		SeasonID                uuid.UUID  `json:"season_id"`
+		SeasonNumber            int32      `json:"season_number"`
+		EpisodeNumber           int32      `json:"episode_number"`
+		Cover                   string     `json:"cover"`
+		Title                   string     `json:"title"`
+		Description             string     `json:"description"`
+		ReleaseDate             string     `json:"release_date"`
+		ChallengeID             *uuid.UUID `json:"challenge_id"`
+		VerificationChallengeID *uuid.UUID `json:"verification_challenge_id"`
+		Rating                  float64    `json:"rating"`
+		RatingsCount            int64      `json:"ratings_count"`
+		ActiveUsers             int32      `json:"active_users"`
+		UserRewardsAmount       float64    `json:"user_rewards_amount"`
+		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
 	}
 
 	showsRepository interface {
@@ -274,20 +274,20 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 // Cast repository.GetEpisodeByIDRow to service Episode structure
 func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
 	ep := Episode{
-		ID:                                source.ID,
-		ShowID:                            source.ShowID,
-		EpisodeNumber:                     source.EpisodeNumber,
-		SeasonID:                          source.SeasonID.UUID,
-		SeasonNumber:                      source.SeasonNumber,
-		Cover:                             source.Cover.String,
-		Title:                             source.Title,
-		Description:                       source.Description.String,
-		ReleaseDate:                       source.ReleaseDate.Time.String(),
-		Rating:                            rating,
-		RatingsCount:                      ratingsCount,
-		NumberUsersWhoHaveAccessToEpisode: number,
-		ReceivedRewardAmount:              receivedAmount,
-		ReceivedRewardAmountByUser:        receivedRewardAmountByUser,
+		ID:                 source.ID,
+		ShowID:             source.ShowID,
+		EpisodeNumber:      source.EpisodeNumber,
+		SeasonID:           source.SeasonID.UUID,
+		SeasonNumber:       source.SeasonNumber,
+		Cover:              source.Cover.String,
+		Title:              source.Title,
+		Description:        source.Description.String,
+		ReleaseDate:        source.ReleaseDate.Time.String(),
+		Rating:             rating,
+		RatingsCount:       ratingsCount,
+		ActiveUsers:        number,
+		TotalRewardsAmount: receivedAmount,
+		UserRewardsAmount:  receivedRewardAmountByUser,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -304,20 +304,20 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmoun
 // Cast repository.GetEpisodesByShowIDRow to service Episode structure
 func castRowsToEpisode(source repository.GetEpisodesByShowIDRow, numberUsersWhoHaveAccessToEpisode int32, receivedAmount, receivedAmountByUser float64) Episode {
 	ep := Episode{
-		ID:                                source.ID,
-		ShowID:                            source.ShowID,
-		EpisodeNumber:                     source.EpisodeNumber,
-		SeasonID:                          source.SeasonID.UUID,
-		SeasonNumber:                      source.SeasonNumber,
-		Cover:                             source.Cover.String,
-		Title:                             source.Title,
-		Description:                       source.Description.String,
-		ReleaseDate:                       source.ReleaseDate.Time.String(),
-		Rating:                            source.AvgRating,
-		RatingsCount:                      source.Ratings,
-		NumberUsersWhoHaveAccessToEpisode: numberUsersWhoHaveAccessToEpisode,
-		ReceivedRewardAmount:              receivedAmount,
-		ReceivedRewardAmountByUser:        receivedAmountByUser,
+		ID:                 source.ID,
+		ShowID:             source.ShowID,
+		EpisodeNumber:      source.EpisodeNumber,
+		SeasonID:           source.SeasonID.UUID,
+		SeasonNumber:       source.SeasonNumber,
+		Cover:              source.Cover.String,
+		Title:              source.Title,
+		Description:        source.Description.String,
+		ReleaseDate:        source.ReleaseDate.Time.String(),
+		Rating:             source.AvgRating,
+		RatingsCount:       source.Ratings,
+		ActiveUsers:        numberUsersWhoHaveAccessToEpisode,
+		TotalRewardsAmount: receivedAmount,
+		UserRewardsAmount:  receivedAmountByUser,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
