@@ -143,7 +143,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
 	}
 	if attempts >= int64(challengeByID.UserMaxAttempts) {
-		return nil, fmt.Errorf("no more attempts left: %w", err)
+		return nil, errors.New("no more attempts left")
 	}
 
 	quiz, err := s.repo.GetQuizByChallengeID(ctx, challengeID)
