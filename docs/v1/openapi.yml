@@ -1114,15 +1114,15 @@ paths:
                       type: number
                       example: 123
                       description: "How many times episode was rated"
-                    number_users_who_have_access_to_episode:
+                    active_users:
                       type: number
                       example: 12
                       description: "How  many users have access to episode"
-                    received_reward_amount_by_user:
+                    user_rewards_amount:
                       type: number
                       example: 12
                       description: "episode received reward amount by user"
-                    received_reward_amount:
+                    total_rewards_amount:
                       type: number
                       example: 12
                       description: "episode received reward amount by all users"
@@ -1290,15 +1290,15 @@ paths:
                     type: number
                     example: 123
                     description: "How many times episode was rated"
-                  number_users_who_have_access_to_episode:
+                  active_users:
                     type: number
                     example: 12
                     description: "How  many users have access to episode"
-                  received_reward_amount_by_user:
+                  user_rewards_amount:
                     type: number
                     example: 12
                     description: "episode received reward amount by user"
-                  received_reward_amount:
+                  total_rewards_amount:
                     type: number
                     example: 12
                     description: "episode received reward amount by all users"
