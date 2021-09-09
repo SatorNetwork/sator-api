@@ -57,7 +57,7 @@ type (
 		Title        string `json:"title,omitempty" validate:"required"`
 		Code         string `json:"code,omitempty" validate:"required"`
 		ReferralLink string `json:"referral_link"`
-		IsPersonal   bool   `json:"is_personal,omitempty" validate:"required"`
+		IsPersonal   bool   `json:"is_personal,omitempty"`
 		UserID       string `json:"user_id"`
 	}
 )
