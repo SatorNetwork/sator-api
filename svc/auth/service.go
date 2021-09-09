@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -223,7 +224,7 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	u, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return fmt.Errorf("user %w", ErrNotFound)
+			return errors.New("please check if you set correct email")
 		}
 		return fmt.Errorf("could not get user: %w", err)
 	}
