@@ -19,7 +19,7 @@ WITH show_claps_sum AS (
         COUNT(*) AS claps,
         show_id
     FROM show_claps
-    WHERE id = @id
+    WHERE show_id = @id
     GROUP BY show_id  
 )
 SELECT 
