@@ -64,7 +64,7 @@ type (
 		GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
 		CheckAnswer(ctx context.Context, answerID, qui uuid.UUID) (bool, error)
 
-		//GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
+		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
 		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
 	}
@@ -129,13 +129,15 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	s.mutex.Lock(key, time.Second*3)
 	defer s.mutex.Unlock(key)
 
-	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
-	if err != nil {
-		return nil, fmt.Errorf("could not get challenge by id: %w", err)
+	receivedReward, err := s.challenges.GetChallengeReceivedRewardAmountByUserID(ctx, challengeID, uid)
+	if err != nil && !db.IsNotFoundError(err) {
+		return nil, fmt.Errorf("could not get received reward amount: %w", err)
 	}
-	if challengeByID.ReceivedReward > 0 {
+	if receivedReward > 0 {
 		return nil, errors.New("reward has been already received for this challenge")
 	}
+
+	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
 	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)

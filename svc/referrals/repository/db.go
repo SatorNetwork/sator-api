@@ -22,17 +22,81 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addReferralStmt, err = db.PrepareContext(ctx, addReferral); err != nil {
+		return nil, fmt.Errorf("error preparing query AddReferral: %w", err)
+	}
+	if q.addReferralCodeDataStmt, err = db.PrepareContext(ctx, addReferralCodeData); err != nil {
+		return nil, fmt.Errorf("error preparing query AddReferralCodeData: %w", err)
+	}
+	if q.deleteReferralCodeDataByIDStmt, err = db.PrepareContext(ctx, deleteReferralCodeDataByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteReferralCodeDataByID: %w", err)
+	}
 	if q.getReferralCodeByIDStmt, err = db.PrepareContext(ctx, getReferralCodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetReferralCodeByID: %w", err)
+	}
+	if q.getReferralCodeDataByCodeStmt, err = db.PrepareContext(ctx, getReferralCodeDataByCode); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReferralCodeDataByCode: %w", err)
+	}
+	if q.getReferralCodeDataByUserIDStmt, err = db.PrepareContext(ctx, getReferralCodeDataByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReferralCodeDataByUserID: %w", err)
+	}
+	if q.getReferralCodesDataListStmt, err = db.PrepareContext(ctx, getReferralCodesDataList); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReferralCodesDataList: %w", err)
+	}
+	if q.getReferralsWithPaginationByUserIDStmt, err = db.PrepareContext(ctx, getReferralsWithPaginationByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReferralsWithPaginationByUserID: %w", err)
+	}
+	if q.updateReferralCodeDataStmt, err = db.PrepareContext(ctx, updateReferralCodeData); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateReferralCodeData: %w", err)
 	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addReferralStmt != nil {
+		if cerr := q.addReferralStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addReferralStmt: %w", cerr)
+		}
+	}
+	if q.addReferralCodeDataStmt != nil {
+		if cerr := q.addReferralCodeDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addReferralCodeDataStmt: %w", cerr)
+		}
+	}
+	if q.deleteReferralCodeDataByIDStmt != nil {
+		if cerr := q.deleteReferralCodeDataByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteReferralCodeDataByIDStmt: %w", cerr)
+		}
+	}
 	if q.getReferralCodeByIDStmt != nil {
 		if cerr := q.getReferralCodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getReferralCodeByIDStmt: %w", cerr)
+		}
+	}
+	if q.getReferralCodeDataByCodeStmt != nil {
+		if cerr := q.getReferralCodeDataByCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReferralCodeDataByCodeStmt: %w", cerr)
+		}
+	}
+	if q.getReferralCodeDataByUserIDStmt != nil {
+		if cerr := q.getReferralCodeDataByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReferralCodeDataByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.getReferralCodesDataListStmt != nil {
+		if cerr := q.getReferralCodesDataListStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReferralCodesDataListStmt: %w", cerr)
+		}
+	}
+	if q.getReferralsWithPaginationByUserIDStmt != nil {
+		if cerr := q.getReferralsWithPaginationByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReferralsWithPaginationByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.updateReferralCodeDataStmt != nil {
+		if cerr := q.updateReferralCodeDataStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateReferralCodeDataStmt: %w", cerr)
 		}
 	}
 	return err
@@ -72,15 +136,31 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                      DBTX
-	tx                      *sql.Tx
-	getReferralCodeByIDStmt *sql.Stmt
+	db                                     DBTX
+	tx                                     *sql.Tx
+	addReferralStmt                        *sql.Stmt
+	addReferralCodeDataStmt                *sql.Stmt
+	deleteReferralCodeDataByIDStmt         *sql.Stmt
+	getReferralCodeByIDStmt                *sql.Stmt
+	getReferralCodeDataByCodeStmt          *sql.Stmt
+	getReferralCodeDataByUserIDStmt        *sql.Stmt
+	getReferralCodesDataListStmt           *sql.Stmt
+	getReferralsWithPaginationByUserIDStmt *sql.Stmt
+	updateReferralCodeDataStmt             *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                      tx,
-		tx:                      tx,
-		getReferralCodeByIDStmt: q.getReferralCodeByIDStmt,
+		db:                                     tx,
+		tx:                                     tx,
+		addReferralStmt:                        q.addReferralStmt,
+		addReferralCodeDataStmt:                q.addReferralCodeDataStmt,
+		deleteReferralCodeDataByIDStmt:         q.deleteReferralCodeDataByIDStmt,
+		getReferralCodeByIDStmt:                q.getReferralCodeByIDStmt,
+		getReferralCodeDataByCodeStmt:          q.getReferralCodeDataByCodeStmt,
+		getReferralCodeDataByUserIDStmt:        q.getReferralCodeDataByUserIDStmt,
+		getReferralCodesDataListStmt:           q.getReferralCodesDataListStmt,
+		getReferralsWithPaginationByUserIDStmt: q.getReferralsWithPaginationByUserIDStmt,
+		updateReferralCodeDataStmt:             q.updateReferralCodeDataStmt,
 	}
 }

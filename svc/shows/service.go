@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
@@ -29,6 +30,7 @@ type (
 		HasNewEpisode bool      `json:"has_new_episode"`
 		Category      string    `json:"category"`
 		Description   string    `json:"description"`
+		Claps         int64     `json:"claps"`
 	}
 
 	Season struct {
@@ -53,6 +55,22 @@ type (
 		VerificationChallengeID *uuid.UUID `json:"verification_challenge_id"`
 		Rating                  float64    `json:"rating"`
 		RatingsCount            int64      `json:"ratings_count"`
+		ActiveUsers             int32      `json:"active_users"`
+		UserRewardsAmount       float64    `json:"user_rewards_amount"`
+		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
+	}
+
+	// Review ...
+	Review struct {
+		ID        string `json:"id"`
+		UserID    string `json:"user_id"`
+		Username  string `json:"username"`
+		Rating    int    `json:"rating"`
+		Title     string `json:"title"`
+		Review    string `json:"review"`
+		Likes     int64  `json:"likes"`
+		Unlikes   int64  `json:"unlikes"`
+		CreatedAt string `json:"created_at"`
 	}
 
 	showsRepository interface {
@@ -60,7 +78,7 @@ type (
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
-		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
@@ -80,11 +98,24 @@ type (
 		// Episodes rating
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
+		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+
+		// Episode reviews
+		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
+		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
+		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
+
+		// Show claps
+		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
+		CountUserClaps(ctx context.Context, arg repository.CountUserClapsParams) (int64, error)
 	}
 
 	// Challenges service client
 	challengesClient interface {
 		GetListByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
+		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
+		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error)
+		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 	}
 )
 
@@ -145,7 +176,7 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
 	}
-	return castToShow(show), nil
+	return castToShowWithClaps(show), nil
 }
 
 // Cast repository.Show to service Show structure
@@ -157,6 +188,19 @@ func castToShow(source repository.Show) Show {
 		HasNewEpisode: source.HasNewEpisode,
 		Category:      source.Category.String,
 		Description:   source.Description.String,
+	}
+}
+
+// Cast repository.GetShowByIDRow to service Show structure
+func castToShowWithClaps(source repository.GetShowByIDRow) Show {
+	return Show{
+		ID:            source.ID,
+		Title:         source.Title,
+		Cover:         source.Cover,
+		HasNewEpisode: source.HasNewEpisode,
+		Category:      source.Category.String,
+		Description:   source.Description.String,
+		Claps:         source.Claps,
 	}
 }
 
@@ -174,7 +218,7 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit
 }
 
 // GetEpisodesByShowID returns episodes by show id.
-func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error) {
+func (s *Service) GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error) {
 	seasons, err := s.sr.GetSeasonsByShowID(ctx, repository.GetSeasonsByShowIDParams{
 		ShowID: showID,
 		Limit:  limit,
@@ -195,10 +239,25 @@ func (s *Service) GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, lim
 
 	episodesPerSeasons := make(map[string][]Episode)
 	for _, e := range episodes {
+		number, err := s.chc.NumberUsersWhoHaveAccessToEpisode(ctx, e.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not number users who have access to episode with id = %v: %w", e.ID, err)
+		}
+
+		receivedAmount, err := s.chc.GetChallengeReceivedRewardAmount(ctx, e.ChallengeID.UUID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", e.ID, err)
+		}
+
+		receivedAmountByUser, err := s.chc.GetChallengeReceivedRewardAmountByUserID(ctx, e.ChallengeID.UUID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenge received reward amount by user for episode with id = %v: %w", e.ID, err)
+		}
+
 		if _, ok := episodesPerSeasons[e.SeasonID.UUID.String()]; ok {
-			episodesPerSeasons[e.SeasonID.UUID.String()] = append(episodesPerSeasons[e.SeasonID.UUID.String()], castRowsToEpisode(e))
+			episodesPerSeasons[e.SeasonID.UUID.String()] = append(episodesPerSeasons[e.SeasonID.UUID.String()], castRowsToEpisode(e, number, receivedAmount, receivedAmountByUser))
 		} else {
-			episodesPerSeasons[e.SeasonID.UUID.String()] = []Episode{castRowsToEpisode(e)}
+			episodesPerSeasons[e.SeasonID.UUID.String()] = []Episode{castRowsToEpisode(e, number, receivedAmount, receivedAmountByUser)}
 		}
 	}
 
@@ -221,7 +280,7 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 }
 
 // GetEpisodeByID returns episode with provided id.
-func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error) {
+func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (interface{}, error) {
 	episode, err := s.sr.GetEpisodeByID(ctx, episodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
@@ -232,23 +291,41 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUI
 		return nil, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
 	}
 
-	return castRowToEpisode(episode, avgRating, ratingsCount), nil
+	receivedAmount, err := s.chc.GetChallengeReceivedRewardAmount(ctx, episode.ChallengeID.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", episode.ID, err)
+	}
+
+	receivedAmountByUser, err := s.chc.GetChallengeReceivedRewardAmountByUserID(ctx, episode.ChallengeID.UUID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", episodeID, err)
+	}
+
+	number, err := s.chc.NumberUsersWhoHaveAccessToEpisode(ctx, episodeID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
+	}
+
+	return castRowToEpisode(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure
-func castRowToEpisode(source repository.GetEpisodeByIDRow, rating float64, ratingsCount int64) Episode {
+func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
 	ep := Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonID:      source.SeasonID.UUID,
-		SeasonNumber:  source.SeasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		Rating:        rating,
-		RatingsCount:  ratingsCount,
+		ID:                 source.ID,
+		ShowID:             source.ShowID,
+		EpisodeNumber:      source.EpisodeNumber,
+		SeasonID:           source.SeasonID.UUID,
+		SeasonNumber:       source.SeasonNumber,
+		Cover:              source.Cover.String,
+		Title:              source.Title,
+		Description:        source.Description.String,
+		ReleaseDate:        source.ReleaseDate.Time.String(),
+		Rating:             rating,
+		RatingsCount:       ratingsCount,
+		ActiveUsers:        number,
+		TotalRewardsAmount: receivedAmount,
+		UserRewardsAmount:  receivedRewardAmountByUser,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -263,19 +340,22 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating float64, ratin
 }
 
 // Cast repository.GetEpisodesByShowIDRow to service Episode structure
-func castRowsToEpisode(source repository.GetEpisodesByShowIDRow) Episode {
+func castRowsToEpisode(source repository.GetEpisodesByShowIDRow, numberUsersWhoHaveAccessToEpisode int32, receivedAmount, receivedAmountByUser float64) Episode {
 	ep := Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonID:      source.SeasonID.UUID,
-		SeasonNumber:  source.SeasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		Rating:        source.AvgRating,
-		RatingsCount:  source.Ratings,
+		ID:                 source.ID,
+		ShowID:             source.ShowID,
+		EpisodeNumber:      source.EpisodeNumber,
+		SeasonID:           source.SeasonID.UUID,
+		SeasonNumber:       source.SeasonNumber,
+		Cover:              source.Cover.String,
+		Title:              source.Title,
+		Description:        source.Description.String,
+		ReleaseDate:        source.ReleaseDate.Time.String(),
+		Rating:             source.AvgRating,
+		RatingsCount:       source.Ratings,
+		ActiveUsers:        numberUsersWhoHaveAccessToEpisode,
+		TotalRewardsAmount: receivedAmount,
+		UserRewardsAmount:  receivedAmountByUser,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -522,6 +602,87 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 			return fmt.Errorf("you've already rated this episode")
 		}
 		return fmt.Errorf("could not rate episode with episodeID=%s: %w", episodeID, err)
+	}
+
+	return nil
+}
+
+// ReviewEpisode ...
+func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
+	if reviewed, _ := s.sr.DidUserReviewEpisode(ctx, repository.DidUserReviewEpisodeParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+	}); reviewed {
+		return ErrAlreadyReviewed
+	}
+
+	if err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+		Username:  sql.NullString{String: username, Valid: true},
+		Rating:    rating,
+		Title:     sql.NullString{String: title, Valid: true},
+		Review:    sql.NullString{String: review, Valid: true},
+	}); err != nil {
+		if db.IsDuplicateError(err) {
+			return ErrAlreadyReviewed
+		}
+		return fmt.Errorf("could not review episode with episodeID=%s: %w", episodeID, err)
+	}
+
+	return nil
+}
+
+func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error) {
+	reviews, err := s.sr.ReviewsList(ctx, repository.ReviewsListParams{
+		EpisodeID: episodeID,
+		Limit:     limit,
+		Offset:    offset,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return castReviewsList(reviews), nil
+}
+
+func castReviewsList(source []repository.Rating) []Review {
+	result := make([]Review, 0, len(source))
+
+	for _, r := range source {
+		result = append(result, Review{
+			ID:        r.ID.String(),
+			UserID:    r.UserID.String(),
+			Username:  r.Username.String,
+			Rating:    int(r.Rating),
+			Title:     r.Title.String,
+			Review:    r.Review.String,
+			CreatedAt: r.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return result
+}
+
+// AddClapsForShow ...
+func (s *Service) AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error {
+	if claps, err := s.sr.CountUserClaps(ctx, repository.CountUserClapsParams{
+		ShowID: showID,
+		UserID: userID,
+	}); err == nil {
+		if claps >= 10 {
+			return ErrMaxClaps
+		}
+	}
+
+	if err := s.sr.AddClapForShow(ctx, repository.AddClapForShowParams{
+		ShowID: showID,
+		UserID: userID,
+	}); err != nil {
+		return fmt.Errorf("could not add claps for show with id=%s: %w", showID, err)
 	}
 
 	return nil

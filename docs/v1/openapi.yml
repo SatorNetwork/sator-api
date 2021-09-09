@@ -837,6 +837,9 @@ paths:
                     has_new_episode:
                       type: boolean
                       example: true
+                    claps:
+                      type: integer
+                      example: 234
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
@@ -997,10 +1000,41 @@ paths:
                   has_new_episode:
                     type: boolean
                     example: true
+                  claps:
+                    type: integer
+                    example: 234
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+
+
+  /shows/{show_id}/claps:
+    post:
+      tags:
+        - "Shows"
+        - "Claps"
+      summary: Claps for show.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /shows/filter/{category}:
     get:
@@ -1114,6 +1148,18 @@ paths:
                       type: number
                       example: 123
                       description: "How many times episode was rated"
+                    active_users:
+                      type: number
+                      example: 12
+                      description: "How  many users have access to episode"
+                    user_rewards_amount:
+                      type: number
+                      example: 12
+                      description: "episode received reward amount by user"
+                    total_rewards_amount:
+                      type: number
+                      example: 12
+                      description: "episode received reward amount by all users"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1158,9 +1204,6 @@ paths:
                   type: string
                   example: "2006-01-02T15:04:05Z"
                 challenge_id:
-                  type: string
-                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                verification_challenge_id:
                   type: string
                   example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                 season_id:
@@ -1281,6 +1324,18 @@ paths:
                     type: number
                     example: 123
                     description: "How many times episode was rated"
+                  active_users:
+                    type: number
+                    example: 12
+                    description: "How  many users have access to episode"
+                  user_rewards_amount:
+                    type: number
+                    example: 12
+                    description: "episode received reward amount by user"
+                  total_rewards_amount:
+                    type: number
+                    example: 12
+                    description: "episode received reward amount by all users"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1415,6 +1470,145 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+
+  /shows/{show_id}/episodes/{episode_id}/reviews:
+    post:
+      tags:
+        - "Shows"
+        - "Episodes"
+        - "Reviews"
+      summary: Used to store episode review.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                  example: 5
+                  description: Episode rating from 1 to 10.
+                title:
+                  type: string
+                  example: My review title
+                  description: Short title of review.
+                review:
+                  type: string
+                  example: My full review text.
+                  description: Full review text.
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Shows"
+        - "Episodes"
+        - "Reviews"
+      summary: Get the episode reviews list.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns reviews list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    username:
+                      type: string
+                      example: "johnDoe"
+                    rating:
+                      type: integer
+                      example: 7
+                      description: it can be from 1 to 10
+                    title:
+                      type: string
+                      example: "Review title"
+                    review:
+                      type: string
+                      example: "Review text"
+                    likes:
+                      type: integer
+                      example: 123
+                      description: Number of review likes
+                    unlikes:
+                      type: integer
+                      example: 75
+                      description: Number of review unlikes
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
 
   /shows/{show_id}/seasons:
     post:
@@ -2767,3 +2961,352 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+
+  /ref/codes/my:
+    get:
+      tags:
+        - "Referral codes"
+      summary: Get users referral code.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          description: Returns referral code data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  code:
+                    type: string
+                    example: "code"
+                  referral_link:
+                    type: string
+                    example: https://link.to.download.app/RefCode
+                  is_personal:
+                    type: boolean
+                    example: true
+                  user_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /ref/codes/{id}:
+    put:
+      tags:
+        - "Referral codes"
+      summary: used to update referral code.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Referral code ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                code:
+                  type: string
+                  example: "code"
+                is_personal:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  code:
+                    type: string
+                    example: "code"
+                  referral_link:
+                    type: string
+                    example: https://link.to.download.app/RefCode
+                  is_personal:
+                    type: boolean
+                    example: true
+                  user_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Referral codes"
+      summary: used for delete referral code by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Referral code ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /ref/codes:
+    post:
+      tags:
+        - "Referral codes"
+      summary: used to store new referral code.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - code
+                - is_personal
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                code:
+                  type: string
+                  example: "code"
+                is_personal:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  code:
+                    type: string
+                    example: "code"
+                  referral_link:
+                    type: string
+                    example: https://link.to.download.app/RefCode
+                  is_personal:
+                    type: boolean
+                    example: true
+                  user_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Referral codes"
+      summary: Get referral codes list.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns referral codes data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "title"
+                    code:
+                      type: string
+                      example: "code"
+                    referral_link:
+                      type: string
+                      example: https://link.to.download.app/RefCode
+                    is_personal:
+                      type: boolean
+                      example: true
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /ref/codes/{id}/referrals:
+    get:
+      tags:
+        - "Referral codes"
+      summary: Get list of users who signed up via this referral code.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: Referral code ID.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns paginated list of users who signed up via this referral code.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    referral_code_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /ref/confirm/{code}:
+    post:
+      tags:
+        - "Referral codes"
+      summary: used to store current user to the referrals table.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: code
+          in: path
+          description: Referral code.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+

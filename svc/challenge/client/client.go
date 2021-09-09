@@ -24,7 +24,11 @@ type (
 
 		StoreChallengeAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
 		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
+		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error)
+		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
+
+		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
 	}
 )
 
@@ -86,9 +90,39 @@ func (c *Client) StoreChallengeReceivedRewardAmount(ctx context.Context, challen
 	return c.s.StoreChallengeReceivedRewardAmount(ctx, challengeID, userID, rewardAmount)
 }
 
+// GetChallengeReceivedRewardAmount user to store challenge received reward amount.
+func (c *Client) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error) {
+	res, err := c.s.GetChallengeReceivedRewardAmount(ctx, challengeID)
+	if err != nil {
+		return 0, err
+	}
+
+	return res, nil
+}
+
+// GetChallengeReceivedRewardAmountByUserID user to store challenge received reward amount.
+func (c *Client) GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
+	res, err := c.s.GetChallengeReceivedRewardAmountByUserID(ctx, challengeID, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return res, nil
+}
+
 // GetPassedChallengeAttempts user to get challenge attempts passed.
 func (c *Client) GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error) {
 	res, err := c.s.GetPassedChallengeAttempts(ctx, challengeID, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return res, nil
+}
+
+// NumberUsersWhoHaveAccessToEpisode ...
+func (c *Client) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error) {
+	res, err := c.s.NumberUsersWhoHaveAccessToEpisode(ctx, episodeID)
 	if err != nil {
 		return 0, err
 	}

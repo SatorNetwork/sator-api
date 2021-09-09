@@ -185,10 +185,11 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 			return nil, err
 		}
 
-		// normalize email address
-		req.Email = strings.ToLower(req.Email)
-
-		token, err := s.Login(ctx, req.Email, req.Password)
+		token, err := s.Login(
+			ctx,
+			strings.ToLower(strings.TrimSpace(req.Email)),
+			strings.TrimSpace(req.Password),
+		)
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
 				return nil, validator.NewValidationError(url.Values{
@@ -225,10 +226,12 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, err
 		}
 
-		// normalize email address
-		req.Email = strings.ToLower(req.Email)
-
-		token, err := s.SignUp(ctx, req.Email, req.Password, req.Username)
+		token, err := s.SignUp(
+			ctx,
+			strings.ToLower(strings.TrimSpace(req.Email)),
+			strings.TrimSpace(req.Password),
+			strings.TrimSpace(req.Username),
+		)
 		if err != nil {
 			return nil, err
 		}

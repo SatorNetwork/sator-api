@@ -133,6 +133,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{show_id}/episodes/{episode_id}/reviews", httptransport.NewServer(
+		e.ReviewEpisode,
+		decodeReviewEpisodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{show_id}/episodes/{episode_id}/reviews", httptransport.NewServer(
+		e.GetReviewsList,
+		decodeGetReviewsListRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	// Seasons
 	r.Post("/{show_id}/seasons", httptransport.NewServer(
 		e.AddSeason,
@@ -148,7 +162,29 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{show_id}/claps", httptransport.NewServer(
+		e.AddClapsForShow,
+		decodeAddClapsForShowRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
+}
+
+// returns http error code by error type
+func codeAndMessageFrom(err error) (int, interface{}) {
+	if errors.Is(err, ErrInvalidParameter) ||
+		errors.Is(err, ErrAlreadyReviewed) ||
+		errors.Is(err, ErrMaxClaps) {
+		return http.StatusBadRequest, err.Error()
+	}
+
+	if errors.Is(err, ErrNotFound) || db.IsNotFoundError(err) {
+		return http.StatusNotFound, err.Error()
+	}
+
+	return httpencoder.CodeAndMessageFrom(err)
 }
 
 func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -194,19 +230,6 @@ func castStrToInt32(source string) int32 {
 	}
 
 	return int32(res)
-}
-
-// returns http error code by error type
-func codeAndMessageFrom(err error) (int, interface{}) {
-	if errors.Is(err, ErrInvalidParameter) {
-		return http.StatusBadRequest, err.Error()
-	}
-
-	if errors.Is(err, ErrNotFound) || db.IsNotFoundError(err) {
-		return http.StatusNotFound, err.Error()
-	}
-
-	return httpencoder.CodeAndMessageFrom(err)
 }
 
 func decodeAddShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -368,4 +391,38 @@ func decodeRateEpisodeRequest(_ context.Context, r *http.Request) (interface{}, 
 	req.EpisodeID = episodeID
 
 	return req, nil
+}
+
+func decodeReviewEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req ReviewEpisodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	episodeID := chi.URLParam(r, "episode_id")
+	if episodeID == "" {
+		return nil, fmt.Errorf("%w: missed episodes id", ErrInvalidParameter)
+	}
+	req.EpisodeID = episodeID
+
+	return req, nil
+}
+
+func decodeGetReviewsListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetReviewsListByEpisodeIDRequest{
+		EpisodeID: chi.URLParam(r, "episode_id"),
+		PaginationRequest: PaginationRequest{
+			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
+}
+
+func decodeAddClapsForShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	return showID, nil
 }

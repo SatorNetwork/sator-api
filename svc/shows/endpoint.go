@@ -31,7 +31,11 @@ type (
 		GetEpisodesByShowID endpoint.Endpoint
 		UpdateEpisode       endpoint.Endpoint
 
-		RateEpisode endpoint.Endpoint
+		RateEpisode    endpoint.Endpoint
+		ReviewEpisode  endpoint.Endpoint
+		GetReviewsList endpoint.Endpoint
+
+		AddClapsForShow endpoint.Endpoint
 	}
 
 	service interface {
@@ -48,11 +52,15 @@ type (
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
-		GetEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetEpisodeByID(ctx context.Context, showID, episodeID uuid.UUID) (interface{}, error)
+		GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (interface{}, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
+		ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error
+		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
+
+		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
 
 	// PaginationRequest struct
@@ -154,6 +162,20 @@ type (
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 		Rating    int32  `json:"rating" validate:"required,gte=1,lte=10"`
 	}
+
+	// ReviewEpisodeRequest struct
+	ReviewEpisodeRequest struct {
+		EpisodeID string `json:"episode_id,omitempty" validate:"required,uuid"`
+		Rating    int32  `json:"rating" validate:"required,gte=1,lte=10"`
+		Title     string `json:"title" validate:"required"`
+		Review    string `json:"review" validate:"required"`
+	}
+
+	// GetReviewsListByEpisodeIDRequest struct
+	GetReviewsListByEpisodeIDRequest struct {
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		PaginationRequest
+	}
 )
 
 // Limit of items
@@ -194,7 +216,11 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
 
-		RateEpisode: MakeRateEpisodeEndpoint(s, validateFunc),
+		RateEpisode:    MakeRateEpisodeEndpoint(s, validateFunc),
+		ReviewEpisode:  MakeReviewEpisodeEndpoint(s, validateFunc),
+		GetReviewsList: MakeGetReviewsListEndpoint(s, validateFunc),
+
+		AddClapsForShow: MakeAddClapsForShowEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -218,6 +244,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
 
 			e.RateEpisode = mdw(e.RateEpisode)
+			e.ReviewEpisode = mdw(e.ReviewEpisode)
+			e.GetReviewsList = mdw(e.GetReviewsList)
+
+			e.AddClapsForShow = mdw(e.AddClapsForShow)
 		}
 	}
 
@@ -525,6 +555,11 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetEpisodeByIDEndpoint ...
 func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(GetEpisodeByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -540,7 +575,7 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetEpisodeByID(ctx, showID, episodeID)
+		resp, err := s.GetEpisodeByID(ctx, showID, episodeID, uid)
 		if err != nil {
 			return nil, err
 		}
@@ -552,6 +587,11 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeGetEpisodesByShowIDEndpoint ...
 func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(GetEpisodesByShowIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -562,7 +602,7 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		resp, err := s.GetEpisodesByShowID(ctx, showID, req.Limit(), req.Offset())
+		resp, err := s.GetEpisodesByShowID(ctx, showID, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
@@ -643,6 +683,80 @@ func MakeRateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 
 		err = s.RateEpisode(ctx, episodeID, uid, req.Rating)
 		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeReviewEpisodeEndpoint ...
+func MakeReviewEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		username, err := jwt.UsernameFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get username: %w", err)
+		}
+
+		req := request.(ReviewEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.ReviewEpisode(ctx, episodeID, uid, username, req.Rating, req.Title, req.Review); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetReviewsListEndpoint ...
+func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(GetReviewsListByEpisodeIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.GetReviewsList(ctx, episodeID, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeAddClapsForShowEndpoint ...
+func MakeAddClapsForShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		showID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.AddClapsForShow(ctx, showID, uid); err != nil {
 			return nil, err
 		}
 

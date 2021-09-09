@@ -99,6 +99,23 @@ func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccess
 	return i, err
 }
 
+const numberUsersWhoHaveAccessToEpisode = `-- name: NumberUsersWhoHaveAccessToEpisode :one
+SELECT COUNT(
+    EXISTS (
+               SELECT episode_id, user_id, activated_at, activated_before
+               FROM episode_access
+               WHERE episode_id = $1 AND activated_before > NOW()
+           )
+    )::INT
+`
+
+func (q *Queries) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error) {
+	row := q.queryRow(ctx, q.numberUsersWhoHaveAccessToEpisodeStmt, numberUsersWhoHaveAccessToEpisode, episodeID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const updateEpisodeAccessData = `-- name: UpdateEpisodeAccessData :exec
 UPDATE episode_access
 SET activated_at = $1, activated_before = $2

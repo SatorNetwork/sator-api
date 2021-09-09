@@ -69,6 +69,7 @@ type (
 		GetEpisodeAccessData(ctx context.Context, arg repository.GetEpisodeAccessDataParams) (repository.EpisodeAccess, error)
 		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
 		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
+		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
 
 		// Verification Question Attempts
 		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
@@ -81,7 +82,8 @@ type (
 		AddChallengeAttempt(ctx context.Context, arg repository.AddChallengeAttemptParams) (repository.PassedChallengesDatum, error)
 		StoreChallengeReceivedRewardAmount(ctx context.Context, arg repository.StoreChallengeReceivedRewardAmountParams) error
 		CountPassedChallengeAttempts(ctx context.Context, arg repository.CountPassedChallengeAttemptsParams) (int64, error)
-		GetChallengeReceivedRewardAmount(ctx context.Context, arg repository.GetChallengeReceivedRewardAmountParams) (float64, error)
+		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error)
+		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, arg repository.GetChallengeReceivedRewardAmountByUserIDParams) (float64, error)
 	}
 
 	playURLGenerator func(challengeID uuid.UUID) string
@@ -185,7 +187,7 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 
 	var attemptsLeft int32
 
-	receivedReward, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+	receivedReward, err := s.cr.GetChallengeReceivedRewardAmountByUserID(ctx, repository.GetChallengeReceivedRewardAmountByUserIDParams{
 		UserID:      userID,
 		ChallengeID: challengeID,
 	})
@@ -365,7 +367,7 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 	// Cast repository.Challenge into challenge.Challenge struct
 	result := make([]Challenge, 0, len(list))
 	for _, v := range list {
-		receivedReward, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
+		receivedReward, err := s.cr.GetChallengeReceivedRewardAmountByUserID(ctx, repository.GetChallengeReceivedRewardAmountByUserIDParams{
 			UserID:      userID,
 			ChallengeID: v.ID,
 		})
@@ -799,13 +801,13 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 
 	switch unlockOption {
 	case "unlock_opt_10_2h":
-		activateBefore = time.Now().Add(time.Hour * 2)
+		activateBefore = activateBefore.Add(time.Hour * 2)
 		amount = 10
 	case "unlock_opt_100_24h":
-		activateBefore = time.Now().Add(time.Hour * 24)
+		activateBefore = activateBefore.Add(time.Hour * 24)
 		amount = 100
 	case "unlock_opt_500_week":
-		activateBefore = time.Now().Add(time.Hour * 24 * 7)
+		activateBefore = activateBefore.Add(time.Hour * 24 * 7)
 		amount = 500
 	}
 
@@ -861,22 +863,34 @@ func (s *Service) StoreChallengeReceivedRewardAmount(ctx context.Context, challe
 	return nil
 }
 
-//// GetChallengeReceivedRewardAmount ...
-//func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
-//	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, repository.GetChallengeReceivedRewardAmountParams{
-//		UserID:      userID,
-//		ChallengeID: challengeID,
-//	})
-//	if err != nil {
-//		if db.IsNotFoundError(err) {
-//			return 0, nil
-//		}
-//
-//		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
-//	}
-//
-//	return amount, nil
-//}
+// GetChallengeReceivedRewardAmountByUserID ...
+func (s *Service) GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error) {
+	amount, err := s.cr.GetChallengeReceivedRewardAmountByUserID(ctx, repository.GetChallengeReceivedRewardAmountByUserIDParams{
+		UserID:      userID,
+		ChallengeID: challengeID,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("could not get challenge received reward amount by user=%v: %w", userID, err)
+	}
+
+	return amount, nil
+}
+
+// GetChallengeReceivedRewardAmount ...
+func (s *Service) GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error) {
+	amount, err := s.cr.GetChallengeReceivedRewardAmount(ctx, challengeID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("could not get challenge received reward amount: %w", err)
+	}
+
+	return amount, nil
+}
 
 // GetPassedChallengeAttempts ...
 func (s *Service) GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error) {
@@ -889,4 +903,14 @@ func (s *Service) GetPassedChallengeAttempts(ctx context.Context, challengeID, u
 	}
 
 	return attemptsNumber, nil
+}
+
+// NumberUsersWhoHaveAccessToEpisode ...
+func (s *Service) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error) {
+	number, err := s.cr.NumberUsersWhoHaveAccessToEpisode(ctx, episodeID)
+	if err != nil {
+		return 0, fmt.Errorf("could not number users who have access to episode: %w", err)
+	}
+
+	return number, nil
 }
