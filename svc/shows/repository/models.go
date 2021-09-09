@@ -51,3 +51,10 @@ type Show struct {
 	Category      sql.NullString `json:"category"`
 	Description   sql.NullString `json:"description"`
 }
+
+type ShowClap struct {
+	ID        uuid.UUID `json:"id"`
+	ShowID    uuid.UUID `json:"show_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}

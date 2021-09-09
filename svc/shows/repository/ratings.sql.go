@@ -145,10 +145,17 @@ WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ReviewsList(ctx context.Context, episodeID uuid.UUID) ([]Rating, error) {
-	rows, err := q.query(ctx, q.reviewsListStmt, reviewsList, episodeID)
+type ReviewsListParams struct {
+	EpisodeID uuid.UUID `json:"episode_id"`
+	Limit     int32     `json:"limit"`
+	Offset    int32     `json:"offset"`
+}
+
+func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rating, error) {
+	rows, err := q.query(ctx, q.reviewsListStmt, reviewsList, arg.EpisodeID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

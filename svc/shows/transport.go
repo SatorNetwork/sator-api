@@ -162,12 +162,21 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{show_id}/claps", httptransport.NewServer(
+		e.AddClapsForShow,
+		decodeAddClapsForShowRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
-	if errors.Is(err, ErrInvalidParameter) || errors.Is(err, ErrAlreadyReviewed) {
+	if errors.Is(err, ErrInvalidParameter) ||
+		errors.Is(err, ErrAlreadyReviewed) ||
+		errors.Is(err, ErrMaxClaps) {
 		return http.StatusBadRequest, err.Error()
 	}
 
@@ -407,4 +416,13 @@ func decodeGetReviewsListRequest(_ context.Context, r *http.Request) (interface{
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
+}
+
+func decodeAddClapsForShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	return showID, nil
 }

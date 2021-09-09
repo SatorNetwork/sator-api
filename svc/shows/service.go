@@ -30,6 +30,7 @@ type (
 		HasNewEpisode bool      `json:"has_new_episode"`
 		Category      string    `json:"category"`
 		Description   string    `json:"description"`
+		Claps         int64     `json:"claps"`
 	}
 
 	Season struct {
@@ -74,8 +75,8 @@ type (
 		// Shows
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
-		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
-		GetShowByID(ctx context.Context, id uuid.UUID) (repository.Show, error)
+		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.GetShowsRow, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
@@ -96,9 +97,15 @@ type (
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
 		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+
+		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
 		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
-		ReviewsList(ctx context.Context, episodeID uuid.UUID) ([]repository.Rating, error)
+		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
+
+		// Show claps
+		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
+		CountUserClaps(ctx context.Context, arg repository.CountUserClapsParams) (int64, error)
 	}
 
 	// Challenges service client
@@ -132,7 +139,7 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToListShow(shows), nil
+	return castToListShowWithClaps(shows), nil
 }
 
 // GetShowChallenges returns challenges by show id.
@@ -161,13 +168,30 @@ func castToListShow(source []repository.Show) []Show {
 	return result
 }
 
+// Cast repository.GetShowsRow to service Show structure
+func castToListShowWithClaps(source []repository.GetShowsRow) []Show {
+	result := make([]Show, 0, len(source))
+	for _, s := range source {
+		result = append(result, Show{
+			ID:            s.ID,
+			Title:         s.Title,
+			Cover:         s.Cover,
+			HasNewEpisode: s.HasNewEpisode,
+			Category:      s.Category.String,
+			Description:   s.Description.String,
+			Claps:         s.Claps,
+		})
+	}
+	return result
+}
+
 // GetShowByID returns show with provided id.
 func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
 	show, err := s.sr.GetShowByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
 	}
-	return castToShow(show), nil
+	return castToShowWithClaps(show), nil
 }
 
 // Cast repository.Show to service Show structure
@@ -179,6 +203,19 @@ func castToShow(source repository.Show) Show {
 		HasNewEpisode: source.HasNewEpisode,
 		Category:      source.Category.String,
 		Description:   source.Description.String,
+	}
+}
+
+// Cast repository.GetShowByIDRow to service Show structure
+func castToShowWithClaps(source repository.GetShowByIDRow) Show {
+	return Show{
+		ID:            source.ID,
+		Title:         source.Title,
+		Cover:         source.Cover,
+		HasNewEpisode: source.HasNewEpisode,
+		Category:      source.Category.String,
+		Description:   source.Description.String,
+		Claps:         source.Claps,
 	}
 }
 
@@ -612,7 +649,11 @@ func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID
 }
 
 func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error) {
-	reviews, err := s.sr.ReviewsList(ctx, episodeID)
+	reviews, err := s.sr.ReviewsList(ctx, repository.ReviewsListParams{
+		EpisodeID: episodeID,
+		Limit:     limit,
+		Offset:    offset,
+	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return nil, ErrNotFound
@@ -639,4 +680,25 @@ func castReviewsList(source []repository.Rating) []Review {
 	}
 
 	return result
+}
+
+// AddClapsForShow ...
+func (s *Service) AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error {
+	if claps, err := s.sr.CountUserClaps(ctx, repository.CountUserClapsParams{
+		ShowID: showID,
+		UserID: userID,
+	}); err == nil {
+		if claps >= 10 {
+			return ErrMaxClaps
+		}
+	}
+
+	if err := s.sr.AddClapForShow(ctx, repository.AddClapForShowParams{
+		ShowID: showID,
+		UserID: userID,
+	}); err != nil {
+		return fmt.Errorf("could not add claps for show with id=%s: %w", showID, err)
+	}
+
+	return nil
 }

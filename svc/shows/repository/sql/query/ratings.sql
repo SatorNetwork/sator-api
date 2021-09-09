@@ -56,7 +56,8 @@ SELECT EXISTS(
 
 -- name: ReviewsList :many
 SELECT * FROM ratings 
-WHERE episode_id = @episode_id
+WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
