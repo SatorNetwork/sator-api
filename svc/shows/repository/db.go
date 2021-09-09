@@ -40,6 +40,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteShowByIDStmt, err = db.PrepareContext(ctx, deleteShowByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteShowByID: %w", err)
 	}
+	if q.doesUserRateEpisodeStmt, err = db.PrepareContext(ctx, doesUserRateEpisode); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserRateEpisode: %w", err)
+	}
+	if q.doesUserReviewEpisodeStmt, err = db.PrepareContext(ctx, doesUserReviewEpisode); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserReviewEpisode: %w", err)
+	}
 	if q.getEpisodeByIDStmt, err = db.PrepareContext(ctx, getEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeByID: %w", err)
 	}
@@ -69,6 +75,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.rateEpisodeStmt, err = db.PrepareContext(ctx, rateEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query RateEpisode: %w", err)
+	}
+	if q.reviewEpisodeStmt, err = db.PrepareContext(ctx, reviewEpisode); err != nil {
+		return nil, fmt.Errorf("error preparing query ReviewEpisode: %w", err)
+	}
+	if q.reviewsListStmt, err = db.PrepareContext(ctx, reviewsList); err != nil {
+		return nil, fmt.Errorf("error preparing query ReviewsList: %w", err)
 	}
 	if q.updateEpisodeStmt, err = db.PrepareContext(ctx, updateEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateEpisode: %w", err)
@@ -109,6 +121,16 @@ func (q *Queries) Close() error {
 	if q.deleteShowByIDStmt != nil {
 		if cerr := q.deleteShowByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteShowByIDStmt: %w", cerr)
+		}
+	}
+	if q.doesUserRateEpisodeStmt != nil {
+		if cerr := q.doesUserRateEpisodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserRateEpisodeStmt: %w", cerr)
+		}
+	}
+	if q.doesUserReviewEpisodeStmt != nil {
+		if cerr := q.doesUserReviewEpisodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserReviewEpisodeStmt: %w", cerr)
 		}
 	}
 	if q.getEpisodeByIDStmt != nil {
@@ -159,6 +181,16 @@ func (q *Queries) Close() error {
 	if q.rateEpisodeStmt != nil {
 		if cerr := q.rateEpisodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing rateEpisodeStmt: %w", cerr)
+		}
+	}
+	if q.reviewEpisodeStmt != nil {
+		if cerr := q.reviewEpisodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing reviewEpisodeStmt: %w", cerr)
+		}
+	}
+	if q.reviewsListStmt != nil {
+		if cerr := q.reviewsListStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing reviewsListStmt: %w", cerr)
 		}
 	}
 	if q.updateEpisodeStmt != nil {
@@ -216,6 +248,8 @@ type Queries struct {
 	deleteEpisodeByIDStmt                     *sql.Stmt
 	deleteSeasonByIDStmt                      *sql.Stmt
 	deleteShowByIDStmt                        *sql.Stmt
+	doesUserRateEpisodeStmt                   *sql.Stmt
+	doesUserReviewEpisodeStmt                 *sql.Stmt
 	getEpisodeByIDStmt                        *sql.Stmt
 	getEpisodeIDByVerificationChallengeIDStmt *sql.Stmt
 	getEpisodeRatingByIDStmt                  *sql.Stmt
@@ -226,21 +260,25 @@ type Queries struct {
 	getShowsStmt                              *sql.Stmt
 	getShowsByCategoryStmt                    *sql.Stmt
 	rateEpisodeStmt                           *sql.Stmt
+	reviewEpisodeStmt                         *sql.Stmt
+	reviewsListStmt                           *sql.Stmt
 	updateEpisodeStmt                         *sql.Stmt
 	updateShowStmt                            *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                    tx,
-		tx:                    tx,
-		addEpisodeStmt:        q.addEpisodeStmt,
-		addSeasonStmt:         q.addSeasonStmt,
-		addShowStmt:           q.addShowStmt,
-		deleteEpisodeByIDStmt: q.deleteEpisodeByIDStmt,
-		deleteSeasonByIDStmt:  q.deleteSeasonByIDStmt,
-		deleteShowByIDStmt:    q.deleteShowByIDStmt,
-		getEpisodeByIDStmt:    q.getEpisodeByIDStmt,
+		db:                        tx,
+		tx:                        tx,
+		addEpisodeStmt:            q.addEpisodeStmt,
+		addSeasonStmt:             q.addSeasonStmt,
+		addShowStmt:               q.addShowStmt,
+		deleteEpisodeByIDStmt:     q.deleteEpisodeByIDStmt,
+		deleteSeasonByIDStmt:      q.deleteSeasonByIDStmt,
+		deleteShowByIDStmt:        q.deleteShowByIDStmt,
+		doesUserRateEpisodeStmt:   q.doesUserRateEpisodeStmt,
+		doesUserReviewEpisodeStmt: q.doesUserReviewEpisodeStmt,
+		getEpisodeByIDStmt:        q.getEpisodeByIDStmt,
 		getEpisodeIDByVerificationChallengeIDStmt: q.getEpisodeIDByVerificationChallengeIDStmt,
 		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
@@ -250,6 +288,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getShowsStmt:                              q.getShowsStmt,
 		getShowsByCategoryStmt:                    q.getShowsByCategoryStmt,
 		rateEpisodeStmt:                           q.rateEpisodeStmt,
+		reviewEpisodeStmt:                         q.reviewEpisodeStmt,
+		reviewsListStmt:                           q.reviewsListStmt,
 		updateEpisodeStmt:                         q.updateEpisodeStmt,
 		updateShowStmt:                            q.updateShowStmt,
 	}

@@ -31,7 +31,9 @@ type (
 		GetEpisodesByShowID endpoint.Endpoint
 		UpdateEpisode       endpoint.Endpoint
 
-		RateEpisode endpoint.Endpoint
+		RateEpisode    endpoint.Endpoint
+		ReviewEpisode  endpoint.Endpoint
+		GetReviewsList endpoint.Endpoint
 	}
 
 	service interface {
@@ -53,6 +55,8 @@ type (
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
+		ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error
+		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
 	}
 
 	// PaginationRequest struct
@@ -154,6 +158,20 @@ type (
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 		Rating    int32  `json:"rating" validate:"required,gte=1,lte=10"`
 	}
+
+	// ReviewEpisodeRequest struct
+	ReviewEpisodeRequest struct {
+		EpisodeID string `json:"episode_id,omitempty" validate:"required,uuid"`
+		Rating    int32  `json:"rating" validate:"required,gte=1,lte=10"`
+		Title     string `json:"title" validate:"required"`
+		Review    string `json:"review" validate:"required"`
+	}
+
+	// GetReviewsListByEpisodeIDRequest struct
+	GetReviewsListByEpisodeIDRequest struct {
+		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		PaginationRequest
+	}
 )
 
 // Limit of items
@@ -194,7 +212,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
 
-		RateEpisode: MakeRateEpisodeEndpoint(s, validateFunc),
+		RateEpisode:    MakeRateEpisodeEndpoint(s, validateFunc),
+		ReviewEpisode:  MakeReviewEpisodeEndpoint(s, validateFunc),
+		GetReviewsList: MakeGetReviewsListEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -218,6 +238,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
 
 			e.RateEpisode = mdw(e.RateEpisode)
+			e.ReviewEpisode = mdw(e.ReviewEpisode)
+			e.GetReviewsList = mdw(e.GetReviewsList)
 		}
 	}
 
@@ -657,5 +679,58 @@ func MakeRateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 		}
 
 		return true, nil
+	}
+}
+
+// MakeReviewEpisodeEndpoint ...
+func MakeReviewEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		username, err := jwt.UsernameFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get username: %w", err)
+		}
+
+		req := request.(ReviewEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.ReviewEpisode(ctx, episodeID, uid, username, req.Rating, req.Title, req.Review); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetReviewsListEndpoint ...
+func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(GetReviewsListByEpisodeIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.GetReviewsList(ctx, episodeID, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }
