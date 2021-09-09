@@ -68,6 +68,8 @@ type (
 		Rating    int    `json:"rating"`
 		Title     string `json:"title"`
 		Review    string `json:"review"`
+		Likes     int64  `json:"likes"`
+		Unlikes   int64  `json:"unlikes"`
 		CreatedAt string `json:"created_at"`
 	}
 

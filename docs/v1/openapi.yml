@@ -1589,6 +1589,14 @@ paths:
                     review:
                       type: string
                       example: "Review text"
+                    likes:
+                      type: integer
+                      example: 123
+                      description: Number of review likes
+                    unlikes:
+                      type: integer
+                      example: 75
+                      description: Number of review unlikes
                     created_at:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
