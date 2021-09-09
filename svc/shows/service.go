@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
@@ -58,6 +59,17 @@ type (
 		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
 	}
 
+	// Review ...
+	Review struct {
+		ID        string `json:"id"`
+		UserID    string `json:"user_id"`
+		Username  string `json:"username"`
+		Rating    int    `json:"rating"`
+		Title     string `json:"title"`
+		Review    string `json:"review"`
+		CreatedAt string `json:"created_at"`
+	}
+
 	showsRepository interface {
 		// Shows
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
@@ -83,6 +95,10 @@ type (
 		// Episodes rating
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
+		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
+		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
+		ReviewsList(ctx context.Context, episodeID uuid.UUID) ([]repository.Rating, error)
 	}
 
 	// Challenges service client
@@ -567,4 +583,60 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 	}
 
 	return nil
+}
+
+// ReviewEpisode ...
+func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
+	if reviewed, _ := s.sr.DidUserReviewEpisode(ctx, repository.DidUserReviewEpisodeParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+	}); reviewed {
+		return ErrAlreadyReviewed
+	}
+
+	if err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+		Username:  sql.NullString{String: username, Valid: true},
+		Rating:    rating,
+		Title:     sql.NullString{String: title, Valid: true},
+		Review:    sql.NullString{String: review, Valid: true},
+	}); err != nil {
+		if db.IsDuplicateError(err) {
+			return ErrAlreadyReviewed
+		}
+		return fmt.Errorf("could not review episode with episodeID=%s: %w", episodeID, err)
+	}
+
+	return nil
+}
+
+func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error) {
+	reviews, err := s.sr.ReviewsList(ctx, episodeID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return castReviewsList(reviews), nil
+}
+
+func castReviewsList(source []repository.Rating) []Review {
+	result := make([]Review, 0, len(source))
+
+	for _, r := range source {
+		result = append(result, Review{
+			ID:        r.ID.String(),
+			UserID:    r.UserID.String(),
+			Username:  r.Username.String,
+			Rating:    int(r.Rating),
+			Title:     r.Title.String,
+			Review:    r.Review.String,
+			CreatedAt: r.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return result
 }

@@ -1437,6 +1437,137 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+
+  /shows/{show_id}/episodes/{episode_id}/reviews:
+    post:
+      tags:
+        - "Shows"
+        - "Episodes"
+        - "Reviews"
+      summary: Used to store episode review.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                  example: 5
+                  description: Episode rating from 1 to 10.
+                title:
+                  type: string
+                  example: My review title
+                  description: Short title of review.
+                review:
+                  type: string
+                  example: My full review text.
+                  description: Full review text.
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Shows"
+        - "Episodes"
+        - "Reviews"
+      summary: Get the episode reviews list.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns reviews list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    username:
+                      type: string
+                      example: "johnDoe"
+                    rating:
+                      type: integer
+                      example: 7
+                      description: it can be from 1 to 10
+                    title:
+                      type: string
+                      example: "Review title"
+                    review:
+                      type: string
+                      example: "Review text"
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+
   /shows/{show_id}/seasons:
     post:
       tags:
