@@ -1,14 +1,6 @@
 -- name: GetShows :many
-WITH show_claps_sum AS (
-    SELECT 
-        COUNT(*) AS claps,
-        show_id
-    FROM show_claps
-    GROUP BY show_id  
-)
-SELECT shows.*, show_claps_sum.claps AS claps
+SELECT *
 FROM shows
-LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -24,7 +16,7 @@ WITH show_claps_sum AS (
 )
 SELECT 
     shows.*,
-    show_claps_sum.claps as claps
+    COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
 WHERE shows.id = @id;

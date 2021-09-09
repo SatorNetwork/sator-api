@@ -75,7 +75,7 @@ type (
 		// Shows
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
-		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.GetShowsRow, error)
+		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
@@ -139,7 +139,7 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToListShowWithClaps(shows), nil
+	return castToListShow(shows), nil
 }
 
 // GetShowChallenges returns challenges by show id.
@@ -163,23 +163,6 @@ func castToListShow(source []repository.Show) []Show {
 			HasNewEpisode: s.HasNewEpisode,
 			Category:      s.Category.String,
 			Description:   s.Description.String,
-		})
-	}
-	return result
-}
-
-// Cast repository.GetShowsRow to service Show structure
-func castToListShowWithClaps(source []repository.GetShowsRow) []Show {
-	result := make([]Show, 0, len(source))
-	for _, s := range source {
-		result = append(result, Show{
-			ID:            s.ID,
-			Title:         s.Title,
-			Cover:         s.Cover,
-			HasNewEpisode: s.HasNewEpisode,
-			Category:      s.Category.String,
-			Description:   s.Description.String,
-			Claps:         s.Claps,
 		})
 	}
 	return result
