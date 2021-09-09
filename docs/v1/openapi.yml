@@ -837,6 +837,9 @@ paths:
                     has_new_episode:
                       type: boolean
                       example: true
+                    claps:
+                      type: integer
+                      example: 234
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
@@ -997,10 +1000,41 @@ paths:
                   has_new_episode:
                     type: boolean
                     example: true
+                  claps:
+                    type: integer
+                    example: 234
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+
+
+  /shows/{show_id}/claps:
+    post:
+      tags:
+        - "Shows"
+        - "Claps"
+      summary: Claps for show.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /shows/filter/{category}:
     get:

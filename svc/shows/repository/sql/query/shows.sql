@@ -1,14 +1,33 @@
 -- name: GetShows :many
-SELECT *
+WITH show_claps_sum AS (
+    SELECT 
+        COUNT(*) AS claps,
+        show_id
+    FROM show_claps
+    GROUP BY show_id  
+)
+SELECT shows.*, show_claps_sum.claps AS claps
 FROM shows
+LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
 LIMIT $1 OFFSET $2;
 -- name: GetShowByID :one
-SELECT *
+WITH show_claps_sum AS (
+    SELECT 
+        COUNT(*) AS claps,
+        show_id
+    FROM show_claps
+    WHERE show_id = @id
+    GROUP BY show_id  
+)
+SELECT 
+    shows.*,
+    show_claps_sum.claps as claps
 FROM shows
-WHERE id = $1;
+LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
+WHERE shows.id = @id;
 -- name: GetShowsByCategory :many
 SELECT *
 FROM shows

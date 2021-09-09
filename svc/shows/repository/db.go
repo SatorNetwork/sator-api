@@ -22,6 +22,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addClapForShowStmt, err = db.PrepareContext(ctx, addClapForShow); err != nil {
+		return nil, fmt.Errorf("error preparing query AddClapForShow: %w", err)
+	}
 	if q.addEpisodeStmt, err = db.PrepareContext(ctx, addEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query AddEpisode: %w", err)
 	}
@@ -30,6 +33,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.addShowStmt, err = db.PrepareContext(ctx, addShow); err != nil {
 		return nil, fmt.Errorf("error preparing query AddShow: %w", err)
+	}
+	if q.countUserClapsStmt, err = db.PrepareContext(ctx, countUserClaps); err != nil {
+		return nil, fmt.Errorf("error preparing query CountUserClaps: %w", err)
 	}
 	if q.deleteEpisodeByIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEpisodeByID: %w", err)
@@ -93,6 +99,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addClapForShowStmt != nil {
+		if cerr := q.addClapForShowStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addClapForShowStmt: %w", cerr)
+		}
+	}
 	if q.addEpisodeStmt != nil {
 		if cerr := q.addEpisodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addEpisodeStmt: %w", cerr)
@@ -106,6 +117,11 @@ func (q *Queries) Close() error {
 	if q.addShowStmt != nil {
 		if cerr := q.addShowStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addShowStmt: %w", cerr)
+		}
+	}
+	if q.countUserClapsStmt != nil {
+		if cerr := q.countUserClapsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countUserClapsStmt: %w", cerr)
 		}
 	}
 	if q.deleteEpisodeByIDStmt != nil {
@@ -242,9 +258,11 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                                        DBTX
 	tx                                        *sql.Tx
+	addClapForShowStmt                        *sql.Stmt
 	addEpisodeStmt                            *sql.Stmt
 	addSeasonStmt                             *sql.Stmt
 	addShowStmt                               *sql.Stmt
+	countUserClapsStmt                        *sql.Stmt
 	deleteEpisodeByIDStmt                     *sql.Stmt
 	deleteSeasonByIDStmt                      *sql.Stmt
 	deleteShowByIDStmt                        *sql.Stmt
@@ -270,9 +288,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                       tx,
 		tx:                       tx,
+		addClapForShowStmt:       q.addClapForShowStmt,
 		addEpisodeStmt:           q.addEpisodeStmt,
 		addSeasonStmt:            q.addSeasonStmt,
 		addShowStmt:              q.addShowStmt,
+		countUserClapsStmt:       q.countUserClapsStmt,
 		deleteEpisodeByIDStmt:    q.deleteEpisodeByIDStmt,
 		deleteSeasonByIDStmt:     q.deleteSeasonByIDStmt,
 		deleteShowByIDStmt:       q.deleteShowByIDStmt,

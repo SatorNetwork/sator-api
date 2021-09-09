@@ -6,6 +6,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -68,14 +69,37 @@ func (q *Queries) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getShowByID = `-- name: GetShowByID :one
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
+WITH show_claps_sum AS (
+    SELECT 
+        COUNT(*) AS claps,
+        show_id
+    FROM show_claps
+    WHERE show_id = $1
+    GROUP BY show_id  
+)
+SELECT 
+    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description,
+    show_claps_sum.claps as claps
 FROM shows
-WHERE id = $1
+LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
+WHERE shows.id = $1
 `
 
-func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
+type GetShowByIDRow struct {
+	ID            uuid.UUID      `json:"id"`
+	Title         string         `json:"title"`
+	Cover         string         `json:"cover"`
+	HasNewEpisode bool           `json:"has_new_episode"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	Category      sql.NullString `json:"category"`
+	Description   sql.NullString `json:"description"`
+	Claps         int64          `json:"claps"`
+}
+
+func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow, error) {
 	row := q.queryRow(ctx, q.getShowByIDStmt, getShowByID, id)
-	var i Show
+	var i GetShowByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
@@ -85,13 +109,22 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
 		&i.CreatedAt,
 		&i.Category,
 		&i.Description,
+		&i.Claps,
 	)
 	return i, err
 }
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
+WITH show_claps_sum AS (
+    SELECT 
+        COUNT(*) AS claps,
+        show_id
+    FROM show_claps
+    GROUP BY show_id  
+)
+SELECT shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, show_claps_sum.claps AS claps
 FROM shows
+LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -103,15 +136,27 @@ type GetShowsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, error) {
+type GetShowsRow struct {
+	ID            uuid.UUID      `json:"id"`
+	Title         string         `json:"title"`
+	Cover         string         `json:"cover"`
+	HasNewEpisode bool           `json:"has_new_episode"`
+	UpdatedAt     sql.NullTime   `json:"updated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	Category      sql.NullString `json:"category"`
+	Description   sql.NullString `json:"description"`
+	Claps         int64          `json:"claps"`
+}
+
+func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]GetShowsRow, error) {
 	rows, err := q.query(ctx, q.getShowsStmt, getShows, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Show
+	var items []GetShowsRow
 	for rows.Next() {
-		var i Show
+		var i GetShowsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -121,6 +166,7 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.CreatedAt,
 			&i.Category,
 			&i.Description,
+			&i.Claps,
 		); err != nil {
 			return nil, err
 		}

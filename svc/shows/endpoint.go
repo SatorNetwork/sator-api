@@ -34,6 +34,8 @@ type (
 		RateEpisode    endpoint.Endpoint
 		ReviewEpisode  endpoint.Endpoint
 		GetReviewsList endpoint.Endpoint
+
+		AddClapsForShow endpoint.Endpoint
 	}
 
 	service interface {
@@ -57,6 +59,8 @@ type (
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
 		ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error
 		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
+
+		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
 
 	// PaginationRequest struct
@@ -215,6 +219,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		RateEpisode:    MakeRateEpisodeEndpoint(s, validateFunc),
 		ReviewEpisode:  MakeReviewEpisodeEndpoint(s, validateFunc),
 		GetReviewsList: MakeGetReviewsListEndpoint(s, validateFunc),
+
+		AddClapsForShow: MakeAddClapsForShowEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -240,6 +246,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.RateEpisode = mdw(e.RateEpisode)
 			e.ReviewEpisode = mdw(e.ReviewEpisode)
 			e.GetReviewsList = mdw(e.GetReviewsList)
+
+			e.AddClapsForShow = mdw(e.AddClapsForShow)
 		}
 	}
 
@@ -732,5 +740,26 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeAddClapsForShowEndpoint ...
+func MakeAddClapsForShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		showID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.AddClapsForShow(ctx, showID, uid); err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }
