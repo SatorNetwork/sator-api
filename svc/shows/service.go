@@ -95,8 +95,8 @@ type (
 		// Episodes rating
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
-		DoesUserRateEpisode(ctx context.Context, arg repository.DoesUserRateEpisodeParams) (bool, error)
-		DoesUserReviewEpisode(ctx context.Context, arg repository.DoesUserReviewEpisodeParams) (bool, error)
+		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
 		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
 		ReviewsList(ctx context.Context, episodeID uuid.UUID) ([]repository.Rating, error)
 	}
@@ -587,7 +587,7 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 
 // ReviewEpisode ...
 func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
-	if reviewed, _ := s.sr.DoesUserReviewEpisode(ctx, repository.DoesUserReviewEpisodeParams{
+	if reviewed, _ := s.sr.DidUserReviewEpisode(ctx, repository.DidUserReviewEpisodeParams{
 		UserID:    userID,
 		EpisodeID: episodeID,
 	}); reviewed {

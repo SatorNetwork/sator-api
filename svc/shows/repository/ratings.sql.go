@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const doesUserRateEpisode = `-- name: DoesUserRateEpisode :one
+const didUserRateEpisode = `-- name: DidUserRateEpisode :one
 SELECT EXISTS(
     SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings 
     WHERE user_id = $1 
@@ -18,19 +18,19 @@ SELECT EXISTS(
 )
 `
 
-type DoesUserRateEpisodeParams struct {
+type DidUserRateEpisodeParams struct {
 	UserID    uuid.UUID `json:"user_id"`
 	EpisodeID uuid.UUID `json:"episode_id"`
 }
 
-func (q *Queries) DoesUserRateEpisode(ctx context.Context, arg DoesUserRateEpisodeParams) (bool, error) {
-	row := q.queryRow(ctx, q.doesUserRateEpisodeStmt, doesUserRateEpisode, arg.UserID, arg.EpisodeID)
+func (q *Queries) DidUserRateEpisode(ctx context.Context, arg DidUserRateEpisodeParams) (bool, error) {
+	row := q.queryRow(ctx, q.didUserRateEpisodeStmt, didUserRateEpisode, arg.UserID, arg.EpisodeID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
 }
 
-const doesUserReviewEpisode = `-- name: DoesUserReviewEpisode :one
+const didUserReviewEpisode = `-- name: DidUserReviewEpisode :one
 SELECT EXISTS(
     SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings 
     WHERE user_id = $1 
@@ -39,13 +39,13 @@ SELECT EXISTS(
 )
 `
 
-type DoesUserReviewEpisodeParams struct {
+type DidUserReviewEpisodeParams struct {
 	UserID    uuid.UUID `json:"user_id"`
 	EpisodeID uuid.UUID `json:"episode_id"`
 }
 
-func (q *Queries) DoesUserReviewEpisode(ctx context.Context, arg DoesUserReviewEpisodeParams) (bool, error) {
-	row := q.queryRow(ctx, q.doesUserReviewEpisodeStmt, doesUserReviewEpisode, arg.UserID, arg.EpisodeID)
+func (q *Queries) DidUserReviewEpisode(ctx context.Context, arg DidUserReviewEpisodeParams) (bool, error) {
+	row := q.queryRow(ctx, q.didUserReviewEpisodeStmt, didUserReviewEpisode, arg.UserID, arg.EpisodeID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err

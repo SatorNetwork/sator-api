@@ -39,14 +39,14 @@ UPDATE SET
     review = EXCLUDED.review,
     username = EXCLUDED.username;
 
--- name: DoesUserRateEpisode :one
+-- name: DidUserRateEpisode :one
 SELECT EXISTS(
     SELECT * FROM ratings 
     WHERE user_id = @user_id 
     AND episode_id = @episode_id
 );
 
--- name: DoesUserReviewEpisode :one
+-- name: DidUserReviewEpisode :one
 SELECT EXISTS(
     SELECT * FROM ratings 
     WHERE user_id = @user_id 
