@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
-
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/types"
 )
@@ -39,92 +38,96 @@ func main() {
 		log.Printf("tx: %+v\n\n", tx)
 	}
 
-	// acc := sc.NewAccount()
-	// log.Printf("account pub key: %#v", acc.PublicKey.ToBase58())
-	// log.Printf("account private key: %#v", acc.PrivateKey)
-
-	// sc.RequestAirdrop(acc.PublicKey.ToBase58(), 10)
-
-	// convert accounnt to asset
-	// if err := sc.CreateAsset(feePayer, issuer, asset); err != nil {
-	// 	log.Fatalln(err)
-	// }
-
-	// allow issuer account to hold asset
-	// if tx, err := sc.InitAccountToUseAsset(feePayer, issuer, asset, issuer); err != nil {
-	// 	log.Fatalln(err)
-	// } else {
-	// 	log.Println(tx)
-	// }
-
-	// issue tokens
-	// if tx, err := sc.IssueAsset(feePayer, issuer, asset, issuer, 1200); err != nil {
-	// 	log.Fatalln(err)
-	// } else {
-	// 	log.Println(tx)
-	// }
-
-	// // allow user account to hold asset
-	// if tx, err := sc.InitAccountToUseAsset(feePayer, issuer, asset, acc); err != nil {
-	// 	log.Fatalln(err)
-	// } else {
-	// 	log.Println(tx)
-	// }
-
-	// for i := 0; i < 5; i++ {
-	// 	if balance, err := sc.GetAccountBalance(acc.PublicKey.ToBase58()); err != nil {
-	// 		log.Println(err)
-	// 		time.Sleep(time.Second * 10)
-	// 	} else {
-	// 		log.Println("init balance", balance)
-	// 		break
-	// 	}
-	// }
-
-	// sends token
-	// for i := 0; i < 5; i++ {
-	// 	if tx, err := sc.SendAssets(feePayer, issuer, asset, user.PublicKey.ToBase58(), 1000); err != nil {
-	// 		log.Println(err)
-	// 		time.Sleep(time.Second * 10)
-	// 	} else {
-	// 		log.Println(tx)
-	// 		break
-	// 	}
-	// }
-
-	// time.Sleep(time.Second * 20)
-
-	// for i := 0; i < 5; i++ {
-	// 	if balance, err := sc.GetAccountBalance(acc.PublicKey.ToBase58()); err != nil {
-	// 		log.Println(err)
-	// 		time.Sleep(time.Second * 10)
-	// 	} else {
-	// 		log.Println("balance", balance)
-	// 		break
-	// 	}
-	// }
-
-	// if info, err := sc.GetAccountBalanceSOL(ctx, feePayerPub); err != nil {
-	// 	log.Println(err)
-	// } else {
-	// 	log.Printf("fee payer: %+v", info)
-	// }
-
-	// if info, err := sc.GetTokenAccountBalance(ctx, issuerPub); err != nil {
-	// 	log.Println(err)
-	// } else {
-	// 	log.Printf("issuer: %+v", info)
-	// }
-
-	// if info, err := sc.GetTokenAccountBalance(ctx, assetPub); err != nil {
-	// 	log.Println(err)
-	// } else {
-	// 	log.Printf("asset: %+v", info)
-	// }
-
-	// if info, err := sc.GetTokenAccountBalance(ctx, userPub); err != nil {
-	// 	log.Println(err)
-	// } else {
-	// 	log.Printf("user: %+v", info)
-	// }
+	//acc := sc.NewAccount()
+	//log.Printf("account pub key: %#v", acc.PublicKey.ToBase58())
+	//log.Printf("account private key: %#v", acc.PrivateKey)
+	//
+	//_, err = sc.RequestAirdrop(ctx, acc.PublicKey.ToBase58(), 10)
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//
+	//// convert account to asset
+	//_, err = sc.CreateAsset(ctx, feePayer, issuer, asset)
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//
+	//// allow issuer account to hold asset
+	//if tx, err := sc.InitAccountToUseAsset(ctx, feePayer, issuer, asset, issuer); err != nil {
+	//	log.Fatalln(err)
+	//} else {
+	//	log.Println(tx)
+	//}
+	//
+	//// issue tokens
+	//if tx, err := sc.IssueAsset(ctx, feePayer, issuer, asset, issuer, 1200); err != nil {
+	//	log.Fatalln(err)
+	//} else {
+	//	log.Println(tx)
+	//}
+	//
+	//// allow user account to hold asset
+	//if tx, err := sc.InitAccountToUseAsset(ctx, feePayer, issuer, asset, acc); err != nil {
+	//	log.Fatalln(err)
+	//} else {
+	//	log.Println(tx)
+	//}
+	//
+	//for i := 0; i < 5; i++ {
+	//	if balance, err := sc.GetTokenAccountBalance(ctx, acc.PublicKey.ToBase58()); err != nil {
+	//		log.Println(err)
+	//		time.Sleep(time.Second * 10)
+	//	} else {
+	//		log.Println("init balance", balance)
+	//		break
+	//	}
+	//}
+	//
+	//// sends token
+	//for i := 0; i < 5; i++ {
+	//	if tx, err := sc.SendAssets(ctx, feePayer, issuer, asset, issuer, user.PublicKey.ToBase58(), 1000); err != nil {
+	//		log.Println(err)
+	//		time.Sleep(time.Second * 10)
+	//	} else {
+	//		log.Println(tx)
+	//		break
+	//	}
+	//}
+	//
+	//time.Sleep(time.Second * 20)
+	//
+	//for i := 0; i < 5; i++ {
+	//	if balance, err := sc.GetTokenAccountBalance(ctx, acc.PublicKey.ToBase58()); err != nil {
+	//		log.Println(err)
+	//		time.Sleep(time.Second * 10)
+	//	} else {
+	//		log.Println("balance", balance)
+	//		break
+	//	}
+	//}
+	//
+	//if info, err := sc.GetAccountBalanceSOL(ctx, feePayerPub); err != nil {
+	//	log.Println(err)
+	//} else {
+	//	log.Printf("fee payer: %+v", info)
+	//}
+	//
+	//if info, err := sc.GetTokenAccountBalance(ctx, issuerPub); err != nil {
+	//	log.Println(err)
+	//} else {
+	//	log.Printf("issuer: %+v", info)
+	//}
+	//
+	//if info, err := sc.GetTokenAccountBalance(ctx, assetPub); err != nil {
+	//	log.Println(err)
+	//} else {
+	//	log.Printf("asset: %+v", info)
+	//}
+	//
+	//if info, err := sc.GetTokenAccountBalance(ctx, userPub); err != nil {
+	//	log.Println(err)
+	//} else {
+	//	log.Printf("user: %+v", info)
+	//}
 }
