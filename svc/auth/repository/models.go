@@ -10,14 +10,15 @@ import (
 )
 
 type User struct {
-	ID         uuid.UUID    `json:"id"`
-	Username   string       `json:"username"`
-	Email      string       `json:"email"`
-	Password   []byte       `json:"password"`
-	Disabled   bool         `json:"disabled"`
-	VerifiedAt sql.NullTime `json:"verified_at"`
-	UpdatedAt  sql.NullTime `json:"updated_at"`
-	CreatedAt  time.Time    `json:"created_at"`
+	ID         uuid.UUID      `json:"id"`
+	Username   string         `json:"username"`
+	Email      string         `json:"email"`
+	Password   []byte         `json:"password"`
+	Disabled   bool           `json:"disabled"`
+	VerifiedAt sql.NullTime   `json:"verified_at"`
+	UpdatedAt  sql.NullTime   `json:"updated_at"`
+	CreatedAt  time.Time      `json:"created_at"`
+	Role       sql.NullString `json:"role"`
 }
 
 type UserVerification struct {

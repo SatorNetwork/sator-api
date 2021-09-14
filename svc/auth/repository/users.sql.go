@@ -11,18 +11,24 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, username, password)
-VALUES ($1, $2, $3) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at
+INSERT INTO users (email, username, password, role)
+VALUES ($1, $2, $3, $4) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role
 `
 
 type CreateUserParams struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password []byte `json:"password"`
+	Email    string         `json:"email"`
+	Username string         `json:"username"`
+	Password []byte         `json:"password"`
+	Role     sql.NullString `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser, arg.Email, arg.Username, arg.Password)
+	row := q.queryRow(ctx, q.createUserStmt, createUser,
+		arg.Email,
+		arg.Username,
+		arg.Password,
+		arg.Role,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -33,6 +39,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.VerifiedAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -62,7 +69,7 @@ func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -80,12 +87,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.VerifiedAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
 FROM users
 WHERE id = $1
 LIMIT 1
@@ -103,12 +111,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.VerifiedAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
 FROM users
 WHERE username = $1
 LIMIT 1
@@ -126,12 +135,13 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.VerifiedAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUsersListDesc = `-- name: GetUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
 FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -160,6 +170,7 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 			&i.VerifiedAt,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}

@@ -36,7 +36,7 @@ type (
 	ServiceOption func(*Service)
 
 	jwtInteractor interface {
-		NewWithUserData(userID uuid.UUID, username string) (uuid.UUID, string, error)
+		NewWithUserData(userID uuid.UUID, username, role string) (uuid.UUID, string, error)
 	}
 
 	userRepository interface {
@@ -112,7 +112,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", ErrInvalidCredentials
 	}
 
-	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username)
+	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username, user.Role.String)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
@@ -127,9 +127,9 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 }
 
 // RefreshToken returns new jwt string.
-func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error) {
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error) {
 	// TODO: add JWT id into the revoked tokens list
-	_, token, err := s.jwt.NewWithUserData(uid, username)
+	_, token, err := s.jwt.NewWithUserData(uid, username, role)
 	if err != nil {
 		return "", fmt.Errorf("could not refresh access token: %w", err)
 	}
@@ -169,6 +169,10 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Email:    email,
 		Password: passwdHash,
 		Username: username,
+		Role: sql.NullString{
+			String: repository.RoleUser,
+			Valid:  true,
+		},
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not create a new account: %w", err)
@@ -203,7 +207,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username)
+	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username, u.Role.String)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}

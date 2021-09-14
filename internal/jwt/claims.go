@@ -13,6 +13,7 @@ import (
 type Claims struct {
 	UserID   string `json:"user_id,omitempty"`
 	Username string `json:"username,omitempty"`
+	Role     string `json:"role,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -49,6 +50,15 @@ func UsernameFromContext(ctx context.Context) (string, error) {
 	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
 	if cl, ok := claims.(*Claims); ok {
 		return cl.Username, nil
+	}
+	return "", ErrInvalidJWTClaims
+}
+
+// RoleFromContext returns user role from request context
+func RoleFromContext(ctx context.Context) (string, error) {
+	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
+	if cl, ok := claims.(*Claims); ok {
+		return cl.Role, nil
 	}
 	return "", ErrInvalidJWTClaims
 }

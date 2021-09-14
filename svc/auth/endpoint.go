@@ -42,7 +42,7 @@ type (
 		Login(ctx context.Context, email, password string) (string, error)
 		Logout(ctx context.Context, tid string) error
 		SignUp(ctx context.Context, email, password, username string) (string, error)
-		RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error)
+		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error)
 
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
@@ -253,12 +253,17 @@ func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			return nil, fmt.Errorf("could not get username: %w", err)
 		}
 
+		role, err := jwt.RoleFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get role: %w", err)
+		}
+
 		tid, err := jwt.TokenIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		token, err := s.RefreshToken(ctx, uid, username, tid.String())
+		token, err := s.RefreshToken(ctx, uid, username, role, tid.String())
 		if err != nil {
 			return nil, err
 		}
