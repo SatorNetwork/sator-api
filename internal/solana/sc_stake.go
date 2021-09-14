@@ -11,7 +11,7 @@ import (
 )
 
 // InitializeStakePool generates and calls instruction that initializes stake pool
-func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, stakeAuthority, tokenAccountStakePool common.PublicKey, err error) {
+func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error) {
 	stakePool = types.NewAccount()
 	systemProgram := c.PublicKeyFromString(SystemProgram)
 	sysvarRent := c.PublicKeyFromString(SysvarRent)
@@ -20,7 +20,7 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
-		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not get recent block hash: %w", err)
+		return "", types.Account{}, fmt.Errorf("could not get recent block hash: %w", err)
 	}
 
 	input := InitializeStakePoolInput{Number: 0, Ranks: [4]Rank{
@@ -30,17 +30,17 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account
 		{7200, 500}}}
 	data, err := borsh.Serialize(input)
 	if err != nil {
-		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not serialize data with borsh: %w", err)
+		return "", types.Account{}, fmt.Errorf("could not serialize data with borsh: %w", err)
 	}
 
 	var seeds [][]byte
 	seeds = append(seeds, stakePool.PublicKey.Bytes()[0:32])
-	stakeAuthority, _, err = common.FindProgramAddress(seeds, programID)
+	stakeAuthority, _, err := common.FindProgramAddress(seeds, programID)
 	if err != nil {
-		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not get stake authority: %w", err)
+		return "", types.Account{}, fmt.Errorf("could not get stake authority: %w", err)
 	}
 
-	tokenAccountStakePool = common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
+	tokenAccountStakePool := common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
 
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
@@ -65,19 +65,19 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account
 		RecentBlockHash: res.Blockhash,
 	})
 	if err != nil {
-		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not create new raw transaction: %w", err)
+		return "", types.Account{}, fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
 	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
 	if err != nil {
-		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not send raw transaction: %w", err)
+		return "", types.Account{}, fmt.Errorf("could not send raw transaction: %w", err)
 	}
 
-	return txhash, stakePool, stakeAuthority, tokenAccountStakePool, nil
+	return txhash, stakePool, nil
 }
 
 // Stake stakes given amount for given period.
-func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeAuthority, userWallet, tokenAccountStakeTarget common.PublicKey, duration int64, amount uint64) (string, common.PublicKey, error) {
+func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, userWallet common.PublicKey, duration int64, amount uint64) (string, error) {
 	sysvarClock := c.PublicKeyFromString(SysvarClock)
 	sysvarRent := c.PublicKeyFromString(SysvarRent)
 	systemProgram := c.PublicKeyFromString(SystemProgram)
@@ -86,7 +86,7 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeA
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
-		return "", common.PublicKey{}, fmt.Errorf("could not get recent block hash: %w", err)
+		return "", fmt.Errorf("could not get recent block hash: %w", err)
 	}
 
 	data, err := borsh.Serialize(StakeInput{
@@ -95,8 +95,17 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeA
 		Amount:   amount,
 	})
 	if err != nil {
-		return "", common.PublicKey{}, fmt.Errorf("could not serialize data with borsh: %w", err)
+		return "", fmt.Errorf("could not serialize data with borsh: %w", err)
 	}
+
+	var seeds [][]byte
+	seeds = append(seeds, pool.Bytes()[0:32])
+	stakeAuthority, _, err := common.FindProgramAddress(seeds, programID)
+	if err != nil {
+		return "", fmt.Errorf("could not get stake authority: %w", err)
+	}
+
+	tokenAccountStakeTarget := common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
 
 	seed := userWallet.Bytes()
 	seedString := base58.Encode(seed[0:20])
@@ -126,21 +135,22 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeA
 		RecentBlockHash: res.Blockhash,
 	})
 	if err != nil {
-		return "", common.PublicKey{}, fmt.Errorf("could not create new raw transaction: %w", err)
+		return "", fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
 	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
 	if err != nil {
-		return "", common.PublicKey{}, fmt.Errorf("could not send raw transaction: %w", err)
+		return "", fmt.Errorf("could not send raw transaction: %w", err)
 	}
 
-	return txhash, stakeAccount, nil
+	return txhash, nil
 }
 
 // Unstake unstake.
-func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool, userWallet, tokenAccount, stakeAccount, stakeAuthority common.PublicKey) (string, error) {
+func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool, userWallet common.PublicKey) (string, error) {
 	sysvarClock := c.PublicKeyFromString(SysvarClock)
 	splToken := c.PublicKeyFromString(SplToken)
+	programID := c.PublicKeyFromString(ProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -152,6 +162,19 @@ func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool,
 		return "", fmt.Errorf("could not serialize data with borsh: %w", err)
 	}
 
+	var seeds [][]byte
+	seeds = append(seeds, stakePool.Bytes()[0:32])
+	stakeAuthority, _, err := common.FindProgramAddress(seeds, programID)
+	if err != nil {
+		return "", fmt.Errorf("could not get stake authority: %w", err)
+	}
+
+	tokenAccountStakeTarget := common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
+
+	seed := userWallet.Bytes()
+	seedString := base58.Encode(seed[0:20])
+	stakeAccount := common.CreateWithSeed(stakeAuthority, seedString, programID)
+
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
 			{
@@ -162,7 +185,7 @@ func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool,
 					{PubKey: stakePool, IsSigner: false, IsWritable: false},
 					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
 					{PubKey: userWallet, IsSigner: false, IsWritable: true},
-					{PubKey: tokenAccount, IsSigner: false, IsWritable: true},
+					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
 					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
 					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
 				},

@@ -30,7 +30,7 @@ func TestScNew(t *testing.T) {
 	_, err = c.RequestAirdrop(ctx, issuer.PublicKey.ToBase58(), 10)
 	time.Sleep(3 * time.Second)
 
-	tx, stakePool, stakeAuthority, stakeTokenAccountPool, err := c.InitializeStakePool(ctx, feePayer, asset.PublicKey)
+	tx, stakePool, err := c.InitializeStakePool(ctx, feePayer, asset.PublicKey)
 	println(tx)
 	println(err)
 
@@ -57,7 +57,7 @@ func TestScNew(t *testing.T) {
 	println(tx)
 	time.Sleep(5 * time.Second)
 
-	tx, _, err = c.Stake(ctx, feePayer, stakePool.PublicKey, stakeAuthority, wallet.PublicKey, stakeTokenAccountPool, 1000, 100)
+	tx, err = c.Stake(ctx, feePayer, stakePool.PublicKey,wallet.PublicKey, 1000, 100)
 	println(tx)
 	println(err)
 }
@@ -67,15 +67,13 @@ func TestScStake(t *testing.T) {
 	ctx := context.Background()
 
 	stakePool := c.PublicKeyFromString("2c8X3S9PjENeU4JzD3A7AehTH9dhQGtVXnTc5VhNuhYj")
-	stakeAuthority := c.PublicKeyFromString("A8DKHrWwoDjUj4TpvpKWY6vEyaqv6y9HSsN6kHpSwYyx")
 	wallet := c.PublicKeyFromString("7Cw8GWHV2EgbZto7v4prxi6LytqV237tCSVvBm8Z6WMQ")
-	stakeTokenAccountPool := c.PublicKeyFromString("F2DbdxnEieiM3BTDAaQyZWN5jH9iDdXe2V2rYvY79jCe")
 
-	tx, acc, err := c.Stake(ctx, feePayer, stakePool, stakeAuthority, wallet, stakeTokenAccountPool, 470000, 1000)
+	tx, err := c.Stake(ctx, feePayer, stakePool, wallet, 470000, 1000)
 	println(tx)
 	println(err)
 
-	tx, err := c.Unstake(ctx, feePayer, stakePool, wallet, stakeTokenAccountPool, acc, stakeAuthority)
+	tx, err = c.Unstake(ctx, feePayer, stakePool, wallet)
 	println(tx)
 	println(err)
 }

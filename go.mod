@@ -31,7 +31,6 @@ require (
 	github.com/portto/solana-go-sdk v0.1.0
 	github.com/rs/cors v1.7.0
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
-	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/thedevsaddam/govalidator v1.9.10
 	github.com/zeebo/errs v1.2.2
 	github.com/ziutek/mymysql v1.5.4 // indirect

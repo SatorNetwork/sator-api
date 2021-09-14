@@ -16,6 +16,7 @@ const (
 	IssuerAccount      SolanaAccountType = "issuer"          // sator tokens issuer
 	DistributorAccount SolanaAccountType = "distributor"     // sator tokens distributor
 	AssetAccount       SolanaAccountType = "asset"           // sator token account
+	StakePoolAccount   SolanaAccountType = "stake_pool"      // sator stake poll account
 )
 
 // SolanaAccountType solana account type

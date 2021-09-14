@@ -21,6 +21,7 @@ type (
 		GetListTransactionsByWalletID endpoint.Endpoint
 		GetStake                      endpoint.Endpoint
 		SetStake                      endpoint.Endpoint
+		Unstake                       endpoint.Endpoint
 	}
 
 	service interface {
@@ -31,6 +32,7 @@ type (
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
 		GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error)
+		Unstake(ctx context.Context, walletID uuid.UUID) error
 	}
 
 	CreateTransferRequest struct {
@@ -62,6 +64,11 @@ type (
 		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
 		WalletID string  `json:"wallet_id" validate:"required,uuid"`
 	}
+
+	// UnstakeRequest struct
+	UnstakeRequest struct {
+		WalletID string `json:"wallet_id" validate:"required,uuid"`
+	}
 )
 
 // Limit of items
@@ -91,6 +98,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		ConfirmTransfer:               MakeConfirmTransferRequestEndpoint(s, validateFunc),
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
+		Unstake:                       MakeUnstakeEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -100,6 +108,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetWalletByID = mdw(e.GetWalletByID)
 			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
 			e.CreateTransfer = mdw(e.CreateTransfer)
+			e.ConfirmTransfer = mdw(e.ConfirmTransfer)
+			e.SetStake = mdw(e.SetStake)
+			e.GetStake = mdw(e.GetStake)
+			e.Unstake = mdw(e.Unstake)
 		}
 	}
 
@@ -244,5 +256,21 @@ func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 		}
 
 		return stake, nil
+	}
+}
+
+func MakeUnstakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		walletID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		err = s.Unstake(ctx, walletID)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 }
