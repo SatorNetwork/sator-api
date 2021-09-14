@@ -13,17 +13,21 @@ import (
 // InitializeStakePool generates and calls instruction that initializes stake pool
 func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, stakeAuthority, tokenAccountStakePool common.PublicKey, err error) {
 	stakePool = types.NewAccount()
-	systemProgram := c.PublicKeyFromString("11111111111111111111111111111111")
-	sysvarRent := c.PublicKeyFromString("SysvarRent111111111111111111111111111111111")
-	splToken := c.PublicKeyFromString("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-	programID := c.PublicKeyFromString("CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u")
+	systemProgram := c.PublicKeyFromString(SystemProgram)
+	sysvarRent := c.PublicKeyFromString(SysvarRent)
+	splToken := c.PublicKeyFromString(SplToken)
+	programID := c.PublicKeyFromString(ProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
 		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not get recent block hash: %w", err)
 	}
 
-	input := InitializeStakePoolInput{Number: 0, Ranks: [4]Rank{{0, 100}, {1800, 200}, {3600, 300}, {7200, 500}}}
+	input := InitializeStakePoolInput{Number: 0, Ranks: [4]Rank{
+		{0, 100},
+		{1800, 200},
+		{3600, 300},
+		{7200, 500}}}
 	data, err := borsh.Serialize(input)
 	if err != nil {
 		return "", types.Account{}, common.PublicKey{}, common.PublicKey{}, fmt.Errorf("could not serialize data with borsh: %w", err)
@@ -74,24 +78,22 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account
 
 // Stake stakes given amount for given period.
 func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeAuthority, userWallet, tokenAccountStakeTarget common.PublicKey, duration int64, amount uint64) (string, common.PublicKey, error) {
-	sysvarClock := c.PublicKeyFromString("SysvarC1ock11111111111111111111111111111111")
-	sysvarRent := c.PublicKeyFromString("SysvarRent111111111111111111111111111111111")
-	systemProgram := c.PublicKeyFromString("11111111111111111111111111111111")
-	splToken := c.PublicKeyFromString("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-	programID := c.PublicKeyFromString("CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u")
+	sysvarClock := c.PublicKeyFromString(SysvarClock)
+	sysvarRent := c.PublicKeyFromString(SysvarRent)
+	systemProgram := c.PublicKeyFromString(SystemProgram)
+	splToken := c.PublicKeyFromString(SplToken)
+	programID := c.PublicKeyFromString(ProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
 		return "", common.PublicKey{}, fmt.Errorf("could not get recent block hash: %w", err)
 	}
 
-	input := StakeInput{
+	data, err := borsh.Serialize(StakeInput{
 		Number:   1,
 		Duration: duration,
 		Amount:   amount,
-	}
-
-	data, err := borsh.Serialize(input)
+	})
 	if err != nil {
 		return "", common.PublicKey{}, fmt.Errorf("could not serialize data with borsh: %w", err)
 	}
@@ -126,7 +128,7 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeA
 	if err != nil {
 		return "", common.PublicKey{}, fmt.Errorf("could not create new raw transaction: %w", err)
 	}
-	// Transaction simulation failed: Error processing Instruction 0: Provided seeds do not result in a valid address
+
 	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
 	if err != nil {
 		return "", common.PublicKey{}, fmt.Errorf("could not send raw transaction: %w", err)
@@ -137,8 +139,8 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, stakeA
 
 // Unstake unstake.
 func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool, userWallet, tokenAccount, stakeAccount, stakeAuthority common.PublicKey) (string, error) {
-	sysvarClock := c.PublicKeyFromString("SysvarC1ock11111111111111111111111111111111")
-	splToken := c.PublicKeyFromString("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+	sysvarClock := c.PublicKeyFromString(SysvarClock)
+	splToken := c.PublicKeyFromString(SplToken)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -153,7 +155,7 @@ func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool,
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
 			{
-				ProgramID: c.PublicKeyFromString("CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u"),
+				ProgramID: c.PublicKeyFromString(ProgramID),
 				Accounts: []types.AccountMeta{
 					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
 					{PubKey: splToken, IsSigner: false, IsWritable: false},

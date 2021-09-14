@@ -75,7 +75,7 @@ func TestScStake(t *testing.T) {
 	println(tx)
 	println(err)
 
-	tx, err = c.Unstake(ctx, feePayer, stakePool, wallet, stakeTokenAccountPool, acc, stakeAuthority)
+	tx, err := c.Unstake(ctx, feePayer, stakePool, wallet, stakeTokenAccountPool, acc, stakeAuthority)
 	println(tx)
 	println(err)
 }
