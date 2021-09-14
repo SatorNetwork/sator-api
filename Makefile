@@ -69,3 +69,7 @@ down: ## Stop and remove all related containers
 solana: ## Prepage solana accounts
 	@DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	go run cmd/solana/main.go
+
+request-airdrop-testnet:
+	SOLANA_API_BASE_URL=https://api.testnet.solana.com \
+	go run ./cmd/solana/airdrop/main.go
