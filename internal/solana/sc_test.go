@@ -57,7 +57,7 @@ func TestScNew(t *testing.T) {
 	println(tx)
 	time.Sleep(5 * time.Second)
 
-	tx, err = c.Stake(ctx, feePayer, stakePool.PublicKey,wallet.PublicKey, 1000, 100)
+	tx, err = c.Stake(ctx, feePayer, stakePool.PublicKey, wallet.PublicKey, 1000, 100)
 	println(tx)
 	println(err)
 }
