@@ -674,7 +674,7 @@ func (s *Service) AddClapsForShow(ctx context.Context, showID, userID uuid.UUID)
 		UserID: userID,
 	}); err == nil {
 		if claps >= 10 {
-			return ErrMaxClaps
+			return nil
 		}
 	}
 
