@@ -10,6 +10,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
@@ -182,6 +183,10 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 
 	if errors.Is(err, ErrNotFound) || db.IsNotFoundError(err) {
 		return http.StatusNotFound, err.Error()
+	}
+
+	if errors.Is(err, rbac.ErrAccessDenied) {
+		return http.StatusForbidden, err.Error()
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)

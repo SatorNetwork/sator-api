@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -344,6 +346,10 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 // MakeAddShowEndpoint ...
 func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddShowRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -367,6 +373,10 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 // MakeUpdateShowEndpoint ...
 func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateShowRequest)
 
 		id, err := uuid.Parse(req.ID)
@@ -393,6 +403,10 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 // MakeDeleteShowByIDEndpoint ...
 func MakeDeleteShowByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get show id: %w", err)
@@ -410,6 +424,10 @@ func MakeDeleteShowByIDEndpoint(s service) endpoint.Endpoint {
 // MakeAddEpisodeEndpoint ...
 func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddEpisodeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -467,6 +485,10 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 // MakeUpdateEpisodeEndpoint ...
 func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateEpisodeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -529,6 +551,10 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeDeleteEpisodeByIDEndpoint ...
 func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(DeleteEpisodeByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -555,6 +581,10 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetEpisodeByIDEndpoint ...
 func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAllRoles); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -614,6 +644,10 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 // MakeAddSeasonEndpoint ...
 func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddSeasonRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -639,6 +673,10 @@ func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 // MakeDeleteSeasonByIDEndpoint ...
 func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(DeleteSeasonByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err

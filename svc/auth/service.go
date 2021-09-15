@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
 
@@ -170,7 +171,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Password: passwdHash,
 		Username: username,
 		Role: sql.NullString{
-			String: repository.RoleUser,
+			String: rbac.RoleUser.String(),
 			Valid:  true,
 		},
 	})
