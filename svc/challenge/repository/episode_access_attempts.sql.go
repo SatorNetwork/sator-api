@@ -46,7 +46,7 @@ func (q *Queries) AddAttempt(ctx context.Context, arg AddAttemptParams) (Attempt
 const countAttempts = `-- name: CountAttempts :one
 SELECT COUNT (*)
 FROM attempts
-WHERE user_id = $1 AND episode_id = $2 AND created_at > $3 AND answer_id IS NOT NULL
+WHERE user_id = $1 AND episode_id = $2 AND created_at > $3
 `
 
 type CountAttemptsParams struct {
