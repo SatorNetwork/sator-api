@@ -214,7 +214,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 		AddEpisode:               MakeAddEpisodeEndpoint(s, validateFunc),
 		DeleteEpisodeByID:        MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
-		GetActivatedUserEpisodes: MakeGetActivatedUserEpisodesEndpoint(s, validateFunc),
+		GetActivatedUserEpisodes: MakeGetActivatedUserEpisodesEndpoint(s),
 		GetEpisodeByID:           MakeGetEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodesByShowID:      MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:            MakeUpdateEpisodeEndpoint(s, validateFunc),
@@ -589,7 +589,7 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 }
 
 // MakeGetActivatedUserEpisodesEndpoint ...
-func MakeGetActivatedUserEpisodesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetActivatedUserEpisodesEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {

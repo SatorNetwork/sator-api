@@ -1257,7 +1257,7 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /shows/{show_id}/episodes/activated:
+  /shows/episodes:
     get:
       tags:
         - "Shows"
