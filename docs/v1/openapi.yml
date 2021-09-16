@@ -2887,10 +2887,21 @@ paths:
       requestBody:
         required: true
         content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                height:
+                  type: number
+                  example: 35 (from 32 to 512)
+                width:
+                  type: number
+                  example: 35 (from 32 to 512)
           image/png:
             schema:
               type: string
               format: binary
+
       responses:
         "200":
           description: Returns qrcode data.

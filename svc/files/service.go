@@ -16,11 +16,14 @@ import (
 )
 
 type (
+	resizerFunc func(f io.ReadCloser, w, h int) (io.ReadSeeker, error)
+
 	// Service struct
 	Service struct {
 		msr     mediaServiceRepository
 		db      *sql.DB
 		storage *storage.Interactor
+		resize  resizerFunc
 	}
 
 	Image struct {
@@ -41,7 +44,7 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(msr mediaServiceRepository, db *sql.DB, storage *storage.Interactor) *Service {
+func NewService(msr mediaServiceRepository, db *sql.DB, storage *storage.Interactor, resize resizerFunc) *Service {
 	if msr == nil {
 		log.Fatalln("media service repository is not set")
 	}
@@ -52,11 +55,11 @@ func NewService(msr mediaServiceRepository, db *sql.DB, storage *storage.Interac
 		log.Fatalln("storage interactor is not set")
 	}
 
-	return &Service{msr: msr, db: db, storage: storage}
+	return &Service{msr: msr, db: db, storage: storage, resize: resize}
 }
 
 // AddImage used to create new image.
-func (s *Service) AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error) {
+func (s *Service) AddImage(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return Image{}, errors.Wrap(err, "begin db transaction")
@@ -72,16 +75,21 @@ func (s *Service) AddImage(ctx context.Context, it Image, file io.ReadSeeker, fi
 		FilePath: s.storage.FilePath(fileName),
 		FileUrl:  s.storage.FileURL(s.storage.FilePath(fileName)),
 	})
-
 	if err != nil {
 		return Image{}, fmt.Errorf("could not add image with file name=%s: %w", it.Filename, err)
+	}
+
+	resizedFile, err := s.resize(file, width, height)
+	if err != nil {
+		tx.Rollback()
+		return Image{}, errors.Wrap(err, "resize image")
 	}
 
 	if err != nil {
 		tx.Rollback()
 		return Image{}, errors.Wrap(err, "store image to db")
 	}
-	if err := s.storage.Upload(file, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
+	if err := s.storage.Upload(resizedFile, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
 		tx.Rollback()
 		return Image{}, errors.Wrap(err, "upload image")
 	}
