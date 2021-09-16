@@ -51,6 +51,16 @@ func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wal
 	return i, err
 }
 
+const deleteWalletByID = `-- name: DeleteWalletByID :exec
+DELETE FROM wallets
+WHERE id = $1
+`
+
+func (q *Queries) DeleteWalletByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteWalletByIDStmt, deleteWalletByID, id)
+	return err
+}
+
 const getWalletByEthereumAccountID = `-- name: GetWalletByEthereumAccountID :one
 SELECT id, user_id, solana_account_id, status, updated_at, created_at, wallet_type, sort, ethereum_account_id
 FROM wallets

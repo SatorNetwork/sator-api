@@ -73,3 +73,13 @@ solana: ## Prepage solana accounts
 request-airdrop-testnet:
 	SOLANA_API_BASE_URL=https://api.testnet.solana.com \
 	go run ./cmd/solana/airdrop/main.go
+
+create-missed-wallets-testnet:
+	DATABASE_URL=postgresql://sator-db-prod:y4ttotjayg3h141c@app-6c60d8cd-32e4-432b-86d6-c19c0a2c3052-do-user-9696296-0.b.db.ondigitalocean.com:25060/sator-db-prod?sslmode=require \
+	SOLANA_API_BASE_URL=https://api.testnet.solana.com \
+	go run ./cmd/solana/missedwallets/main.go
+
+create-missed-wallets-devnet:
+	DATABASE_URL=postgresql://db:zk131mmy8sdf93f5@app-03ef8dbc-d361-4581-a833-2671c70adb58-do-user-9696296-0.b.db.ondigitalocean.com:25060/db?sslmode=require \
+	SOLANA_API_BASE_URL=https://api.devnet.solana.com \
+	go run ./cmd/solana/missedwallets/main.go
