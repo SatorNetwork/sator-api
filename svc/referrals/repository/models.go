@@ -21,6 +21,6 @@ type ReferralCode struct {
 	Code         string         `json:"code"`
 	ReferralLink sql.NullString `json:"referral_link"`
 	IsPersonal   sql.NullBool   `json:"is_personal"`
-	UserID       uuid.UUID      `json:"user_id"`
+	UserID       uuid.NullUUID  `json:"user_id"`
 	CreatedAt    time.Time      `json:"created_at"`
 }
