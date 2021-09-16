@@ -2887,9 +2887,13 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
+              required:
+                - height
+                - width
+                - image
               properties:
                 height:
                   type: number
@@ -2897,10 +2901,9 @@ paths:
                 width:
                   type: number
                   example: 35 (from 32 to 512)
-          image/png:
-            schema:
-              type: string
-              format: binary
+                image:
+                  type: string
+                  format: binary
 
       responses:
         "200":
