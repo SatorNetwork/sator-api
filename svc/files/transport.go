@@ -105,36 +105,42 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 			"size:2097152",
 			"mime:image/png,image/jpeg",
 		},
-		"height": []string{
-			"required",
-			"numeric",
-			"numeric_between:32,512",
-		},
-		"width": []string{
-			"required",
-			"numeric",
-			"numeric_between:32,512",
-		},
 	}
 	if err := utils.Validate(r, rules, nil); err != nil {
 		return nil, err
 	}
 
-	height, _ := strconv.Atoi(r.FormValue("height"))
-	width, _ := strconv.Atoi(r.FormValue("width"))
+	height := 1024
+	width := 1024
+	
+	var err error
+
+	if hs := r.FormValue("height"); hs != "" {
+		height, err = strconv.Atoi(r.FormValue("height"))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if ws := r.FormValue("width"); ws != "" {
+		width, err = strconv.Atoi(r.FormValue("width"))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
 	}
 	defer file.Close()
 
-	var req AddImageRequest
-	req.File = file
-	req.FileHeader = header
-	req.Height = height
-	req.Width = width
-
-	return req, nil
+	return AddImageRequest{
+		File: file,
+		FileHeader: header,
+		Height: height,
+		Width: width,
+	}, nil
 }
 
 func decodeDeleteImageByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
