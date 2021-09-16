@@ -35,7 +35,7 @@ type AddReferralCodeDataParams struct {
 	Code         string         `json:"code"`
 	ReferralLink sql.NullString `json:"referral_link"`
 	IsPersonal   sql.NullBool   `json:"is_personal"`
-	UserID       uuid.UUID      `json:"user_id"`
+	UserID       uuid.NullUUID  `json:"user_id"`
 }
 
 func (q *Queries) AddReferralCodeData(ctx context.Context, arg AddReferralCodeDataParams) (ReferralCode, error) {
@@ -70,6 +70,18 @@ func (q *Queries) DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) 
 	return err
 }
 
+const getNumberOfReferralCodes = `-- name: GetNumberOfReferralCodes :one
+SELECT COUNT (id)
+FROM referral_codes
+`
+
+func (q *Queries) GetNumberOfReferralCodes(ctx context.Context) (int64, error) {
+	row := q.queryRow(ctx, q.getNumberOfReferralCodesStmt, getNumberOfReferralCodes)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getReferralCodeDataByCode = `-- name: GetReferralCodeDataByCode :one
 SELECT id, title, code, referral_link, is_personal, user_id, created_at
 FROM referral_codes
@@ -92,41 +104,25 @@ func (q *Queries) GetReferralCodeDataByCode(ctx context.Context, code string) (R
 	return i, err
 }
 
-const getReferralCodeDataByUserID = `-- name: GetReferralCodeDataByUserID :many
+const getReferralCodeDataByUserID = `-- name: GetReferralCodeDataByUserID :one
 SELECT id, title, code, referral_link, is_personal, user_id, created_at
 FROM referral_codes
 WHERE user_id = $1
 `
 
-func (q *Queries) GetReferralCodeDataByUserID(ctx context.Context, userID uuid.UUID) ([]ReferralCode, error) {
-	rows, err := q.query(ctx, q.getReferralCodeDataByUserIDStmt, getReferralCodeDataByUserID, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ReferralCode
-	for rows.Next() {
-		var i ReferralCode
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Code,
-			&i.ReferralLink,
-			&i.IsPersonal,
-			&i.UserID,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetReferralCodeDataByUserID(ctx context.Context, userID uuid.NullUUID) (ReferralCode, error) {
+	row := q.queryRow(ctx, q.getReferralCodeDataByUserIDStmt, getReferralCodeDataByUserID, userID)
+	var i ReferralCode
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Code,
+		&i.ReferralLink,
+		&i.IsPersonal,
+		&i.UserID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getReferralCodesDataList = `-- name: GetReferralCodesDataList :many
@@ -187,7 +183,7 @@ type UpdateReferralCodeDataParams struct {
 	Code         string         `json:"code"`
 	ReferralLink sql.NullString `json:"referral_link"`
 	IsPersonal   sql.NullBool   `json:"is_personal"`
-	UserID       uuid.UUID      `json:"user_id"`
+	UserID       uuid.NullUUID  `json:"user_id"`
 	ID           uuid.UUID      `json:"id"`
 }
 

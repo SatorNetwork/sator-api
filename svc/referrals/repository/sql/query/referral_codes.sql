@@ -15,7 +15,7 @@ VALUES (
         @is_personal,
         @user_id
     ) RETURNING *;
--- name: GetReferralCodeDataByUserID :many
+-- name: GetReferralCodeDataByUserID :one
 SELECT *
 FROM referral_codes
 WHERE user_id = $1;
@@ -40,3 +40,6 @@ WHERE id = @id;
 -- name: DeleteReferralCodeDataByID :exec
 DELETE FROM referral_codes
 WHERE id = @id;
+-- name: GetNumberOfReferralCodes :one
+SELECT COUNT (id)
+FROM referral_codes;

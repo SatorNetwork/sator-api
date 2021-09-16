@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteReferralCodeDataByIDStmt, err = db.PrepareContext(ctx, deleteReferralCodeDataByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteReferralCodeDataByID: %w", err)
 	}
+	if q.getNumberOfReferralCodesStmt, err = db.PrepareContext(ctx, getNumberOfReferralCodes); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNumberOfReferralCodes: %w", err)
+	}
 	if q.getReferralCodeByIDStmt, err = db.PrepareContext(ctx, getReferralCodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetReferralCodeByID: %w", err)
 	}
@@ -67,6 +70,11 @@ func (q *Queries) Close() error {
 	if q.deleteReferralCodeDataByIDStmt != nil {
 		if cerr := q.deleteReferralCodeDataByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteReferralCodeDataByIDStmt: %w", cerr)
+		}
+	}
+	if q.getNumberOfReferralCodesStmt != nil {
+		if cerr := q.getNumberOfReferralCodesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNumberOfReferralCodesStmt: %w", cerr)
 		}
 	}
 	if q.getReferralCodeByIDStmt != nil {
@@ -141,6 +149,7 @@ type Queries struct {
 	addReferralStmt                        *sql.Stmt
 	addReferralCodeDataStmt                *sql.Stmt
 	deleteReferralCodeDataByIDStmt         *sql.Stmt
+	getNumberOfReferralCodesStmt           *sql.Stmt
 	getReferralCodeByIDStmt                *sql.Stmt
 	getReferralCodeDataByCodeStmt          *sql.Stmt
 	getReferralCodeDataByUserIDStmt        *sql.Stmt
@@ -156,6 +165,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addReferralStmt:                        q.addReferralStmt,
 		addReferralCodeDataStmt:                q.addReferralCodeDataStmt,
 		deleteReferralCodeDataByIDStmt:         q.deleteReferralCodeDataByIDStmt,
+		getNumberOfReferralCodesStmt:           q.getNumberOfReferralCodesStmt,
 		getReferralCodeByIDStmt:                q.getReferralCodeByIDStmt,
 		getReferralCodeDataByCodeStmt:          q.getReferralCodeDataByCodeStmt,
 		getReferralCodeDataByUserIDStmt:        q.getReferralCodeDataByUserIDStmt,
