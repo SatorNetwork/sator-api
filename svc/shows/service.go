@@ -9,6 +9,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 
 	"github.com/google/uuid"
@@ -116,6 +117,7 @@ type (
 		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
 		GetChallengeReceivedRewardAmount(ctx context.Context, challengeID uuid.UUID) (float64, error)
 		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
+		ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]challenge.EpisodeAccess, error)
 	}
 )
 
@@ -280,30 +282,30 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 }
 
 // GetEpisodeByID returns episode with provided id.
-func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (interface{}, error) {
+func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (Episode, error) {
 	episode, err := s.sr.GetEpisodeByID(ctx, episodeID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
 	}
 
 	avgRating, ratingsCount, err := s.getAverageEpisodesRatingByID(ctx, episodeID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
 	}
 
 	receivedAmount, err := s.chc.GetChallengeReceivedRewardAmount(ctx, episode.ChallengeID.UUID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", episode.ID, err)
+		return Episode{}, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", episode.ID, err)
 	}
 
 	receivedAmountByUser, err := s.chc.GetChallengeReceivedRewardAmountByUserID(ctx, episode.ChallengeID.UUID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get challenge received reward amount for episode with id = %v: %w", episodeID, err)
 	}
 
 	number, err := s.chc.NumberUsersWhoHaveAccessToEpisode(ctx, episodeID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
 	}
 
 	return castRowToEpisode(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
@@ -686,4 +688,42 @@ func (s *Service) AddClapsForShow(ctx context.Context, showID, userID uuid.UUID)
 	}
 
 	return nil
+}
+
+// GetActivatedUserEpisodes returns list activated episodes by user id.
+func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID) ([]Episode, error) {
+	listEpisodes, err := s.chc.ListAvailableUserEpisodes(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get list user available episodes: %w", err)
+	}
+
+	result := make([]Episode, 0, len(listEpisodes))
+
+	for _, l := range listEpisodes {
+		ep, err := s.GetEpisodeByID(ctx, *l.EpisodeID, *l.EpisodeID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get episodes list: %w", err)
+		}
+
+		result = append(result, Episode{
+			ID:                      ep.ID,
+			ShowID:                  ep.ShowID,
+			SeasonID:                ep.SeasonID,
+			SeasonNumber:            ep.SeasonNumber,
+			EpisodeNumber:           ep.EpisodeNumber,
+			Cover:                   ep.Cover,
+			Title:                   ep.Title,
+			Description:             ep.Description,
+			ReleaseDate:             ep.ReleaseDate,
+			ChallengeID:             ep.ChallengeID,
+			VerificationChallengeID: ep.VerificationChallengeID,
+			Rating:                  ep.Rating,
+			RatingsCount:            ep.RatingsCount,
+			ActiveUsers:             ep.ActiveUsers,
+			UserRewardsAmount:       ep.UserRewardsAmount,
+			TotalRewardsAmount:      ep.TotalRewardsAmount,
+		})
+	}
+
+	return result, nil
 }

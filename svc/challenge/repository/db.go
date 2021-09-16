@@ -109,6 +109,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getQuestionsByChallengeIDWithExceptionsStmt, err = db.PrepareContext(ctx, getQuestionsByChallengeIDWithExceptions); err != nil {
 		return nil, fmt.Errorf("error preparing query GetQuestionsByChallengeIDWithExceptions: %w", err)
 	}
+	if q.listAvailableUserEpisodesStmt, err = db.PrepareContext(ctx, listAvailableUserEpisodes); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAvailableUserEpisodes: %w", err)
+	}
 	if q.numberUsersWhoHaveAccessToEpisodeStmt, err = db.PrepareContext(ctx, numberUsersWhoHaveAccessToEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query NumberUsersWhoHaveAccessToEpisode: %w", err)
 	}
@@ -280,6 +283,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getQuestionsByChallengeIDWithExceptionsStmt: %w", cerr)
 		}
 	}
+	if q.listAvailableUserEpisodesStmt != nil {
+		if cerr := q.listAvailableUserEpisodesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAvailableUserEpisodesStmt: %w", cerr)
+		}
+	}
 	if q.numberUsersWhoHaveAccessToEpisodeStmt != nil {
 		if cerr := q.numberUsersWhoHaveAccessToEpisodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing numberUsersWhoHaveAccessToEpisodeStmt: %w", cerr)
@@ -383,6 +391,7 @@ type Queries struct {
 	getQuestionByIDStmt                          *sql.Stmt
 	getQuestionsByChallengeIDStmt                *sql.Stmt
 	getQuestionsByChallengeIDWithExceptionsStmt  *sql.Stmt
+	listAvailableUserEpisodesStmt                *sql.Stmt
 	numberUsersWhoHaveAccessToEpisodeStmt        *sql.Stmt
 	storeChallengeReceivedRewardAmountStmt       *sql.Stmt
 	updateAnswerStmt                             *sql.Stmt
@@ -425,6 +434,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getQuestionByIDStmt:                          q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt:                q.getQuestionsByChallengeIDStmt,
 		getQuestionsByChallengeIDWithExceptionsStmt:  q.getQuestionsByChallengeIDWithExceptionsStmt,
+		listAvailableUserEpisodesStmt:                q.listAvailableUserEpisodesStmt,
 		numberUsersWhoHaveAccessToEpisodeStmt:        q.numberUsersWhoHaveAccessToEpisodeStmt,
 		storeChallengeReceivedRewardAmountStmt:       q.storeChallengeReceivedRewardAmountStmt,
 		updateAnswerStmt:                             q.updateAnswerStmt,

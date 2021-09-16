@@ -99,6 +99,41 @@ func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccess
 	return i, err
 }
 
+const listAvailableUserEpisodes = `-- name: ListAvailableUserEpisodes :many
+SELECT episode_id, user_id, activated_at, activated_before
+FROM episode_access
+WHERE user_id = $1 AND activated_before > NOW()
+ORDER BY activated_before DESC, activated_at DESC
+`
+
+func (q *Queries) ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]EpisodeAccess, error) {
+	rows, err := q.query(ctx, q.listAvailableUserEpisodesStmt, listAvailableUserEpisodes, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EpisodeAccess
+	for rows.Next() {
+		var i EpisodeAccess
+		if err := rows.Scan(
+			&i.EpisodeID,
+			&i.UserID,
+			&i.ActivatedAt,
+			&i.ActivatedBefore,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const numberUsersWhoHaveAccessToEpisode = `-- name: NumberUsersWhoHaveAccessToEpisode :one
 SELECT COUNT(
     EXISTS (
