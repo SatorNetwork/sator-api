@@ -3245,7 +3245,6 @@ paths:
                         page:
                           type: number
                           example: 12
-
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
