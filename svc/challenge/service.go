@@ -107,6 +107,7 @@ type (
 		UserMaxAttempts    int32      `json:"user_max_attempts"`
 		AttemptsLeft       int32      `json:"attempts_left"`
 		ReceivedReward     float64    `json:"received_reward"`
+		ReceivedRewardStr  string     `json:"received_reward_str"`
 	}
 
 	// Question struct
@@ -410,6 +411,7 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		UserMaxAttempts:    c.UserMaxAttempts,
 		AttemptsLeft:       attemptsLeft,
 		ReceivedReward:     receivedReward,
+		ReceivedRewardStr:  fmt.Sprintf("%.2f SAO", receivedReward),
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
