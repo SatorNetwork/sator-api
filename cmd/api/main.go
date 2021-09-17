@@ -384,7 +384,7 @@ func main() {
 			log.Fatalf("mediaServiceRepo error: %v", err)
 		}
 		r.Mount("/files", files.MakeHTTPHandler(
-			files.MakeEndpoints(files.NewService(mediaServiceRepo, db, stor, resizer.Resize), jwtMdw),
+			files.MakeEndpoints(files.NewService(mediaServiceRepo, stor, resizer.Resize), jwtMdw),
 			logger,
 		))
 	}
