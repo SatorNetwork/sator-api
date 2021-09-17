@@ -3,6 +3,7 @@ package files
 import (
 	"context"
 	"fmt"
+	"io"
 	"mime/multipart"
 
 	"github.com/SatorNetwork/sator-api/internal/validator"
@@ -20,7 +21,8 @@ type (
 	}
 
 	service interface {
-		AddImage(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error)
+		AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error)
+		AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error)
 		GetImageByID(ctx context.Context, id uuid.UUID) (Image, error)
 		GetImagesList(ctx context.Context, limit, offset int32) ([]Image, error)
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
@@ -32,12 +34,18 @@ type (
 		ImagesPerPage int32 `json:"images_per_page,omitempty" validate:"number,gte=0"`
 	}
 
-	// AddImageRequest struct
-	AddImageRequest struct {
+	// AddImageResizeRequest struct
+	AddImageResizeRequest struct {
 		File       multipart.File
 		FileHeader *multipart.FileHeader
 		Height     int
 		Width      int
+	}
+
+	// AddImageRequest struct
+	AddImageRequest struct {
+		File       io.ReadSeeker
+		FileHeader *multipart.FileHeader
 	}
 )
 
@@ -108,6 +116,25 @@ func MakeAddImageEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 		}
 
 		resp, err := s.AddImage(ctx, Image{
+			Filename: req.FileHeader.Filename,
+		}, req.File, req.FileHeader)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeAddImageResizeEndpoint ...
+func MakeAddImageResizeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(AddImageResizeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.AddImageResize(ctx, Image{
 			Filename: req.FileHeader.Filename,
 		}, req.File, req.FileHeader, req.Height, req.Width)
 		if err != nil {

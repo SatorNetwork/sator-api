@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/thedevsaddam/govalidator"
@@ -110,24 +109,24 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 
-	height := 1024
-	width := 1024
-	
+	// height := 1024
+	// width := 1024
+
 	var err error
 
-	if hs := r.FormValue("height"); hs != "" {
-		height, err = strconv.Atoi(r.FormValue("height"))
-		if err != nil {
-			return nil, err
-		}
-	}
+	// if hs := r.FormValue("height"); hs != "" {
+	// 	height, err = strconv.Atoi(r.FormValue("height"))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
-	if ws := r.FormValue("width"); ws != "" {
-		width, err = strconv.Atoi(r.FormValue("width"))
-		if err != nil {
-			return nil, err
-		}
-	}
+	// if ws := r.FormValue("width"); ws != "" {
+	// 	width, err = strconv.Atoi(r.FormValue("width"))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	file, header, err := r.FormFile("image")
 	if err != nil {
@@ -136,10 +135,10 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 	defer file.Close()
 
 	return AddImageRequest{
-		File: file,
+		File:       file,
 		FileHeader: header,
-		Height: height,
-		Width: width,
+		// Height: height,
+		// Width: width,
 	}, nil
 }
 

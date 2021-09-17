@@ -42,7 +42,7 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(msr mediaServiceRepository,  storage *storage.Interactor, resize resizerFunc) *Service {
+func NewService(msr mediaServiceRepository, storage *storage.Interactor, resize resizerFunc) *Service {
 	if msr == nil {
 		log.Fatalln("media service repository is not set")
 	}
@@ -50,11 +50,11 @@ func NewService(msr mediaServiceRepository,  storage *storage.Interactor, resize
 		log.Fatalln("storage interactor is not set")
 	}
 
-	return &Service{msr: msr,  storage: storage, resize: resize}
+	return &Service{msr: msr, storage: storage, resize: resize}
 }
 
 // AddImage used to create new image.
-func (s *Service) AddImage(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error) {
+func (s *Service) AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error) {
 	id := uuid.New()
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	ct := fileHeader.Header.Get("Content-Type")
@@ -65,6 +65,29 @@ func (s *Service) AddImage(ctx context.Context, it Image, file multipart.File, f
 	}
 
 	if err := s.storage.Upload(resizedFile, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
+		return Image{}, errors.Wrap(err, "upload image")
+	}
+
+	image, err := s.msr.AddFile(ctx, repository.AddFileParams{
+		ID:       id,
+		FileName: fileHeader.Filename,
+		FilePath: s.storage.FilePath(fileName),
+		FileUrl:  s.storage.FileURL(s.storage.FilePath(fileName)),
+	})
+	if err != nil {
+		return Image{}, fmt.Errorf("could not add image with file name=%s: %w", it.Filename, err)
+	}
+
+	return castToFile(image), nil
+}
+
+// AddImage used to create new image.
+func (s *Service) AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error) {
+	id := uuid.New()
+	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
+	ct := fileHeader.Header.Get("Content-Type")
+
+	if err := s.storage.Upload(file, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
 		return Image{}, errors.Wrap(err, "upload image")
 	}
 
