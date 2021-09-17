@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createWalletStmt, err = db.PrepareContext(ctx, createWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateWallet: %w", err)
 	}
+	if q.deleteWalletByIDStmt, err = db.PrepareContext(ctx, deleteWalletByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteWalletByID: %w", err)
+	}
 	if q.getEthereumAccountByIDStmt, err = db.PrepareContext(ctx, getEthereumAccountByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEthereumAccountByID: %w", err)
 	}
@@ -82,6 +85,11 @@ func (q *Queries) Close() error {
 	if q.createWalletStmt != nil {
 		if cerr := q.createWalletStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createWalletStmt: %w", cerr)
+		}
+	}
+	if q.deleteWalletByIDStmt != nil {
+		if cerr := q.deleteWalletByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteWalletByIDStmt: %w", cerr)
 		}
 	}
 	if q.getEthereumAccountByIDStmt != nil {
@@ -181,6 +189,7 @@ type Queries struct {
 	addEthereumAccountStmt                *sql.Stmt
 	addSolanaAccountStmt                  *sql.Stmt
 	createWalletStmt                      *sql.Stmt
+	deleteWalletByIDStmt                  *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
 	getEthereumAccountByUserIDAndTypeStmt *sql.Stmt
 	getSolanaAccountByIDStmt              *sql.Stmt
@@ -201,6 +210,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addEthereumAccountStmt:                q.addEthereumAccountStmt,
 		addSolanaAccountStmt:                  q.addSolanaAccountStmt,
 		createWalletStmt:                      q.createWalletStmt,
+		deleteWalletByIDStmt:                  q.deleteWalletByIDStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,
 		getEthereumAccountByUserIDAndTypeStmt: q.getEthereumAccountByUserIDAndTypeStmt,
 		getSolanaAccountByIDStmt:              q.getSolanaAccountByIDStmt,

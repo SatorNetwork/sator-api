@@ -33,3 +33,7 @@ SELECT *
 FROM wallets
 WHERE id = $1
 LIMIT 1;
+
+-- name: DeleteWalletByID :exec
+DELETE FROM wallets
+WHERE id = $1;

@@ -22,6 +22,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.countAllUsersStmt, err = db.PrepareContext(ctx, countAllUsers); err != nil {
+		return nil, fmt.Errorf("error preparing query CountAllUsers: %w", err)
+	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
@@ -58,6 +61,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUsersListDescStmt, err = db.PrepareContext(ctx, getUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUsersListDesc: %w", err)
 	}
+	if q.getVerifiedUsersListDescStmt, err = db.PrepareContext(ctx, getVerifiedUsersListDesc); err != nil {
+		return nil, fmt.Errorf("error preparing query GetVerifiedUsersListDesc: %w", err)
+	}
 	if q.updateUserEmailStmt, err = db.PrepareContext(ctx, updateUserEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserEmail: %w", err)
 	}
@@ -75,6 +81,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.countAllUsersStmt != nil {
+		if cerr := q.countAllUsersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countAllUsersStmt: %w", cerr)
+		}
+	}
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
@@ -133,6 +144,11 @@ func (q *Queries) Close() error {
 	if q.getUsersListDescStmt != nil {
 		if cerr := q.getUsersListDescStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUsersListDescStmt: %w", cerr)
+		}
+	}
+	if q.getVerifiedUsersListDescStmt != nil {
+		if cerr := q.getVerifiedUsersListDescStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getVerifiedUsersListDescStmt: %w", cerr)
 		}
 	}
 	if q.updateUserEmailStmt != nil {
@@ -194,6 +210,7 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                                  DBTX
 	tx                                  *sql.Tx
+	countAllUsersStmt                   *sql.Stmt
 	createUserStmt                      *sql.Stmt
 	createUserVerificationStmt          *sql.Stmt
 	deleteUserByIDStmt                  *sql.Stmt
@@ -206,6 +223,7 @@ type Queries struct {
 	getUserVerificationByEmailStmt      *sql.Stmt
 	getUserVerificationByUserIDStmt     *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
+	getVerifiedUsersListDescStmt        *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
@@ -216,6 +234,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                                  tx,
 		tx:                                  tx,
+		countAllUsersStmt:                   q.countAllUsersStmt,
 		createUserStmt:                      q.createUserStmt,
 		createUserVerificationStmt:          q.createUserVerificationStmt,
 		deleteUserByIDStmt:                  q.deleteUserByIDStmt,
@@ -228,6 +247,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserVerificationByEmailStmt:      q.getUserVerificationByEmailStmt,
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
+		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,

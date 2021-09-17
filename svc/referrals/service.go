@@ -24,15 +24,15 @@ type (
 	}
 
 	ReferralCode struct {
-		ID           uuid.UUID `json:"id"`
-		Title        string    `json:"title"`
-		Code         string    `json:"code"`
-		ReferralLink string    `json:"referral_link"`
-		IsPersonal   bool      `json:"is_personal"`
-		UserID       uuid.UUID `json:"user_id"`
-		CreatedAt    time.Time `json:"created_at"`
+		ID           uuid.UUID  `json:"id"`
+		Title        string     `json:"title"`
+		Code         string     `json:"code"`
+		ReferralLink string     `json:"referral_link"`
+		IsPersonal   bool       `json:"is_personal"`
+		UserID       *uuid.UUID `json:"user_id"`
+		CreatedAt    time.Time  `json:"created_at"`
 	}
-
+  
 	Referral struct {
 		ReferralCodeID uuid.UUID `json:"referral_code_id"`
 		UserID         uuid.UUID `json:"user_id"`
@@ -43,10 +43,11 @@ type (
 		// Referral codes
 		AddReferralCodeData(ctx context.Context, arg repository.AddReferralCodeDataParams) (repository.ReferralCode, error)
 		DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) error
-		GetReferralCodeDataByUserID(ctx context.Context, userID uuid.UUID) ([]repository.ReferralCode, error)
+		GetReferralCodeDataByUserID(ctx context.Context, userID uuid.NullUUID) (repository.ReferralCode, error)
 		GetReferralCodeDataByCode(ctx context.Context, code string) (repository.ReferralCode, error)
 		GetReferralCodesDataList(ctx context.Context, arg repository.GetReferralCodesDataListParams) ([]repository.ReferralCode, error)
 		UpdateReferralCodeData(ctx context.Context, arg repository.UpdateReferralCodeDataParams) error
+		GetNumberOfReferralCodes(ctx context.Context) (int64, error)
 
 		// Referrals
 		AddReferral(ctx context.Context, arg repository.AddReferralParams) error
@@ -68,57 +69,65 @@ func NewService(rr referralsRepository, fb *firebase.Interactor, config firebase
 }
 
 // GetMyReferralCode returns referral code if there is or generate new if not.
-func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username string) ([]ReferralCode, error) {
-	referralCodeData, err := s.rr.GetReferralCodeDataByUserID(ctx, uid)
+func (s *Service) GetMyReferralCode(ctx context.Context, uid uuid.UUID, username string) (ReferralCode, error) {
+	referralCodeData, err := s.rr.GetReferralCodeDataByUserID(ctx, uuid.NullUUID{
+		UUID:  uid,
+		Valid: true,
+	})
 	if err != nil {
-		return []ReferralCode{}, fmt.Errorf("could not get referral code data by user id: %w", err)
-	}
-	if len(referralCodeData) < 1 {
-		id := uuid.New()
-		link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{
-			DynamicLinkInfo: firebase.DynamicLinkInfo{
-				DomainUriPrefix: s.config.BaseFirebaseURL,
-				Link:            s.config.MainSiteLink + "referral/" + id.String(),
-				AndroidInfo: firebase.AndroidInfo{
-					AndroidPackageName: s.config.AndroidPackageName,
+		if db.IsNotFoundError(err) {
+			id := uuid.New()
+			link, err := s.fb.GenerateDynamicLink(ctx, firebase.DynamicLinkRequest{
+				DynamicLinkInfo: firebase.DynamicLinkInfo{
+					DomainUriPrefix: s.config.BaseFirebaseURL,
+					Link:            s.config.MainSiteLink + "referral/" + id.String(),
+					AndroidInfo: firebase.AndroidInfo{
+						AndroidPackageName: s.config.AndroidPackageName,
+					},
+					IosInfo: firebase.IosInfo{
+						IosBundleId: s.config.IosBundleId,
+					},
+					//NavigationInfo: firebase.NavigationInfo{EnableForcedRedirect: true},
 				},
-				IosInfo: firebase.IosInfo{
-					IosBundleId: s.config.IosBundleId,
+				Suffix: firebase.Suffix{
+					Option: s.config.SuffixOption,
 				},
-				//NavigationInfo: firebase.NavigationInfo{EnableForcedRedirect: true},
-			},
-			Suffix: firebase.Suffix{
-				Option: s.config.SuffixOption,
-			},
-		})
-		if err != nil {
-			return []ReferralCode{}, fmt.Errorf("could not generate dynamic link for user = %v: %w", uid, err)
+			})
+			if err != nil {
+				return ReferralCode{}, fmt.Errorf("could not generate dynamic link for user = %v: %w", uid, err)
+			}
+
+			data, err := s.rr.AddReferralCodeData(ctx, repository.AddReferralCodeDataParams{
+				ID: id,
+				Title: sql.NullString{
+					String: username,
+					Valid:  len(username) > 0,
+				},
+				Code: id.String(),
+				ReferralLink: sql.NullString{
+					String: link.ShortLink,
+					Valid:  len(link.ShortLink) > 0,
+				},
+				IsPersonal: sql.NullBool{
+					Bool:  true,
+					Valid: true,
+				},
+				UserID: uuid.NullUUID{
+					UUID:  uid,
+					Valid: true,
+				},
+			})
+			if err != nil {
+				return ReferralCode{}, fmt.Errorf("could not add referral code data for user = %v: %w", uid, err)
+			}
+
+			return castToReferralCode(data, username), err
 		}
 
-		data, err := s.rr.AddReferralCodeData(ctx, repository.AddReferralCodeDataParams{
-			ID: id,
-			Title: sql.NullString{
-				String: username,
-				Valid:  len(username) > 0,
-			},
-			Code: id.String(),
-			ReferralLink: sql.NullString{
-				String: link.ShortLink,
-				Valid:  len(link.ShortLink) > 0,
-			},
-			IsPersonal: sql.NullBool{
-				Bool:  true,
-				Valid: true,
-			},
-			UserID: uid,
-		})
-		if err != nil {
-			return []ReferralCode{}, fmt.Errorf("could not add referral code data for user = %v: %w", uid, err)
-		}
-		return castReferralCodeToReferralCodes(data), err
+		return ReferralCode{}, fmt.Errorf("could not get referral code data by user id: %w", err)
 	}
 
-	return castToReferralCodesWithUsername(referralCodeData, username), nil
+	return castToReferralCode(referralCodeData, username), nil
 }
 
 // Cast repository.ReferralCode to service ReferralCode structure
@@ -130,55 +139,19 @@ func castToReferralCode(source repository.ReferralCode, username string) Referra
 		}
 	}
 
-	return ReferralCode{
+	data := ReferralCode{
 		ID:           source.ID,
 		Title:        source.Title.String,
 		Code:         source.Code,
 		ReferralLink: source.ReferralLink.String,
 		IsPersonal:   source.IsPersonal.Bool,
-		UserID:       source.UserID,
 		CreatedAt:    source.CreatedAt,
 	}
-}
-
-// Cast repository.ReferralCode array to service ReferralCode array.
-func castToReferralCodesWithUsername(source []repository.ReferralCode, username string) []ReferralCode {
-	result := make([]ReferralCode, 0, len(source))
-	for _, s := range source {
-		if s.Title.String == "" {
-			s.Title = sql.NullString{
-				String: username,
-				Valid:  true,
-			}
-		}
-		result = append(result, ReferralCode{
-			ID:           s.ID,
-			Title:        s.Title.String,
-			Code:         s.Code,
-			ReferralLink: s.ReferralLink.String,
-			IsPersonal:   s.IsPersonal.Bool,
-			UserID:       s.UserID,
-			CreatedAt:    s.CreatedAt,
-		})
+	if source.UserID.Valid && source.UserID.UUID != uuid.Nil {
+		data.UserID = &source.UserID.UUID
 	}
 
-	return result
-}
-
-// Cast repository.ReferralCode to service ReferralCode array.
-func castReferralCodeToReferralCodes(source repository.ReferralCode) []ReferralCode {
-	result := make([]ReferralCode, 0, 1)
-	result = append(result, ReferralCode{
-		ID:           source.ID,
-		Title:        source.Title.String,
-		Code:         source.Code,
-		ReferralLink: source.ReferralLink.String,
-		IsPersonal:   source.IsPersonal.Bool,
-		UserID:       source.UserID,
-		CreatedAt:    source.CreatedAt,
-	})
-
-	return result
+	return data
 }
 
 // AddReferralCodeData used to store new referral code.
@@ -204,7 +177,7 @@ func (s *Service) AddReferralCodeData(ctx context.Context, rc ReferralCode) (Ref
 		return ReferralCode{}, fmt.Errorf("could not generate dynamic link: %w", err)
 	}
 
-	referralCode, err := s.rr.AddReferralCodeData(ctx, repository.AddReferralCodeDataParams{
+	params := repository.AddReferralCodeDataParams{
 		ID: id,
 		Title: sql.NullString{
 			String: rc.Title,
@@ -219,8 +192,13 @@ func (s *Service) AddReferralCodeData(ctx context.Context, rc ReferralCode) (Ref
 			Bool:  rc.IsPersonal,
 			Valid: true,
 		},
-		UserID: rc.UserID,
-	})
+	}
+
+	if rc.UserID != nil && *rc.UserID != uuid.Nil {
+		params.UserID = uuid.NullUUID{UUID: *rc.UserID, Valid: true}
+	}
+
+	referralCode, err := s.rr.AddReferralCodeData(ctx, params)
 	if err != nil {
 		return ReferralCode{}, fmt.Errorf("could not store referral code: %w", err)
 	}
@@ -238,30 +216,41 @@ func (s *Service) DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) 
 }
 
 // GetReferralCodesDataList returns referral codes list.
-func (s *Service) GetReferralCodesDataList(ctx context.Context, limit, offset int32) ([]ReferralCode, error) {
+func (s *Service) GetReferralCodesDataList(ctx context.Context, limit, offset int32) ([]ReferralCode, int64, error) {
 	referralCodes, err := s.rr.GetReferralCodesDataList(ctx, repository.GetReferralCodesDataListParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not get referral codes list: %w", err)
+		return nil, 0, fmt.Errorf("could not get referral codes list: %w", err)
 	}
 
-	return castToReferralCodes(referralCodes), nil
+	numberOfReferralCodes, err := s.rr.GetNumberOfReferralCodes(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not get number of referral codes list: %w", err)
+	}
+
+	return castToReferralCodes(referralCodes), numberOfReferralCodes, nil
 }
 
 // Cast repository.ReferralCode to service ReferralCode structure.
 func castToReferralCodes(source []repository.ReferralCode) []ReferralCode {
 	result := make([]ReferralCode, 0, len(source))
 	for _, s := range source {
-		result = append(result, ReferralCode{
+
+		data := ReferralCode{
 			ID:         s.ID,
 			Title:      s.Title.String,
 			Code:       s.Code,
 			IsPersonal: s.IsPersonal.Bool,
-			UserID:     s.UserID,
 			CreatedAt:  s.CreatedAt,
-		})
+		}
+
+		if s.UserID.Valid && s.UserID.UUID != uuid.Nil {
+			data.UserID = &s.UserID.UUID
+		}
+
+		result = append(result, data)
 	}
 
 	return result
@@ -269,7 +258,7 @@ func castToReferralCodes(source []repository.ReferralCode) []ReferralCode {
 
 // UpdateReferralCodeData used to update referral code.
 func (s *Service) UpdateReferralCodeData(ctx context.Context, rc ReferralCode) error {
-	if err := s.rr.UpdateReferralCodeData(ctx, repository.UpdateReferralCodeDataParams{
+	params := repository.UpdateReferralCodeDataParams{
 		Title: sql.NullString{
 			String: rc.Title,
 			Valid:  len(rc.Title) > 0,
@@ -283,9 +272,14 @@ func (s *Service) UpdateReferralCodeData(ctx context.Context, rc ReferralCode) e
 			Bool:  rc.IsPersonal,
 			Valid: true,
 		},
-		UserID: rc.UserID,
-		ID:     rc.ID,
-	}); err != nil {
+		ID: rc.ID,
+	}
+
+	if rc.UserID != nil && *rc.UserID != uuid.Nil {
+		params.UserID = uuid.NullUUID{UUID: *rc.UserID, Valid: true}
+	}
+
+	if err := s.rr.UpdateReferralCodeData(ctx, params); err != nil {
 		return fmt.Errorf("could not update referral code with id=%s:%w", rc.ID, err)
 	}
 
@@ -330,7 +324,7 @@ func (s *Service) StoreUserWithValidCode(ctx context.Context, uid uuid.UUID, cod
 		return false, fmt.Errorf("could not get referral code %s: %w", code, err)
 	}
 
-	if rc.UserID == uid {
+	if rc.UserID.UUID == uid {
 		return false, errors.New("it's your own referral code")
 	}
 

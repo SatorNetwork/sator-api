@@ -3,6 +3,19 @@ SELECT *
 FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
+
+-- name: GetVerifiedUsersListDesc :many
+SELECT *
+FROM users
+WHERE verified_at IS NOT NULL
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: CountAllUsers :one
+SELECT count(id)
+FROM users
+WHERE verified_at IS NOT NULL;
+
 -- name: GetUserByID :one
 SELECT *
 FROM users

@@ -19,3 +19,4 @@ cmd/test/
 cmd/quiz/
 .trash/
 .DS_Store
+Makefile.local
