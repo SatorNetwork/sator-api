@@ -409,8 +409,9 @@ func decodeReviewEpisodeRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func decodeGetReviewsListRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return GetReviewsListByEpisodeIDRequest{
+	return GetReviewsListRequest{
 		EpisodeID: chi.URLParam(r, "episode_id"),
+		ByUserID:  castStrToInt32(r.URL.Query().Get("by_user_id")),
 		PaginationRequest: PaginationRequest{
 			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),

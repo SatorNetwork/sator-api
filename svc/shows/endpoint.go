@@ -32,9 +32,10 @@ type (
 		GetEpisodesByShowID endpoint.Endpoint
 		UpdateEpisode       endpoint.Endpoint
 
-		RateEpisode    endpoint.Endpoint
-		ReviewEpisode  endpoint.Endpoint
-		GetReviewsList endpoint.Endpoint
+		RateEpisode            endpoint.Endpoint
+		ReviewEpisode          endpoint.Endpoint
+		GetReviewsList         endpoint.Endpoint
+		GetReviewsListByUserID endpoint.Endpoint
 
 		AddClapsForShow endpoint.Endpoint
 	}
@@ -60,6 +61,7 @@ type (
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
 		ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error
 		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
+		GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error)
 
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
@@ -155,7 +157,7 @@ type (
 	// DeleteSeasonByIDRequest struct
 	DeleteSeasonByIDRequest struct {
 		SeasonID string `json:"season_id" validate:"required,uuid"`
-		ShowID   string `json:"show_id" validate:"required,uuid"`
+		ShowID   string `json:"show_id" validate:"r validate:"required"equired,uuid"`
 	}
 
 	// RateEpisodeRequest struct
@@ -172,9 +174,10 @@ type (
 		Review    string `json:"review" validate:"required"`
 	}
 
-	// GetReviewsListByEpisodeIDRequest struct
-	GetReviewsListByEpisodeIDRequest struct {
+	// GetReviewsListRequest struct
+	GetReviewsListRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
+		ByUserID  int32  `json:"by_user_id" validate:"required"`
 		PaginationRequest
 	}
 )
@@ -217,9 +220,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
 
-		RateEpisode:    MakeRateEpisodeEndpoint(s, validateFunc),
-		ReviewEpisode:  MakeReviewEpisodeEndpoint(s, validateFunc),
-		GetReviewsList: MakeGetReviewsListEndpoint(s, validateFunc),
+		RateEpisode:            MakeRateEpisodeEndpoint(s, validateFunc),
+		ReviewEpisode:          MakeReviewEpisodeEndpoint(s, validateFunc),
+		GetReviewsList:         MakeGetReviewsListEndpoint(s, validateFunc),
+		GetReviewsListByUserID: MakeGetReviewsListEndpoint(s, validateFunc),
 
 		AddClapsForShow: MakeAddClapsForShowEndpoint(s, validateFunc),
 	}
@@ -247,6 +251,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.RateEpisode = mdw(e.RateEpisode)
 			e.ReviewEpisode = mdw(e.ReviewEpisode)
 			e.GetReviewsList = mdw(e.GetReviewsList)
+			e.GetReviewsListByUserID = mdw(e.GetReviewsListByUserID)
 
 			e.AddClapsForShow = mdw(e.AddClapsForShow)
 		}
@@ -725,9 +730,23 @@ func MakeReviewEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeGetReviewsListEndpoint ...
 func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(GetReviewsListByEpisodeIDRequest)
+		req := request.(GetReviewsListRequest)
 		if err := v(req); err != nil {
 			return nil, err
+		}
+
+		if req.ByUserID == 1 {
+			uid, err := jwt.UserIDFromContext(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("could not get user profile id: %w", err)
+			}
+
+			resp, err := s.GetReviewsListByUserID(ctx, uid, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return resp, nil
 		}
 
 		episodeID, err := uuid.Parse(req.EpisodeID)
@@ -767,3 +786,25 @@ func MakeAddClapsForShowEndpoint(s service, v validator.ValidateFunc) endpoint.E
 		return true, nil
 	}
 }
+
+//// MakeGetReviewsListByUserIDEndpoint ...
+//func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+//	return func(ctx context.Context, request interface{}) (interface{}, error) {
+//		req := request.(PaginationRequest)
+//		if err := v(req); err != nil {
+//			return nil, err
+//		}
+//
+//		uid, err := jwt.UserIDFromContext(ctx)
+//		if err != nil {
+//			return nil, fmt.Errorf("could not get user profile id: %w", err)
+//		}
+//
+//		resp, err := s.GetReviewsListByUserID(ctx, uid, req.Limit(), req.Offset())
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		return resp, nil
+//	}
+//}

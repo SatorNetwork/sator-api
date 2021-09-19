@@ -1557,6 +1557,11 @@ paths:
           description: |
             Set needed items per page.
             By default returns 20 items per page.
+        - name: by_user_id
+          in: query
+          description: |
+            Set by_user_id=1 for get current user reviews list.
+            If this query = 0 or empty it returns all reviews by episode id.
           required: false
           schema:
             type: integer

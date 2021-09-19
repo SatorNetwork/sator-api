@@ -185,3 +185,50 @@ func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rat
 	}
 	return items, nil
 }
+
+const reviewsListByUserID = `-- name: ReviewsListByUserID :many
+SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
+WHERE user_id = $1
+  AND title IS NOT NULL
+  AND review IS NOT NULL
+ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3
+`
+
+type ReviewsListByUserIDParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ReviewsListByUserID(ctx context.Context, arg ReviewsListByUserIDParams) ([]Rating, error) {
+	rows, err := q.query(ctx, q.reviewsListByUserIDStmt, reviewsListByUserID, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Rating
+	for rows.Next() {
+		var i Rating
+		if err := rows.Scan(
+			&i.EpisodeID,
+			&i.UserID,
+			&i.Rating,
+			&i.CreatedAt,
+			&i.ID,
+			&i.Title,
+			&i.Review,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
