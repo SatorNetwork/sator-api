@@ -10,13 +10,13 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-// InitializeStakePool generates and calls instruction that initializes stake pool
+// InitializeStakePool generates and calls instruction that initializes stake pool.
 func (c *Client) InitializeStakePool(ctx context.Context, feePayer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error) {
 	stakePool = types.NewAccount()
 	systemProgram := c.PublicKeyFromString(SystemProgram)
 	sysvarRent := c.PublicKeyFromString(SysvarRent)
 	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(ProgramID)
+	programID := c.PublicKeyFromString(StakeProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -82,12 +82,7 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, userWa
 	sysvarRent := c.PublicKeyFromString(SysvarRent)
 	systemProgram := c.PublicKeyFromString(SystemProgram)
 	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(ProgramID)
-
-	res, err := c.solana.GetRecentBlockhash(ctx)
-	if err != nil {
-		return "", fmt.Errorf("could not get recent block hash: %w", err)
-	}
+	programID := c.PublicKeyFromString(StakeProgramID)
 
 	data, err := borsh.Serialize(StakeInput{
 		Number:   1,
@@ -106,10 +101,15 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, userWa
 	}
 
 	tokenAccountStakeTarget := common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
-
 	seed := userWallet.Bytes()
 	seedString := base58.Encode(seed[0:20])
 	stakeAccount := common.CreateWithSeed(stakeAuthority, seedString, programID)
+
+	res, err := c.solana.GetRecentBlockhash(ctx)
+	if err != nil {
+		return "", fmt.Errorf("could not get recent block hash: %w", err)
+	}
+
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
 			{
@@ -150,7 +150,7 @@ func (c *Client) Stake(ctx context.Context, feePayer types.Account, pool, userWa
 func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool, userWallet common.PublicKey) (string, error) {
 	sysvarClock := c.PublicKeyFromString(SysvarClock)
 	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(ProgramID)
+	programID := c.PublicKeyFromString(StakeProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -178,7 +178,7 @@ func (c *Client) Unstake(ctx context.Context, feePayer types.Account, stakePool,
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
 			{
-				ProgramID: c.PublicKeyFromString(ProgramID),
+				ProgramID: c.PublicKeyFromString(StakeProgramID),
 				Accounts: []types.AccountMeta{
 					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
 					{PubKey: splToken, IsSigner: false, IsWritable: false},
