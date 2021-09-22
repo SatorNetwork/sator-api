@@ -16,10 +16,10 @@ VALUES ($1, $2, $3, $4) RETURNING id, username, email, password, disabled, verif
 `
 
 type CreateUserParams struct {
-	Email    string         `json:"email"`
-	Username string         `json:"username"`
-	Password []byte         `json:"password"`
-	Role     sql.NullString `json:"role"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password []byte `json:"password"`
+	Role     string `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {

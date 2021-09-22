@@ -113,7 +113,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", ErrInvalidCredentials
 	}
 
-	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username, user.Role.String)
+	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username, user.Role)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
@@ -170,10 +170,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Email:    email,
 		Password: passwdHash,
 		Username: username,
-		Role: sql.NullString{
-			String: rbac.RoleUser.String(),
-			Valid:  true,
-		},
+		Role:     rbac.RoleUser.String(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not create a new account: %w", err)
@@ -208,7 +205,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username, u.Role.String)
+	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username, u.Role)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
