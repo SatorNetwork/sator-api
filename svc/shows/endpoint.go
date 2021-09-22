@@ -2,6 +2,7 @@ package shows
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/rbac"
@@ -795,6 +796,9 @@ func MakeAddClapsForShowEndpoint(s service, v validator.ValidateFunc) endpoint.E
 		}
 
 		if err := s.AddClapsForShow(ctx, showID, uid); err != nil {
+			if errors.Is(err, ErrMaxClaps) {
+				return false, nil
+			}
 			return nil, err
 		}
 

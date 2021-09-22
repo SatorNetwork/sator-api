@@ -10,6 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
+const countAllUsers = `-- name: CountAllUsers :one
+SELECT count(id)
+FROM users
+WHERE verified_at IS NOT NULL
+`
+
+func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
+	row := q.queryRow(ctx, q.countAllUsersStmt, countAllUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, username, password, role)
 VALUES ($1, $2, $3, $4) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role
@@ -171,6 +184,51 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getVerifiedUsersListDesc = `-- name: GetVerifiedUsersListDesc :many
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
+FROM users
+WHERE verified_at IS NOT NULL
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetVerifiedUsersListDescParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedUsersListDescParams) ([]User, error) {
+	rows, err := q.query(ctx, q.getVerifiedUsersListDescStmt, getVerifiedUsersListDesc, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Password,
+			&i.Disabled,
+			&i.VerifiedAt,
+			&i.UpdatedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
