@@ -1266,12 +1266,25 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: show_id
-          in: path
-          description: Show ID.
-          required: true
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
           schema:
-            type: string
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+
       responses:
         "200":
           description: Returns list activated episodes for current user.
@@ -1312,26 +1325,6 @@ paths:
                     verification_challenge_id:
                       type: string
                       example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    rating:
-                      type: number
-                      example: 8.76
-                      description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
-                    ratings_count:
-                      type: number
-                      example: 123
-                      description: "How many times episode was rated"
-                    active_users:
-                      type: number
-                      example: 12
-                      description: "How  many users have access to episode"
-                    user_rewards_amount:
-                      type: number
-                      example: 12
-                      description: "episode received reward amount by user"
-                    total_rewards_amount:
-                      type: number
-                      example: 12
-                      description: "episode received reward amount by all users"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

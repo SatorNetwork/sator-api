@@ -109,8 +109,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getQuestionsByChallengeIDWithExceptionsStmt, err = db.PrepareContext(ctx, getQuestionsByChallengeIDWithExceptions); err != nil {
 		return nil, fmt.Errorf("error preparing query GetQuestionsByChallengeIDWithExceptions: %w", err)
 	}
-	if q.listAvailableUserEpisodesStmt, err = db.PrepareContext(ctx, listAvailableUserEpisodes); err != nil {
-		return nil, fmt.Errorf("error preparing query ListAvailableUserEpisodes: %w", err)
+	if q.listIDsAvailableUserEpisodesStmt, err = db.PrepareContext(ctx, listIDsAvailableUserEpisodes); err != nil {
+		return nil, fmt.Errorf("error preparing query ListIDsAvailableUserEpisodes: %w", err)
 	}
 	if q.numberUsersWhoHaveAccessToEpisodeStmt, err = db.PrepareContext(ctx, numberUsersWhoHaveAccessToEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query NumberUsersWhoHaveAccessToEpisode: %w", err)
@@ -283,9 +283,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getQuestionsByChallengeIDWithExceptionsStmt: %w", cerr)
 		}
 	}
-	if q.listAvailableUserEpisodesStmt != nil {
-		if cerr := q.listAvailableUserEpisodesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing listAvailableUserEpisodesStmt: %w", cerr)
+	if q.listIDsAvailableUserEpisodesStmt != nil {
+		if cerr := q.listIDsAvailableUserEpisodesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listIDsAvailableUserEpisodesStmt: %w", cerr)
 		}
 	}
 	if q.numberUsersWhoHaveAccessToEpisodeStmt != nil {
@@ -391,7 +391,7 @@ type Queries struct {
 	getQuestionByIDStmt                          *sql.Stmt
 	getQuestionsByChallengeIDStmt                *sql.Stmt
 	getQuestionsByChallengeIDWithExceptionsStmt  *sql.Stmt
-	listAvailableUserEpisodesStmt                *sql.Stmt
+	listIDsAvailableUserEpisodesStmt             *sql.Stmt
 	numberUsersWhoHaveAccessToEpisodeStmt        *sql.Stmt
 	storeChallengeReceivedRewardAmountStmt       *sql.Stmt
 	updateAnswerStmt                             *sql.Stmt
@@ -434,7 +434,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getQuestionByIDStmt:                          q.getQuestionByIDStmt,
 		getQuestionsByChallengeIDStmt:                q.getQuestionsByChallengeIDStmt,
 		getQuestionsByChallengeIDWithExceptionsStmt:  q.getQuestionsByChallengeIDWithExceptionsStmt,
-		listAvailableUserEpisodesStmt:                q.listAvailableUserEpisodesStmt,
+		listIDsAvailableUserEpisodesStmt:             q.listIDsAvailableUserEpisodesStmt,
 		numberUsersWhoHaveAccessToEpisodeStmt:        q.numberUsersWhoHaveAccessToEpisodeStmt,
 		storeChallengeReceivedRewardAmountStmt:       q.storeChallengeReceivedRewardAmountStmt,
 		updateAnswerStmt:                             q.updateAnswerStmt,

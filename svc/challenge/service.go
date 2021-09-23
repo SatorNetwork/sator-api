@@ -70,7 +70,7 @@ type (
 		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
 		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
 		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
-		ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]repository.EpisodeAccess, error)
+		ListIDsAvailableUserEpisodes(ctx context.Context, arg repository.ListIDsAvailableUserEpisodesParams) ([]uuid.UUID, error)
 
 		// Verification Question Attempts
 		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
@@ -917,30 +917,16 @@ func (s *Service) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episode
 	return number, nil
 }
 
-// ListAvailableUserEpisodes ...
-func (s *Service) ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]EpisodeAccess, error) {
-	list, err := s.cr.ListAvailableUserEpisodes(ctx, userID)
+// ListIDsAvailableUserEpisodes ...
+func (s *Service) ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]uuid.UUID, error) {
+	list, err := s.cr.ListIDsAvailableUserEpisodes(ctx, repository.ListIDsAvailableUserEpisodesParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("could not get list user available episodes: %w", err)
 	}
 
-	return castToListEpisodeAccess(list), nil
-}
-
-// Cast repository.EpisodeAccess to service EpisodeAccess structure
-func castToListEpisodeAccess(source []repository.EpisodeAccess) []EpisodeAccess {
-	result := make([]EpisodeAccess, 0, len(source))
-	for _, s := range source {
-		if !s.ActivatedAt.Valid || !s.ActivatedBefore.Valid || s.ActivatedBefore.Time.Before(time.Now()) {
-			continue
-		}
-
-		result = append(result, EpisodeAccess{
-			EpisodeID:       &s.EpisodeID,
-			Result:          s.ActivatedBefore.Time.After(time.Now()),
-			ActivatedAt:     s.ActivatedAt.Time.Format(time.RFC3339),
-			ActivatedBefore: s.ActivatedBefore.Time.Format(time.RFC3339),
-		})
-	}
-	return result
+	return list, nil
 }

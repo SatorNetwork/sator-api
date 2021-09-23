@@ -99,31 +99,33 @@ func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccess
 	return i, err
 }
 
-const listAvailableUserEpisodes = `-- name: ListAvailableUserEpisodes :many
-SELECT episode_id, user_id, activated_at, activated_before
+const listIDsAvailableUserEpisodes = `-- name: ListIDsAvailableUserEpisodes :many
+SELECT episode_id
 FROM episode_access
 WHERE user_id = $1 AND activated_before > NOW()
 ORDER BY activated_before DESC, activated_at DESC
+    LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]EpisodeAccess, error) {
-	rows, err := q.query(ctx, q.listAvailableUserEpisodesStmt, listAvailableUserEpisodes, userID)
+type ListIDsAvailableUserEpisodesParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListIDsAvailableUserEpisodes(ctx context.Context, arg ListIDsAvailableUserEpisodesParams) ([]uuid.UUID, error) {
+	rows, err := q.query(ctx, q.listIDsAvailableUserEpisodesStmt, listIDsAvailableUserEpisodes, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []EpisodeAccess
+	var items []uuid.UUID
 	for rows.Next() {
-		var i EpisodeAccess
-		if err := rows.Scan(
-			&i.EpisodeID,
-			&i.UserID,
-			&i.ActivatedAt,
-			&i.ActivatedBefore,
-		); err != nil {
+		var episode_id uuid.UUID
+		if err := rows.Scan(&episode_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, episode_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

@@ -29,7 +29,7 @@ type (
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
 
 		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
-		ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]challenge.EpisodeAccess, error)
+		ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]uuid.UUID, error)
 	}
 )
 
@@ -131,9 +131,9 @@ func (c *Client) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeI
 	return res, nil
 }
 
-// ListAvailableUserEpisodes ...
-func (c *Client) ListAvailableUserEpisodes(ctx context.Context, userID uuid.UUID) ([]challenge.EpisodeAccess, error) {
-	res, err := c.s.ListAvailableUserEpisodes(ctx, userID)
+// ListIDsAvailableUserEpisodes ...
+func (c *Client) ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]uuid.UUID, error) {
+	res, err := c.s.ListIDsAvailableUserEpisodes(ctx, userID, limit, offset)
 	if err != nil {
 		return nil, err
 	}

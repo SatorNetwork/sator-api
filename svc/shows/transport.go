@@ -354,7 +354,10 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 }
 
 func decodeGetActivatedUserEpisodesRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return nil, nil
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
 }
 
 func decodeAddSeasonRequest(_ context.Context, r *http.Request) (interface{}, error) {
