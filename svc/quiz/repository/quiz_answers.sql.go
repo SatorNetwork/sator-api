@@ -38,7 +38,7 @@ func (q *Queries) CountCorrectAnswers(ctx context.Context, arg CountCorrectAnswe
 }
 
 const getAnswer = `-- name: GetAnswer :one
-SELECT quiz_id, user_id, question_id, answer_id, is_correct, rate, pts, created_at
+SELECT quiz_id, user_id, question_id, answer_id, is_correct, rate, pts, created_at, updated_at
 FROM quiz_answers
 WHERE quiz_id = $1
     AND user_id = $2
@@ -64,6 +64,7 @@ func (q *Queries) GetAnswer(ctx context.Context, arg GetAnswerParams) (QuizAnswe
 		&i.Rate,
 		&i.Pts,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -162,7 +163,27 @@ VALUES (
             )
             ELSE 0
         END
-    ) ON CONFLICT (quiz_id, user_id, question_id) DO NOTHING RETURNING quiz_id, user_id, question_id, answer_id, is_correct, rate, pts, created_at
+    ) ON CONFLICT (quiz_id, user_id, question_id) DO 
+UPDATE SET 
+    answer_id = EXCLUDED.answer_id, 
+    is_correct = EXCLUDED.is_correct, 
+    pts = CASE
+            WHEN EXCLUDED.is_correct THEN COALESCE(
+                (
+                    SELECT CASE
+                            WHEN COUNT(*) > 0 THEN 0
+                        END AS pts
+                    FROM quiz_answers
+                    WHERE question_id = EXCLUDED.question_id
+                        AND quiz_id = EXCLUDED.quiz_id
+                        AND is_correct = TRUE
+                    GROUP BY question_id
+                ),
+                2
+            )
+            ELSE 0
+        END
+RETURNING quiz_id, user_id, question_id, answer_id, is_correct, rate, pts, created_at, updated_at
 `
 
 type StoreAnswerParams struct {
@@ -193,6 +214,7 @@ func (q *Queries) StoreAnswer(ctx context.Context, arg StoreAnswerParams) (QuizA
 		&i.Rate,
 		&i.Pts,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

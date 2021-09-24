@@ -29,6 +29,7 @@ type QuizAnswer struct {
 	Rate       int32     `json:"rate"`
 	Pts        int32     `json:"pts"`
 	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  int32     `json:"updated_at"`
 }
 
 type QuizPlayer struct {
