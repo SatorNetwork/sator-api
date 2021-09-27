@@ -24,13 +24,16 @@ type (
 	// Show struct
 	// Fields were rearranged to optimize memory usage.
 	Show struct {
-		ID            uuid.UUID `json:"id"`
-		Title         string    `json:"title"`
-		Cover         string    `json:"cover"`
-		HasNewEpisode bool      `json:"has_new_episode"`
-		Category      string    `json:"category"`
-		Description   string    `json:"description"`
-		Claps         int64     `json:"claps"`
+		ID             uuid.UUID `json:"id"`
+		Title          string    `json:"title"`
+		Cover          string    `json:"cover"`
+		HasNewEpisode  bool      `json:"has_new_episode"`
+		Category       string    `json:"category"`
+		Description    string    `json:"description"`
+		Claps          int64     `json:"claps"`
+		RealmsTitle    string    `json:"realms_title"`
+		RealmsSubtitle string    `json:"realms_subtitle"`
+		Watch          string    `json:"watch"`
 	}
 
 	Season struct {
@@ -159,12 +162,15 @@ func castToListShow(source []repository.Show) []Show {
 	result := make([]Show, 0, len(source))
 	for _, s := range source {
 		result = append(result, Show{
-			ID:            s.ID,
-			Title:         s.Title,
-			Cover:         s.Cover,
-			HasNewEpisode: s.HasNewEpisode,
-			Category:      s.Category.String,
-			Description:   s.Description.String,
+			ID:             s.ID,
+			Title:          s.Title,
+			Cover:          s.Cover,
+			HasNewEpisode:  s.HasNewEpisode,
+			Category:       s.Category.String,
+			Description:    s.Description.String,
+			RealmsTitle:    s.RealmsTitle.String,
+			RealmsSubtitle: s.RealmsSubtitle.String,
+			Watch:          s.Watch.String,
 		})
 	}
 	return result
@@ -182,25 +188,31 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 // Cast repository.Show to service Show structure
 func castToShow(source repository.Show) Show {
 	return Show{
-		ID:            source.ID,
-		Title:         source.Title,
-		Cover:         source.Cover,
-		HasNewEpisode: source.HasNewEpisode,
-		Category:      source.Category.String,
-		Description:   source.Description.String,
+		ID:             source.ID,
+		Title:          source.Title,
+		Cover:          source.Cover,
+		HasNewEpisode:  source.HasNewEpisode,
+		Category:       source.Category.String,
+		Description:    source.Description.String,
+		RealmsTitle:    source.RealmsTitle.String,
+		RealmsSubtitle: source.RealmsSubtitle.String,
+		Watch:          source.Watch.String,
 	}
 }
 
 // Cast repository.GetShowByIDRow to service Show structure
 func castToShowWithClaps(source repository.GetShowByIDRow) Show {
 	return Show{
-		ID:            source.ID,
-		Title:         source.Title,
-		Cover:         source.Cover,
-		HasNewEpisode: source.HasNewEpisode,
-		Category:      source.Category.String,
-		Description:   source.Description.String,
-		Claps:         source.Claps,
+		ID:             source.ID,
+		Title:          source.Title,
+		Cover:          source.Cover,
+		HasNewEpisode:  source.HasNewEpisode,
+		Category:       source.Category.String,
+		Description:    source.Description.String,
+		Claps:          source.Claps,
+		RealmsTitle:    source.RealmsTitle.String,
+		RealmsSubtitle: source.RealmsSubtitle.String,
+		Watch:          source.Watch.String,
 	}
 }
 
@@ -408,6 +420,18 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 			String: sh.Description,
 			Valid:  len(sh.Description) > 0,
 		},
+		RealmsTitle: sql.NullString{
+			String: sh.RealmsTitle,
+			Valid:  len(sh.RealmsTitle) > 0,
+		},
+		RealmsSubtitle: sql.NullString{
+			String: sh.RealmsSubtitle,
+			Valid:  len(sh.RealmsSubtitle) > 0,
+		},
+		Watch: sql.NullString{
+			String: sh.Watch,
+			Valid:  len(sh.Watch) > 0,
+		},
 	})
 	if err != nil {
 		return Show{}, fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
@@ -429,6 +453,18 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		Description: sql.NullString{
 			String: sh.Description,
 			Valid:  len(sh.Description) > 0,
+		},
+		RealmsTitle: sql.NullString{
+			String: sh.RealmsTitle,
+			Valid:  len(sh.RealmsTitle) > 0,
+		},
+		RealmsSubtitle: sql.NullString{
+			String: sh.RealmsSubtitle,
+			Valid:  len(sh.RealmsSubtitle) > 0,
+		},
+		Watch: sql.NullString{
+			String: sh.Watch,
+			Valid:  len(sh.Watch) > 0,
 		},
 		ID: sh.ID,
 	}); err != nil {

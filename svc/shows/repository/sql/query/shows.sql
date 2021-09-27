@@ -34,14 +34,20 @@ INSERT INTO shows (
     cover,
     has_new_episode,
     category,
-    description
+    description,
+    realms_title,
+    realms_subtitle,
+    watch
   )
 VALUES (
            @title,
            @cover,
            @has_new_episode,
            @category,
-           @description
+           @description,
+           @realms_title,
+           @realms_subtitle,
+           @watch
 ) RETURNING *;
 -- name: UpdateShow :exec
 UPDATE shows
@@ -49,7 +55,10 @@ SET title = @title,
     cover = @cover,
     has_new_episode = @has_new_episode,
     category = @category,
-    description = @description
+    description = @description,
+    realms_title = @realms_title,
+    realms_subtitle = @realms_subtitle,
+    watch = @watch
 WHERE id = @id;
 -- name: DeleteShowByID :exec
 DELETE FROM shows
