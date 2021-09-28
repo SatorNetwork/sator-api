@@ -187,7 +187,7 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 
 // Cast repository.Show to service Show structure
 func castToShow(source repository.Show) Show {
-	return Show{
+	result := Show{
 		ID:             source.ID,
 		Title:          source.Title,
 		Cover:          source.Cover,
@@ -198,6 +198,12 @@ func castToShow(source repository.Show) Show {
 		RealmsSubtitle: source.RealmsSubtitle.String,
 		Watch:          source.Watch.String,
 	}
+
+	if !source.RealmsTitle.Valid {
+		result.RealmsTitle = "Realms"
+	}
+
+	return result
 }
 
 // Cast repository.GetShowByIDRow to service Show structure
