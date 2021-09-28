@@ -84,21 +84,27 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title         string `json:"title,omitempty" validate:"required,gt=0"`
-		Cover         string `json:"cover,omitempty" validate:"required,gt=0"`
-		HasNewEpisode bool   `json:"has_new_episode,omitempty"`
-		Category      string `json:"category,omitempty"`
-		Description   string `json:"description,omitempty"`
+		Title          string `json:"title,omitempty" validate:"required,gt=0"`
+		Cover          string `json:"cover,omitempty" validate:"required,gt=0"`
+		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
+		Category       string `json:"category,omitempty"`
+		Description    string `json:"description,omitempty"`
+		RealmsTitle    string `json:"realms_title,omitempty"`
+		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
+		Watch          string `json:"watch,omitempty"`
 	}
 
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
-		ID            string `json:"id,omitempty" validate:"required,uuid"`
-		Title         string `json:"title,omitempty" validate:"required"`
-		Cover         string `json:"cover,omitempty" validate:"required"`
-		HasNewEpisode bool   `json:"has_new_episode,omitempty"`
-		Category      string `json:"category,omitempty"`
-		Description   string `json:"description,omitempty"`
+		ID             string `json:"id,omitempty" validate:"required,uuid"`
+		Title          string `json:"title,omitempty" validate:"required"`
+		Cover          string `json:"cover,omitempty" validate:"required"`
+		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
+		Category       string `json:"category,omitempty"`
+		Description    string `json:"description,omitempty"`
+		RealmsTitle    string `json:"realms_title,omitempty"`
+		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
+		Watch          string `json:"watch,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -351,11 +357,14 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 		}
 
 		resp, err := s.AddShow(ctx, Show{
-			Title:         req.Title,
-			Cover:         req.Cover,
-			HasNewEpisode: req.HasNewEpisode,
-			Category:      req.Category,
-			Description:   req.Description,
+			Title:          req.Title,
+			Cover:          req.Cover,
+			HasNewEpisode:  req.HasNewEpisode,
+			Category:       req.Category,
+			Description:    req.Description,
+			RealmsTitle:    req.RealmsTitle,
+			RealmsSubtitle: req.RealmsSubtitle,
+			Watch:          req.Watch,
 		})
 		if err != nil {
 			return nil, err
@@ -376,12 +385,15 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 		}
 
 		err = s.UpdateShow(ctx, Show{
-			ID:            id,
-			Title:         req.Title,
-			Cover:         req.Cover,
-			HasNewEpisode: req.HasNewEpisode,
-			Category:      req.Category,
-			Description:   req.Description,
+			ID:             id,
+			Title:          req.Title,
+			Cover:          req.Cover,
+			HasNewEpisode:  req.HasNewEpisode,
+			Category:       req.Category,
+			Description:    req.Description,
+			RealmsTitle:    req.RealmsTitle,
+			RealmsSubtitle: req.RealmsSubtitle,
+			Watch:          req.Watch,
 		})
 		if err != nil {
 			return nil, err

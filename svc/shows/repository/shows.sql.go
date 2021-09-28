@@ -17,23 +17,32 @@ INSERT INTO shows (
     cover,
     has_new_episode,
     category,
-    description
+    description,
+    realms_title,
+    realms_subtitle,
+    watch
   )
 VALUES (
            $1,
            $2,
            $3,
            $4,
-           $5
-) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description
+           $5,
+           $6,
+           $7,
+           $8
+) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch
 `
 
 type AddShowParams struct {
-	Title         string         `json:"title"`
-	Cover         string         `json:"cover"`
-	HasNewEpisode bool           `json:"has_new_episode"`
-	Category      sql.NullString `json:"category"`
-	Description   sql.NullString `json:"description"`
+	Title          string         `json:"title"`
+	Cover          string         `json:"cover"`
+	HasNewEpisode  bool           `json:"has_new_episode"`
+	Category       sql.NullString `json:"category"`
+	Description    sql.NullString `json:"description"`
+	RealmsTitle    sql.NullString `json:"realms_title"`
+	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
+	Watch          sql.NullString `json:"watch"`
 }
 
 func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) {
@@ -43,6 +52,9 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 		arg.HasNewEpisode,
 		arg.Category,
 		arg.Description,
+		arg.RealmsTitle,
+		arg.RealmsSubtitle,
+		arg.Watch,
 	)
 	var i Show
 	err := row.Scan(
@@ -54,6 +66,9 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 		&i.CreatedAt,
 		&i.Category,
 		&i.Description,
+		&i.RealmsTitle,
+		&i.RealmsSubtitle,
+		&i.Watch,
 	)
 	return i, err
 }
@@ -78,7 +93,7 @@ WITH show_claps_sum AS (
     GROUP BY show_id  
 )
 SELECT 
-    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description,
+    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch,
     COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
@@ -86,15 +101,18 @@ WHERE shows.id = $1
 `
 
 type GetShowByIDRow struct {
-	ID            uuid.UUID      `json:"id"`
-	Title         string         `json:"title"`
-	Cover         string         `json:"cover"`
-	HasNewEpisode bool           `json:"has_new_episode"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
-	CreatedAt     time.Time      `json:"created_at"`
-	Category      sql.NullString `json:"category"`
-	Description   sql.NullString `json:"description"`
-	Claps         int64          `json:"claps"`
+	ID             uuid.UUID      `json:"id"`
+	Title          string         `json:"title"`
+	Cover          string         `json:"cover"`
+	HasNewEpisode  bool           `json:"has_new_episode"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	Category       sql.NullString `json:"category"`
+	Description    sql.NullString `json:"description"`
+	RealmsTitle    sql.NullString `json:"realms_title"`
+	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
+	Watch          sql.NullString `json:"watch"`
+	Claps          int64          `json:"claps"`
 }
 
 func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow, error) {
@@ -109,13 +127,16 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow
 		&i.CreatedAt,
 		&i.Category,
 		&i.Description,
+		&i.RealmsTitle,
+		&i.RealmsSubtitle,
+		&i.Watch,
 		&i.Claps,
 	)
 	return i, err
 }
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch
 FROM shows
 ORDER BY has_new_episode DESC,
     updated_at DESC,
@@ -146,6 +167,9 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.CreatedAt,
 			&i.Category,
 			&i.Description,
+			&i.RealmsTitle,
+			&i.RealmsSubtitle,
+			&i.Watch,
 		); err != nil {
 			return nil, err
 		}
@@ -161,7 +185,7 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch
 FROM shows
 WHERE category = $1
 ORDER BY has_new_episode DESC,
@@ -194,6 +218,9 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 			&i.CreatedAt,
 			&i.Category,
 			&i.Description,
+			&i.RealmsTitle,
+			&i.RealmsSubtitle,
+			&i.Watch,
 		); err != nil {
 			return nil, err
 		}
@@ -214,17 +241,23 @@ SET title = $1,
     cover = $2,
     has_new_episode = $3,
     category = $4,
-    description = $5
-WHERE id = $6
+    description = $5,
+    realms_title = $6,
+    realms_subtitle = $7,
+    watch = $8
+WHERE id = $9
 `
 
 type UpdateShowParams struct {
-	Title         string         `json:"title"`
-	Cover         string         `json:"cover"`
-	HasNewEpisode bool           `json:"has_new_episode"`
-	Category      sql.NullString `json:"category"`
-	Description   sql.NullString `json:"description"`
-	ID            uuid.UUID      `json:"id"`
+	Title          string         `json:"title"`
+	Cover          string         `json:"cover"`
+	HasNewEpisode  bool           `json:"has_new_episode"`
+	Category       sql.NullString `json:"category"`
+	Description    sql.NullString `json:"description"`
+	RealmsTitle    sql.NullString `json:"realms_title"`
+	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
+	Watch          sql.NullString `json:"watch"`
+	ID             uuid.UUID      `json:"id"`
 }
 
 func (q *Queries) UpdateShow(ctx context.Context, arg UpdateShowParams) error {
@@ -234,6 +267,9 @@ func (q *Queries) UpdateShow(ctx context.Context, arg UpdateShowParams) error {
 		arg.HasNewEpisode,
 		arg.Category,
 		arg.Description,
+		arg.RealmsTitle,
+		arg.RealmsSubtitle,
+		arg.Watch,
 		arg.ID,
 	)
 	return err
