@@ -161,7 +161,7 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID, userID uuid.UUI
 func castToListShow(source []repository.Show) []Show {
 	result := make([]Show, 0, len(source))
 	for _, s := range source {
-		result = append(result, Show{
+		sh := Show{
 			ID:             s.ID,
 			Title:          s.Title,
 			Cover:          s.Cover,
@@ -171,8 +171,15 @@ func castToListShow(source []repository.Show) []Show {
 			RealmsTitle:    s.RealmsTitle.String,
 			RealmsSubtitle: s.RealmsSubtitle.String,
 			Watch:          s.Watch.String,
-		})
+		}
+
+		if !s.RealmsTitle.Valid {
+			sh.RealmsTitle = "Realms"
+		}
+
+		result = append(result, sh)
 	}
+
 	return result
 }
 
@@ -208,7 +215,7 @@ func castToShow(source repository.Show) Show {
 
 // Cast repository.GetShowByIDRow to service Show structure
 func castToShowWithClaps(source repository.GetShowByIDRow) Show {
-	return Show{
+	result := Show{
 		ID:             source.ID,
 		Title:          source.Title,
 		Cover:          source.Cover,
@@ -220,6 +227,12 @@ func castToShowWithClaps(source repository.GetShowByIDRow) Show {
 		RealmsSubtitle: source.RealmsSubtitle.String,
 		Watch:          source.Watch.String,
 	}
+
+	if !source.RealmsTitle.Valid {
+		result.RealmsTitle = "Realms"
+	}
+
+	return result
 }
 
 // GetShowsByCategory returns show by provided category.
