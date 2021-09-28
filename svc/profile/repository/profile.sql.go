@@ -12,7 +12,7 @@ import (
 
 const createProfile = `-- name: CreateProfile :one
 INSERT INTO profiles (user_id, first_name, last_name)
-VALUES ($1, $2, $3) RETURNING id, user_id, first_name, last_name, updated_at, created_at
+VALUES ($1, $2, $3) RETURNING id, user_id, first_name, last_name, updated_at, created_at, avatar
 `
 
 type CreateProfileParams struct {
@@ -31,12 +31,13 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 		&i.LastName,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Avatar,
 	)
 	return i, err
 }
 
 const getProfileByUserID = `-- name: GetProfileByUserID :one
-SELECT id, user_id, first_name, last_name, updated_at, created_at
+SELECT id, user_id, first_name, last_name, updated_at, created_at, avatar
 FROM profiles
 WHERE user_id = $1
 LIMIT 1
@@ -52,8 +53,25 @@ func (q *Queries) GetProfileByUserID(ctx context.Context, userID uuid.UUID) (Pro
 		&i.LastName,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Avatar,
 	)
 	return i, err
+}
+
+const updateAvatar = `-- name: UpdateAvatar :exec
+UPDATE profiles
+SET avatar = $1
+WHERE user_id = $2
+`
+
+type UpdateAvatarParams struct {
+	Avatar sql.NullString `json:"avatar"`
+	UserID uuid.UUID      `json:"user_id"`
+}
+
+func (q *Queries) UpdateAvatar(ctx context.Context, arg UpdateAvatarParams) error {
+	_, err := q.exec(ctx, q.updateAvatarStmt, updateAvatar, arg.Avatar, arg.UserID)
+	return err
 }
 
 const updateProfileByID = `-- name: UpdateProfileByID :exec

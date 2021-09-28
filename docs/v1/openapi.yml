@@ -355,6 +355,32 @@ paths:
                   last_name:
                     type: string
                     example: "Doe"
+                  avatar:
+                    type: string
+                    example: "https://link@to.avatar"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /profile/avatar:
+    put:
+      tags:
+        - "Profile"
+      summary: Updates users avatar
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  example: "https://link@to.avatar"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 

@@ -28,6 +28,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getProfileByUserIDStmt, err = db.PrepareContext(ctx, getProfileByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetProfileByUserID: %w", err)
 	}
+	if q.updateAvatarStmt, err = db.PrepareContext(ctx, updateAvatar); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAvatar: %w", err)
+	}
 	if q.updateProfileByIDStmt, err = db.PrepareContext(ctx, updateProfileByID); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateProfileByID: %w", err)
 	}
@@ -47,6 +50,11 @@ func (q *Queries) Close() error {
 	if q.getProfileByUserIDStmt != nil {
 		if cerr := q.getProfileByUserIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getProfileByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.updateAvatarStmt != nil {
+		if cerr := q.updateAvatarStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAvatarStmt: %w", cerr)
 		}
 	}
 	if q.updateProfileByIDStmt != nil {
@@ -100,6 +108,7 @@ type Queries struct {
 	tx                        *sql.Tx
 	createProfileStmt         *sql.Stmt
 	getProfileByUserIDStmt    *sql.Stmt
+	updateAvatarStmt          *sql.Stmt
 	updateProfileByIDStmt     *sql.Stmt
 	updateProfileByUserIDStmt *sql.Stmt
 }
@@ -110,6 +119,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                        tx,
 		createProfileStmt:         q.createProfileStmt,
 		getProfileByUserIDStmt:    q.getProfileByUserIDStmt,
+		updateAvatarStmt:          q.updateAvatarStmt,
 		updateProfileByIDStmt:     q.updateProfileByIDStmt,
 		updateProfileByUserIDStmt: q.updateProfileByUserIDStmt,
 	}
