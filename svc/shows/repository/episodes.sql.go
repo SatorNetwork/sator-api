@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const addEpisode = `-- name: AddEpisode :one
@@ -218,6 +219,76 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 			&i.SeasonNumber,
 			&i.AvgRating,
 			&i.Ratings,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getListEpisodesByIDs = `-- name: GetListEpisodesByIDs :many
+SELECT
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id,
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = ANY($1::uuid[])
+ORDER BY episodes.episode_number DESC
+LIMIT $3 OFFSET $2
+`
+
+type GetListEpisodesByIDsParams struct {
+	EpisodeIDs []uuid.UUID `json:"episode_ids"`
+	Offset     int32       `json:"offset_val"`
+	Limit      int32       `json:"limit_val"`
+}
+
+type GetListEpisodesByIDsRow struct {
+	ID                      uuid.UUID      `json:"id"`
+	ShowID                  uuid.UUID      `json:"show_id"`
+	SeasonID                uuid.NullUUID  `json:"season_id"`
+	EpisodeNumber           int32          `json:"episode_number"`
+	Cover                   sql.NullString `json:"cover"`
+	Title                   string         `json:"title"`
+	Description             sql.NullString `json:"description"`
+	ReleaseDate             sql.NullTime   `json:"release_date"`
+	UpdatedAt               sql.NullTime   `json:"updated_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
+	SeasonNumber            int32          `json:"season_number"`
+}
+
+func (q *Queries) GetListEpisodesByIDs(ctx context.Context, arg GetListEpisodesByIDsParams) ([]GetListEpisodesByIDsRow, error) {
+	rows, err := q.query(ctx, q.getListEpisodesByIDsStmt, getListEpisodesByIDs, pq.Array(arg.EpisodeIDs), arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetListEpisodesByIDsRow
+	for rows.Next() {
+		var i GetListEpisodesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.SeasonID,
+			&i.EpisodeNumber,
+			&i.Cover,
+			&i.Title,
+			&i.Description,
+			&i.ReleaseDate,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.ChallengeID,
+			&i.VerificationChallengeID,
+			&i.SeasonNumber,
 		); err != nil {
 			return nil, err
 		}

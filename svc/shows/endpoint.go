@@ -26,11 +26,12 @@ type (
 		AddSeason        endpoint.Endpoint
 		DeleteSeasonByID endpoint.Endpoint
 
-		AddEpisode          endpoint.Endpoint
-		DeleteEpisodeByID   endpoint.Endpoint
-		GetEpisodeByID      endpoint.Endpoint
-		GetEpisodesByShowID endpoint.Endpoint
-		UpdateEpisode       endpoint.Endpoint
+		AddEpisode               endpoint.Endpoint
+		DeleteEpisodeByID        endpoint.Endpoint
+		GetActivatedUserEpisodes endpoint.Endpoint
+		GetEpisodeByID           endpoint.Endpoint
+		GetEpisodesByShowID      endpoint.Endpoint
+		UpdateEpisode            endpoint.Endpoint
 
 		RateEpisode            endpoint.Endpoint
 		ReviewEpisode          endpoint.Endpoint
@@ -54,8 +55,9 @@ type (
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
+		GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID, page, itemsPerPage int32) ([]Episode, error)
 		GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (interface{}, error)
+		GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (Episode, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
@@ -86,21 +88,27 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title         string `json:"title,omitempty" validate:"required,gt=0"`
-		Cover         string `json:"cover,omitempty" validate:"required,gt=0"`
-		HasNewEpisode bool   `json:"has_new_episode,omitempty"`
-		Category      string `json:"category,omitempty"`
-		Description   string `json:"description,omitempty"`
+		Title          string `json:"title,omitempty" validate:"required,gt=0"`
+		Cover          string `json:"cover,omitempty" validate:"required,gt=0"`
+		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
+		Category       string `json:"category,omitempty"`
+		Description    string `json:"description,omitempty"`
+		RealmsTitle    string `json:"realms_title,omitempty"`
+		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
+		Watch          string `json:"watch,omitempty"`
 	}
 
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
-		ID            string `json:"id,omitempty" validate:"required,uuid"`
-		Title         string `json:"title,omitempty" validate:"required"`
-		Cover         string `json:"cover,omitempty" validate:"required"`
-		HasNewEpisode bool   `json:"has_new_episode,omitempty"`
-		Category      string `json:"category,omitempty"`
-		Description   string `json:"description,omitempty"`
+		ID             string `json:"id,omitempty" validate:"required,uuid"`
+		Title          string `json:"title,omitempty" validate:"required"`
+		Cover          string `json:"cover,omitempty" validate:"required"`
+		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
+		Category       string `json:"category,omitempty"`
+		Description    string `json:"description,omitempty"`
+		RealmsTitle    string `json:"realms_title,omitempty"`
+		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
+		Watch          string `json:"watch,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -214,11 +222,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		AddSeason:        MakeAddSeasonEndpoint(s, validateFunc),
 		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
 
-		AddEpisode:          MakeAddEpisodeEndpoint(s, validateFunc),
-		DeleteEpisodeByID:   MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
-		GetEpisodeByID:      MakeGetEpisodeByIDEndpoint(s, validateFunc),
-		GetEpisodesByShowID: MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
-		UpdateEpisode:       MakeUpdateEpisodeEndpoint(s, validateFunc),
+		AddEpisode:               MakeAddEpisodeEndpoint(s, validateFunc),
+		DeleteEpisodeByID:        MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
+		GetActivatedUserEpisodes: MakeGetActivatedUserEpisodesEndpoint(s, validateFunc),
+		GetEpisodeByID:           MakeGetEpisodeByIDEndpoint(s, validateFunc),
+		GetEpisodesByShowID:      MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
+		UpdateEpisode:            MakeUpdateEpisodeEndpoint(s, validateFunc),
 
 		RateEpisode:            MakeRateEpisodeEndpoint(s, validateFunc),
 		ReviewEpisode:          MakeReviewEpisodeEndpoint(s, validateFunc),
@@ -244,6 +253,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 			e.AddEpisode = mdw(e.AddEpisode)
 			e.DeleteEpisodeByID = mdw(e.DeleteEpisodeByID)
+			e.GetActivatedUserEpisodes = mdw(e.GetActivatedUserEpisodes)
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
@@ -356,11 +366,14 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 		}
 
 		resp, err := s.AddShow(ctx, Show{
-			Title:         req.Title,
-			Cover:         req.Cover,
-			HasNewEpisode: req.HasNewEpisode,
-			Category:      req.Category,
-			Description:   req.Description,
+			Title:          req.Title,
+			Cover:          req.Cover,
+			HasNewEpisode:  req.HasNewEpisode,
+			Category:       req.Category,
+			Description:    req.Description,
+			RealmsTitle:    req.RealmsTitle,
+			RealmsSubtitle: req.RealmsSubtitle,
+			Watch:          req.Watch,
 		})
 		if err != nil {
 			return nil, err
@@ -381,12 +394,15 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 		}
 
 		err = s.UpdateShow(ctx, Show{
-			ID:            id,
-			Title:         req.Title,
-			Cover:         req.Cover,
-			HasNewEpisode: req.HasNewEpisode,
-			Category:      req.Category,
-			Description:   req.Description,
+			ID:             id,
+			Title:          req.Title,
+			Cover:          req.Cover,
+			HasNewEpisode:  req.HasNewEpisode,
+			Category:       req.Category,
+			Description:    req.Description,
+			RealmsTitle:    req.RealmsTitle,
+			RealmsSubtitle: req.RealmsSubtitle,
+			Watch:          req.Watch,
 		})
 		if err != nil {
 			return nil, err
@@ -582,6 +598,28 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 		}
 
 		resp, err := s.GetEpisodeByID(ctx, showID, episodeID, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetActivatedUserEpisodesEndpoint ...
+func MakeGetActivatedUserEpisodesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetActivatedUserEpisodes(ctx, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
