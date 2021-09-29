@@ -185,7 +185,6 @@ type (
 	// GetReviewsListRequest struct
 	GetReviewsListRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
-		ByUserID  int32  `json:"by_user_id" validate:"required_without"`
 		PaginationRequest
 	}
 )
@@ -771,20 +770,6 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 		req := request.(GetReviewsListRequest)
 		if err := v(req); err != nil {
 			return nil, err
-		}
-
-		if req.ByUserID == 1 {
-			uid, err := jwt.UserIDFromContext(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("could not get user profile id: %w", err)
-			}
-
-			resp, err := s.GetReviewsListByUserID(ctx, uid, req.Limit(), req.Offset())
-			if err != nil {
-				return nil, err
-			}
-
-			return resp, nil
 		}
 
 		episodeID, err := uuid.Parse(req.EpisodeID)
