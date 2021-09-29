@@ -64,6 +64,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEpisodesByShowIDStmt, err = db.PrepareContext(ctx, getEpisodesByShowID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodesByShowID: %w", err)
 	}
+	if q.getListEpisodesByIDsStmt, err = db.PrepareContext(ctx, getListEpisodesByIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetListEpisodesByIDs: %w", err)
+	}
 	if q.getSeasonByIDStmt, err = db.PrepareContext(ctx, getSeasonByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSeasonByID: %w", err)
 	}
@@ -169,6 +172,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getEpisodesByShowIDStmt: %w", cerr)
 		}
 	}
+	if q.getListEpisodesByIDsStmt != nil {
+		if cerr := q.getListEpisodesByIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getListEpisodesByIDsStmt: %w", cerr)
+		}
+	}
 	if q.getSeasonByIDStmt != nil {
 		if cerr := q.getSeasonByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSeasonByIDStmt: %w", cerr)
@@ -272,6 +280,7 @@ type Queries struct {
 	getEpisodeIDByVerificationChallengeIDStmt *sql.Stmt
 	getEpisodeRatingByIDStmt                  *sql.Stmt
 	getEpisodesByShowIDStmt                   *sql.Stmt
+	getListEpisodesByIDsStmt                  *sql.Stmt
 	getSeasonByIDStmt                         *sql.Stmt
 	getSeasonsByShowIDStmt                    *sql.Stmt
 	getShowByIDStmt                           *sql.Stmt
@@ -302,6 +311,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getEpisodeIDByVerificationChallengeIDStmt: q.getEpisodeIDByVerificationChallengeIDStmt,
 		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
+		getListEpisodesByIDsStmt:                  q.getListEpisodesByIDsStmt,
 		getSeasonByIDStmt:                         q.getSeasonByIDStmt,
 		getSeasonsByShowIDStmt:                    q.getSeasonsByShowIDStmt,
 		getShowByIDStmt:                           q.getShowByIDStmt,

@@ -91,6 +91,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/episodes", httptransport.NewServer(
+		e.GetActivatedUserEpisodes,
+		decodeGetActivatedUserEpisodesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.GetEpisodeByID,
 		decodeGetEpisodeByIDRequest,
@@ -343,6 +350,13 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
+	}, nil
+}
+
+func decodeGetActivatedUserEpisodesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
 }
 

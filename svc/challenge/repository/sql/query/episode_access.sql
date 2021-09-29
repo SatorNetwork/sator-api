@@ -28,3 +28,9 @@ SELECT COUNT(
                WHERE episode_id = @episode_id AND activated_before > NOW()
            )
     )::INT;
+-- name: ListIDsAvailableUserEpisodes :many
+SELECT episode_id
+FROM episode_access
+WHERE user_id = $1 AND activated_before > NOW()
+ORDER BY activated_before DESC, activated_at DESC
+    LIMIT $2 OFFSET $3;
