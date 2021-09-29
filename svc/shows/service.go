@@ -373,11 +373,11 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmoun
 }
 
 // GetListEpisodesByIDs returns list episodes by list episode ids.
-func (s *Service) GetListEpisodesByIDs(ctx context.Context, userIDs []uuid.UUID, limit, offset int32) ([]Episode, error) {
+func (s *Service) GetListEpisodesByIDs(ctx context.Context, episodeIDs []uuid.UUID, limit, offset int32) ([]Episode, error) {
 	episodes, err := s.sr.GetListEpisodesByIDs(ctx, repository.GetListEpisodesByIDsParams{
-		Column1: userIDs,
-		Limit:   limit,
-		Offset:  offset,
+		EpisodeIDs: episodeIDs,
+		Limit:      limit,
+		Offset:     offset,
 	})
 	if err != nil {
 		return []Episode{}, fmt.Errorf("could not get episodes by episodes ids: %w", err)

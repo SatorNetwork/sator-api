@@ -78,7 +78,7 @@ SELECT
     episodes.*,
     seasons.season_number as season_number
 FROM episodes
-         JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = ANY($1::uuid[])
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = ANY(@episode_ids::uuid[])
 ORDER BY episodes.episode_number DESC
-    LIMIT $2 OFFSET $3;
+LIMIT @limit_val OFFSET @offset_val;

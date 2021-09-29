@@ -238,16 +238,16 @@ SELECT
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id,
     seasons.season_number as season_number
 FROM episodes
-         JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = ANY($1::uuid[])
 ORDER BY episodes.episode_number DESC
-    LIMIT $2 OFFSET $3
+LIMIT $3 OFFSET $2
 `
 
 type GetListEpisodesByIDsParams struct {
-	Column1 []uuid.UUID `json:"column_1"`
-	Limit   int32       `json:"limit"`
-	Offset  int32       `json:"offset"`
+	EpisodeIDs []uuid.UUID `json:"episode_ids"`
+	Offset     int32       `json:"offset_val"`
+	Limit      int32       `json:"limit_val"`
 }
 
 type GetListEpisodesByIDsRow struct {
@@ -267,7 +267,7 @@ type GetListEpisodesByIDsRow struct {
 }
 
 func (q *Queries) GetListEpisodesByIDs(ctx context.Context, arg GetListEpisodesByIDsParams) ([]GetListEpisodesByIDsRow, error) {
-	rows, err := q.query(ctx, q.getListEpisodesByIDsStmt, getListEpisodesByIDs, pq.Array(arg.Column1), arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.getListEpisodesByIDsStmt, getListEpisodesByIDs, pq.Array(arg.EpisodeIDs), arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
