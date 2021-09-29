@@ -75,6 +75,20 @@ func castToProfile(p repository.Profile, username string) *Profile {
 
 // UpdateAvatar updates users avatar.
 func (s *Service) UpdateAvatar(ctx context.Context, uid uuid.UUID, avatar string) error {
+	_, err := s.pr.GetProfileByUserID(ctx, uid)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return fmt.Errorf("could not get user profile: %w", err)
+		}
+
+		_, err = s.pr.CreateProfile(ctx, repository.CreateProfileParams{
+			UserID: uid,
+		})
+		if err != nil {
+			return fmt.Errorf("could not get user profile: %w", err)
+		}
+	}
+
 	if err := s.pr.UpdateAvatar(ctx, repository.UpdateAvatarParams{
 		Avatar: sql.NullString{
 			String: avatar,

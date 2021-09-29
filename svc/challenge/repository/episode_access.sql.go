@@ -137,13 +137,9 @@ func (q *Queries) ListIDsAvailableUserEpisodes(ctx context.Context, arg ListIDsA
 }
 
 const numberUsersWhoHaveAccessToEpisode = `-- name: NumberUsersWhoHaveAccessToEpisode :one
-SELECT COUNT(
-    EXISTS (
-               SELECT episode_id, user_id, activated_at, activated_before
-               FROM episode_access
-               WHERE episode_id = $1 AND activated_before > NOW()
-           )
-    )::INT
+SELECT COUNT(*)::INT
+FROM episode_access
+WHERE episode_id = $1 AND activated_before > NOW()
 `
 
 func (q *Queries) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error) {
