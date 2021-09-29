@@ -108,6 +108,7 @@ type (
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
 		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
+		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -775,6 +776,23 @@ func (s *Service) AddClapsForShow(ctx context.Context, showID, userID uuid.UUID)
 	}
 
 	return nil
+}
+
+// GetReviewsListByUserID ...
+func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error) {
+	reviews, err := s.sr.ReviewsListByUserID(ctx, repository.ReviewsListByUserIDParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return castReviewsList(reviews), nil
 }
 
 // GetActivatedUserEpisodes returns list activated episodes by user id.
