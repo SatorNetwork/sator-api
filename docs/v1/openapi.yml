@@ -355,6 +355,32 @@ paths:
                   last_name:
                     type: string
                     example: "Doe"
+                  avatar:
+                    type: string
+                    example: "https://link@to.avatar"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /profile/avatar:
+    put:
+      tags:
+        - "Profile"
+      summary: Updates users avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  example: "https://link@to.avatar"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
@@ -535,7 +561,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /wallets/{wallet_id}/create-transfer:
     post:
       tags:
@@ -598,7 +623,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /wallets/{wallet_id}/confirm-transfer:
     post:
       tags:
@@ -649,7 +673,7 @@ paths:
         - "Wallet"
       summary: set stake.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
@@ -692,7 +716,7 @@ paths:
         - "Wallet"
       summary: Get wallet transactions.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
@@ -744,14 +768,13 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /wallets/{wallet_id}/unstake:
     post:
       tags:
         - "Wallet"
       summary: set stake.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
@@ -840,6 +863,15 @@ paths:
                     claps:
                       type: integer
                       example: 234
+                    realms_title:
+                      type: string
+                      example: "Realms"
+                    realms_subtitle:
+                      type: string
+                      example: "Watch on Netflix. Then earn SAO. "
+                    watch:
+                      type: string
+                      example: "https://youtube.com/ERGbevesrf"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
@@ -848,7 +880,7 @@ paths:
         - "Shows"
       summary: Used for create new show.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -874,6 +906,15 @@ paths:
                 description:
                   type: string
                   example: "description"
+                realms_title:
+                  type: string
+                  example: "Realms"
+                realms_subtitle:
+                  type: string
+                  example: "Watch on Netflix. Then earn SAO. "
+                watch:
+                  type: string
+                  example: "https://youtube.com/ERGbevesrf"
       responses:
         "200":
           description: Returns shows data.
@@ -903,6 +944,15 @@ paths:
                   description:
                     type: string
                     example: "description"
+                  realms_title:
+                    type: string
+                    example: "Realms"
+                  realms_subtitle:
+                    type: string
+                    example: "Watch on Netflix. Then earn SAO. "
+                  watch:
+                    type: string
+                    example: "https://youtube.com/ERGbevesrf"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -1003,12 +1053,76 @@ paths:
                   claps:
                     type: integer
                     example: 234
+                  realms_title:
+                    type: string
+                    example: "Realms"
+                  realms_subtitle:
+                    type: string
+                    example: "Watch on Netflix. Then earn SAO. "
+                  watch:
+                    type: string
+                    example: "https://youtube.com/ERGbevesrf"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
+    put:
+      tags:
+        - "Shows"
+      summary: Used for update show by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "title"
+                - "cover"
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                cover:
+                  type: string
+                  example: "cover"
+                has_new_episode:
+                  type: boolean
+                  example: true
+                category:
+                  type: string
+                  example: "category"
+                description:
+                  type: string
+                  example: "description"
+                realms_title:
+                  type: string
+                  example: "Realms"
+                realms_subtitle:
+                  type: string
+                  example: "Watch on Netflix. Then earn SAO. "
+                watch:
+                  type: string
+                  example: "https://youtube.com/ERGbevesrf"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
 
   /shows/{show_id}/claps:
     post:
@@ -1017,7 +1131,7 @@ paths:
         - "Claps"
       summary: Claps for show.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1034,7 +1148,6 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
-
 
   /shows/filter/{category}:
     get:
@@ -1101,7 +1214,7 @@ paths:
         - "Episodes"
       summary: Get episodes by show id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1171,7 +1284,7 @@ paths:
         - "Episodes"
       summary: Used for create new episode.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1337,7 +1450,7 @@ paths:
         - "Episodes"
       summary: Get episode by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1419,7 +1532,7 @@ paths:
         - "Episodes"
       summary: Used for update episode.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1477,7 +1590,7 @@ paths:
         - "Episodes"
       summary: Used for delete episode by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1501,7 +1614,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /shows/{show_id}/episodes/{episode_id}/rate:
     post:
       tags:
@@ -1509,7 +1621,7 @@ paths:
         - "Episodes"
       summary: Used to rate episode.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1544,7 +1656,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /shows/{show_id}/episodes/{episode_id}/reviews:
     post:
       tags:
@@ -1553,7 +1664,7 @@ paths:
         - "Reviews"
       summary: Used to store episode review.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1603,7 +1714,7 @@ paths:
         - "Reviews"
       summary: Get the episode reviews list.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1681,8 +1792,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
-
   /shows/{show_id}/seasons:
     post:
       tags:
@@ -1690,7 +1799,7 @@ paths:
         - "Seasons"
       summary: Used for create new season.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1743,7 +1852,7 @@ paths:
         - "Seasons"
       summary: Used for delete season by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path
@@ -1766,7 +1875,6 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
-
 
   /challenges/{challenge_id}:
     get:
@@ -1836,7 +1944,7 @@ paths:
         - "Challenges"
       summary: Update challenge by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: challenge_id
           in: path
@@ -1870,8 +1978,8 @@ paths:
                   type: integer
                   example: 10
                 episode_id:
-                    type: string
-                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  type: string
+                  example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                 kind:
                   type: integer
                   example: 10
@@ -1891,7 +1999,7 @@ paths:
         - "Challenges"
       summary: Delete challenge by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: challenge_id
           in: path
@@ -1913,7 +2021,7 @@ paths:
         - "Challenges"
       summary: Add new challenge.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -2166,7 +2274,7 @@ paths:
         - "QR code"
       summary: used for update qrcode by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -2213,7 +2321,7 @@ paths:
         - "QR code"
       summary: used for delete qrcode by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -2237,7 +2345,7 @@ paths:
         - "QR code"
       summary: used for create new qrcode.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -2497,7 +2605,7 @@ paths:
         - "Questions"
       summary: Used for get question by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: question_id
           in: path
@@ -2553,7 +2661,7 @@ paths:
         - "Questions"
       summary: Used for update question by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: question_id
           in: path
@@ -2582,7 +2690,7 @@ paths:
                   items:
                     type: object
                     properties:
-                      option: 
+                      option:
                         type: string
                         description: Answer option
                       is_correct:
@@ -2604,7 +2712,7 @@ paths:
         - "Questions"
       summary: Used for delete question by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: question_id
           in: path
@@ -2629,7 +2737,7 @@ paths:
         - "Questions"
       summary: Used for get questions by challenge id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: challenge_id
           in: path
@@ -2686,7 +2794,7 @@ paths:
         - "Questions"
       summary: Used for create new question.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: challenge_id
           in: path
@@ -2715,7 +2823,7 @@ paths:
                   items:
                     type: object
                     properties:
-                      option: 
+                      option:
                         type: string
                         description: Answer option
                       is_correct:
@@ -2748,7 +2856,6 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /questions/{question_id}/answers:
     post:
       tags:
@@ -2757,7 +2864,7 @@ paths:
         - "Answers"
       summary: Used for create new answer.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: question_id
           in: path
@@ -2813,7 +2920,7 @@ paths:
         - "Answers"
       summary: Used for update answer by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: question_id
           in: path
@@ -2857,7 +2964,7 @@ paths:
         - "Answers"
       summary: Used for delete answer by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: question_id
           in: path
@@ -2881,14 +2988,13 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /files/images/{id}:
     get:
       tags:
         - "File Storage / Images"
       summary: Get image by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -2932,7 +3038,7 @@ paths:
         - "File Storage / Images"
       summary: used for delete from storages image by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -2956,14 +3062,28 @@ paths:
         - "File Storage / Images"
       summary: used to store new image.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
-          image/png:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
+              type: object
+              required:
+                - height
+                - width
+                - image
+              properties:
+                height:
+                  type: number
+                  example: 35 (from 32 to 512)
+                width:
+                  type: number
+                  example: 35 (from 32 to 512)
+                image:
+                  type: string
+                  format: binary
+
       responses:
         "200":
           description: Returns qrcode data.
@@ -3000,7 +3120,7 @@ paths:
         - "File Storage / Images"
       summary: Get images list.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
 
       responses:
         "200":
@@ -3035,23 +3155,20 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /ref/codes/my:
     get:
       tags:
         - "Referral codes"
       summary: Get users referral code.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           description: Returns referral code data.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
+                type: object
                 properties:
                   id:
                     type: string
@@ -3088,7 +3205,7 @@ paths:
         - "Referral codes"
       summary: used to update referral code.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -3154,7 +3271,7 @@ paths:
         - "Referral codes"
       summary: used for delete referral code by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -3178,7 +3295,7 @@ paths:
         - "Referral codes"
       summary: used to store new referral code.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -3241,7 +3358,7 @@ paths:
         - "Referral codes"
       summary: Get referral codes list.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -3269,28 +3386,43 @@ paths:
                 items:
                   type: object
                   properties:
-                    id:
-                      type: string
-                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    title:
-                      type: string
-                      example: "title"
-                    code:
-                      type: string
-                      example: "code"
-                    referral_link:
-                      type: string
-                      example: https://link.to.download.app/RefCode
-                    is_personal:
-                      type: boolean
-                      example: true
-                    user_id:
-                      type: string
-                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
-                    created_at:
-                      type: string
-                      example: "2006-01-02T15:04:05Z07:00"
-                      description: "RFC3339"
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        title:
+                          type: string
+                          example: "title"
+                        code:
+                          type: string
+                          example: "code"
+                        referral_link:
+                          type: string
+                          example: https://link.to.download.app/RefCode
+                        is_personal:
+                          type: boolean
+                          example: true
+                        user_id:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                        created_at:
+                          type: string
+                          example: "2006-01-02T15:04:05Z07:00"
+                          description: "RFC3339"
+                    meta:
+                      type: object
+                      properties:
+                        total_items:
+                          type: number
+                          example: 12
+                        items_per_page:
+                          type: number
+                          example: 12
+                        page:
+                          type: number
+                          example: 12
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -3298,14 +3430,13 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /ref/codes/{id}/referrals:
     get:
       tags:
         - "Referral codes"
       summary: Get list of users who signed up via this referral code.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -3364,7 +3495,7 @@ paths:
         - "Referral codes"
       summary: used to store current user to the referrals table.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: code
           in: path
@@ -3381,5 +3512,3 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
-
-

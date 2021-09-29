@@ -26,6 +26,7 @@ func Transaction(db *sql.DB) TransactionFunc {
 		if err != nil {
 			return err
 		}
+		
 		defer func() {
 			if p := recover(); p != nil {
 				tx.Rollback()
@@ -36,7 +37,7 @@ func Transaction(db *sql.DB) TransactionFunc {
 				err = tx.Commit() // err is nil; if Commit returns error update err
 			}
 		}()
-		err = txFunc(tx)
-		return err
+
+		return txFunc(tx)
 	}
 }

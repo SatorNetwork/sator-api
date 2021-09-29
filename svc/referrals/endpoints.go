@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -28,8 +29,8 @@ type (
 		// Referral codes
 		AddReferralCodeData(ctx context.Context, rc ReferralCode) (ReferralCode, error)
 		DeleteReferralCodeDataByID(ctx context.Context, id uuid.UUID) error
-		GetMyReferralCode(ctx context.Context, uid uuid.UUID, username string) ([]ReferralCode, error)
-		GetReferralCodesDataList(ctx context.Context, limit, offset int32) ([]ReferralCode, error)
+		GetMyReferralCode(ctx context.Context, uid uuid.UUID, username string) (ReferralCode, error)
+		GetReferralCodesDataList(ctx context.Context, limit, offset int32) ([]ReferralCode, int64, error)
 		UpdateReferralCodeData(ctx context.Context, rc ReferralCode) error
 
 		// Referrals
@@ -126,7 +127,7 @@ func MakeAddReferralCodeDataEndpoint(s service, v validator.ValidateFunc) endpoi
 			Title:      req.Title,
 			Code:       req.Code,
 			IsPersonal: req.IsPersonal,
-			UserID:     uid,
+			UserID:     &uid,
 		})
 		if err != nil {
 			return nil, err
@@ -160,7 +161,7 @@ func MakeUpdateReferralCodeDataEndpoint(s service, v validator.ValidateFunc) end
 			Code:         req.Code,
 			ReferralLink: req.ReferralLink,
 			IsPersonal:   req.IsPersonal,
-			UserID:       uid,
+			UserID:       &uid,
 		})
 		if err != nil {
 			return nil, err
@@ -195,12 +196,18 @@ func MakeGetReferralCodesDataListEndpoint(s service, v validator.ValidateFunc) e
 			return nil, err
 		}
 
-		resp, err := s.GetReferralCodesDataList(ctx, req.Limit(), req.Offset())
+		resp, numberOfReferralCodes, err := s.GetReferralCodesDataList(ctx, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
 
-		return resp, nil
+		response := httpencoder.ListResponse{}
+		response.Data = resp
+		response.Meta.TotalItems = numberOfReferralCodes
+		response.Meta.ItemsPerPage = int64(req.ItemsPerPage)
+		response.Meta.Page = int64(req.Page)
+
+		return response, nil
 	}
 }
 

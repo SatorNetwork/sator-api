@@ -42,14 +42,17 @@ type Season struct {
 }
 
 type Show struct {
-	ID            uuid.UUID      `json:"id"`
-	Title         string         `json:"title"`
-	Cover         string         `json:"cover"`
-	HasNewEpisode bool           `json:"has_new_episode"`
-	UpdatedAt     sql.NullTime   `json:"updated_at"`
-	CreatedAt     time.Time      `json:"created_at"`
-	Category      sql.NullString `json:"category"`
-	Description   sql.NullString `json:"description"`
+	ID             uuid.UUID      `json:"id"`
+	Title          string         `json:"title"`
+	Cover          string         `json:"cover"`
+	HasNewEpisode  bool           `json:"has_new_episode"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	Category       sql.NullString `json:"category"`
+	Description    sql.NullString `json:"description"`
+	RealmsTitle    sql.NullString `json:"realms_title"`
+	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
+	Watch          sql.NullString `json:"watch"`
 }
 
 type ShowClap struct {

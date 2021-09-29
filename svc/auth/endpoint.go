@@ -80,9 +80,9 @@ type (
 
 	// SignUpRequest struct
 	SignUpRequest struct {
-		Email    string `json:"email" validate:"required,email"`
-		Password string `json:"password" validate:"required,gte=8"`
-		Username string `json:"username" validate:"required,alphanum,gte=5"`
+		Email    string `json:"email" validate:"required,email,lte=150"`
+		Password string `json:"password" validate:"required,gte=8,lte=50"`
+		Username string `json:"username" validate:"required,alphanum,gte=5,lte=50"`
 	}
 
 	// ForgotPasswordRequest struct
