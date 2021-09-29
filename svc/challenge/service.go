@@ -789,8 +789,6 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 
 // UnlockEpisode ...
 func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID, unlockOption string) error {
-	log.Printf("UnlockEpisode: user_id=%s, episode_id=%s, unlock_option=%s", userID, episodeID, unlockOption)
-
 	activateBefore := time.Now()
 	var amount float64
 

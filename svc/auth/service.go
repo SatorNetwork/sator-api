@@ -338,7 +338,6 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 
 	err = bcrypt.CompareHashAndPassword(uv.VerificationCode, []byte(otp))
 	if err != nil {
-		log.Printf("master otp: %s", s.masterCode)
 		if err := bcrypt.CompareHashAndPassword([]byte(s.masterCode), []byte(otp)); err != nil {
 			return ErrOTPCode
 		}
