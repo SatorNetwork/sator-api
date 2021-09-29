@@ -98,6 +98,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/reviews", httptransport.NewServer(
+		e.GetReviewsListByUserID,
+		decodeGetReviewsListByUserIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.GetEpisodeByID,
 		decodeGetEpisodeByIDRequest,
@@ -354,6 +361,13 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 }
 
 func decodeGetActivatedUserEpisodesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
+}
+
+func decodeGetReviewsListByUserIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
 		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),

@@ -1377,7 +1377,7 @@ paths:
         - "Episodes"
       summary: Get activated episodes for current user.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -1438,6 +1438,79 @@ paths:
                     verification_challenge_id:
                       type: string
                       example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/reviews:
+    get:
+      tags:
+        - "Shows"
+        - "Reviews"
+      summary: Get all reviews of current user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns reviews list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    user_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    username:
+                      type: string
+                      example: "johnDoe"
+                    rating:
+                      type: integer
+                      example: 7
+                      description: it can be from 1 to 10
+                    title:
+                      type: string
+                      example: "Review title"
+                    review:
+                      type: string
+                      example: "Review text"
+                    likes:
+                      type: integer
+                      example: 123
+                      description: Number of review likes
+                    unlikes:
+                      type: integer
+                      example: 75
+                      description: Number of review unlikes
+                    created_at:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                      description: "RFC3339"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1741,6 +1814,8 @@ paths:
           description: |
             Set needed items per page.
             By default returns 20 items per page.
+          schema:
+            type: integer
         - name: by_user_id
           in: query
           description: |

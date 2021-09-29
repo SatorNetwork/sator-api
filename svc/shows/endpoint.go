@@ -232,7 +232,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		RateEpisode:            MakeRateEpisodeEndpoint(s, validateFunc),
 		ReviewEpisode:          MakeReviewEpisodeEndpoint(s, validateFunc),
 		GetReviewsList:         MakeGetReviewsListEndpoint(s, validateFunc),
-		GetReviewsListByUserID: MakeGetReviewsListEndpoint(s, validateFunc),
+		GetReviewsListByUserID: MakeGetReviewsListByUserIDEndpoint(s, validateFunc),
 
 		AddClapsForShow: MakeAddClapsForShowEndpoint(s, validateFunc),
 	}
@@ -793,6 +793,28 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 		}
 
 		resp, err := s.GetReviewsList(ctx, episodeID, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetReviewsListByUserIDEndpoint ...
+func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		resp, err := s.GetReviewsListByUserID(ctx, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
