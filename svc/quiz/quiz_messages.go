@@ -24,6 +24,7 @@ type (
 	User struct {
 		UserID   string `json:"user_id"`
 		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
 	}
 
 	Countdown struct {

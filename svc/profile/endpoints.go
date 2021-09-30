@@ -19,7 +19,7 @@ type (
 	}
 
 	service interface {
-		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (interface{}, error)
+		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (*Profile, error)
 		UpdateAvatar(ctx context.Context, uid uuid.UUID, avatar string) error
 	}
 

@@ -279,16 +279,15 @@ func main() {
 	}
 
 	// Profile service
-	{
-		profileRepository, err := profileRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("profileRepo error: %v", err)
-		}
-		r.Mount("/profile", profile.MakeHTTPHandler(
-			profile.MakeEndpoints(profile.NewService(profileRepository), jwtMdw),
-			logger,
-		))
+	profileRepository, err := profileRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("profileRepo error: %v", err)
 	}
+	profileSvc := profile.NewService(profileRepository)
+	r.Mount("/profile", profile.MakeHTTPHandler(
+		profile.MakeEndpoints(profileSvc, jwtMdw),
+		logger,
+	))
 
 	{
 		// firebase connection
@@ -432,6 +431,7 @@ func main() {
 				quizSvc,
 				invitationsService.SendReward(rewardService.AddTransaction),
 				challengeSvcClient,
+				profileSvc,
 				quizBotsTimeout,
 			),
 		))
