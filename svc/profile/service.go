@@ -67,7 +67,11 @@ func castToProfile(p repository.Profile, username string) *Profile {
 		UserName:  username,
 		FirstName: p.FirstName.String,
 		LastName:  p.LastName.String,
-		Avatar:    p.Avatar.String,
+		Avatar:    "images/avatar/Avatar_32.svg",
+	}
+
+	if p.Avatar.Valid {
+		profile.Avatar = p.Avatar.String
 	}
 
 	return profile
