@@ -414,7 +414,7 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		if len(req.AnswerOptions) == 4 || len(req.AnswerOptions) == 3 || len(req.AnswerOptions) == 2 {
+		if n := len(req.AnswerOptions); n >= 2 && n <= 4 {
 			resp, err := s.AddQuestion(ctx, Question{
 				ChallengeID: challengeID,
 				Question:    req.Question,
@@ -536,12 +536,7 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		q, err := s.GetQuestionByID(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(req.AnswerOptions) == len(q.AnswerOptions) {
+		if n := len(req.AnswerOptions); n >= 2 && n <= 4 {
 			if err = s.UpdateQuestion(ctx, Question{
 				ID:          id,
 				ChallengeID: challengeID,
@@ -567,7 +562,7 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return true, nil
 		}
 
-		return nil, fmt.Errorf("number of answer options must be: %v", len(q.AnswerOptions))
+		return nil, fmt.Errorf("number of answer options must be from 2 to 4")
 	}
 }
 
