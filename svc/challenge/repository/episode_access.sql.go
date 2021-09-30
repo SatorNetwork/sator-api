@@ -99,14 +99,47 @@ func (q *Queries) GetEpisodeAccessData(ctx context.Context, arg GetEpisodeAccess
 	return i, err
 }
 
+const listIDsAvailableUserEpisodes = `-- name: ListIDsAvailableUserEpisodes :many
+SELECT episode_id
+FROM episode_access
+WHERE user_id = $1 AND activated_before > NOW()
+ORDER BY activated_before DESC, activated_at DESC
+    LIMIT $2 OFFSET $3
+`
+
+type ListIDsAvailableUserEpisodesParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListIDsAvailableUserEpisodes(ctx context.Context, arg ListIDsAvailableUserEpisodesParams) ([]uuid.UUID, error) {
+	rows, err := q.query(ctx, q.listIDsAvailableUserEpisodesStmt, listIDsAvailableUserEpisodes, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var episode_id uuid.UUID
+		if err := rows.Scan(&episode_id); err != nil {
+			return nil, err
+		}
+		items = append(items, episode_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const numberUsersWhoHaveAccessToEpisode = `-- name: NumberUsersWhoHaveAccessToEpisode :one
-SELECT COUNT(
-    EXISTS (
-               SELECT episode_id, user_id, activated_at, activated_before
-               FROM episode_access
-               WHERE episode_id = $1 AND activated_before > NOW()
-           )
-    )::INT
+SELECT COUNT(*)::INT
+FROM episode_access
+WHERE episode_id = $1 AND activated_before > NOW()
 `
 
 func (q *Queries) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error) {

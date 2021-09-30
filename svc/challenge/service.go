@@ -70,6 +70,7 @@ type (
 		UpdateEpisodeAccessData(ctx context.Context, arg repository.UpdateEpisodeAccessDataParams) error
 		DoesUserHaveAccessToEpisode(ctx context.Context, arg repository.DoesUserHaveAccessToEpisodeParams) (bool, error)
 		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
+		ListIDsAvailableUserEpisodes(ctx context.Context, arg repository.ListIDsAvailableUserEpisodesParams) ([]uuid.UUID, error)
 
 		// Verification Question Attempts
 		AddAttempt(ctx context.Context, arg repository.AddAttemptParams) (repository.Attempt, error)
@@ -144,9 +145,10 @@ type (
 	}
 
 	EpisodeAccess struct {
-		Result          bool   `json:"result"`
-		ActivatedAt     string `json:"activated_at,omitempty"`
-		ActivatedBefore string `json:"activated_before,omitempty"`
+		EpisodeID       *uuid.UUID `json:"episode_id"`
+		Result          bool       `json:"result"`
+		ActivatedAt     string     `json:"activated_at,omitempty"`
+		ActivatedBefore string     `json:"activated_before,omitempty"`
 	}
 )
 
@@ -789,8 +791,6 @@ func (s *Service) UpdateAnswer(ctx context.Context, ao AnswerOption) error {
 
 // UnlockEpisode ...
 func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID, unlockOption string) error {
-	log.Printf("UnlockEpisode: user_id=%s, episode_id=%s, unlock_option=%s", userID, episodeID, unlockOption)
-
 	activateBefore := time.Now()
 	var amount float64
 
@@ -915,4 +915,18 @@ func (s *Service) NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episode
 	}
 
 	return number, nil
+}
+
+// ListIDsAvailableUserEpisodes ...
+func (s *Service) ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]uuid.UUID, error) {
+	list, err := s.cr.ListIDsAvailableUserEpisodes(ctx, repository.ListIDsAvailableUserEpisodesParams{
+		UserID: userID,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get list user available episodes: %w", err)
+	}
+
+	return list, nil
 }

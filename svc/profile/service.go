@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 
@@ -19,6 +20,7 @@ type (
 	profileRepository interface {
 		CreateProfile(ctx context.Context, arg repository.CreateProfileParams) (repository.Profile, error)
 		GetProfileByUserID(ctx context.Context, userID uuid.UUID) (repository.Profile, error)
+		UpdateAvatar(ctx context.Context, arg repository.UpdateAvatarParams) error
 	}
 
 	// Profile struct
@@ -27,6 +29,7 @@ type (
 		UserName  string `json:"username"`
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
+		Avatar    string `json:"avatar"`
 	}
 )
 
@@ -64,7 +67,39 @@ func castToProfile(p repository.Profile, username string) *Profile {
 		UserName:  username,
 		FirstName: p.FirstName.String,
 		LastName:  p.LastName.String,
+		Avatar:    "images/avatar/Avatar_32.svg",
+	}
+
+	if p.Avatar.Valid {
+		profile.Avatar = p.Avatar.String
 	}
 
 	return profile
+}
+
+// UpdateAvatar updates users avatar.
+func (s *Service) UpdateAvatar(ctx context.Context, uid uuid.UUID, avatar string) error {
+	if _, err := s.pr.GetProfileByUserID(ctx, uid); err != nil {
+		if db.IsNotFoundError(err) {
+			if _, err := s.pr.CreateProfile(ctx, repository.CreateProfileParams{
+				UserID: uid,
+			}); err != nil {
+				return fmt.Errorf("update avatar: could not create user profile: %w", err)
+			}
+		}
+
+		return fmt.Errorf("update avatar: could not get user profile: %w", err)
+	}
+
+	if err := s.pr.UpdateAvatar(ctx, repository.UpdateAvatarParams{
+		Avatar: sql.NullString{
+			String: avatar,
+			Valid:  len(avatar) > 0,
+		},
+		UserID: uid,
+	}); err != nil {
+		return fmt.Errorf("could not store avatar: %w", err)
+	}
+
+	return nil
 }

@@ -68,8 +68,17 @@ WHERE id = @id;
 DELETE FROM episodes
 WHERE id = @id;
 
-
 -- name: GetEpisodeIDByVerificationChallengeID :one
 SELECT id
 FROM episodes
 WHERE verification_challenge_id = $1;
+
+-- name: GetListEpisodesByIDs :many
+SELECT
+    episodes.*,
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = ANY(@episode_ids::uuid[])
+ORDER BY episodes.episode_number DESC
+LIMIT @limit_val OFFSET @offset_val;
