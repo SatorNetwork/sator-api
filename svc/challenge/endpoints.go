@@ -414,16 +414,16 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		resp, err := s.AddQuestion(ctx, Question{
-			ChallengeID: challengeID,
-			Question:    req.Question,
-			Order:       req.Order,
-		})
-		if err != nil {
-			return nil, err
-		}
+		if n := len(req.AnswerOptions); n >= 2 && n <= 4 {
+			resp, err := s.AddQuestion(ctx, Question{
+				ChallengeID: challengeID,
+				Question:    req.Question,
+				Order:       req.Order,
+			})
+			if err != nil {
+				return nil, err
+			}
 
-		if len(req.AnswerOptions) == 4 {
 			answerOptions := make([]AnswerOption, 0, len(req.AnswerOptions))
 
 			for _, answ := range req.AnswerOptions {
@@ -440,9 +440,11 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			}
 
 			resp.AnswerOptions = answerOptions
+
+			return resp, nil
 		}
 
-		return resp, nil
+		return nil, fmt.Errorf("number of answer options must be from 2 to 4")
 	}
 }
 
@@ -534,16 +536,16 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		if err = s.UpdateQuestion(ctx, Question{
-			ID:          id,
-			ChallengeID: challengeID,
-			Question:    req.Question,
-			Order:       req.Order,
-		}); err != nil {
-			return nil, err
-		}
+		if n := len(req.AnswerOptions); n >= 2 && n <= 4 {
+			if err = s.UpdateQuestion(ctx, Question{
+				ID:          id,
+				ChallengeID: challengeID,
+				Question:    req.Question,
+				Order:       req.Order,
+			}); err != nil {
+				return nil, err
+			}
 
-		if len(req.AnswerOptions) == 4 {
 			if err := s.DeleteAnswersByQuestionID(ctx, id); err != nil {
 				return nil, err
 			}
@@ -557,9 +559,10 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 					return nil, err
 				}
 			}
+			return true, nil
 		}
 
-		return true, nil
+		return nil, fmt.Errorf("number of answer options must be from 2 to 4")
 	}
 }
 
