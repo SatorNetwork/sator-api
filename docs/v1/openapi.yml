@@ -3150,14 +3150,14 @@ paths:
             schema:
               type: object
               required:
-                - height
-                - width
+                - max_height
+                - max_width
                 - image
               properties:
-                height:
+                max_height:
                   type: number
                   example: 35 (from 32 to 512)
-                width:
+                max_width:
                   type: number
                   example: 35 (from 32 to 512)
                 image:

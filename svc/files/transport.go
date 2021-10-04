@@ -5,16 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/thedevsaddam/govalidator"
-
-	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"strconv"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/thedevsaddam/govalidator"
+
+	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 )
 
 // Predefined request query keys
@@ -109,24 +109,24 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 
-	// height := 1024
-	// width := 1024
+	var MaxHeight uint64
+	var MaxWidth uint64
 
 	var err error
 
-	// if hs := r.FormValue("height"); hs != "" {
-	// 	height, err = strconv.Atoi(r.FormValue("height"))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	if hs := r.FormValue("max_height"); hs != "" {
+		MaxHeight, err = strconv.ParseUint(r.FormValue("max_height"), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	// if ws := r.FormValue("width"); ws != "" {
-	// 	width, err = strconv.Atoi(r.FormValue("width"))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	if ws := r.FormValue("max_width"); ws != "" {
+		MaxWidth, err = strconv.ParseUint(r.FormValue("max_width"), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	file, header, err := r.FormFile("image")
 	if err != nil {
@@ -134,11 +134,11 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 	}
 	defer file.Close()
 
-	return AddImageRequest{
+	return AddImageResizeRequest{
 		File:       file,
 		FileHeader: header,
-		// Height: height,
-		// Width: width,
+		MaxHeight:  uint(MaxHeight),
+		MaxWidth:   uint(MaxWidth),
 	}, nil
 }
 
