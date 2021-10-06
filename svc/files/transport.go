@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
@@ -109,22 +108,22 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 
-	var MaxHeight uint64
-	var MaxWidth uint64
+	var MaxHeight uint
+	var MaxWidth uint
 
 	var err error
 
 	if hs := r.FormValue("max_height"); hs != "" {
-		MaxHeight, err = strconv.ParseUint(r.FormValue("max_height"), 10, 64)
-		if err != nil {
-			return nil, err
+		MaxHeight = utils.StrToUint(r.FormValue("max_height"))
+		if MaxHeight < 32 || MaxHeight > 512 {
+			return nil, errors.New("max height must be from 32 to 512")
 		}
 	}
 
 	if ws := r.FormValue("max_width"); ws != "" {
-		MaxWidth, err = strconv.ParseUint(r.FormValue("max_width"), 10, 64)
-		if err != nil {
-			return nil, err
+		MaxWidth = utils.StrToUint(r.FormValue("max_width"))
+		if MaxWidth < 32 || MaxWidth > 512 {
+			return nil, errors.New("max width must be from 32 to 512")
 		}
 	}
 
@@ -137,8 +136,8 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 	return AddImageResizeRequest{
 		File:       file,
 		FileHeader: header,
-		MaxHeight:  uint(MaxHeight),
-		MaxWidth:   uint(MaxWidth),
+		MaxHeight:  MaxHeight,
+		MaxWidth:   MaxWidth,
 	}, nil
 }
 
