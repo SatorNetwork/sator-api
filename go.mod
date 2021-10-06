@@ -3,6 +3,7 @@ module github.com/SatorNetwork/sator-api
 go 1.16
 
 require (
+	github.com/allisson/go-pglock/v2 v2.0.1
 	github.com/anthonynsimon/bild v0.13.0
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
