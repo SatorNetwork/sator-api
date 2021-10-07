@@ -217,7 +217,7 @@ func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint
 
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
-			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
 		resp, err := s.GetVerificationQuestionByEpisodeID(ctx, id, uid)
@@ -709,7 +709,7 @@ func MakeGetAttemptsLeftForVerificationQuestionEndpoint(s service) endpoint.Endp
 
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
-			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
 		resp, err := s.GetAttemptsLeftForVerificationQuestion(ctx, id, uid)
