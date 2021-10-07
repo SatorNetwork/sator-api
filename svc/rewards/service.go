@@ -25,6 +25,7 @@ type (
 	Service struct {
 		repo            rewardsRepository
 		ws              walletService
+		getLocker       db.GetLocker
 		assetName       string
 		explorerURLTmpl string
 	}
@@ -58,10 +59,11 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Service {
+func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker, opt ...Option) *Service {
 	s := &Service{
 		repo:            repo,
 		ws:              ws,
+		getLocker:       getLocker,
 		assetName:       "SAO",
 		explorerURLTmpl: "https://explorer.solana.com/tx/%s?cluster=devnet",
 	}
@@ -111,6 +113,23 @@ func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID,
 
 // ClaimRewards send rewards to user by it and sets them to withdrawn.
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error) {
+	id := fmt.Sprintf("claim-rewards-%v", uid.String())
+	lock, err := s.getLocker.GetLock(ctx, id)
+	if err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("can't get lock by id: %v, err: %v", id, err)
+	}
+
+	ok, err := lock.Lock(ctx)
+	if err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("can't acquire a lock with id: %v, err: %v", id, err)
+	}
+	if !ok {
+		return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
+	}
+
+	// TODO(evg): log error
+	defer lock.Unlock(ctx)
+
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
 		if db.IsNotFoundError(err) {
