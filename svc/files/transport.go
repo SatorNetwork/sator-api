@@ -108,37 +108,26 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 
-	var MaxHeight uint
-	var MaxWidth uint
-
-	var err error
-
-	if hs := r.FormValue("height"); hs != "" {
-		MaxHeight = utils.StrToUint(r.FormValue("height"))
-		if MaxHeight < 32 || MaxHeight > 512 {
-			return nil, errors.New("max height must be from 32 to 512")
-		}
-	}
-
-	if ws := r.FormValue("width"); ws != "" {
-		MaxWidth = utils.StrToUint(r.FormValue("width"))
-		if MaxWidth < 32 || MaxWidth > 512 {
-			return nil, errors.New("max width must be from 32 to 512")
-		}
-	}
-
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
 	}
 	defer file.Close()
 
-	return AddImageResizeRequest{
+	req := AddImageResizeRequest{
 		File:       file,
 		FileHeader: header,
-		MaxHeight:  MaxHeight,
-		MaxWidth:   MaxWidth,
-	}, nil
+	}
+
+	if height := r.FormValue("height"); height != "" {
+		req.MaxHeight = utils.StrToUint(height)
+	}
+
+	if width := r.FormValue("width"); width != "" {
+		req.MaxWidth = utils.StrToUint(width)
+	}
+
+	return req, nil
 }
 
 func decodeDeleteImageByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
