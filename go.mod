@@ -3,7 +3,6 @@ module github.com/SatorNetwork/sator-api
 go 1.16
 
 require (
-	github.com/anthonynsimon/bild v0.13.0
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/dmitrymomot/distlock v0.1.1
@@ -25,6 +24,7 @@ require (
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
 	github.com/mr-tron/base58 v1.2.0
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/portto/solana-go-sdk v0.1.0
