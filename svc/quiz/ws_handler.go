@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 	"github.com/oklog/run"
@@ -25,10 +26,14 @@ type (
 	challengesClient interface {
 		StoreChallengeAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
 	}
+
+	profileClient interface {
+		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (*profile.Profile, error)
+	}
 )
 
 // QuizWsHandler handles websocket connections
-func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challengesClient, botsTimeout time.Duration) http.HandlerFunc {
+func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challengesClient, pc profileClient, botsTimeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := chi.URLParam(r, "token")
 		tokenPayload, err := s.ParseQuizToken(r.Context(), token)
@@ -46,6 +51,13 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 			cancel()
 		}()
 
+		userProfile, err := pc.GetProfileByUserID(ctx, uid, username)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		avatar := userProfile.Avatar
+
 		quizHub, err := s.SetupNewQuizHub(ctx, quizID)
 		if err != nil {
 			log.Println(err)
@@ -60,7 +72,7 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 			return
 		}
 
-		if err := quizHub.AddPlayer(uid, username); err != nil {
+		if err := quizHub.AddPlayer(uid, username, avatar); err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -73,8 +85,6 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 
 		defer func() {
 			callback(uid, quizID)
-			// log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////")                   // TODO: Remove it!
-			// log.Printf("Defer: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
 		}()
 
 		defer func() {
@@ -94,10 +104,6 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 				Username: faker.Internet().UserName(),
 			})
 		}
-
-		// 		callback(uid, quizID)
-		// 		log.Println("Callback called ////////////////////// ////////////////////// ////////////////////// //////////////////////")                 // TODO: Remove it!
-		// 		log.Printf("uid: %v, QuizID: %v ////////////////////// ////////////////////// ////////////////////// //////////////////////", uid, quizID) // TODO: Remove it!
 
 		var g run.Group
 		{
@@ -178,7 +184,7 @@ func QuizWsHandler(s quizService, callback func(uid, qid uuid.UUID), c challenge
 
 			for _, u := range fakePlayers {
 				time.Sleep(time.Second)
-				if err := quizHub.AddPlayer(u.ID, u.Username); err != nil {
+				if err := quizHub.AddPlayer(u.ID, u.Username, ""); err != nil {
 					log.Printf("add dummy player %s: %v", u.Username, err)
 					continue
 				}

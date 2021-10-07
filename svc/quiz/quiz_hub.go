@@ -52,6 +52,7 @@ type (
 	PlayerHub struct {
 		UserID   uuid.UUID
 		Username string
+		Avatar   string
 
 		answers map[string]QuestionResult
 
@@ -62,10 +63,11 @@ type (
 )
 
 // NewPlayerHub setup new player hub
-func NewPlayerHub(userID uuid.UUID, username string) *PlayerHub {
+func NewPlayerHub(userID uuid.UUID, username, avatar string) *PlayerHub {
 	return &PlayerHub{
 		UserID:      userID,
 		Username:    username,
+		Avatar:      avatar,
 		sendMsg:     broadcast.NewBroadcaster(10),
 		receiveAnsw: broadcast.NewBroadcaster(10),
 		quit:        broadcast.NewBroadcaster(10),
@@ -113,7 +115,7 @@ func NewQuizHub(quiz repository.Quiz, qs map[string]challenge.Question) *Hub {
 }
 
 // AddPlayer adds player to a quiz hub.
-func (h *Hub) AddPlayer(userID uuid.UUID, username string) error {
+func (h *Hub) AddPlayer(userID uuid.UUID, username, avatar string) error {
 	if _, ok := h.players[userID.String()]; !ok {
 		log.Printf("AddPlayer %s: %v", username, userID)
 		if h.Stage != OpenForRegistration {
@@ -126,7 +128,7 @@ func (h *Hub) AddPlayer(userID uuid.UUID, username string) error {
 			return fmt.Errorf("quiz is full, try another one")
 		}
 
-		h.players[userID.String()] = NewPlayerHub(userID, username)
+		h.players[userID.String()] = NewPlayerHub(userID, username, avatar)
 
 		if len(h.players) >= h.PlayersNumberToStart {
 			h.Stage = ClosedForRegistration
@@ -144,6 +146,7 @@ func (h *Hub) Connect(userID uuid.UUID) error {
 		if err := h.SendMessage(UserConnectedMessage, User{
 			UserID:   userID.String(),
 			Username: p.Username,
+			Avatar:   p.Avatar,
 		}); err != nil {
 			return fmt.Errorf("add player: could not encode message: %w", err)
 		}

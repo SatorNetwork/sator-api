@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/thedevsaddam/govalidator"
-
-	"github.com/SatorNetwork/sator-api/internal/httpencoder"
-
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/thedevsaddam/govalidator"
+
+	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 )
 
 // Predefined request query keys
@@ -109,37 +108,26 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 
-	// height := 1024
-	// width := 1024
-
-	var err error
-
-	// if hs := r.FormValue("height"); hs != "" {
-	// 	height, err = strconv.Atoi(r.FormValue("height"))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
-
-	// if ws := r.FormValue("width"); ws != "" {
-	// 	width, err = strconv.Atoi(r.FormValue("width"))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
-
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
 	}
 	defer file.Close()
 
-	return AddImageRequest{
+	req := AddImageResizeRequest{
 		File:       file,
 		FileHeader: header,
-		// Height: height,
-		// Width: width,
-	}, nil
+	}
+
+	if height := r.FormValue("height"); height != "" {
+		req.MaxHeight = utils.StrToUint(height)
+	}
+
+	if width := r.FormValue("width"); width != "" {
+		req.MaxWidth = utils.StrToUint(width)
+	}
+
+	return req, nil
 }
 
 func decodeDeleteImageByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {

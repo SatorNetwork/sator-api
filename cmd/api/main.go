@@ -13,12 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/resizer"
-
+	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
+	"github.com/SatorNetwork/sator-api/internal/resizer"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
@@ -234,6 +234,7 @@ func main() {
 	rewardService := rewards.NewService(
 		rewardsRepository,
 		walletSvcClient,
+		db_internal.NewAdvisoryLocks(db),
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
@@ -279,16 +280,15 @@ func main() {
 	}
 
 	// Profile service
-	{
-		profileRepository, err := profileRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("profileRepo error: %v", err)
-		}
-		r.Mount("/profile", profile.MakeHTTPHandler(
-			profile.MakeEndpoints(profile.NewService(profileRepository), jwtMdw),
-			logger,
-		))
+	profileRepository, err := profileRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("profileRepo error: %v", err)
 	}
+	profileSvc := profile.NewService(profileRepository)
+	r.Mount("/profile", profile.MakeHTTPHandler(
+		profile.MakeEndpoints(profileSvc, jwtMdw),
+		logger,
+	))
 
 	{
 		// firebase connection
@@ -432,6 +432,7 @@ func main() {
 				quizSvc,
 				invitationsService.SendReward(rewardService.AddTransaction),
 				challengeSvcClient,
+				profileSvc,
 				quizBotsTimeout,
 			),
 		))

@@ -17,6 +17,10 @@ To use make commands you must have installed the following things:
 ```shell
 make up && sleep 10 && make migrate-local run-local
 ```
+or 
+```shell
+make -f Makefile.local up && sleep 10 && make -f Makefile.local migrate-local run-local
+```
 then the API will be available on `localhost:8080`
 
 ## Development
