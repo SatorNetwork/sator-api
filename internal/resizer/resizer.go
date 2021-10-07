@@ -58,6 +58,7 @@ func Resize(f io.ReadCloser, w, h uint, imageType string) (io.ReadSeeker, error)
 	return nil, errors.New("image format must be *.png or *.jpg")
 }
 
+// TODO: handle case when origin sizes less then new ones
 func newWidthHeight(w, h uint) (uint, uint) {
 	if w >= h {
 		return w, 0

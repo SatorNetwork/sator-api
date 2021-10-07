@@ -108,25 +108,6 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 
-	// height := 1024
-	// width := 1024
-
-	var err error
-
-	// if hs := r.FormValue("height"); hs != "" {
-	// 	height, err = strconv.Atoi(r.FormValue("height"))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
-
-	// if ws := r.FormValue("width"); ws != "" {
-	// 	width, err = strconv.Atoi(r.FormValue("width"))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
-
 	file, header, err := r.FormFile("image")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
