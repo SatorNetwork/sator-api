@@ -3,11 +3,11 @@ package resizer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"io"
-	"mime"
 
 	"github.com/nfnt/resize"
 )
@@ -15,26 +15,25 @@ import (
 type ImageType string
 
 const (
-	ImageTypePNG  ImageType = "image/png"
-	ImageTypeJPEG ImageType = "image/jpeg"
+	ImageTypePNG ImageType = "image/png"
+	ImageTypeJPG ImageType = "image/jpeg"
 )
 
 // Resize file
-func Resize(f io.ReadCloser, w, h uint) (io.ReadSeeker, error) {
-	imageType := guessImageMimeTypes(f)
-
+func Resize(f io.ReadCloser, w, h uint, imageType string) (io.ReadSeeker, error) {
 	switch ImageType(imageType) {
-	case ImageTypeJPEG:
+	case ImageTypeJPG:
 		img, err := jpeg.Decode(f)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode jpeg: %w", err)
 		}
 
-		resized := resize.Thumbnail(w, h, img, resize.Bilinear)
+		w, h = newWidthHeight(w, h)
+		resized := resize.Resize(w, h, img, resize.Lanczos3)
 
 		buff := bytes.NewBuffer([]byte{})
-		if err := png.Encode(buff, resized); err != nil {
-			return nil, err
+		if err := jpeg.Encode(buff, resized, &jpeg.Options{Quality: 100}); err != nil {
+			return nil, fmt.Errorf("encode jpeg: %w", err)
 		}
 
 		return bytes.NewReader(buff.Bytes()), nil
@@ -42,32 +41,26 @@ func Resize(f io.ReadCloser, w, h uint) (io.ReadSeeker, error) {
 	case ImageTypePNG:
 		img, _, err := image.Decode(f)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode png: %w", err)
 		}
-		resized := resize.Thumbnail(w, h, img, resize.Bilinear)
+
+		w, h = newWidthHeight(w, h)
+		resized := resize.Resize(w, h, img, resize.Lanczos3)
 
 		buff := bytes.NewBuffer([]byte{})
 		if err := png.Encode(buff, resized); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encode png: %w", err)
 		}
 
 		return bytes.NewReader(buff.Bytes()), nil
 	}
 
-	return nil, errors.New("image format must be PNG or JPG/JPEG")
+	return nil, errors.New("image format must be *.png or *.jpg")
 }
 
-// Guess image format from gif/jpeg/png/webp
-func guessImageFormat(r io.Reader) (format string, err error) {
-	_, format, err = image.DecodeConfig(r)
-	return
-}
-
-// Guess image mime types from gif/jpeg/png/webp
-func guessImageMimeTypes(r io.Reader) string {
-	format, _ := guessImageFormat(r)
-	if format == "" {
-		return ""
+func newWidthHeight(w, h uint) (uint, uint) {
+	if w >= h {
+		return w, 0
 	}
-	return mime.TypeByExtension("." + format)
+	return 0, h
 }

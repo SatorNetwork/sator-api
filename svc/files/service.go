@@ -16,7 +16,7 @@ import (
 )
 
 type (
-	resizerFunc func(f io.ReadCloser, w, h uint) (io.ReadSeeker, error)
+	resizerFunc func(f io.ReadCloser, w, h uint, imageType string) (io.ReadSeeker, error)
 
 	// Service struct
 	Service struct {
@@ -60,7 +60,7 @@ func (s *Service) AddImageResize(ctx context.Context, it Image, file multipart.F
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	ct := fileHeader.Header.Get("Content-Type")
 
-	resizedFile, err := s.resize(file, width, height)
+	resizedFile, err := s.resize(file, width, height, ct)
 	if err != nil {
 		return Image{}, errors.Wrap(err, "resize image")
 	}
