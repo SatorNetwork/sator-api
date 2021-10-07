@@ -930,3 +930,31 @@ func (s *Service) ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.
 
 	return list, nil
 }
+
+// GetAttemptsLeftForVerificationQuestion ...
+func (s *Service) GetAttemptsLeftForVerificationQuestion(ctx context.Context, episodeID, userID uuid.UUID) (int64, error) {
+	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
+	if err != nil {
+		return 0, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
+	}
+	challenge, err := s.cr.GetChallengeByID(ctx, ep.VerificationChallengeID.UUID)
+	if err != nil {
+		return 0, fmt.Errorf("could not get challenge by id: %w", err)
+	}
+
+	numberAttempts, err := s.cr.CountAttempts(ctx, repository.CountAttemptsParams{
+		UserID:    userID,
+		EpisodeID: episodeID,
+		CreatedAt: sql.NullTime{
+			Time:  time.Now().Add(-s.activatedRealmPeriod),
+			Valid: true,
+		},
+	})
+	if err == nil {
+		if numberAttempts >= int64(challenge.UserMaxAttempts) {
+			return 0, nil
+		}
+	}
+
+	return int64(challenge.UserMaxAttempts) - numberAttempts, nil
+}
