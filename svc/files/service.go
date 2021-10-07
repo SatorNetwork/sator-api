@@ -11,13 +11,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/resizer"
 	"github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/files/repository"
 )
 
 type (
-	resizerFunc func(f io.ReadCloser, w, h uint, imageType resizer.ImageType) (io.ReadSeeker, error)
+	resizerFunc func(f io.ReadCloser, w, h uint) (io.ReadSeeker, error)
 
 	// Service struct
 	Service struct {
@@ -61,18 +60,7 @@ func (s *Service) AddImageResize(ctx context.Context, it Image, file multipart.F
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	ct := fileHeader.Header.Get("Content-Type")
 
-	var imageType resizer.ImageType
-	if path.Ext(fileHeader.Filename) == ".jpg" {
-		imageType = resizer.ImageTypeJPG
-	}
-	if path.Ext(fileHeader.Filename) == ".jpeg" {
-		imageType = resizer.ImageTypeJPG
-	}
-	if path.Ext(fileHeader.Filename) == ".png" {
-		imageType = resizer.ImageTypePNG
-	}
-
-	resizedFile, err := s.resize(file, width, height, imageType)
+	resizedFile, err := s.resize(file, width, height)
 	if err != nil {
 		return Image{}, errors.Wrap(err, "resize image")
 	}
