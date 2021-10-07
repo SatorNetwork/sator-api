@@ -113,15 +113,15 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 
 	var err error
 
-	if hs := r.FormValue("max_height"); hs != "" {
-		MaxHeight = utils.StrToUint(r.FormValue("max_height"))
+	if hs := r.FormValue("height"); hs != "" {
+		MaxHeight = utils.StrToUint(r.FormValue("height"))
 		if MaxHeight < 32 || MaxHeight > 512 {
 			return nil, errors.New("max height must be from 32 to 512")
 		}
 	}
 
-	if ws := r.FormValue("max_width"); ws != "" {
-		MaxWidth = utils.StrToUint(r.FormValue("max_width"))
+	if ws := r.FormValue("width"); ws != "" {
+		MaxWidth = utils.StrToUint(r.FormValue("width"))
 		if MaxWidth < 32 || MaxWidth > 512 {
 			return nil, errors.New("max width must be from 32 to 512")
 		}
