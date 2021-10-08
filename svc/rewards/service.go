@@ -127,9 +127,6 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
 	}
 
-	// TODO(evg): log error
-	defer lock.Unlock(ctx)
-
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -154,6 +151,13 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		TransactionType: TransactionTypeWithdraw,
 	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
+	}
+
+	// We should release a lock in any case, even if context was cancelled
+	// TODO(evg): get timeout from config
+	ctxt, _ := context.WithTimeout(context.Background(), 15 * time.Second)
+	if err := lock.Unlock(ctxt); err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("can't release a lock with id: %v, err: %v", id, err)
 	}
 
 	return ClaimRewardsResult{
