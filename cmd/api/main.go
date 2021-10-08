@@ -13,12 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/resizer"
-
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
+	"github.com/SatorNetwork/sator-api/internal/resizer"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
@@ -32,6 +31,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
+	"github.com/SatorNetwork/sator-api/svc/nft"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -442,6 +442,15 @@ func main() {
 		}, func(err error) {
 			log.Fatalf("quiz service: %v", err)
 		})
+	}
+
+	{
+		// NFT service
+		nftService := nft.NewService()
+		r.Mount("/nft", nft.MakeHTTPHandler(
+			nft.MakeEndpoints(nftService, jwtMdw),
+			logger,
+		))
 	}
 
 	{
