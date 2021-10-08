@@ -113,19 +113,19 @@ func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID,
 
 // ClaimRewards send rewards to user by it and sets them to withdrawn.
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error) {
-	id := fmt.Sprintf("claim-rewards-%v", uid.String())
-	lock, err := s.getLocker.GetLock(ctx, id)
-	if err != nil {
-		return ClaimRewardsResult{}, fmt.Errorf("can't get lock by id: %v, err: %v", id, err)
-	}
+	// id := fmt.Sprintf("claim-rewards-%v", uid.String())
+	// lock, err := s.getLocker.GetLock(ctx, id)
+	// if err != nil {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("can't get lock by id: %v, err: %v", id, err)
+	// }
 
-	ok, err := lock.Lock(ctx)
-	if err != nil {
-		return ClaimRewardsResult{}, fmt.Errorf("can't acquire a lock with id: %v, err: %v", id, err)
-	}
-	if !ok {
-		return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
-	}
+	// ok, err := lock.Lock(ctx)
+	// if err != nil {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("can't acquire a lock with id: %v, err: %v", id, err)
+	// }
+	// if !ok {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
+	// }
 
 	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
@@ -155,10 +155,10 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 
 	// We should release a lock in any case, even if context was cancelled
 	// TODO(evg): get timeout from config
-	ctxt, _ := context.WithTimeout(context.Background(), 15 * time.Second)
-	if err := lock.Unlock(ctxt); err != nil {
-		return ClaimRewardsResult{}, fmt.Errorf("can't release a lock with id: %v, err: %v", id, err)
-	}
+	// ctxt, _ := context.WithTimeout(context.Background(), 15 * time.Second)
+	// if err := lock.Unlock(ctxt); err != nil {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("can't release a lock with id: %v, err: %v", id, err)
+	// }
 
 	return ClaimRewardsResult{
 		Amount:          amount,
