@@ -33,6 +33,8 @@ type (
 	}
 
 	TransportNFT struct {
+		ImageLink string `json:"image_link"`
+
 		Name        string            `json:"name"`
 		Description string            `json:"description"`
 		Tags        map[string]string `json:"tags"`
@@ -70,6 +72,7 @@ type (
 
 func (n *TransportNFT) ToServiceNFT() *NFT {
 	nft := &NFT{
+		ImageLink:   n.ImageLink,
 		Name:        n.Name,
 		Description: n.Description,
 		Tags:        n.Tags,
