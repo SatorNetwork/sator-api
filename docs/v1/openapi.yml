@@ -14,6 +14,9 @@ components:
     NFT:
       type: object
       properties:
+        image_link:
+          type: string
+          example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
         name:
           type: string
         description:
