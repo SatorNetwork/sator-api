@@ -62,7 +62,7 @@ var (
 		},
 	}
 
-	categories = []*Category{
+	defaultCategories = []*Category{
 		{
 			ID:    uuid.MustParse("14812103-23fc-4307-8bf9-281fa300a8f6"),
 			Title: "Popular",
@@ -130,5 +130,5 @@ func (s *Service) BuyNFT(ctx context.Context, userUid uuid.UUID, nftId string) e
 }
 
 func (s *Service) GetCategories(ctx context.Context) ([]*Category, error) {
-	return categories, nil
+	return defaultCategories, nil
 }

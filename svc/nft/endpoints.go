@@ -77,6 +77,41 @@ type (
 	Empty struct{}
 )
 
+func FromServiceNFTs(nfts []*NFT) []*TransportNFT {
+	transportNFTs := make([]*TransportNFT, 0, len(nfts))
+	for _, n := range nfts {
+		transportNFTs = append(transportNFTs, FromServiceNFT(n))
+	}
+
+	return transportNFTs
+}
+
+func FromServiceNFT(n *NFT) *TransportNFT {
+	nft := &TransportNFT{
+		ImageLink:   n.ImageLink,
+		Name:        n.Name,
+		Description: n.Description,
+		Tags:        n.Tags,
+		Supply:      n.Supply,
+		Royalties:   n.Royalties,
+		Blockchain:  n.Blockchain,
+		SellType:    n.SellType,
+	}
+	if n.AuctionParams != nil {
+		nft.AuctionParams = FromServiceNFTAuctionParams(n.AuctionParams)
+	}
+
+	return nft
+}
+
+func FromServiceNFTAuctionParams(a *NFTAuctionParams) *TransportNFTAuctionParams {
+	return &TransportNFTAuctionParams{
+		StartingBid:    a.StartingBid,
+		StartTimestamp: a.StartTimestamp,
+		EndTimestamp:   a.EndTimestamp,
+	}
+}
+
 func (n *TransportNFT) ToServiceNFT() *NFT {
 	nft := &NFT{
 		ImageLink:   n.ImageLink,
@@ -178,7 +213,7 @@ func MakeGetNFTsEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("can't get NFTs: %v", err)
 		}
 
-		return nfts, nil
+		return FromServiceNFTs(nfts), nil
 	}
 }
 
@@ -194,7 +229,7 @@ func MakeGetNFTsByCategoryEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("can't get NFTs by category: %v, %v", req.Category, err)
 		}
 
-		return nfts, nil
+		return FromServiceNFTs(nfts), nil
 	}
 }
 
@@ -210,7 +245,7 @@ func MakeGetNFTsByShowIDEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("can't get NFTs by show & episode ids: %v - %v, err: %v", req.ShowID, req.EpisodeID, err)
 		}
 
-		return nfts, nil
+		return FromServiceNFTs(nfts), nil
 	}
 }
 
@@ -226,7 +261,7 @@ func MakeGetNFTsByUserIDEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("can't get NFTs by user's ID: %v", err)
 		}
 
-		return nfts, nil
+		return FromServiceNFTs(nfts), nil
 	}
 }
 
@@ -242,7 +277,7 @@ func MakeGetNFTByIDEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("can't get nft by id: %v, err: %v", nftId, err)
 		}
 
-		return nft, nil
+		return FromServiceNFT(nft), nil
 	}
 }
 
