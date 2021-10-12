@@ -78,6 +78,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/categories", httptransport.NewServer(
+		e.GetCategories,
+		decodeGetCategoriesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -145,6 +152,10 @@ func decodeBuyNFTRequest(_ context.Context, r *http.Request) (interface{}, error
 		return nil, fmt.Errorf("%w: missed nft_id parameter", ErrInvalidParameter)
 	}
 	return nftId, nil
+}
+
+func decodeGetCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return Empty{}, nil
 }
 
 // returns http error code by error type

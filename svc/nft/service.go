@@ -32,6 +32,11 @@ type (
 		EndTimestamp   string // TODO(evg): replace with time.Time?
 	}
 
+	Category struct {
+		ID    uuid.UUID
+		Title string
+	}
+
 	// Option func to set custom service options
 	Option func(*Service)
 )
@@ -54,6 +59,25 @@ var (
 			StartingBid:    1,
 			StartTimestamp: rfc3339Timestamp,
 			EndTimestamp:   rfc3339Timestamp,
+		},
+	}
+
+	categories = []*Category{
+		{
+			ID:    uuid.MustParse("14812103-23fc-4307-8bf9-281fa300a8f6"),
+			Title: "Popular",
+		},
+		{
+			ID:    uuid.MustParse("4d30e882-f001-4805-9fa4-1fe34a1b2e5b"),
+			Title: "New",
+		},
+		{
+			ID:    uuid.MustParse("b4fabfd9-d6e4-45c1-8fba-1635de493a50"),
+			Title: "Shows",
+		},
+		{
+			ID:    uuid.MustParse("fb261e35-9283-47f0-837e-7eaa6c78c4a6"),
+			Title: "Sport",
 		},
 	}
 )
@@ -103,4 +127,8 @@ func (s *Service) GetNFTByID(ctx context.Context, nftId string) (*NFT, error) {
 func (s *Service) BuyNFT(ctx context.Context, userUid uuid.UUID, nftId string) error {
 	// TODO(evg): implement when NFT SDK will be ready
 	return nil
+}
+
+func (s *Service) GetCategories(ctx context.Context) ([]*Category, error) {
+	return categories, nil
 }

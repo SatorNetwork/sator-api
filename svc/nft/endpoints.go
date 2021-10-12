@@ -20,6 +20,7 @@ type (
 		GetNFTsByUserID   endpoint.Endpoint
 		GetNFTByID        endpoint.Endpoint
 		BuyNFT            endpoint.Endpoint
+		GetCategories     endpoint.Endpoint
 	}
 
 	service interface {
@@ -30,6 +31,7 @@ type (
 		GetNFTsByUserID(ctx context.Context, userId string) ([]*NFT, error)
 		GetNFTByID(ctx context.Context, nftId string) (*NFT, error)
 		BuyNFT(ctx context.Context, userUid uuid.UUID, nftId string) error
+		GetCategories(ctx context.Context) ([]*Category, error)
 	}
 
 	TransportNFT struct {
@@ -67,6 +69,11 @@ type (
 		UserID string `json:"user_id"`
 	}
 
+	TransportCategory struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+	}
+
 	Empty struct{}
 )
 
@@ -96,6 +103,22 @@ func (a *TransportNFTAuctionParams) ToServiceNFTAuctionParams() *NFTAuctionParam
 	}
 }
 
+func FromServiceCategory(c *Category) *TransportCategory {
+	return &TransportCategory{
+		ID:    c.ID.String(),
+		Title: c.Title,
+	}
+}
+
+func FromServiceCategories(categories []*Category) []*TransportCategory {
+	transportCategories := make([]*TransportCategory, 0, len(categories))
+	for _, c := range categories {
+		transportCategories = append(transportCategories, FromServiceCategory(c))
+	}
+
+	return transportCategories
+}
+
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	// validateFunc := validator.ValidateStruct()
 
@@ -107,6 +130,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetNFTsByUserID:   MakeGetNFTsByUserIDEndpoint(s),
 		GetNFTByID:        MakeGetNFTByIDEndpoint(s),
 		BuyNFT:            MakeBuyNFTEndpoint(s),
+		GetCategories:     MakeGetCategoriesEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -119,6 +143,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetNFTsByUserID = mdw(e.GetNFTsByUserID)
 			e.GetNFTByID = mdw(e.GetNFTByID)
 			e.BuyNFT = mdw(e.BuyNFT)
+			e.GetCategories = mdw(e.GetCategories)
 		}
 	}
 
@@ -239,5 +264,16 @@ func MakeBuyNFTEndpoint(s service) endpoint.Endpoint {
 		}
 
 		return Empty{}, nil
+	}
+}
+
+func MakeGetCategoriesEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		categories, err := s.GetCategories(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("can't get categories: %v", err)
+		}
+
+		return FromServiceCategories(categories), nil
 	}
 }
