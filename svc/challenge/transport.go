@@ -43,6 +43,13 @@ func MakeHTTPHandlerChallenges(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/{episode_id}/attempts-left", httptransport.NewServer(
+		e.GetAttemptsLeftForVerificationQuestion,
+		decodeGetAttemptsLeftForVerificationQuestionRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{question_id}/check-answer/{answer_id}", httptransport.NewServer(
 		e.CheckVerificationQuestionAnswer,
 		decodeCheckAnswerRequest,
@@ -165,6 +172,15 @@ func MakeHTTPHandlerQuestions(e Endpoints, log logger) http.Handler {
 }
 
 func decodeGetValidationQuestionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "episode_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed episode_id", ErrInvalidParameter)
+	}
+
+	return id, nil
+}
+
+func decodeGetAttemptsLeftForVerificationQuestionRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "episode_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed episode_id", ErrInvalidParameter)

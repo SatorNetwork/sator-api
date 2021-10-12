@@ -2288,6 +2288,36 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /challenges/{episode_id}/attempts-left:
+    get:
+      tags:
+        - "Challenges"
+      summary: Get number of attempts left to pass verification question for current user by episode id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns number of attempts left to pass verification question.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attempts_left:
+                    type: number
+                    example: 3
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /challenges/{question_id}/check-answer/{answer_id}:
     get:
       tags:

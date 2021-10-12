@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
@@ -234,6 +235,7 @@ func main() {
 	rewardService := rewards.NewService(
 		rewardsRepository,
 		walletSvcClient,
+		db_internal.NewAdvisoryLocks(db),
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)

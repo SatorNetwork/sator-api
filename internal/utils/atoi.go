@@ -2,13 +2,14 @@ package utils
 
 import (
 	"log"
+	"math"
 	"strconv"
 )
 
 // DefaultAllocate ...
 const DefaultAllocate = 0
 
-// StrToInt32 casts string to int32
+// StrToInt casts string to int
 func StrToInt(source string) int {
 	res, err := strconv.ParseInt(source, 10, 32)
 	if err != nil {
@@ -36,4 +37,20 @@ func StrToInt64(source string) int64 {
 		return DefaultAllocate
 	}
 	return res
+}
+
+// StrToUint casts string to uint
+func StrToUint(source string) uint {
+	res, err := strconv.ParseUint(source, 10, 32)
+	if err != nil {
+		log.Printf("error in StrToUint: %v", err)
+		return DefaultAllocate
+	}
+
+	if res < 0 && res > math.MaxUint32 {
+		log.Printf("error in StrToUint: %v", err)
+		return DefaultAllocate
+	}
+
+	return uint(res)
 }
