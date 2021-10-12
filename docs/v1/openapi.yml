@@ -49,6 +49,19 @@ components:
             end_timestamp:
               type: string
               example: "2006-01-02T15:04:05Z07:00"
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "91692ed7-fc43-4f75-884b-9e1799180041"
+        title:
+          type: string
+          example: "Popular"
+    Categories:
+      type: array
+      items:
+        $ref: '#/components/schemas/Category'
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http
@@ -133,6 +146,12 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/NFT'
+    Categories:
+      description: Categories.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Categories'
 paths:
   /:
     get:
@@ -2851,6 +2870,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/responses/EmptyBody'
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/categories:
+    get:
+      tags:
+        - "NFT"
+      summary: Get categories.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Categories"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
