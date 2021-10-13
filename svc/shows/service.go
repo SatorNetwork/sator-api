@@ -61,6 +61,7 @@ type (
 		ActiveUsers             int32      `json:"active_users"`
 		UserRewardsAmount       float64    `json:"user_rewards_amount"`
 		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
+		HintText                string     `json:"hint_text"`
 	}
 
 	// Review ...
@@ -360,6 +361,7 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmoun
 		ActiveUsers:        number,
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedRewardAmountByUser,
+		HintText:           source.HintText.String,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -422,6 +424,7 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow, numberUsersWhoH
 		ActiveUsers:        numberUsersWhoHaveAccessToEpisode,
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedAmountByUser,
+		HintText:           source.HintText.String,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -447,6 +450,7 @@ func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
 		Title:         source.Title,
 		Description:   source.Description.String,
 		ReleaseDate:   source.ReleaseDate.Time.String(),
+		HintText:      source.HintText.String,
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -545,21 +549,28 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 	}
 
 	params := repository.AddEpisodeParams{
-		ShowID:        ep.ShowID,
-		SeasonID:      uuid.NullUUID{UUID: ep.SeasonID, Valid: ep.SeasonID != uuid.Nil},
+		ShowID: ep.ShowID,
+		SeasonID: uuid.NullUUID{
+			UUID:  ep.SeasonID,
+			Valid: ep.SeasonID != uuid.Nil,
+		},
 		EpisodeNumber: ep.EpisodeNumber,
 		Cover: sql.NullString{
 			String: ep.Cover,
-			Valid:  true,
+			Valid:  len(ep.Cover) > 0,
 		},
 		Title: ep.Title,
 		Description: sql.NullString{
 			String: ep.Description,
-			Valid:  true,
+			Valid:  len(ep.Description) > 0,
 		},
 		ReleaseDate: sql.NullTime{
 			Time:  rDate,
 			Valid: true,
+		},
+		HintText: sql.NullString{
+			String: ep.HintText,
+			Valid:  len(ep.HintText) > 0,
 		},
 	}
 
@@ -608,6 +619,10 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		ReleaseDate: sql.NullTime{
 			Time:  rDate,
 			Valid: true,
+		},
+		HintText: sql.NullString{
+			String: ep.HintText,
+			Valid:  len(ep.HintText) > 0,
 		},
 	}
 

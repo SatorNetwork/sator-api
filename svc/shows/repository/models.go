@@ -22,6 +22,7 @@ type Episode struct {
 	CreatedAt               time.Time      `json:"created_at"`
 	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
 	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
+	HintText                sql.NullString `json:"hint_text"`
 }
 
 type Rating struct {

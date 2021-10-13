@@ -475,7 +475,7 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		Title:  ch.Title,
 		Description: sql.NullString{
 			String: ch.Title,
-			Valid:  len(ch.Description) > 0,
+			Valid:  len(ch.Title) > 0,
 		},
 		PrizePool:      ch.PrizePoolAmount,
 		PlayersToStart: ch.Players,
