@@ -32,6 +32,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
+	"github.com/SatorNetwork/sator-api/svc/nft"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -443,6 +444,15 @@ func main() {
 		}, func(err error) {
 			log.Fatalf("quiz service: %v", err)
 		})
+	}
+
+	{
+		// NFT service
+		nftService := nft.NewService()
+		r.Mount("/nft", nft.MakeHTTPHandler(
+			nft.MakeEndpoints(nftService, jwtMdw),
+			logger,
+		))
 	}
 
 	{

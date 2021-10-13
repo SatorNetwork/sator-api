@@ -10,6 +10,60 @@ servers:
   - url: https://api.stage.sator.io/
     description: Staging server
 components:
+  schemas:
+    NFT:
+      type: object
+      properties:
+        id:
+          type: string
+        image_link:
+          type: string
+          example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        supply:
+          type: number
+          example: 1
+        royalties:
+          type: number
+          example: 2
+        blockchain:
+          type: string
+          example: Ethereum
+        sell_type:
+          type: string
+          example: Auction
+        auction_params:
+          type: object
+          properties:
+            starting_bid:
+              type: number
+              example: 1
+            start_timestamp:
+              type: string
+              example: "2006-01-02T15:04:05Z07:00"
+            end_timestamp:
+              type: string
+              example: "2006-01-02T15:04:05Z07:00"
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "91692ed7-fc43-4f75-884b-9e1799180041"
+        title:
+          type: string
+          example: "Popular"
+    Categories:
+      type: array
+      items:
+        $ref: "#/components/schemas/Category"
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http
@@ -80,6 +134,26 @@ components:
                     items:
                       type: string
                       example: "Field another_field must contain at least 8 chars"
+    NFT:
+      description: NFT.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/NFT"
+    NFTs:
+      description: NFTs.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/NFT"
+    Categories:
+      description: Categories.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Categories"
 paths:
   /:
     get:
@@ -2678,6 +2752,141 @@ paths:
                       description: "RFC3339"
         "400":
           $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  # TODO(evg): add parameters section for NFT service API
+  /nft:
+    post:
+      tags:
+        - "NFT"
+      summary: Create NFT
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NFT"
+      responses:
+        "200":
+          description: Create NFT.
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "7d9939ab-e987-43de-9766-6d1b30490a59"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "NFT"
+      summary: Get all NFTs.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTs"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/filter/category/{category}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get NFTs by category.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTs"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/filter/show_id/{show_id}/episode/{episode_id}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get NFTs by show ID.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTs"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/filter/user_id/{user_id}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get NFTs by user ID.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTs"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/{nft_id}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get NFT by ID
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFT"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/{nft_id}/buy:
+    post:
+      tags:
+        - "NFT"
+      summary: Buy NFT
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Buy NFT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/EmptyBody"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/categories:
+    get:
+      tags:
+        - "NFT"
+      summary: Get categories.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Categories"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
