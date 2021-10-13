@@ -35,8 +35,8 @@ type (
 	}
 
 	TransportNFT struct {
-		ImageLink string `json:"image_link"`
-
+		ID          uuid.UUID         `json:"id"`
+		ImageLink   string            `json:"image_link"`
 		Name        string            `json:"name"`
 		Description string            `json:"description"`
 		Tags        map[string]string `json:"tags"`
@@ -88,6 +88,7 @@ func FromServiceNFTs(nfts []*NFT) []*TransportNFT {
 
 func FromServiceNFT(n *NFT) *TransportNFT {
 	nft := &TransportNFT{
+		ID:          n.ID,
 		ImageLink:   n.ImageLink,
 		Name:        n.Name,
 		Description: n.Description,
@@ -114,6 +115,7 @@ func FromServiceNFTAuctionParams(a *NFTAuctionParams) *TransportNFTAuctionParams
 
 func (n *TransportNFT) ToServiceNFT() *NFT {
 	nft := &NFT{
+		ID:          n.ID,
 		ImageLink:   n.ImageLink,
 		Name:        n.Name,
 		Description: n.Description,
