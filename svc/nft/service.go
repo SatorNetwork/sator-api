@@ -11,8 +11,8 @@ type (
 	Service struct{}
 
 	NFT struct {
-		ImageLink string
-
+		ID          uuid.UUID
+		ImageLink   string
 		Name        string
 		Description string
 		Tags        map[string]string
@@ -45,6 +45,7 @@ var (
 	rfc3339Timestamp = "2006-01-02T15:04:05Z07:00"
 
 	fakeNFT = NFT{
+		ID:          uuid.New(),
 		ImageLink:   "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png",
 		Name:        "test name",
 		Description: "test description",
