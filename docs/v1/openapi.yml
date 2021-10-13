@@ -14,6 +14,8 @@ components:
     NFT:
       type: object
       properties:
+        id:
+          type: string
         image_link:
           type: string
           example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
@@ -61,7 +63,7 @@ components:
     Categories:
       type: array
       items:
-        $ref: '#/components/schemas/Category'
+        $ref: "#/components/schemas/Category"
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http
@@ -137,7 +139,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/NFT'
+            $ref: "#/components/schemas/NFT"
     NFTs:
       description: NFTs.
       content:
@@ -145,13 +147,13 @@ components:
           schema:
             type: array
             items:
-              $ref: '#/components/schemas/NFT'
+              $ref: "#/components/schemas/NFT"
     Categories:
       description: Categories.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Categories'
+            $ref: "#/components/schemas/Categories"
 paths:
   /:
     get:
@@ -2768,7 +2770,7 @@ paths:
         content:
           application/json:
             schema:
-               $ref: '#/components/schemas/NFT'
+              $ref: "#/components/schemas/NFT"
       responses:
         "200":
           description: Create NFT.
@@ -2869,7 +2871,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/responses/EmptyBody'
+                $ref: "#/components/responses/EmptyBody"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
