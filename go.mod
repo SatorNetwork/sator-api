@@ -2,6 +2,8 @@ module github.com/SatorNetwork/sator-api
 
 go 1.16
 
+replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompatible
+
 require (
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
