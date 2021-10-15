@@ -52,6 +52,7 @@ type (
 		EpisodeNumber           int32      `json:"episode_number"`
 		Cover                   string     `json:"cover"`
 		Title                   string     `json:"title"`
+		ShowTitle               string     `json:"show_title,omitempty"`
 		Description             string     `json:"description"`
 		ReleaseDate             string     `json:"release_date"`
 		ChallengeID             *uuid.UUID `json:"challenge_id"`
@@ -397,6 +398,7 @@ func (s *Service) GetListEpisodesByIDs(ctx context.Context, episodeIDs []uuid.UU
 			EpisodeNumber:           ep.EpisodeNumber,
 			Cover:                   ep.Cover.String,
 			Title:                   ep.Title,
+			ShowTitle:               ep.ShowTitle,
 			Description:             ep.Description.String,
 			ReleaseDate:             ep.ReleaseDate.Time.String(),
 			ChallengeID:             &ep.ChallengeID.UUID,

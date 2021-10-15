@@ -79,9 +79,11 @@ WHERE verification_challenge_id = $1;
 -- name: GetListEpisodesByIDs :many
 SELECT
     episodes.*,
-    seasons.season_number as season_number
+    seasons.season_number as season_number,
+    shows.title as show_title
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
+JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY(@episode_ids::uuid[])
 ORDER BY episodes.episode_number DESC
 LIMIT @limit_val OFFSET @offset_val;
