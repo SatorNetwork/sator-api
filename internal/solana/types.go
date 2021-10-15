@@ -36,6 +36,16 @@ type InitializeViewer struct {
 	UserPubKey common.PublicKey
 }
 
+type InitializeQuizInput struct {
+	Winners     []WinnerInput
+	TokenAmount uint64
+}
+
+type WinnerInput struct {
+	UserPubKey common.PublicKey
+	Points     uint32
+}
+
 const (
 	SystemProgram   = "11111111111111111111111111111111"
 	SysvarRent      = "SysvarRent111111111111111111111111111111111"
