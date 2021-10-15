@@ -245,9 +245,11 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 const getListEpisodesByIDs = `-- name: GetListEpisodesByIDs :many
 SELECT
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text,
-    seasons.season_number as season_number
+    seasons.season_number as season_number,
+    shows.title as show_title
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
+JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY($1::uuid[])
 ORDER BY episodes.episode_number DESC
 LIMIT $3 OFFSET $2
@@ -274,6 +276,7 @@ type GetListEpisodesByIDsRow struct {
 	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	HintText                sql.NullString `json:"hint_text"`
 	SeasonNumber            int32          `json:"season_number"`
+	ShowTitle               string         `json:"show_title"`
 }
 
 func (q *Queries) GetListEpisodesByIDs(ctx context.Context, arg GetListEpisodesByIDsParams) ([]GetListEpisodesByIDsRow, error) {
@@ -300,6 +303,7 @@ func (q *Queries) GetListEpisodesByIDs(ctx context.Context, arg GetListEpisodesB
 			&i.VerificationChallengeID,
 			&i.HintText,
 			&i.SeasonNumber,
+			&i.ShowTitle,
 		); err != nil {
 			return nil, err
 		}

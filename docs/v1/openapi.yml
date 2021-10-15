@@ -1505,6 +1505,9 @@ paths:
                       example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
                     title:
                       type: string
+                      example: "Pilot episode"
+                    show_title:
+                      type: string
                       example: "Peaky Blinders"
                     description:
                       type: string
