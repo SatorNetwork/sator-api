@@ -1347,6 +1347,9 @@ paths:
                       type: number
                       example: 12
                       description: "episode received reward amount by all users"
+                    hint_text:
+                      type: string
+                      example: "hint text"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1396,6 +1399,9 @@ paths:
                 season_id:
                   type: string
                   example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                hint_text:
+                  type: string
+                  example: "hint text"
       responses:
         "200":
           description: Returns episode data.
@@ -1669,6 +1675,9 @@ paths:
                     type: number
                     example: 12
                     description: "episode received reward amount by all users"
+                  hint_text:
+                    type: string
+                    example: "hint text"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1721,6 +1730,9 @@ paths:
                 challenge_id:
                   type: string
                   example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                hint_text:
+                  type: string
+                  example: "hint text"
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
