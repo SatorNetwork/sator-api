@@ -23,6 +23,7 @@ type (
 		Blockchain string  // TODO(evg): replace with enum?
 		SellType   string  // TODO(evg): replace with enum?
 
+		BuyNowPrice   uint64
 		AuctionParams *NFTAuctionParams
 	}
 

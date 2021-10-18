@@ -39,6 +39,9 @@ components:
         sell_type:
           type: string
           example: Auction
+        buy_now_price:
+          type: number
+          example: 100
         auction_params:
           type: object
           properties:

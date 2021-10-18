@@ -43,9 +43,10 @@ type (
 		// Supply - the number of copies that can be minted.
 		Supply int `json:"supply"`
 		// Royalties are optional and allow user to earn a percentage on secondary sales
-		Royalties  float64 `json:"royalties"` // TODO(evg): add validation?
-		Blockchain string  `json:"blockchain"`
-		SellType   string  `json:"sell_type"`
+		Royalties   float64 `json:"royalties"` // TODO(evg): add validation?
+		Blockchain  string  `json:"blockchain"`
+		SellType    string  `json:"sell_type"`
+		BuyNowPrice uint64  `json:"buy_now_price"`
 
 		AuctionParams *TransportNFTAuctionParams `json:"auction_params"`
 	}
@@ -97,6 +98,7 @@ func FromServiceNFT(n *NFT) *TransportNFT {
 		Royalties:   n.Royalties,
 		Blockchain:  n.Blockchain,
 		SellType:    n.SellType,
+		BuyNowPrice: n.BuyNowPrice,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = FromServiceNFTAuctionParams(n.AuctionParams)
@@ -124,6 +126,7 @@ func (n *TransportNFT) ToServiceNFT() *NFT {
 		Royalties:   n.Royalties,
 		Blockchain:  n.Blockchain,
 		SellType:    n.SellType,
+		BuyNowPrice: n.BuyNowPrice,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = n.AuctionParams.ToServiceNFTAuctionParams()
