@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const defaultHintText = "Start watching to earn SAO"
+
 type (
 	// Service struct
 	Service struct {
@@ -362,7 +364,11 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmoun
 		ActiveUsers:        number,
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedRewardAmountByUser,
-		HintText:           source.HintText.String,
+		HintText:           defaultHintText,
+	}
+
+	if source.HintText.Valid {
+		ep.HintText = source.HintText.String
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -426,7 +432,11 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow, numberUsersWhoH
 		ActiveUsers:        numberUsersWhoHaveAccessToEpisode,
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedAmountByUser,
-		HintText:           source.HintText.String,
+		HintText:           defaultHintText,
+	}
+
+	if source.HintText.Valid {
+		ep.HintText = source.HintText.String
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -452,7 +462,11 @@ func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
 		Title:         source.Title,
 		Description:   source.Description.String,
 		ReleaseDate:   source.ReleaseDate.Time.String(),
-		HintText:      source.HintText.String,
+		HintText:      defaultHintText,
+	}
+
+	if source.HintText.Valid {
+		ep.HintText = source.HintText.String
 	}
 
 	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
@@ -572,7 +586,7 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		},
 		HintText: sql.NullString{
 			String: ep.HintText,
-			Valid:  len(ep.HintText) > 0,
+			Valid:  len(ep.HintText) > 0 && ep.HintText != defaultHintText,
 		},
 	}
 
@@ -624,7 +638,7 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		},
 		HintText: sql.NullString{
 			String: ep.HintText,
-			Valid:  len(ep.HintText) > 0,
+			Valid:  len(ep.HintText) > 0 && ep.HintText != defaultHintText,
 		},
 	}
 
