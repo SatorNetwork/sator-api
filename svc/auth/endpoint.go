@@ -28,8 +28,8 @@ type (
 		VerifyAccount endpoint.Endpoint
 
 		RequestChangeEmail      endpoint.Endpoint
-		ValidateChangeEmailCode endpoint.Endpoint
 		UpdateEmail             endpoint.Endpoint
+		UpdateUsername          endpoint.Endpoint
 
 		RequestDestroyAccount endpoint.Endpoint
 		VerifyDestroyCode     endpoint.Endpoint
@@ -53,6 +53,7 @@ type (
 		RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error
 		ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error
 		UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error
+		UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error
 
 		RequestDestroyAccount(ctx context.Context, uid uuid.UUID) error
 		ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID, otp string) error
@@ -121,6 +122,10 @@ type (
 		Email string `json:"email" validate:"required,email"`
 		OTP   string `json:"otp" validate:"required"`
 	}
+
+	UpdateUsernameRequest struct {
+		Username string `json:"username" validate:"required"`
+	}
 )
 
 // MakeEndpoints ...
@@ -141,8 +146,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		ResendOTP:                 jwtMdw(MakeResendOTPEndpoint(as)),
 
 		RequestChangeEmail:      jwtMdw(MakeRequestChangeEmailEndpoint(as, validateFunc)),
-		ValidateChangeEmailCode: jwtMdw(MakeValidateChangeEmailCodeEndpoint(as, validateFunc)),
 		UpdateEmail:             jwtMdw(MakeUpdateEmailEndpoint(as, validateFunc)),
+		UpdateUsername:          jwtMdw(MakeUpdateUsernameEndpoint(as, validateFunc)),
 
 		RequestDestroyAccount: jwtMdw(MakeRequestDestroyAccount(as, validateFunc)),
 		VerifyDestroyCode:     jwtMdw(MakeVerifyDestroyEndpoint(as, validateFunc)),
@@ -165,8 +170,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.ResendOTP = mdw(e.ResendOTP)
 
 			e.RequestChangeEmail = mdw(e.RequestChangeEmail)
-			e.ValidateChangeEmailCode = mdw(e.ValidateChangeEmailCode)
 			e.UpdateEmail = mdw(e.UpdateEmail)
+			e.UpdateUsername = mdw(e.UpdateUsername)
 
 			e.RequestDestroyAccount = mdw(e.RequestDestroyAccount)
 			e.VerifyDestroyCode = mdw(e.VerifyDestroyCode)
@@ -410,6 +415,30 @@ func MakeUpdateEmailEndpoint(s authService, v validator.ValidateFunc) endpoint.E
 		}
 
 		if err := s.UpdateEmail(ctx, uid, req.Email, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeUpdateUsernameEndpoint ...
+func MakeUpdateUsernameEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateUsernameRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		// normalize email address
+		req.Username = strings.ToLower(req.Username)
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.UpdateUsername(ctx, uid, req.Username); err != nil {
 			return nil, err
 		}
 
