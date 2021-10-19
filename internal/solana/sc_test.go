@@ -12,7 +12,7 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-var  (
+var (
 	feePayerPub = "4Zx9h7C47oBB3duhXGn2GYGGtvKVRpuYTqNsoT9A94Ds"
 	feePayer    = types.AccountFromPrivateKeyBytes([]byte{0xc2, 0x30, 0x16, 0x0, 0x95, 0x1b, 0xf8, 0x86, 0xf8, 0x71, 0x31, 0xab, 0x7d, 0x9d, 0x3b, 0x9d, 0x74, 0x6, 0x8d, 0xa6, 0xe1, 0xf0, 0x3, 0xd7, 0xdb, 0x26, 0xca, 0x5d, 0x98, 0x32, 0x2e, 0x4b, 0x35, 0x4, 0x1, 0x3b, 0xf, 0xdc, 0xe0, 0x52, 0x7e, 0x1c, 0x1f, 0xfc, 0x96, 0x68, 0x5f, 0xdc, 0x1d, 0xdd, 0x26, 0x7, 0xbf, 0x33, 0x1b, 0x1b, 0x84, 0xef, 0xf8, 0xd4, 0xec, 0x7d, 0xb7, 0xa6})
 
@@ -61,7 +61,7 @@ func TestScNew(t *testing.T) {
 	//println("tx = ")
 	//println(tx)
 
-	tx, stakePool, err := c.InitializeStakePool(ctx, feePayer, asset.PublicKey)
+	tx, stakePool, err := c.InitializeStakePool(ctx, feePayer, issuer, asset.PublicKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestScNew(t *testing.T) {
 	time.Sleep(time.Second * 20)
 
 	for i := 0; i < 5; i++ {
-		if tx, err := c.Stake(ctx, feePayer, stakePool.PublicKey, wallet.PublicKey, 100, 100); err != nil {
+		if tx, err := c.Stake(ctx, feePayer, issuer, stakePool.PublicKey, wallet.PublicKey, 10, 1); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 20)
 		} else {
@@ -80,10 +80,16 @@ func TestScNew(t *testing.T) {
 		}
 	}
 
-	time.Sleep(120 * time.Second)
-	tx, err = c.Unstake(ctx, feePayer, stakePool.PublicKey, wallet.PublicKey)
-	println(tx)
-	println(err)
+	time.Sleep(20 * time.Second)
+	for i := 0; i < 5; i++ {
+		if tx, err := c.Unstake(ctx, feePayer, issuer, stakePool.PublicKey, wallet.PublicKey); err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 20)
+		} else {
+			log.Println(tx)
+			break
+		}
+	}
 }
 
 //func TestScStake(t *testing.T) {
