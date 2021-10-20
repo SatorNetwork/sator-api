@@ -21,6 +21,7 @@ type (
 		GetNFTByID        endpoint.Endpoint
 		BuyNFT            endpoint.Endpoint
 		GetCategories     endpoint.Endpoint
+		GetMainScreenData endpoint.Endpoint
 	}
 
 	service interface {
@@ -32,6 +33,7 @@ type (
 		GetNFTByID(ctx context.Context, nftId string) (*NFT, error)
 		BuyNFT(ctx context.Context, userUid uuid.UUID, nftId string) error
 		GetCategories(ctx context.Context) ([]*Category, error)
+		GetMainScreenCategory(ctx context.Context) (*Category, error)
 	}
 
 	TransportNFT struct {
@@ -71,8 +73,9 @@ type (
 	}
 
 	TransportCategory struct {
-		ID    string `json:"id"`
-		Title string `json:"title"`
+		ID    string          `json:"id"`
+		Title string          `json:"title"`
+		Items []*TransportNFT `json:"items,omitempty"`
 	}
 
 	Empty struct{}
@@ -171,6 +174,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetNFTByID:        MakeGetNFTByIDEndpoint(s),
 		BuyNFT:            MakeBuyNFTEndpoint(s),
 		GetCategories:     MakeGetCategoriesEndpoint(s),
+		GetMainScreenData: MakeGetMainScreenDataEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -184,6 +188,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetNFTByID = mdw(e.GetNFTByID)
 			e.BuyNFT = mdw(e.BuyNFT)
 			e.GetCategories = mdw(e.GetCategories)
+			e.GetMainScreenData = mdw(e.GetMainScreenData)
 		}
 	}
 
@@ -315,5 +320,24 @@ func MakeGetCategoriesEndpoint(s service) endpoint.Endpoint {
 		}
 
 		return FromServiceCategories(categories), nil
+	}
+}
+
+func MakeGetMainScreenDataEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		cat, err := s.GetMainScreenCategory(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not found any category to show on main screen: %v", err)
+		}
+
+		nfts, err := s.GetNFTsByCategory(ctx, cat.ID.String())
+		if err != nil {
+			return nil, fmt.Errorf("can't get NFTs by category: %v, %v", cat.ID.String(), err)
+		}
+
+		category := FromServiceCategory(cat)
+		category.Items = FromServiceNFTs(nfts)
+
+		return category, nil
 	}
 }
