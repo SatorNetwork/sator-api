@@ -85,5 +85,4 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY(@episode_ids::uuid[])
-ORDER BY episodes.episode_number DESC
-LIMIT @limit_val OFFSET @offset_val;
+ORDER BY episodes.episode_number DESC;

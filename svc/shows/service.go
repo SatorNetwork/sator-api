@@ -98,7 +98,7 @@ type (
 		// Episodes
 		AddEpisode(ctx context.Context, arg repository.AddEpisodeParams) (repository.Episode, error)
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (repository.GetEpisodeByIDRow, error)
-		GetListEpisodesByIDs(ctx context.Context, arg repository.GetListEpisodesByIDsParams) ([]repository.GetListEpisodesByIDsRow, error)
+		GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UUID) ([]repository.GetListEpisodesByIDsRow, error)
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.GetEpisodesByShowIDRow, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
@@ -383,12 +383,8 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmoun
 }
 
 // GetListEpisodesByIDs returns list episodes by list episode ids.
-func (s *Service) GetListEpisodesByIDs(ctx context.Context, episodeIDs []uuid.UUID, limit, offset int32) ([]Episode, error) {
-	episodes, err := s.sr.GetListEpisodesByIDs(ctx, repository.GetListEpisodesByIDsParams{
-		EpisodeIDs: episodeIDs,
-		Limit:      limit,
-		Offset:     offset,
-	})
+func (s *Service) GetListEpisodesByIDs(ctx context.Context, episodeIDs []uuid.UUID) ([]Episode, error) {
+	episodes, err := s.sr.GetListEpisodesByIDs(ctx, episodeIDs)
 	if err != nil {
 		return []Episode{}, fmt.Errorf("could not get episodes by episodes ids: %w", err)
 	}
@@ -833,7 +829,7 @@ func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID
 		return nil, fmt.Errorf("could not get list ids user available episodes: %w", err)
 	}
 
-	listEpisodes, err := s.GetListEpisodesByIDs(ctx, listIDs, limit, offset)
+	listEpisodes, err := s.GetListEpisodesByIDs(ctx, listIDs)
 	if err != nil {
 		return nil, fmt.Errorf("could not get list user available episodes: %w", err)
 	}

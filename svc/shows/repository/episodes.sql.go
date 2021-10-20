@@ -252,14 +252,7 @@ JOIN seasons ON seasons.id = episodes.season_id
 JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY($1::uuid[])
 ORDER BY episodes.episode_number DESC
-LIMIT $3 OFFSET $2
 `
-
-type GetListEpisodesByIDsParams struct {
-	EpisodeIDs []uuid.UUID `json:"episode_ids"`
-	Offset     int32       `json:"offset_val"`
-	Limit      int32       `json:"limit_val"`
-}
 
 type GetListEpisodesByIDsRow struct {
 	ID                      uuid.UUID      `json:"id"`
@@ -279,8 +272,8 @@ type GetListEpisodesByIDsRow struct {
 	ShowTitle               string         `json:"show_title"`
 }
 
-func (q *Queries) GetListEpisodesByIDs(ctx context.Context, arg GetListEpisodesByIDsParams) ([]GetListEpisodesByIDsRow, error) {
-	rows, err := q.query(ctx, q.getListEpisodesByIDsStmt, getListEpisodesByIDs, pq.Array(arg.EpisodeIDs), arg.Offset, arg.Limit)
+func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UUID) ([]GetListEpisodesByIDsRow, error) {
+	rows, err := q.query(ctx, q.getListEpisodesByIDsStmt, getListEpisodesByIDs, pq.Array(episodeIds))
 	if err != nil {
 		return nil, err
 	}
