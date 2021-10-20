@@ -85,6 +85,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/home", httptransport.NewServer(
+		e.GetMainScreenData,
+		decodeGetMainScreenDataRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -155,6 +162,10 @@ func decodeBuyNFTRequest(_ context.Context, r *http.Request) (interface{}, error
 }
 
 func decodeGetCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return Empty{}, nil
+}
+
+func decodeGetMainScreenDataRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return Empty{}, nil
 }
 

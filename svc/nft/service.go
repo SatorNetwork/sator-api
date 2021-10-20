@@ -134,3 +134,7 @@ func (s *Service) BuyNFT(ctx context.Context, userUid uuid.UUID, nftId string) e
 func (s *Service) GetCategories(ctx context.Context) ([]*Category, error) {
 	return defaultCategories, nil
 }
+
+func (s *Service) GetMainScreenCategory(ctx context.Context) (*Category, error) {
+	return defaultCategories[0], nil
+}
