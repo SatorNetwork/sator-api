@@ -46,6 +46,7 @@ type (
 		GetUserByUsername(ctx context.Context, username string) (repository.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (repository.User, error)
 		UpdateUserEmail(ctx context.Context, arg repository.UpdateUserEmailParams) error
+		UpdateUsername(ctx context.Context, arg repository.UpdateUsernameParams) error
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
 		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
 		DestroyUser(ctx context.Context, id uuid.UUID) error
@@ -365,7 +366,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 	return nil
 }
 
-// RequestChangeEmail requests password reset with email.
+// RequestChangeEmail requests change email for authorized user. Checks if email already exists in db, creates user verification and sends code to new email.
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
 	var otpHash []byte
 
@@ -434,7 +435,7 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 	return nil
 }
 
-// UpdateEmail ...
+// UpdateEmail updates user's email to provided new one in case of correct otp provided.
 func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
 	if err := s.ValidateChangeEmailCode(ctx, userID, email, otp); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
@@ -460,6 +461,19 @@ func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp 
 	}); err != nil {
 		// just log, not any error for user
 		log.Printf("could not delete verification code for user with id=%s: %v", userID.String(), err)
+	}
+
+	return nil
+}
+
+// UpdateUsername ...
+func (s *Service) UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error {
+	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
+		return fmt.Errorf("user with username %s already exists", username)
+	}
+
+	if err := s.ur.UpdateUsername(ctx, repository.UpdateUsernameParams{ID: userID, Username: username}); err != nil {
+		return fmt.Errorf("could not update username: %w", err)
 	}
 
 	return nil

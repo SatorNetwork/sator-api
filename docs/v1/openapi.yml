@@ -405,6 +405,78 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
+  /auth/request-update-email:
+    post:
+      tags:
+        - "Auth"
+      summary: request update email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/update-email:
+    post:
+      tags:
+        - "Auth"
+      summary: Update email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "john.doe@mail.dev"
+                otp:
+                  type: string
+                  example: "54367"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/update-username:
+    post:
+      tags:
+        - "Auth"
+      summary: Update username.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "JohnDoe1990"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
   /profile:
     get:
       tags:
