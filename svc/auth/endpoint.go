@@ -430,8 +430,17 @@ func MakeUpdateUsernameEndpoint(s authService, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
+		userName, err := jwt.UsernameFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get username: %w", err)
+		}
+
 		// normalize email address
 		req.Username = strings.ToLower(req.Username)
+
+		if strings.ToLower(userName) == req.Username {
+			return false, nil
+		}
 
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
