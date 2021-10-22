@@ -468,6 +468,10 @@ func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp 
 
 // UpdateUsername ...
 func (s *Service) UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error {
+	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
+		return fmt.Errorf("user with username %s already exists", username)
+	}
+
 	if err := s.ur.UpdateUsername(ctx, repository.UpdateUsernameParams{ID: userID, Username: username}); err != nil {
 		return fmt.Errorf("could not update username: %w", err)
 	}
