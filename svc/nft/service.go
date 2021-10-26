@@ -2,6 +2,7 @@ package nft
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand"
 
@@ -66,29 +67,6 @@ type (
 	buyNFTFunction func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
 )
 
-var (
-	rfc3339Timestamp = "2006-01-02T15:04:05Z07:00"
-
-	fakeNFT = NFT{
-		ID:          uuid.New(),
-		ImageLink:   "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png",
-		Name:        "test name",
-		Description: "test description",
-		Tags: map[string]string{
-			"test key": "test val",
-		},
-		Supply:     1,
-		Royalties:  2,
-		Blockchain: "Ethereum",
-		SellType:   "Auction",
-		AuctionParams: &NFTAuctionParams{
-			StartingBid:    1,
-			StartTimestamp: rfc3339Timestamp,
-			EndTimestamp:   rfc3339Timestamp,
-		},
-	}
-)
-
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
 func NewService(nftRepo nftRepository, buyNFTFunc buyNFTFunction, opt ...Option) *Service {
@@ -104,7 +82,7 @@ func NewService(nftRepo nftRepository, buyNFTFunc buyNFTFunction, opt ...Option)
 func (s *Service) CreateNFT(ctx context.Context, userID uuid.UUID, nft *NFT) (string, error) {
 	item, err := s.nftRepo.AddNFTItem(ctx, repository.AddNFTItemParams{
 		Name:        nft.Name,
-		Description: nft.Description,
+		Description: sql.NullString{String: nft.Description, Valid: len(nft.Description) > 0},
 		Cover:       nft.ImageLink,
 		Supply:      1, // TODO: multiple supplies are not supported yet
 		BuyNowPrice: nft.BuyNowPrice,
@@ -272,7 +250,7 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 		ID:          source.ID,
 		ImageLink:   source.Cover,
 		Name:        source.Name,
-		Description: source.Description,
+		Description: source.Description.String,
 		Supply:      int(source.Supply),
 		BuyNowPrice: source.BuyNowPrice,
 		TokenURI:    source.TokenURI,

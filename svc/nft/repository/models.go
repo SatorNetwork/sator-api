@@ -17,16 +17,16 @@ type NFTCategory struct {
 }
 
 type NFTItem struct {
-	ID          uuid.UUID     `json:"id"`
-	OwnerID     uuid.NullUUID `json:"owner_id"`
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Cover       string        `json:"cover"`
-	Supply      int64         `json:"supply"`
-	BuyNowPrice float64       `json:"buy_now_price"`
-	TokenURI    string        `json:"token_uri"`
-	UpdatedAt   sql.NullTime  `json:"updated_at"`
-	CreatedAt   time.Time     `json:"created_at"`
+	ID          uuid.UUID      `json:"id"`
+	OwnerID     uuid.NullUUID  `json:"owner_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Cover       string         `json:"cover"`
+	Supply      int64          `json:"supply"`
+	BuyNowPrice float64        `json:"buy_now_price"`
+	TokenURI    string         `json:"token_uri"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type NFTRelation struct {

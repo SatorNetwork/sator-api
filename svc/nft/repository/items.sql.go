@@ -5,6 +5,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -16,12 +17,12 @@ RETURNING id, owner_id, name, description, cover, supply, buy_now_price, token_u
 `
 
 type AddNFTItemParams struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Cover       string  `json:"cover"`
-	Supply      int64   `json:"supply"`
-	BuyNowPrice float64 `json:"buy_now_price"`
-	TokenURI    string  `json:"token_uri"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Cover       string         `json:"cover"`
+	Supply      int64          `json:"supply"`
+	BuyNowPrice float64        `json:"buy_now_price"`
+	TokenURI    string         `json:"token_uri"`
 }
 
 func (q *Queries) AddNFTItem(ctx context.Context, arg AddNFTItemParams) (NFTItem, error) {

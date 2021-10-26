@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS nft_items (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id uuid DEFAULT NULL,
     name VARCHAR NOT NULL,
-    description VARCHAR NOT NULL,
+    description VARCHAR DEFAULT NULL,
     cover VARCHAR NOT NULL,
     supply BIGINT NOT NULL DEFAULT 1,
     buy_now_price DOUBLE PRECISION NOT NULL DEFAULT 0,
