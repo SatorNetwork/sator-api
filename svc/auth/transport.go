@@ -128,6 +128,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/request-update-email", httptransport.NewServer(
+		e.RequestChangeEmail,
+		decodeRequestChangeEmailRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/update-email", httptransport.NewServer(
+		e.UpdateEmail,
+		decodeUpdateEmailRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/update-username", httptransport.NewServer(
+		e.UpdateUsername,
+		decodeUpdateUsernameRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -201,8 +222,8 @@ func decodeRequestChangeEmailRequest(_ context.Context, r *http.Request) (reques
 	return req, nil
 }
 
-func decodeValidateChangeEmailCodeRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req ValidateChangeEmailCodeRequest
+func decodeUpdateEmailRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req UpdateEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
@@ -210,8 +231,8 @@ func decodeValidateChangeEmailCodeRequest(_ context.Context, r *http.Request) (r
 	return req, nil
 }
 
-func decodeUpdateEmailRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req UpdateEmailRequest
+func decodeUpdateUsernameRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req UpdateUsernameRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}

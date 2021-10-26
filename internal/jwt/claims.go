@@ -44,7 +44,7 @@ func UserIDFromContext(ctx context.Context) (uuid.UUID, error) {
 	return uuid.Nil, ErrInvalidJWTClaims
 }
 
-// UsernameFromContext returns user uuid from request context
+// UsernameFromContext returns username from request context
 func UsernameFromContext(ctx context.Context) (string, error) {
 	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
 	if cl, ok := claims.(*Claims); ok {
