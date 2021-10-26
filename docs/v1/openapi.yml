@@ -18,6 +18,7 @@ components:
           type: string
         image_link:
           type: string
+          description: NFT cover image
           example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
         name:
           type: string
@@ -42,6 +43,10 @@ components:
         buy_now_price:
           type: number
           example: 100
+        token_uri:
+          type: string
+          example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
+          description: NFT payload, for example link to the original file
         auction_params:
           type: object
           properties:
@@ -2816,13 +2821,30 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /nft/filter/category/{category}:
+  /nft/filter/category/{category_id}:
     get:
       tags:
         - "NFT"
       summary: Get NFTs by category.
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           $ref: "#/components/responses/NFTs"
@@ -2831,13 +2853,62 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-  /nft/filter/show_id/{show_id}/episode/{episode_id}:
+  /nft/filter/show/{show_id}:
     get:
       tags:
         - "NFT"
       summary: Get NFTs by show ID.
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTs"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/filter/episode/{episode_id}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get NFTs by show ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           $ref: "#/components/responses/NFTs"
@@ -2853,6 +2924,23 @@ paths:
       summary: Get NFTs by user ID.
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           $ref: "#/components/responses/NFTs"

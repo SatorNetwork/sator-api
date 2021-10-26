@@ -128,11 +128,21 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 
 // RefreshToken returns new jwt string.
 func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error) {
-	// TODO: add JWT id into the revoked tokens list
-	_, token, err := s.jwt.NewWithUserData(uid, username)
+	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
 		return "", fmt.Errorf("could not refresh access token: %w", err)
 	}
+
+	if u.Disabled {
+		return "", ErrUserIsDisabled
+	}
+
+	// TODO: add JWT id into the revoked tokens list
+	_, token, err := s.jwt.NewWithUserData(uid, u.Username)
+	if err != nil {
+		return "", fmt.Errorf("could not refresh access token: %w", err)
+	}
+
 	return token, nil
 }
 

@@ -50,14 +50,21 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/filter/show_id/{show_id}/episode/{episode_id}", httptransport.NewServer(
+	r.Get("/filter/show/{show_id}", httptransport.NewServer(
 		e.GetNFTsByShowID,
 		decodeGetNFTsByShowIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/filter/user_id/{user_id}", httptransport.NewServer(
+	r.Get("/filter/episode/{episode_id}", httptransport.NewServer(
+		e.GetNFTsByShowID,
+		decodeGetNFTsByEpisodeIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/filter/user/{user_id}", httptransport.NewServer(
 		e.GetNFTsByUserID,
 		decodeGetNFTsByUserIDRequest,
 		httpencoder.EncodeResponse,
@@ -123,13 +130,19 @@ func decodeGetNFTsByShowIDRequest(_ context.Context, r *http.Request) (interface
 	if showId == "" {
 		return nil, fmt.Errorf("%w: missed category parameter", ErrInvalidParameter)
 	}
+
+	return &GetNFTsByShowIDRequest{
+		ShowID: showId,
+	}, nil
+}
+
+func decodeGetNFTsByEpisodeIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	episodeId := chi.URLParam(r, "episode_id")
 	if episodeId == "" {
 		return nil, fmt.Errorf("%w: missed category parameter", ErrInvalidParameter)
 	}
 
-	return &GetNFTsByShowIDRequest{
-		ShowID:    showId,
+	return &GetNFTsByEpisodeIDRequest{
 		EpisodeID: episodeId,
 	}, nil
 }
