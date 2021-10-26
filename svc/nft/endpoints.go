@@ -386,7 +386,7 @@ func MakeBuyNFTEndpoint(s service) endpoint.Endpoint {
 
 		err = s.BuyNFT(ctx, userUid, uuid.MustParse(nftID))
 		if err != nil {
-			return nil, fmt.Errorf("can't buy nft by id: %v, err: %v", nftID, err)
+			return nil, err
 		}
 
 		return Empty{}, nil
