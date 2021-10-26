@@ -20,6 +20,7 @@ type (
 
 	NFT struct {
 		ID          uuid.UUID
+		OwnerID     *uuid.UUID
 		ImageLink   string
 		Name        string
 		Description string
@@ -254,6 +255,10 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 		Supply:      int(source.Supply),
 		BuyNowPrice: source.BuyNowPrice,
 		TokenURI:    source.TokenURI,
+	}
+
+	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
+		nft.OwnerID = &source.OwnerID.UUID
 	}
 
 	return nft
