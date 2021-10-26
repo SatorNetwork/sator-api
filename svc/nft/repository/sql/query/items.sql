@@ -18,7 +18,7 @@ LIMIT @limit_val OFFSET @offset_val;
 SELECT nft_items.* FROM nft_items
 JOIN nft_relations ON nft_relations.nft_item_id =  nft_items.id
 WHERE nft_relations.relation_id = @relation_id
-AND owner_id = @owner_id
+AND owner_id IS NULL
 ORDER BY created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 

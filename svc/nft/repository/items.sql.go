@@ -170,25 +170,19 @@ const getNFTItemsListByRelationID = `-- name: GetNFTItemsListByRelationID :many
 SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at FROM nft_items
 JOIN nft_relations ON nft_relations.nft_item_id =  nft_items.id
 WHERE nft_relations.relation_id = $1
-AND owner_id = $2
+AND owner_id IS NULL
 ORDER BY created_at DESC
-LIMIT $4 OFFSET $3
+LIMIT $3 OFFSET $2
 `
 
 type GetNFTItemsListByRelationIDParams struct {
-	RelationID uuid.UUID     `json:"relation_id"`
-	OwnerID    uuid.NullUUID `json:"owner_id"`
-	Offset     int32         `json:"offset_val"`
-	Limit      int32         `json:"limit_val"`
+	RelationID uuid.UUID `json:"relation_id"`
+	Offset     int32     `json:"offset_val"`
+	Limit      int32     `json:"limit_val"`
 }
 
 func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTItemsListByRelationIDParams) ([]NFTItem, error) {
-	rows, err := q.query(ctx, q.getNFTItemsListByRelationIDStmt, getNFTItemsListByRelationID,
-		arg.RelationID,
-		arg.OwnerID,
-		arg.Offset,
-		arg.Limit,
-	)
+	rows, err := q.query(ctx, q.getNFTItemsListByRelationIDStmt, getNFTItemsListByRelationID, arg.RelationID, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
