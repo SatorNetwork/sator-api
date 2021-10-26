@@ -17,6 +17,12 @@ rename:
   limit_val: "Limit"
   offset_val: "Offset"
   user_id: "UserID"
+  token_uri: "TokenURI"
+  nft: "NFT"
+  nft_item: "NFTItem"
+  nft_item_id: "NFTItemID"
+  nft_category: "NFTCategory"
+  nft_relation: "NFTRelation"
 overrides:
   - go_type: "github.com/google/uuid.NullUUID"
     db_type: "uuid"

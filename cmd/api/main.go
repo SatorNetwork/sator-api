@@ -33,6 +33,7 @@ import (
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
 	"github.com/SatorNetwork/sator-api/svc/nft"
+	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -448,7 +449,11 @@ func main() {
 
 	{
 		// NFT service
-		nftService := nft.NewService()
+		nftRepository, err := nftRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("nftRepo error: %v", err)
+		}
+		nftService := nft.NewService(nftRepository, walletSvcClient.PayForService)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,

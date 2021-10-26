@@ -2,7 +2,8 @@ package nft
 
 import "errors"
 
+// Predefined package errors
 var (
-	// ErrInvalidParameter indicates that passed invalid parameter.
 	ErrInvalidParameter = errors.New("invalid parameter")
+	ErrAlreadySold      = errors.New("reselling is not available in the current app version")
 )
