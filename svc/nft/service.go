@@ -280,7 +280,3 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 
 	return nft
 }
-
-func (s *Service) GetMainScreenCategory(ctx context.Context) (*Category, error) {
-	return defaultCategories[0], nil
-}
