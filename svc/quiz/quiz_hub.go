@@ -385,7 +385,7 @@ func (h *Hub) SetAnswer(userID, questionID, answerID uuid.UUID, isCorrect bool, 
 func (h *Hub) SendQuestionResult(userID, questionID uuid.UUID) error {
 	result, ok := h.players[userID.String()].answers[questionID.String()]
 	if !ok {
-		err := h.SendPersonalMessage(userID, TimeOutMessage, TimeOut{Message: TimeOutMessage})
+		err := h.SendPersonalMessage(userID, TimeOutMessage, TimeOut{Message: "time is over"})
 		if err != nil {
 			return fmt.Errorf("could not sent quiz result message: %w", err)
 		}
