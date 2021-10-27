@@ -389,9 +389,11 @@ func (h *Hub) SendQuestionResult(userID, questionID uuid.UUID) error {
 		if err != nil {
 			return fmt.Errorf("could not sent quiz result message: %w", err)
 		}
-	}
-	if err := h.SendPersonalMessage(userID, QuestionResultMessage, result); err != nil {
-		return fmt.Errorf("could not sent quiz result message: %w", err)
+	} else {
+		err := h.SendPersonalMessage(userID, QuestionResultMessage, result)
+		if err != nil {
+			return fmt.Errorf("could not sent quiz result message: %w", err)
+		}
 	}
 	if !result.Result {
 		time.Sleep(h.TimeBtwQuestions)
