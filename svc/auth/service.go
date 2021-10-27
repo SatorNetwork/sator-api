@@ -326,6 +326,35 @@ func (s *Service) ResetPassword(ctx context.Context, email, password, otp string
 	return nil
 }
 
+// ChangePassword changing password.
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {
+	user, err := s.ur.GetUserByID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return ErrInvalidCredentials
+		}
+		return fmt.Errorf("could not log in: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(oldPassword)); err != nil {
+		return ErrInvalidCredentials
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 14)
+	if err != nil {
+		return fmt.Errorf("could not reset password: %w", err)
+	}
+
+	if err := s.ur.UpdateUserPassword(ctx, repository.UpdateUserPasswordParams{
+		ID:       userID,
+		Password: passwordHash,
+	}); err != nil {
+		return fmt.Errorf("could not reset password: %w", err)
+	}
+
+	return nil
+}
+
 // VerifyAccount verifies account.
 func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp string) error {
 	u, err := s.ur.GetUserByID(ctx, userID)

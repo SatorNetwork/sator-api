@@ -86,6 +86,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/change-password", httptransport.NewServer(
+		e.ChangePassword,
+		decodeChangePasswordRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/verify-account", httptransport.NewServer(
 		e.VerifyAccount,
 		decodeVerifyAccountRequest,
@@ -205,6 +212,14 @@ func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request int
 	return req, nil
 }
 
+func decodeChangePasswordRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
 func decodeVerifyAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req VerifyOTPRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
