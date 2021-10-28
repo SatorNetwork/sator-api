@@ -297,6 +297,39 @@ paths:
         "422":
           $ref: "#/components/responses/ValidationError"
 
+  /auth/change-password:
+    post:
+      tags:
+        - "Auth"
+      summary: Change password.
+      security:
+        - bearerAuth: [ ]
+      description: Change password for authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                old_password:
+                  type: string
+                  minimum: 8
+                  maximum: 50
+                  example: "srgserge45g45grtg"
+                new_password:
+                  type: string
+                  minimum: 8
+                  maximum: 50
+                  example: "srgserge99g45grtg"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
   /auth/validate-reset-password-code:
     post:
       tags:
@@ -415,6 +448,8 @@ paths:
       tags:
         - "Auth"
       summary: request update email.
+      security:
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -464,6 +499,8 @@ paths:
       tags:
         - "Auth"
       summary: Update username.
+      security:
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:
