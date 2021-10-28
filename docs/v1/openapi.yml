@@ -1467,6 +1467,9 @@ paths:
                     hint_text:
                       type: string
                       example: "hint text"
+                    watch:
+                      type: string
+                      example: "www.watch.com/this_episode"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1519,6 +1522,9 @@ paths:
                 hint_text:
                   type: string
                   example: "hint text"
+                watch:
+                  type: string
+                  example: "www.watch.com/this_episode"
       responses:
         "200":
           description: Returns episode data.
@@ -1798,6 +1804,9 @@ paths:
                   hint_text:
                     type: string
                     example: "hint text"
+                  watch:
+                    type: string
+                    example: "www.watch.com/this_episode"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1853,6 +1862,9 @@ paths:
                 hint_text:
                   type: string
                   example: "hint text"
+                watch:
+                  type: string
+                  example: "www.watch.com/this_episode"
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

@@ -135,6 +135,7 @@ type (
 		ChallengeID             string `json:"challenge_id,omitempty"`
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 		HintText                string `json:"hint_text,omitempty"`
+		Watch                   string `json:"watch,omitempty"`
 	}
 
 	// UpdateEpisodeRequest struct
@@ -150,6 +151,7 @@ type (
 		ChallengeID             string `json:"challenge_id,omitempty"`
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 		HintText                string `json:"hint_text,omitempty"`
+		Watch                   string `json:"watch,omitempty"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
@@ -457,6 +459,7 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			Description:   req.Description,
 			ReleaseDate:   req.ReleaseDate,
 			HintText:      req.HintText,
+			Watch:         req.Watch,
 		}
 
 		if req.ChallengeID != "" {
@@ -521,6 +524,7 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			Description:   req.Description,
 			ReleaseDate:   req.ReleaseDate,
 			HintText:      req.HintText,
+			Watch:         req.Watch,
 		}
 
 		if req.ChallengeID != "" {
