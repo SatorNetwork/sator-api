@@ -333,7 +333,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassw
 		if db.IsNotFoundError(err) {
 			return ErrInvalidCredentials
 		}
-		return fmt.Errorf("could not log in: %w", err)
+		return fmt.Errorf("could not get user bu id: %w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(oldPassword)); err != nil {

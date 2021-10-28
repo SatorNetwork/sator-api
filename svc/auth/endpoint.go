@@ -149,7 +149,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		ForgotPassword:            MakeForgotPasswordEndpoint(as, validateFunc),
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
-		ChangePassword:            MakeChangePasswordEndpoint(as, validateFunc),
+		ChangePassword:            jwtMdw(MakeChangePasswordEndpoint(as, validateFunc)),
 		VerifyAccount:             jwtMdw(MakeVerifyAccountEndpoint(as, validateFunc)),
 		IsVerified:                jwtMdw(MakeIsVerifiedEndpoint(as)),
 		ResendOTP:                 jwtMdw(MakeResendOTPEndpoint(as)),

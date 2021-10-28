@@ -301,7 +301,9 @@ paths:
     post:
       tags:
         - "Auth"
-      summary: Change password
+      summary: Change password.
+      security:
+        - bearerAuth: [ ]
       description: Change password for authenticated user.
       requestBody:
         required: true
@@ -446,6 +448,8 @@ paths:
       tags:
         - "Auth"
       summary: request update email.
+      security:
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -495,6 +499,8 @@ paths:
       tags:
         - "Auth"
       summary: Update username.
+      security:
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:

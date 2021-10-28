@@ -213,7 +213,7 @@ func decodeResetPasswordRequest(_ context.Context, r *http.Request) (request int
 }
 
 func decodeChangePasswordRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req ResetPasswordRequest
+	var req ChangePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
