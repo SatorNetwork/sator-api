@@ -337,7 +337,9 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassw
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(oldPassword)); err != nil {
-		return ErrInvalidCredentials
+		return validator.NewValidationError(url.Values{
+			"old_password": []string{"invalid current password"},
+		})
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 14)
