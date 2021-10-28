@@ -58,7 +58,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Get("/filter/episode/{episode_id}", httptransport.NewServer(
-		e.GetNFTsByShowID,
+		e.GetNFTsByEpisodeID,
 		decodeGetNFTsByEpisodeIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
