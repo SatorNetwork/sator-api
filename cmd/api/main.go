@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -192,6 +193,8 @@ func main() {
 		r.Use(middleware.Recoverer)
 		r.Use(middleware.Timeout(httpRequestTimeout))
 		r.Use(cors.AllowAll().Handler)
+
+		r.Use(testingMdw)
 
 		r.NotFound(notFoundHandler)
 		r.MethodNotAllowed(methodNotAllowedHandler)
@@ -528,4 +531,21 @@ func defaultResponse(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+// Testing middleware
+// Helps to test any HTTP error
+// Pass must_err query parameter with code you want get
+// E.g.: /shows?must_err=403
+func testingMdw(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if errCodeStr := r.URL.Query().Get("must_err"); len(errCodeStr) == 3 {
+			if errCode, err := strconv.Atoi(errCodeStr); err == nil && errCode >= 400 && errCode < 600 {
+				w.WriteHeader(errCode)
+				w.Write([]byte(http.StatusText(errCode)))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
