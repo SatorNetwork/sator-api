@@ -16,3 +16,7 @@ UPDATE profiles
 SET first_name = @first_name,
     last_name = @last_name
 WHERE user_id = @user_id;
+-- name: UpdateAvatar :exec
+UPDATE profiles
+SET avatar = @avatar
+WHERE user_id = @user_id;

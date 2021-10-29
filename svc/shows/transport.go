@@ -91,6 +91,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/episodes", httptransport.NewServer(
+		e.GetActivatedUserEpisodes,
+		decodeGetActivatedUserEpisodesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/reviews", httptransport.NewServer(
+		e.GetReviewsListByUserID,
+		decodeGetReviewsListByUserIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
 		e.GetEpisodeByID,
 		decodeGetEpisodeByIDRequest,
@@ -346,6 +360,20 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 	}, nil
 }
 
+func decodeGetActivatedUserEpisodesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
+}
+
+func decodeGetReviewsListByUserIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return PaginationRequest{
+		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
+}
+
 func decodeAddSeasonRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req AddSeasonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -409,7 +437,7 @@ func decodeReviewEpisodeRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func decodeGetReviewsListRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return GetReviewsListByEpisodeIDRequest{
+	return GetReviewsListRequest{
 		EpisodeID: chi.URLParam(r, "episode_id"),
 		PaginationRequest: PaginationRequest{
 			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),

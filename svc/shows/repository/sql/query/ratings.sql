@@ -61,3 +61,11 @@ AND title IS NOT NULL
 AND review IS NOT NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: ReviewsListByUserID :many
+SELECT * FROM ratings
+WHERE user_id = $1
+  AND title IS NOT NULL
+  AND review IS NOT NULL
+ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3;

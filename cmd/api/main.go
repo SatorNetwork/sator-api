@@ -9,16 +9,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/resizer"
-
+	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/mail"
+	"github.com/SatorNetwork/sator-api/internal/resizer"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
@@ -32,6 +33,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
+	"github.com/SatorNetwork/sator-api/svc/nft"
+	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -197,6 +200,8 @@ func main() {
 		r.Use(middleware.Timeout(httpRequestTimeout))
 		r.Use(cors.AllowAll().Handler)
 
+		r.Use(testingMdw)
+
 		r.NotFound(notFoundHandler)
 		r.MethodNotAllowed(methodNotAllowedHandler)
 
@@ -247,6 +252,7 @@ func main() {
 	rewardService := rewards.NewService(
 		rewardsRepository,
 		walletSvcClient,
+		db_internal.NewAdvisoryLocks(db),
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
@@ -292,16 +298,15 @@ func main() {
 	}
 
 	// Profile service
-	{
-		profileRepository, err := profileRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("profileRepo error: %v", err)
-		}
-		r.Mount("/profile", profile.MakeHTTPHandler(
-			profile.MakeEndpoints(profile.NewService(profileRepository), jwtMdw),
-			logger,
-		))
+	profileRepository, err := profileRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("profileRepo error: %v", err)
 	}
+	profileSvc := profile.NewService(profileRepository)
+	r.Mount("/profile", profile.MakeHTTPHandler(
+		profile.MakeEndpoints(profileSvc, jwtMdw),
+		logger,
+	))
 
 	{
 		// firebase connection
@@ -445,6 +450,7 @@ func main() {
 				quizSvc,
 				invitationsService.SendReward(rewardService.AddTransaction),
 				challengeSvcClient,
+				profileSvc,
 				quizBotsTimeout,
 			),
 		))
@@ -455,6 +461,19 @@ func main() {
 		}, func(err error) {
 			log.Fatalf("quiz service: %v", err)
 		})
+	}
+
+	{
+		// NFT service
+		nftRepository, err := nftRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("nftRepo error: %v", err)
+		}
+		nftService := nft.NewService(nftRepository, walletSvcClient.PayForService)
+		r.Mount("/nft", nft.MakeHTTPHandler(
+			nft.MakeEndpoints(nftService, jwtMdw),
+			logger,
+		))
 	}
 
 	{
@@ -525,4 +544,21 @@ func defaultResponse(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+// Testing middleware
+// Helps to test any HTTP error
+// Pass must_err query parameter with code you want get
+// E.g.: /shows?must_err=403
+func testingMdw(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if errCodeStr := r.URL.Query().Get("must_err"); len(errCodeStr) == 3 {
+			if errCode, err := strconv.Atoi(errCodeStr); err == nil && errCode >= 400 && errCode < 600 {
+				w.WriteHeader(errCode)
+				w.Write([]byte(http.StatusText(errCode)))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

@@ -64,6 +64,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEpisodesByShowIDStmt, err = db.PrepareContext(ctx, getEpisodesByShowID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodesByShowID: %w", err)
 	}
+	if q.getListEpisodesByIDsStmt, err = db.PrepareContext(ctx, getListEpisodesByIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetListEpisodesByIDs: %w", err)
+	}
 	if q.getSeasonByIDStmt, err = db.PrepareContext(ctx, getSeasonByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSeasonByID: %w", err)
 	}
@@ -87,6 +90,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.reviewsListStmt, err = db.PrepareContext(ctx, reviewsList); err != nil {
 		return nil, fmt.Errorf("error preparing query ReviewsList: %w", err)
+	}
+	if q.reviewsListByUserIDStmt, err = db.PrepareContext(ctx, reviewsListByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query ReviewsListByUserID: %w", err)
 	}
 	if q.updateEpisodeStmt, err = db.PrepareContext(ctx, updateEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateEpisode: %w", err)
@@ -169,6 +175,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getEpisodesByShowIDStmt: %w", cerr)
 		}
 	}
+	if q.getListEpisodesByIDsStmt != nil {
+		if cerr := q.getListEpisodesByIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getListEpisodesByIDsStmt: %w", cerr)
+		}
+	}
 	if q.getSeasonByIDStmt != nil {
 		if cerr := q.getSeasonByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSeasonByIDStmt: %w", cerr)
@@ -207,6 +218,11 @@ func (q *Queries) Close() error {
 	if q.reviewsListStmt != nil {
 		if cerr := q.reviewsListStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing reviewsListStmt: %w", cerr)
+		}
+	}
+	if q.reviewsListByUserIDStmt != nil {
+		if cerr := q.reviewsListByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing reviewsListByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.updateEpisodeStmt != nil {
@@ -272,6 +288,7 @@ type Queries struct {
 	getEpisodeIDByVerificationChallengeIDStmt *sql.Stmt
 	getEpisodeRatingByIDStmt                  *sql.Stmt
 	getEpisodesByShowIDStmt                   *sql.Stmt
+	getListEpisodesByIDsStmt                  *sql.Stmt
 	getSeasonByIDStmt                         *sql.Stmt
 	getSeasonsByShowIDStmt                    *sql.Stmt
 	getShowByIDStmt                           *sql.Stmt
@@ -280,6 +297,7 @@ type Queries struct {
 	rateEpisodeStmt                           *sql.Stmt
 	reviewEpisodeStmt                         *sql.Stmt
 	reviewsListStmt                           *sql.Stmt
+	reviewsListByUserIDStmt                   *sql.Stmt
 	updateEpisodeStmt                         *sql.Stmt
 	updateShowStmt                            *sql.Stmt
 }
@@ -302,6 +320,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getEpisodeIDByVerificationChallengeIDStmt: q.getEpisodeIDByVerificationChallengeIDStmt,
 		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
+		getListEpisodesByIDsStmt:                  q.getListEpisodesByIDsStmt,
 		getSeasonByIDStmt:                         q.getSeasonByIDStmt,
 		getSeasonsByShowIDStmt:                    q.getSeasonsByShowIDStmt,
 		getShowByIDStmt:                           q.getShowByIDStmt,
@@ -310,6 +329,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		rateEpisodeStmt:                           q.rateEpisodeStmt,
 		reviewEpisodeStmt:                         q.reviewEpisodeStmt,
 		reviewsListStmt:                           q.reviewsListStmt,
+		reviewsListByUserIDStmt:                   q.reviewsListByUserIDStmt,
 		updateEpisodeStmt:                         q.updateEpisodeStmt,
 		updateShowStmt:                            q.updateShowStmt,
 	}

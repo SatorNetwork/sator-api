@@ -2,6 +2,8 @@ package profile
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
@@ -34,11 +36,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Put("/avatar", httptransport.NewServer(
+		e.UpdateAvatar,
+		decodeUpdateAvatarRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
 func decodeGetProfileRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
+}
+
+func decodeUpdateAvatarRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateAvatarRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
 }
 
 // returns http error code by error type

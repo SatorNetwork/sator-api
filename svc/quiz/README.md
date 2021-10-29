@@ -11,6 +11,7 @@
 - question
 - question_result
 - challenge_result
+- time_out
 
 **Client side message**
 - answer

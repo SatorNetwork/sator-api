@@ -14,8 +14,11 @@ rename:
   id: "ID"
   guid: "GUID"
   url: "URL"
+  episode_id: "EpisodeID"
+  episode_ids: "EpisodeIDs"
+  limit_val: "Limit"
+  offset_val: "Offset"
 overrides:
   - go_type: "github.com/google/uuid.NullUUID"
     db_type: "uuid"
     nullable: true
-

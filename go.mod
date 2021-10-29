@@ -2,8 +2,9 @@ module github.com/SatorNetwork/sator-api
 
 go 1.16
 
+replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompatible
+
 require (
-	github.com/anthonynsimon/bild v0.13.0
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/dmitrymomot/distlock v0.1.1
@@ -26,6 +27,7 @@ require (
 	github.com/lib/pq v1.10.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.0
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/portto/solana-go-sdk v0.1.0
