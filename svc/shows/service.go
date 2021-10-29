@@ -65,6 +65,7 @@ type (
 		UserRewardsAmount       float64    `json:"user_rewards_amount"`
 		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
 		HintText                string     `json:"hint_text"`
+		Watch                   string     `json:"watch"`
 	}
 
 	// Review ...
@@ -365,6 +366,7 @@ func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmoun
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedRewardAmountByUser,
 		HintText:           defaultHintText,
+		Watch:              source.Watch.String,
 	}
 
 	if source.HintText.Valid {
@@ -429,6 +431,7 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow, numberUsersWhoH
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedAmountByUser,
 		HintText:           defaultHintText,
+		Watch:              source.Watch.String,
 	}
 
 	if source.HintText.Valid {
@@ -459,6 +462,7 @@ func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
 		Description:   source.Description.String,
 		ReleaseDate:   source.ReleaseDate.Time.String(),
 		HintText:      defaultHintText,
+		Watch:         source.Watch.String,
 	}
 
 	if source.HintText.Valid {
@@ -584,6 +588,10 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 			String: ep.HintText,
 			Valid:  len(ep.HintText) > 0 && ep.HintText != defaultHintText,
 		},
+		Watch: sql.NullString{
+			String: ep.Watch,
+			Valid:  len(ep.Watch) > 0,
+		},
 	}
 
 	if ep.ChallengeID != nil && *ep.ChallengeID != uuid.Nil {
@@ -635,6 +643,10 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		HintText: sql.NullString{
 			String: ep.HintText,
 			Valid:  len(ep.HintText) > 0 && ep.HintText != defaultHintText,
+		},
+		Watch: sql.NullString{
+			String: ep.Watch,
+			Valid:  len(ep.Watch) > 0,
 		},
 	}
 

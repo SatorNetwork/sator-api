@@ -38,7 +38,8 @@ INSERT INTO episodes (
     release_date,
     challenge_id,
     verification_challenge_id,
-    hint_text
+    hint_text,
+    watch
 )
 VALUES (
            @show_id,
@@ -50,7 +51,8 @@ VALUES (
            @release_date,
            @challenge_id,
            @verification_challenge_id,
-           @hint_text
+           @hint_text,
+           @watch
 ) RETURNING *;
 
 -- name: UpdateEpisode :exec
@@ -64,7 +66,8 @@ SET episode_number = @episode_number,
     title = @title,
     description = @description,
     release_date = @release_date,
-    hint_text = @hint_text
+    hint_text = @hint_text,
+    watch = @watch
 WHERE id = @id;
 
 -- name: DeleteEpisodeByID :exec
