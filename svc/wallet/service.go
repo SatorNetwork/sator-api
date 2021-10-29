@@ -496,6 +496,19 @@ func (s *Service) Bootstrap(ctx context.Context) error {
 		break
 	}
 
+	_, stakePool, err := s.sc.InitializeStakePool(ctx, feePayer, issuer, asset.PublicKey)
+	if err != nil {
+		log.Printf("could not initiate stake pool: %s", err.Error())
+	}
+
+	if _, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
+		AccountType: StakePoolAccount.String(),
+		PublicKey:   stakePool.PublicKey.ToBase58(),
+		PrivateKey:  stakePool.PrivateKey,
+	}); err != nil {
+		return fmt.Errorf("could not store stake pool solana account: %w", err)
+	}
+
 	return nil
 }
 
@@ -696,7 +709,11 @@ func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, duration int
 	}
 	issuerAccount := s.sc.AccountFromPrivatekey(issuer.PrivateKey)
 
-	_, err = s.sc.Stake(ctx, fee, issuerAccount, stakePool, userWalletPK, duration, uint64(amount))
+	tx, err := s.sc.Stake(ctx, fee, issuerAccount, stakePool, userWalletPK, duration, uint64(amount))
+	if err != nil {
+		return false, fmt.Errorf("could not stake: %w", err)
+	}
+	fmt.Println("tx", tx)
 
 	return true, nil
 }
@@ -734,6 +751,9 @@ func (s *Service) Unstake(ctx context.Context, walletID uuid.UUID) error {
 	issuerAccount := s.sc.AccountFromPrivatekey(issuer.PrivateKey)
 
 	_, err = s.sc.Unstake(ctx, fee, issuerAccount, stakePool, userWalletPK)
+	if err != nil {
+		return fmt.Errorf("could not unstake: %w", err)
+	}
 
 	return nil
 }
