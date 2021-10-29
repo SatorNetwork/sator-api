@@ -45,12 +45,3 @@ type WinnerInput struct {
 	UserPubKey common.PublicKey
 	Points     uint32
 }
-
-const (
-	SystemProgram   = "11111111111111111111111111111111"
-	SysvarRent      = "SysvarRent111111111111111111111111111111111"
-	SysvarClock     = "SysvarC1ock11111111111111111111111111111111"
-	SplToken        = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-	StakeProgramID  = "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u"
-	RewardProgramID = "DajevvE6uo5HtST4EDguRUcbdEMNKNcLWjjNowMRQvZ1"
-)

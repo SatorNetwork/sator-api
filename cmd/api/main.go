@@ -94,6 +94,12 @@ var (
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+	systemProgram    = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	sysvarRent       = env.MustString("SOLANA_SYSVAR_RENT")
+	sysvarClock      = env.MustString("SOLANA_SYSVAR_CLOCK")
+	splToken         = env.MustString("SOLANA_SPL_TOKEN")
+	stakeProgramID   = env.MustString("SOLANA_STAKE_PROGRAM_ID")
+	rewardProgramID  = env.MustString("SOLANA_REWARD_PROGRAM_ID")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -216,7 +222,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), ethereumClient)
+		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl, solana.Config{
+			SystemProgram:   systemProgram,
+			SysvarRent:      sysvarRent,
+			SysvarClock:     sysvarClock,
+			SplToken:        splToken,
+			StakeProgramID:  stakeProgramID,
+			RewardProgramID: rewardProgramID,
+		}), ethereumClient)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),

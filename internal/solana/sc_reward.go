@@ -13,10 +13,10 @@ import (
 // InitializeShow generates and calls instruction that initializes show.
 func (c *Client) InitializeShow(ctx context.Context, feePayer types.Account, asset common.PublicKey) (txHast string, show types.Account, err error) {
 	show = types.NewAccount()
-	systemProgram := c.PublicKeyFromString(SystemProgram)
-	sysvarRent := c.PublicKeyFromString(SysvarRent)
-	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(RewardProgramID)
+	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
+	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
+	splToken := c.PublicKeyFromString(c.config.SplToken)
+	programID := c.PublicKeyFromString(c.config.RewardProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -73,9 +73,9 @@ func (c *Client) InitializeShow(ctx context.Context, feePayer types.Account, ass
 
 // InitializeViewer generates and calls instruction that initializes viewer.
 func (c *Client) InitializeViewer(ctx context.Context, feePayer, show types.Account, wallet common.PublicKey) (txHast string, err error) {
-	systemProgram := c.PublicKeyFromString(SystemProgram)
-	sysvarRent := c.PublicKeyFromString(SysvarRent)
-	programID := c.PublicKeyFromString(RewardProgramID)
+	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
+	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
+	programID := c.PublicKeyFromString(c.config.RewardProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -130,10 +130,10 @@ func (c *Client) InitializeViewer(ctx context.Context, feePayer, show types.Acco
 
 // InitializeQuiz generates and calls instruction that initializes quiz.
 func (c *Client) InitializeQuiz(ctx context.Context, feePayer, show types.Account, wallet common.PublicKey, quizIndex uint64, winners []WinnerInput, amount uint64) (txHast string, err error) {
-	systemProgram := c.PublicKeyFromString(SystemProgram)
-	sysvarRent := c.PublicKeyFromString(SysvarRent)
-	sysvarClock := c.PublicKeyFromString(SysvarClock)
-	programID := c.PublicKeyFromString(RewardProgramID)
+	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
+	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
+	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
+	programID := c.PublicKeyFromString(c.config.RewardProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {

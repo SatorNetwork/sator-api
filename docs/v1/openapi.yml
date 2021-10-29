@@ -667,6 +667,9 @@ paths:
                 amount:
                   type: number
                   example: 1000
+                duration:
+                  type: number
+                  example: 10
       responses:
         "200":
           description: staked successfully.

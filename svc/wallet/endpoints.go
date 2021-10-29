@@ -7,6 +7,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
+	"github.com/dmitrymomot/go-env"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -31,7 +32,7 @@ type (
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
 		GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error)
-		SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error)
+		SetStake(ctx context.Context, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, walletID uuid.UUID) error
 	}
 
@@ -63,6 +64,7 @@ type (
 	SetStakeRequest struct {
 		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
 		WalletID string  `json:"wallet_id" validate:"required,uuid"`
+		Duration int64   `json:"duration"`
 	}
 
 	// UnstakeRequest struct
@@ -70,6 +72,8 @@ type (
 		WalletID string `json:"wallet_id" validate:"required,uuid"`
 	}
 )
+
+var StakeDuration = env.GetInt("SMART_CONTRACT_STAKE_DURATION", 0)
 
 // Limit of items
 func (r PaginationRequest) Limit() int32 {
@@ -234,7 +238,11 @@ func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, fmt.Errorf("invalid wallet id: %w", err)
 		}
 
-		result, err := s.SetStake(ctx, walletID, req.Amount)
+		if req.Duration == 0 {
+			req.Duration = int64(StakeDuration)
+		}
+
+		result, err := s.SetStake(ctx, walletID, req.Duration, req.Amount)
 		if err != nil {
 			return false, err
 		}

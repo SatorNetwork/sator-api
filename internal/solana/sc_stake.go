@@ -13,10 +13,10 @@ import (
 // InitializeStakePool generates and calls instruction that initializes stake pool.
 func (c *Client) InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error) {
 	stakePool = types.NewAccount()
-	systemProgram := c.PublicKeyFromString(SystemProgram)
-	sysvarRent := c.PublicKeyFromString(SysvarRent)
-	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(StakeProgramID)
+	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
+	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
+	splToken := c.PublicKeyFromString(c.config.SplToken)
+	programID := c.PublicKeyFromString(c.config.StakeProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -78,11 +78,11 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, issuer types
 
 // Stake stakes given amount for given period.
 func (c *Client) Stake(ctx context.Context, feePayer, issuer types.Account, pool, userWallet common.PublicKey, duration int64, amount uint64) (string, error) {
-	sysvarClock := c.PublicKeyFromString(SysvarClock)
-	sysvarRent := c.PublicKeyFromString(SysvarRent)
-	systemProgram := c.PublicKeyFromString(SystemProgram)
-	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(StakeProgramID)
+	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
+	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
+	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
+	splToken := c.PublicKeyFromString(c.config.SplToken)
+	programID := c.PublicKeyFromString(c.config.StakeProgramID)
 
 	data, err := borsh.Serialize(StakeInput{
 		Number:   1,
@@ -148,9 +148,9 @@ func (c *Client) Stake(ctx context.Context, feePayer, issuer types.Account, pool
 
 // Unstake unstake.
 func (c *Client) Unstake(ctx context.Context, feePayer, issuer types.Account, stakePool, userWallet common.PublicKey) (string, error) {
-	sysvarClock := c.PublicKeyFromString(SysvarClock)
-	splToken := c.PublicKeyFromString(SplToken)
-	programID := c.PublicKeyFromString(StakeProgramID)
+	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
+	splToken := c.PublicKeyFromString(c.config.SplToken)
+	programID := c.PublicKeyFromString(c.config.StakeProgramID)
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
@@ -178,7 +178,7 @@ func (c *Client) Unstake(ctx context.Context, feePayer, issuer types.Account, st
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
 			{
-				ProgramID: c.PublicKeyFromString(StakeProgramID),
+				ProgramID: c.PublicKeyFromString(c.config.StakeProgramID),
 				Accounts: []types.AccountMeta{
 					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
 					{PubKey: splToken, IsSigner: false, IsWritable: false},

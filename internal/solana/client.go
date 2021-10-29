@@ -17,16 +17,28 @@ type (
 		endpoint string
 		decimals uint8
 		mltpl    uint64
+		config   Config
+	}
+
+	// Config struct
+	Config struct {
+		SystemProgram   string
+		SysvarRent      string
+		SysvarClock     string
+		SplToken        string
+		StakeProgramID  string
+		RewardProgramID string
 	}
 )
 
 // New creates new solana client wrapper
-func New(endpoint string) *Client {
+func New(endpoint string, config Config) *Client {
 	return &Client{
 		solana:   client.NewClient(endpoint),
 		endpoint: endpoint,
 		decimals: 9,
 		mltpl:    1e9,
+		config:   config,
 	}
 }
 
