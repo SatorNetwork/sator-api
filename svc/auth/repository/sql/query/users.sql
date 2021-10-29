@@ -38,6 +38,10 @@ VALUES ($1, $2, $3) RETURNING *;
 UPDATE users
 SET email = $2
 WHERE id = $1;
+-- name: UpdateUsername :exec
+UPDATE users
+SET username = $2
+WHERE id = $1;
 -- name: UpdateUserPassword :exec
 UPDATE users
 SET password = $2

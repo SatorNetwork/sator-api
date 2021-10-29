@@ -295,3 +295,19 @@ func (q *Queries) UpdateUserVerifiedAt(ctx context.Context, arg UpdateUserVerifi
 	_, err := q.exec(ctx, q.updateUserVerifiedAtStmt, updateUserVerifiedAt, arg.VerifiedAt, arg.UserID)
 	return err
 }
+
+const updateUsername = `-- name: UpdateUsername :exec
+UPDATE users
+SET username = $2
+WHERE id = $1
+`
+
+type UpdateUsernameParams struct {
+	ID       uuid.UUID `json:"id"`
+	Username string    `json:"username"`
+}
+
+func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
+	_, err := q.exec(ctx, q.updateUsernameStmt, updateUsername, arg.ID, arg.Username)
+	return err
+}

@@ -20,9 +20,10 @@ type (
 		DeleteChallengeByID   endpoint.Endpoint
 		UpdateChallenge       endpoint.Endpoint
 
-		GetVerificationQuestionByEpisodeID endpoint.Endpoint
-		CheckVerificationQuestionAnswer    endpoint.Endpoint
-		VerifyUserAccessToEpisode          endpoint.Endpoint
+		GetVerificationQuestionByEpisodeID     endpoint.Endpoint
+		CheckVerificationQuestionAnswer        endpoint.Endpoint
+		VerifyUserAccessToEpisode              endpoint.Endpoint
+		GetAttemptsLeftForVerificationQuestion endpoint.Endpoint
 
 		AddQuestion               endpoint.Endpoint
 		DeleteQuestionByID        endpoint.Endpoint
@@ -48,6 +49,7 @@ type (
 		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error)
 		CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error)
 		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error)
+		GetAttemptsLeftForVerificationQuestion(ctx context.Context, episodeID, userID uuid.UUID) (int64, error)
 
 		AddQuestion(ctx context.Context, qw Question) (Question, error)
 		DeleteQuestionByID(ctx context.Context, id uuid.UUID) error
@@ -139,20 +141,26 @@ type (
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 		Option    string `json:"option" validate:"required"`
 	}
+
+	//	GetAttemptsLeftForVerificationQuestionResponse...
+	GetAttemptsLeftForVerificationQuestionResponse struct {
+		AttemptsLeft int64 `json:"attempts_left"`
+	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetChallengeById:                   MakeGetChallengeByIdEndpoint(s),
-		GetChallengesByShowId:              MakeGetChallengeByIdEndpoint(s),
-		GetVerificationQuestionByEpisodeID: MakeGetVerificationQuestionByEpisodeIDEndpoint(s),
-		CheckVerificationQuestionAnswer:    MakeCheckVerificationQuestionAnswerEndpoint(s, validateFunc),
-		VerifyUserAccessToEpisode:          MakeVerifyUserAccessToEpisodeEndpoint(s),
-		AddChallenge:                       MakeAddChallengeEndpoint(s, validateFunc),
-		DeleteChallengeByID:                MakeDeleteChallengeByIDEndpoint(s),
-		UpdateChallenge:                    MakeUpdateChallengeEndpoint(s, validateFunc),
+		GetChallengeById:                       MakeGetChallengeByIdEndpoint(s),
+		GetChallengesByShowId:                  MakeGetChallengeByIdEndpoint(s),
+		GetVerificationQuestionByEpisodeID:     MakeGetVerificationQuestionByEpisodeIDEndpoint(s),
+		CheckVerificationQuestionAnswer:        MakeCheckVerificationQuestionAnswerEndpoint(s, validateFunc),
+		VerifyUserAccessToEpisode:              MakeVerifyUserAccessToEpisodeEndpoint(s),
+		AddChallenge:                           MakeAddChallengeEndpoint(s, validateFunc),
+		DeleteChallengeByID:                    MakeDeleteChallengeByIDEndpoint(s),
+		UpdateChallenge:                        MakeUpdateChallengeEndpoint(s, validateFunc),
+		GetAttemptsLeftForVerificationQuestion: MakeGetAttemptsLeftForVerificationQuestionEndpoint(s),
 
 		AddQuestion:               MakeAddQuestionEndpoint(s, validateFunc),
 		DeleteQuestionByID:        MakeDeleteQuestionByIDEndpoint(s),
@@ -179,6 +187,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.AddChallenge = mdw(e.AddChallenge)
 			e.DeleteChallengeByID = mdw(e.DeleteChallengeByID)
 			e.UpdateChallenge = mdw(e.UpdateChallenge)
+			e.GetAttemptsLeftForVerificationQuestion = mdw(e.GetAttemptsLeftForVerificationQuestion)
 
 			e.AddQuestion = mdw(e.AddQuestion)
 			e.DeleteQuestionByID = mdw(e.DeleteQuestionByID)
@@ -208,7 +217,7 @@ func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint
 
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
-			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
 		resp, err := s.GetVerificationQuestionByEpisodeID(ctx, id, uid)
@@ -414,16 +423,16 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		resp, err := s.AddQuestion(ctx, Question{
-			ChallengeID: challengeID,
-			Question:    req.Question,
-			Order:       req.Order,
-		})
-		if err != nil {
-			return nil, err
-		}
+		if n := len(req.AnswerOptions); n >= 2 && n <= 4 {
+			resp, err := s.AddQuestion(ctx, Question{
+				ChallengeID: challengeID,
+				Question:    req.Question,
+				Order:       req.Order,
+			})
+			if err != nil {
+				return nil, err
+			}
 
-		if len(req.AnswerOptions) == 4 {
 			answerOptions := make([]AnswerOption, 0, len(req.AnswerOptions))
 
 			for _, answ := range req.AnswerOptions {
@@ -440,9 +449,11 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 			}
 
 			resp.AnswerOptions = answerOptions
+
+			return resp, nil
 		}
 
-		return resp, nil
+		return nil, fmt.Errorf("number of answer options must be from 2 to 4")
 	}
 }
 
@@ -534,16 +545,16 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		if err = s.UpdateQuestion(ctx, Question{
-			ID:          id,
-			ChallengeID: challengeID,
-			Question:    req.Question,
-			Order:       req.Order,
-		}); err != nil {
-			return nil, err
-		}
+		if n := len(req.AnswerOptions); n >= 2 && n <= 4 {
+			if err = s.UpdateQuestion(ctx, Question{
+				ID:          id,
+				ChallengeID: challengeID,
+				Question:    req.Question,
+				Order:       req.Order,
+			}); err != nil {
+				return nil, err
+			}
 
-		if len(req.AnswerOptions) == 4 {
 			if err := s.DeleteAnswersByQuestionID(ctx, id); err != nil {
 				return nil, err
 			}
@@ -557,9 +568,10 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 					return nil, err
 				}
 			}
+			return true, nil
 		}
 
-		return true, nil
+		return nil, fmt.Errorf("number of answer options must be from 2 to 4")
 	}
 }
 
@@ -684,5 +696,27 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeGetAttemptsLeftForVerificationQuestionEndpoint ...
+func MakeGetAttemptsLeftForVerificationQuestionEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.GetAttemptsLeftForVerificationQuestion(ctx, id, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return GetAttemptsLeftForVerificationQuestionResponse{AttemptsLeft: resp}, nil
 	}
 }

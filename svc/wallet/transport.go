@@ -125,7 +125,11 @@ func decodeCreateTransferRequest(_ context.Context, r *http.Request) (interface{
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}
-	req.SenderWalletID = chi.URLParam(r, "wallet_id")
+	senderWalletID := chi.URLParam(r, "wallet_id")
+	if senderWalletID == "" {
+		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
+	}
+	req.SenderWalletID = senderWalletID
 	req.Asset = "SAO" // FIXME: remove hardcode
 
 	log.Printf("\n\nCreateTransferRequest: \n%#v\n\n", req)

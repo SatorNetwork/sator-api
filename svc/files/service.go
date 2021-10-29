@@ -8,14 +8,15 @@ import (
 	"mime/multipart"
 	"path"
 
-	"github.com/SatorNetwork/sator-api/internal/storage"
-	"github.com/SatorNetwork/sator-api/svc/files/repository"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	"github.com/SatorNetwork/sator-api/internal/storage"
+	"github.com/SatorNetwork/sator-api/svc/files/repository"
 )
 
 type (
-	resizerFunc func(f io.ReadCloser, w, h int) (io.ReadSeeker, error)
+	resizerFunc func(f io.ReadCloser, w, h uint, imageType string) (io.ReadSeeker, error)
 
 	// Service struct
 	Service struct {
@@ -53,13 +54,13 @@ func NewService(msr mediaServiceRepository, storage *storage.Interactor, resize 
 	return &Service{msr: msr, storage: storage, resize: resize}
 }
 
-// AddImage used to create new image.
-func (s *Service) AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error) {
+// AddImageResize used to create new resized image.
+func (s *Service) AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width uint) (Image, error) {
 	id := uuid.New()
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	ct := fileHeader.Header.Get("Content-Type")
 
-	resizedFile, err := s.resize(file, width, height)
+	resizedFile, err := s.resize(file, width, height, ct)
 	if err != nil {
 		return Image{}, errors.Wrap(err, "resize image")
 	}
