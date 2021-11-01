@@ -691,25 +691,28 @@ func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, duration int
 	}
 	stakePool := common.PublicKeyFromString(pool.PublicKey)
 
-	wallet, err := s.wr.GetWalletByID(ctx, walletID)
-	if err != nil {
-		return false, fmt.Errorf("could not get wallet: %w", err)
-	}
-
-	solanaAccount, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
-	if err != nil {
-		return false, fmt.Errorf("could not get wallet: %w", err)
-	}
-
-	userWalletPK := common.PublicKeyFromString(solanaAccount.PublicKey)
-
 	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
 	if err != nil {
 		return false, fmt.Errorf("could not get issuer account: %w", err)
 	}
 	issuerAccount := s.sc.AccountFromPrivatekey(issuer.PrivateKey)
 
-	tx, err := s.sc.Stake(ctx, fee, issuerAccount, stakePool, userWalletPK, duration, uint64(amount))
+	assetAcc, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return false, fmt.Errorf("could not get issuer account: %w", err)
+	}
+	asset := s.sc.AccountFromPrivatekey(assetAcc.PrivateKey)
+
+	wlt := types.NewAccount()
+	if _, err = s.sc.InitAccountToUseAsset(ctx, fee, issuerAccount, asset, wlt); err != nil {
+		println(err)
+	}
+
+	if _, err := s.sc.SendAssets(ctx, fee, issuerAccount, asset, issuerAccount, wlt.PublicKey.ToBase58(), 1000); err != nil {
+		println(err)
+	}
+
+	tx, err := s.sc.Stake(ctx, fee, issuerAccount, stakePool, wlt.PublicKey, duration, uint64(amount))
 	if err != nil {
 		return false, fmt.Errorf("could not stake: %w", err)
 	}

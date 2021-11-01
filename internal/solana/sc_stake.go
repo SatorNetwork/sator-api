@@ -3,6 +3,8 @@ package solana
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/mr-tron/base58"
 	"github.com/near/borsh-go"
@@ -77,7 +79,7 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, issuer types
 }
 
 // Stake stakes given amount for given period.
-func (c *Client) Stake(ctx context.Context, feePayer, issuer types.Account, pool, userWallet common.PublicKey, duration int64, amount uint64) (string, error) {
+func (c *Client) Stake(ctx context.Context, feePayer, issuer types.Account, pool, userWallet common.PublicKey, duration int64, amount uint64) (txHash string, err error) {
 	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
 	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
 	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
@@ -105,57 +107,62 @@ func (c *Client) Stake(ctx context.Context, feePayer, issuer types.Account, pool
 	seedString := base58.Encode(seed[0:20])
 	stakeAccount := common.CreateWithSeed(stakeAuthority, seedString, programID)
 
-	res, err := c.solana.GetRecentBlockhash(ctx)
-	if err != nil {
-		return "", fmt.Errorf("could not get recent block hash: %w", err)
-	}
+	for i := 0; i < 3; i++ {
+		res, err := c.solana.GetRecentBlockhash(ctx)
+		if err != nil {
+			log.Println(fmt.Errorf("could not get recent block hash: %w", err))
+			time.Sleep(10 * time.Second)
+			continue
+		}
 
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			{
-				ProgramID: programID,
-				Accounts: []types.AccountMeta{
-					{PubKey: systemProgram, IsSigner: false, IsWritable: false},
-					{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
-					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
-					{PubKey: splToken, IsSigner: false, IsWritable: false},
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
-					{PubKey: pool, IsSigner: false, IsWritable: false},
-					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
-					{PubKey: userWallet, IsSigner: false, IsWritable: true},
-					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
-					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
+		rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
+			Instructions: []types.Instruction{
+				{
+					ProgramID: programID,
+					Accounts: []types.AccountMeta{
+						{PubKey: systemProgram, IsSigner: false, IsWritable: false},
+						{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
+						{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
+						{PubKey: splToken, IsSigner: false, IsWritable: false},
+						{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
+						{PubKey: pool, IsSigner: false, IsWritable: false},
+						{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
+						{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+						{PubKey: userWallet, IsSigner: false, IsWritable: true},
+						{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
+						{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
+					},
+					Data: data,
 				},
-				Data: data,
 			},
-		},
-		Signers:         []types.Account{feePayer, issuer},
-		FeePayer:        feePayer.PublicKey,
-		RecentBlockHash: res.Blockhash,
-	})
-	if err != nil {
-		return "", fmt.Errorf("could not create new raw transaction: %w", err)
+			Signers:         []types.Account{feePayer, issuer},
+			FeePayer:        feePayer.PublicKey,
+			RecentBlockHash: res.Blockhash,
+		})
+		if err != nil {
+			log.Println(fmt.Errorf("could not create new raw transaction: %w", err))
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		txHash, err = c.solana.SendRawTransaction(ctx, rawTx)
+		if err != nil {
+			log.Println(fmt.Errorf("could not send new raw transaction: %w", err))
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		break
 	}
 
-	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
-	if err != nil {
-		return "", fmt.Errorf("could not send raw transaction: %w", err)
-	}
-
-	return txhash, nil
+	return txHash, err
 }
 
 // Unstake unstake.
-func (c *Client) Unstake(ctx context.Context, feePayer, issuer types.Account, stakePool, userWallet common.PublicKey) (string, error) {
+func (c *Client) Unstake(ctx context.Context, feePayer, issuer types.Account, stakePool, userWallet common.PublicKey) (txHash string, err error) {
 	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
 	splToken := c.PublicKeyFromString(c.config.SplToken)
 	programID := c.PublicKeyFromString(c.config.StakeProgramID)
-
-	res, err := c.solana.GetRecentBlockhash(ctx)
-	if err != nil {
-		return "", fmt.Errorf("could not get recent block hash: %w", err)
-	}
 
 	data, err := borsh.Serialize(UnstakeInput{Number: 2})
 	if err != nil {
@@ -175,36 +182,51 @@ func (c *Client) Unstake(ctx context.Context, feePayer, issuer types.Account, st
 	seedString := base58.Encode(seed[0:20])
 	stakeAccount := common.CreateWithSeed(stakeAuthority, seedString, programID)
 
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			{
-				ProgramID: c.PublicKeyFromString(c.config.StakeProgramID),
-				Accounts: []types.AccountMeta{
-					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
-					{PubKey: splToken, IsSigner: false, IsWritable: false},
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: true},
-					{PubKey: stakePool, IsSigner: false, IsWritable: false},
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
-					{PubKey: userWallet, IsSigner: false, IsWritable: true},
-					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
-					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
-					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
+	for i := 0; i < 3; i++ {
+		res, err := c.solana.GetRecentBlockhash(ctx)
+		if err != nil {
+			log.Println(fmt.Errorf("could not get recent block hash: %w", err))
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
+			Instructions: []types.Instruction{
+				{
+					ProgramID: c.PublicKeyFromString(c.config.StakeProgramID),
+					Accounts: []types.AccountMeta{
+						{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
+						{PubKey: splToken, IsSigner: false, IsWritable: false},
+						{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: true},
+						{PubKey: stakePool, IsSigner: false, IsWritable: false},
+						{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+						{PubKey: userWallet, IsSigner: false, IsWritable: true},
+						{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
+						{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
+						{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
+					},
+					Data: data,
 				},
-				Data: data,
 			},
-		},
-		Signers:         []types.Account{feePayer, issuer},
-		FeePayer:        feePayer.PublicKey,
-		RecentBlockHash: res.Blockhash,
-	})
-	if err != nil {
-		return "", fmt.Errorf("could not create new raw transaction: %w", err)
+			Signers:         []types.Account{feePayer, issuer},
+			FeePayer:        feePayer.PublicKey,
+			RecentBlockHash: res.Blockhash,
+		})
+		if err != nil {
+			log.Println(fmt.Errorf("could not create new raw transaction: %w", err))
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		txHash, err = c.solana.SendRawTransaction(ctx, rawTx)
+		if err != nil {
+			log.Println(fmt.Errorf("could not send new raw transaction: %w", err))
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		break
 	}
 
-	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
-	if err != nil {
-		return "", fmt.Errorf("could not send raw transaction: %w", err)
-	}
-
-	return txhash, nil
+	return txHash, err
 }

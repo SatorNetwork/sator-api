@@ -25,7 +25,14 @@ var (
 
 func main() {
 	ctx := context.Background()
-	sc := solana.New(client.DevnetRPCEndpoint)
+	sc := solana.New(client.DevnetRPCEndpoint, solana.Config{
+		SystemProgram:   "11111111111111111111111111111111",
+		SysvarRent:      "SysvarRent111111111111111111111111111111111",
+		SysvarClock:     "SysvarC1ock11111111111111111111111111111111",
+		SplToken:        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+		StakeProgramID:  "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		RewardProgramID: "DajevvE6uo5HtST4EDguRUcbdEMNKNcLWjjNowMRQvZ1",
+	})
 
 	txList, err := sc.GetTransactions(ctx, "3Z6t2topTRBVeQjbLf8mExLnEvxUz38rMkyiNSnwMkrj")
 	if err != nil {
