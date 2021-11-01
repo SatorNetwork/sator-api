@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -292,6 +293,9 @@ func decodeAddEpisodeRequest(_ context.Context, r *http.Request) (interface{}, e
 	}
 	req.ShowID = showID
 
+	// TODO: remove it
+	log.Printf("decodeAddEpisodeRequest: \n%+v\n", req)
+
 	return req, nil
 }
 
@@ -312,6 +316,9 @@ func decodeUpdateEpisodeRequest(_ context.Context, r *http.Request) (interface{}
 		return nil, fmt.Errorf("%w: missed episodes id", ErrInvalidParameter)
 	}
 	req.ID = episodeID
+
+	// TODO: remove it
+	log.Printf("decodeUpdateEpisodeRequest: \n%+v\n", req)
 
 	return req, nil
 }
