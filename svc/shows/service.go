@@ -345,28 +345,35 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 		return Episode{}, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
 	}
 
-	return castRowToEpisode(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
+	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
+}
+
+// Cast repository.GetEpisodeByIDRow to service Episode structure with extra data
+func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
+	ep := castRowToEpisode(source)
+	ep.Rating = rating
+	ep.RatingsCount = ratingsCount
+	ep.ActiveUsers = number
+	ep.TotalRewardsAmount = receivedAmount
+	ep.UserRewardsAmount = receivedRewardAmountByUser
+
+	return ep
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure
-func castRowToEpisode(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
+func castRowToEpisode(source repository.GetEpisodeByIDRow) Episode {
 	ep := Episode{
-		ID:                 source.ID,
-		ShowID:             source.ShowID,
-		EpisodeNumber:      source.EpisodeNumber,
-		SeasonID:           source.SeasonID.UUID,
-		SeasonNumber:       source.SeasonNumber,
-		Cover:              source.Cover.String,
-		Title:              source.Title,
-		Description:        source.Description.String,
-		ReleaseDate:        source.ReleaseDate.Time.String(),
-		Rating:             rating,
-		RatingsCount:       ratingsCount,
-		ActiveUsers:        number,
-		TotalRewardsAmount: receivedAmount,
-		UserRewardsAmount:  receivedRewardAmountByUser,
-		HintText:           defaultHintText,
-		Watch:              source.Watch.String,
+		ID:            source.ID,
+		ShowID:        source.ShowID,
+		EpisodeNumber: source.EpisodeNumber,
+		SeasonID:      source.SeasonID.UUID,
+		SeasonNumber:  source.SeasonNumber,
+		Cover:         source.Cover.String,
+		Title:         source.Title,
+		Description:   source.Description.String,
+		ReleaseDate:   source.ReleaseDate.Time.String(),
+		HintText:      defaultHintText,
+		Watch:         source.Watch.String,
 	}
 
 	if source.HintText.Valid {
@@ -432,37 +439,6 @@ func castRowsToEpisode(source repository.GetEpisodesByShowIDRow, numberUsersWhoH
 		UserRewardsAmount:  receivedAmountByUser,
 		HintText:           defaultHintText,
 		Watch:              source.Watch.String,
-	}
-
-	if source.HintText.Valid {
-		ep.HintText = source.HintText.String
-	}
-
-	if source.ChallengeID.Valid && source.ChallengeID.UUID != uuid.Nil {
-		ep.ChallengeID = &source.ChallengeID.UUID
-	}
-
-	if source.VerificationChallengeID.Valid && source.VerificationChallengeID.UUID != uuid.Nil {
-		ep.VerificationChallengeID = &source.VerificationChallengeID.UUID
-	}
-
-	return ep
-}
-
-// Cast repository.Episode to service Episode structure
-func castToEpisode(source repository.Episode, seasonNumber int32) Episode {
-	ep := Episode{
-		ID:            source.ID,
-		ShowID:        source.ShowID,
-		EpisodeNumber: source.EpisodeNumber,
-		SeasonID:      source.SeasonID.UUID,
-		SeasonNumber:  seasonNumber,
-		Cover:         source.Cover.String,
-		Title:         source.Title,
-		Description:   source.Description.String,
-		ReleaseDate:   source.ReleaseDate.Time.String(),
-		HintText:      defaultHintText,
-		Watch:         source.Watch.String,
 	}
 
 	if source.HintText.Valid {
@@ -612,7 +588,8 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
 	}
 
-	return castToEpisode(episode, episodeByID.SeasonNumber), nil
+	// return castToEpisode(episode, episodeByID.SeasonNumber), nil
+	return castRowToEpisode(episodeByID), nil
 }
 
 // UpdateEpisode ..
