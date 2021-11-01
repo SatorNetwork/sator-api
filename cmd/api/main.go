@@ -112,6 +112,9 @@ var (
 	companyName    = env.GetString("COMPANY_NAME", "Sator")
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
 
+	// Rewards
+	holdRewardsPeriod = env.GetDuration("HOLD_REWARDS_PERIOD", 0)
+
 	// Invitation
 	invitationReward = env.GetFloat("INVITATION_REWARD", 0)
 	invitationURL    = env.GetString("INVITATION_URL", "https://sator.io")
@@ -241,6 +244,7 @@ func main() {
 		walletSvcClient,
 		db_internal.NewAdvisoryLocks(db),
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
+		rewards.WithHoldRewardsPeriod(holdRewardsPeriod),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(

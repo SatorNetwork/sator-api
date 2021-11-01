@@ -303,7 +303,7 @@ paths:
         - "Auth"
       summary: Change password.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       description: Change password for authenticated user.
       requestBody:
         required: true
@@ -449,7 +449,7 @@ paths:
         - "Auth"
       summary: request update email.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -500,7 +500,7 @@ paths:
         - "Auth"
       summary: Update username.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -598,6 +598,12 @@ paths:
                     currency:
                       type: string
                       example: "SAO"
+                    sub_amount:
+                      type: number
+                      example: 50.65
+                    sub_currency:
+                      type: string
+                      example: "Rewards"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 

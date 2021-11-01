@@ -12,7 +12,7 @@ import (
 type Reward struct {
 	ID              uuid.UUID      `json:"id"`
 	UserID          uuid.UUID      `json:"user_id"`
-	RelationID      uuid.UUID      `json:"relation_id"`
+	RelationID      uuid.NullUUID  `json:"relation_id"`
 	Amount          float64        `json:"amount"`
 	Withdrawn       bool           `json:"withdrawn"`
 	UpdatedAt       sql.NullTime   `json:"updated_at"`

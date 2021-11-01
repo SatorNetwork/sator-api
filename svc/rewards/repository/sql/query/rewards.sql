@@ -13,21 +13,34 @@ VALUES (
         @transaction_type,
         @amount
     );
+
 -- name: Withdraw :exec
 UPDATE rewards
 SET withdrawn = TRUE
-WHERE user_id = $1
-    AND transaction_type = 1;
+WHERE user_id = @user_id
+AND transaction_type = 1
+AND created_at < @not_after_date;
+
 -- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = @user_id
-    AND withdrawn = FALSE
-    AND transaction_type = 1
+AND withdrawn = FALSE
+AND transaction_type = 1
 GROUP BY user_id;
+
+-- name: GetAmountAvailableToWithdraw :one
+SELECT SUM(amount)::DOUBLE PRECISION
+FROM rewards
+WHERE user_id = @user_id
+AND withdrawn = FALSE
+AND transaction_type = 1
+AND created_at < @not_after_date
+GROUP BY user_id;
+
 -- name: GetTransactionsByUserIDPaginated :many
 SELECT *
 FROM rewards
 WHERE user_id = $1
 ORDER BY created_at DESC
-    LIMIT $2 OFFSET $3;
+LIMIT $2 OFFSET $3;
