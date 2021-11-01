@@ -10,7 +10,7 @@ require (
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
-	github.com/ethereum/go-ethereum v1.10.8
+	github.com/ethereum/go-ethereum v1.10.11
 	github.com/go-chi/chi v4.1.1+incompatible
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/locales v0.13.0
@@ -34,7 +34,7 @@ require (
 	github.com/zeebo/errs v1.2.2
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/sys v0.0.0-20211031064116-611d5d643895 // indirect
 	syreclabs.com/go/faker v1.2.3
 )
