@@ -3,17 +3,22 @@ package ethereum
 import (
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 func MintNFT() error {
-	client, err := ethclient.Dial("https://rinkeby.etherscan.io/")
+	client, err := ethclient.Dial("http://geth-dev.sator.io:8545")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	instance, err := NewEthereum(common.HexToAddress("0x06C46089EC98ed594aaec58f323F85D377755987"), client)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,35 +45,24 @@ func MintNFT() error {
 		log.Fatal(err)
 	}
 
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, &big.Int{})
+	// 4 for rinkeby, more chainID's here: https://chainlist.org/
+	chainID := big.NewInt(4)
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)     // in wei
-	auth.GasLimit = uint64(300000) // in units
+	auth.GasLimit = uint64(21000) // in units
 	auth.GasPrice = gasPrice
 
-	address, tx, instance, err := DeployEthereum(auth, client)
+	tx, err := instance.Mint(auth, common.HexToAddress("0x6323324e4376a2babb1f9096a6eab66326fc60b8"), "testToken_123")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(address.Hex())
-	fmt.Println(tx.Hash().Hex())
-
-	_ = instance
-
-	instance, err = NewEthereum(address, client)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//tx, err = instance.Mint()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	print(tx)
 
 	return nil
 }
