@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -51,6 +52,12 @@ type (
 		AddEthereumAccount(ctx context.Context, arg repository.AddEthereumAccountParams) (repository.EthereumAccount, error)
 		GetEthereumAccountByID(ctx context.Context, id uuid.UUID) (repository.EthereumAccount, error)
 		GetEthereumAccountByUserIDAndType(ctx context.Context, arg repository.GetEthereumAccountByUserIDAndTypeParams) (repository.EthereumAccount, error)
+
+		AddStake(ctx context.Context, arg repository.AddStakeParams) (repository.Stake, error)
+		DeleteStakeByUserID(ctx context.Context, userID uuid.UUID) error
+		GetStakeByUserID(ctx context.Context, userID uuid.UUID) (repository.Stake, error)
+		GetTotalStake(ctx context.Context) (float64, error)
+		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
 	}
 
 	solanaClient interface {
@@ -661,14 +668,29 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 }
 
 // GetStake method for get stake
-func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error) {
+func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Stake, error) {
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Stake{}, fmt.Errorf("you do not have stake: %w", err)
+		}
+		return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
+	}
+
+	totalStake, err := s.wr.GetTotalStake(ctx)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get total stake by user id: %w", err)
+	}
+
+	yourShare := stake.StakeAmount / totalStake * 100
+
 	return Stake{
 		Staking: Staking{
 			AssetName:   "SAO",
-			APY:         138.9,
-			TotalStaked: 23423454567,
-			Staked:      345.75,
-			YourShare:   0.021,
+			APY:         138.9, // TODO: Figure out what this field mean and fill it!!!
+			TotalStaked: totalStake,
+			Staked:      stake.StakeAmount,
+			YourShare:   yourShare,
 		},
 		Loyalty: Loyalty{
 			LevelTitle:    "Genin",
@@ -678,7 +700,7 @@ func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, erro
 }
 
 // SetStake method for set stake
-func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
+func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
 	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
 	if err != nil {
 		return false, fmt.Errorf("could not get fee payer account: %w", err)
@@ -718,11 +740,47 @@ func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, duration int
 	}
 	fmt.Println("tx", tx)
 
+	// Store stake data in our db.
+	staked, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			_, err := s.wr.AddStake(ctx, repository.AddStakeParams{
+				UserID:      userID,
+				WalletID:    walletID,
+				StakeAmount: amount,
+				StakeDuration: sql.NullInt32{
+					Int32: int32(duration),
+					Valid: true,
+				},
+				UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+			})
+			if err != nil {
+				return false, fmt.Errorf("could not add stake for user= %v, %w", userID, err)
+			}
+
+			return true, nil
+		}
+		err := s.wr.UpdateStake(ctx, repository.UpdateStakeParams{
+			UserID:      userID,
+			StakeAmount: staked.StakeAmount + amount,
+			StakeDuration: sql.NullInt32{
+				Int32: int32(duration),
+				Valid: true,
+			},
+			UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+		})
+		if err != nil {
+			return false, fmt.Errorf("could not update stake for user= %v, %w", userID, err)
+		}
+
+		return true, nil
+	}
+
 	return true, nil
 }
 
 // Unstake method for unstake
-func (s *Service) Unstake(ctx context.Context, walletID uuid.UUID) error {
+func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error {
 	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
 	if err != nil {
 		return fmt.Errorf("could not get fee payer account: %w", err)
@@ -756,6 +814,11 @@ func (s *Service) Unstake(ctx context.Context, walletID uuid.UUID) error {
 	_, err = s.sc.Unstake(ctx, fee, issuerAccount, stakePool, userWalletPK)
 	if err != nil {
 		return fmt.Errorf("could not unstake: %w", err)
+	}
+
+	err = s.wr.DeleteStakeByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not delete stake by user id: %w", err)
 	}
 
 	return nil

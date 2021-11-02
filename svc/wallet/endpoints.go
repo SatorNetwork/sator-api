@@ -31,9 +31,9 @@ type (
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
-		GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error)
-		SetStake(ctx context.Context, walletID uuid.UUID, duration int64, amount float64) (bool, error)
-		Unstake(ctx context.Context, walletID uuid.UUID) error
+		GetStake(ctx context.Context, userID, walletID uuid.UUID) (Stake, error)
+		SetStake(ctx context.Context, uid, walletID uuid.UUID, duration int64, amount float64) (bool, error)
+		Unstake(ctx context.Context, uid, walletID uuid.UUID) error
 	}
 
 	CreateTransferRequest struct {
@@ -228,6 +228,11 @@ func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) end
 
 func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(SetStakeRequest)
 		if err := v(req); err != nil {
 			return false, err
@@ -242,7 +247,7 @@ func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			req.Duration = int64(StakeDuration)
 		}
 
-		result, err := s.SetStake(ctx, walletID, req.Duration, req.Amount)
+		result, err := s.SetStake(ctx, uid, walletID, req.Duration, req.Amount)
 		if err != nil {
 			return false, err
 		}
@@ -253,12 +258,17 @@ func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 
 func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		walletID, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get wallet id: %w", err)
 		}
 
-		stake, err := s.GetStake(ctx, walletID)
+		stake, err := s.GetStake(ctx, uid, walletID)
 		if err != nil {
 			return nil, err
 		}
@@ -269,12 +279,17 @@ func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 
 func MakeUnstakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		walletID, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get wallet id: %w", err)
 		}
 
-		err = s.Unstake(ctx, walletID)
+		err = s.Unstake(ctx, uid, walletID)
 		if err != nil {
 			return nil, err
 		}
