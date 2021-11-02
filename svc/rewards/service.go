@@ -187,11 +187,9 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (total float64, available float64, err error) {
 	total, err = s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
-		if db.IsNotFoundError(err) {
-			return
+		if !db.IsNotFoundError(err) {
+			return 0, 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 		}
-
-		return 0, 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
 	available, err = s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
@@ -202,7 +200,6 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (total floa
 		if !db.IsNotFoundError(err) {
 			return 0, 0, fmt.Errorf("could not get available amount of rewards: %w", err)
 		}
-
 	}
 
 	return total, available, nil
