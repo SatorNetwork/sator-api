@@ -7,11 +7,18 @@ import (
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+)
+
+// Predefined request query keys
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -111,7 +118,10 @@ func decodeCreateNFTRequest(_ context.Context, r *http.Request) (interface{}, er
 }
 
 func decodeGetNFTsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return Empty{}, nil
+	return PaginationRequest{
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
 }
 
 func decodeGetNFTsByCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -122,6 +132,10 @@ func decodeGetNFTsByCategoryRequest(_ context.Context, r *http.Request) (interfa
 
 	return &GetNFTsByCategoryRequest{
 		Category: category,
+		PaginationRequest: PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -133,6 +147,10 @@ func decodeGetNFTsByShowIDRequest(_ context.Context, r *http.Request) (interface
 
 	return &GetNFTsByShowIDRequest{
 		ShowID: showId,
+		PaginationRequest: PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -144,6 +162,10 @@ func decodeGetNFTsByEpisodeIDRequest(_ context.Context, r *http.Request) (interf
 
 	return &GetNFTsByEpisodeIDRequest{
 		EpisodeID: episodeId,
+		PaginationRequest: PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -155,6 +177,10 @@ func decodeGetNFTsByUserIDRequest(_ context.Context, r *http.Request) (interface
 
 	return &GetNFTsByUserIDRequest{
 		UserID: userId,
+		PaginationRequest: PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 

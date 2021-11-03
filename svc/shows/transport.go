@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
@@ -204,8 +204,8 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 
 func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
-		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
 }
 
@@ -213,8 +213,8 @@ func decodeGetShowChallengesRequest(_ context.Context, r *http.Request) (interfa
 	return GetShowChallengesRequest{
 		ShowID: chi.URLParam(r, "show_id"),
 		PaginationRequest: PaginationRequest{
-			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
 }
@@ -232,19 +232,10 @@ func decodeGetShowsByCategoryRequest(ctx context.Context, r *http.Request) (inte
 	return GetShowsByCategoryRequest{
 		Category: chi.URLParam(r, "category"),
 		PaginationRequest: PaginationRequest{
-			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
-}
-
-func castStrToInt32(source string) int32 {
-	res, err := strconv.ParseInt(source, 10, 32)
-	if err != nil {
-		return 0
-	}
-
-	return int32(res)
 }
 
 func decodeAddShowRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -361,23 +352,23 @@ func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (inter
 	return GetEpisodesByShowIDRequest{
 		ShowID: chi.URLParam(r, "show_id"),
 		PaginationRequest: PaginationRequest{
-			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
 }
 
 func decodeGetActivatedUserEpisodesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
-		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
 }
 
 func decodeGetReviewsListByUserIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return PaginationRequest{
-		Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-		ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
 }
 
@@ -447,8 +438,8 @@ func decodeGetReviewsListRequest(_ context.Context, r *http.Request) (interface{
 	return GetReviewsListRequest{
 		EpisodeID: chi.URLParam(r, "episode_id"),
 		PaginationRequest: PaginationRequest{
-			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
 }
