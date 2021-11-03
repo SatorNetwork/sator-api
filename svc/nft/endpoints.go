@@ -141,6 +141,7 @@ func FromServiceNFT(n *NFT) *TransportNFT {
 		Blockchain:  n.Blockchain,
 		SellType:    n.SellType,
 		BuyNowPrice: n.BuyNowPrice,
+		TokenURI:    n.TokenURI,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = FromServiceNFTAuctionParams(n.AuctionParams)
