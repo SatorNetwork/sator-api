@@ -74,6 +74,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{wallet_id}/create-cross-blockchain-transfer", httptransport.NewServer(
+		e.CreateCrossBlockchainTransfer,
+		decodeCreateCrossBlockchainTransferRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/{wallet_id}/stake", httptransport.NewServer(
 		e.SetStake,
 		decodeSetStakeRequest,
@@ -144,6 +151,20 @@ func decodeConfirmTransferRequest(_ context.Context, r *http.Request) (interface
 	}
 	req.SenderWalletID = chi.URLParam(r, "wallet_id")
 	log.Printf("\n\nConfirmTransferRequest: \n%#v\n\n", req)
+
+	return req, nil
+}
+
+func decodeCreateCrossBlockchainTransferRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req CreateCrossBlockchainTransferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	senderWalletID := chi.URLParam(r, "wallet_id")
+	if senderWalletID == "" {
+		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
+	}
+	req.SenderWalletID = senderWalletID
 
 	return req, nil
 }
