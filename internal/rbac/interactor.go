@@ -6,8 +6,8 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 )
 
-func CheckRole(userRole Role, requiredRoles ...Role) error {
-	for _, v := range requiredRoles {
+func CheckRole(userRole Role, allowedRoles ...Role) error {
+	for _, v := range allowedRoles {
 		switch v {
 		case userRole, AvailableForAllRoles:
 			return nil
@@ -21,7 +21,7 @@ func CheckRole(userRole Role, requiredRoles ...Role) error {
 	return ErrAccessDenied
 }
 
-func CheckRoleFromContext(ctx context.Context, requiredRoles ...Role) error {
+func CheckRoleFromContext(ctx context.Context, allowedRoles ...Role) error {
 	role, err := jwt.RoleFromContext(ctx)
 	if err != nil {
 		role = RoleGuest.String()
@@ -31,5 +31,5 @@ func CheckRoleFromContext(ctx context.Context, requiredRoles ...Role) error {
 		}
 	}
 
-	return CheckRole(Role(role), AvailableForAllRoles)
+	return CheckRole(Role(role), allowedRoles...)
 }

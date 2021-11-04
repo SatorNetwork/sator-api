@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -74,6 +75,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetDataByQRCodeIDEndpoint ...
 func MakeGetDataByQRCodeIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		qrcodeUID, err := uuid.Parse(req.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get qrcode id: %w", err)
@@ -96,6 +101,10 @@ func MakeGetDataByQRCodeIDEndpoint(s service) endpoint.Endpoint {
 // MakeAddQRCodeEndpoint ...
 func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddQRCodeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -139,6 +148,10 @@ func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 // MakeDeleteQRCodeByIDEndpoint ...
 func MakeDeleteQRCodeByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get qrcode id: %w", err)
@@ -156,6 +169,10 @@ func MakeDeleteQRCodeByIDEndpoint(s service) endpoint.Endpoint {
 // MakeUpdateQRCodeEndpoint ...
 func MakeUpdateQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateQRCodeRequest)
 		if err := v(req); err != nil {
 			return nil, err
