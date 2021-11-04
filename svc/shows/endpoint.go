@@ -298,7 +298,7 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 // MakeGetShowChallengesEndpoint ...
 func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -843,7 +843,7 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
 		}
-    
+
 		req := request.(GetReviewsListRequest)
 		if err := v(req); err != nil {
 			return nil, err

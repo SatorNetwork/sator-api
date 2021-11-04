@@ -101,7 +101,7 @@ func MakeGetDataByQRCodeIDEndpoint(s service) endpoint.Endpoint {
 // MakeAddQRCodeEndpoint ...
 func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -148,7 +148,7 @@ func MakeAddQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 // MakeDeleteQRCodeByIDEndpoint ...
 func MakeDeleteQRCodeByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -169,7 +169,7 @@ func MakeDeleteQRCodeByIDEndpoint(s service) endpoint.Endpoint {
 // MakeUpdateQRCodeEndpoint ...
 func MakeUpdateQRCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 

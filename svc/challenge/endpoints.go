@@ -325,7 +325,7 @@ func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 // MakeAddChallengeEndpoint ...
 func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -370,7 +370,7 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 // MakeDeleteChallengeByIDEndpoint ...
 func MakeDeleteChallengeByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -391,7 +391,7 @@ func MakeDeleteChallengeByIDEndpoint(s service) endpoint.Endpoint {
 // MakeUpdateChallengeEndpoint ...
 func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -442,7 +442,7 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 // MakeAddQuestionEndpoint ...
 func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -493,7 +493,7 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // MakeAddQuestionOptionEndpoint ...
 func MakeAddQuestionOptionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -523,7 +523,7 @@ func MakeAddQuestionOptionEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeDeleteQuestionByIDEndpoint ...
 func MakeDeleteQuestionByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -544,7 +544,7 @@ func MakeDeleteQuestionByIDEndpoint(s service) endpoint.Endpoint {
 // MakeDeleteAnswerByIDEndpoint ...
 func MakeDeleteAnswerByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -575,7 +575,7 @@ func MakeDeleteAnswerByIDEndpoint(s service, v validator.ValidateFunc) endpoint.
 // MakeUpdateQuestionEndpoint ...
 func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -627,7 +627,7 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeUpdateAnswerEndpoint ...
 func MakeUpdateAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -662,7 +662,7 @@ func MakeUpdateAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 // MakeGetQuestionByIDEndpoint ...
 func MakeGetQuestionByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -683,7 +683,7 @@ func MakeGetQuestionByIDEndpoint(s service) endpoint.Endpoint {
 // MakeGetQuestionsByChallengeIDEndpoint ...
 func MakeGetQuestionsByChallengeIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -704,7 +704,8 @@ func MakeGetQuestionsByChallengeIDEndpoint(s service) endpoint.Endpoint {
 // MakeCheckAnswerEndpoint ...
 func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		// FIXME: is allowed roles correct???
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
@@ -736,7 +737,8 @@ func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // TODO: remove it, added for demo
 func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		// FIXME: is allowed roles correct???
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
 			return nil, err
 		}
 
