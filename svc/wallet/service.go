@@ -59,7 +59,9 @@ type (
 		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 		AccountFromPrivatekey(pk []byte) types.Account
 		InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
-		SendAssets(ctx context.Context, feePayer, issuer, asset, sender types.Account, recipientAddr string, amount float64) (string, error)
+		CreateAccountWithATA(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
+		GiveAssetsWithAutoDerive(ctx context.Context, feePayer, issuer, asset types.Account, recipientAddr string, amount float64) (string, error)
+		SendAssetsWithAutoDerive(ctx context.Context, feePayer, asset, source types.Account, recipientAddr string, amount float64) (string, error)
 		CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
 		IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error)
 		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
@@ -282,7 +284,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 
 	acc := s.sc.NewAccount()
 
-	txHash, err := s.sc.InitAccountToUseAsset(
+	txHash, err := s.sc.CreateAccountWithATA(
 		ctx,
 		s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 		s.sc.AccountFromPrivatekey(issuer.PrivateKey),
@@ -382,12 +384,11 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 
 	// sends token
 	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.SendAssets(
+		if tx, err = s.sc.GiveAssetsWithAutoDerive(
 			ctx,
 			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
 			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
-			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			user.PublicKey,
 			amount,
 		); err != nil {
@@ -613,20 +614,15 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 	if err != nil {
 		return fmt.Errorf("could not get fee payer account: %w", err)
 	}
-	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get issuer account: %w", err)
-	}
 	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
 	if err != nil {
 		return fmt.Errorf("could not get asset account: %w", err)
 	}
 
 	for i := 0; i < 5; i++ {
-		if tx, err := s.sc.SendAssets(
+		if tx, err := s.sc.SendAssetsWithAutoDerive(
 			ctx,
 			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
-			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
 			s.sc.AccountFromPrivatekey(asset.PrivateKey),
 			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
 			recipientAddr,
