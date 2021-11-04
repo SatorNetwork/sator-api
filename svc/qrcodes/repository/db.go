@@ -25,11 +25,20 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addQRCodeStmt, err = db.PrepareContext(ctx, addQRCode); err != nil {
 		return nil, fmt.Errorf("error preparing query AddQRCode: %w", err)
 	}
+	if q.addScannedQRCodeStmt, err = db.PrepareContext(ctx, addScannedQRCode); err != nil {
+		return nil, fmt.Errorf("error preparing query AddScannedQRCode: %w", err)
+	}
 	if q.deleteQRCodeByIDStmt, err = db.PrepareContext(ctx, deleteQRCodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteQRCodeByID: %w", err)
 	}
+	if q.deleteScannedQRCodeStmt, err = db.PrepareContext(ctx, deleteScannedQRCode); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteScannedQRCode: %w", err)
+	}
 	if q.getDataByQRCodeIDStmt, err = db.PrepareContext(ctx, getDataByQRCodeID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetDataByQRCodeID: %w", err)
+	}
+	if q.getScannedQRCodeByUserIDStmt, err = db.PrepareContext(ctx, getScannedQRCodeByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetScannedQRCodeByUserID: %w", err)
 	}
 	if q.updateQRCodeStmt, err = db.PrepareContext(ctx, updateQRCode); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateQRCode: %w", err)
@@ -44,14 +53,29 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addQRCodeStmt: %w", cerr)
 		}
 	}
+	if q.addScannedQRCodeStmt != nil {
+		if cerr := q.addScannedQRCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addScannedQRCodeStmt: %w", cerr)
+		}
+	}
 	if q.deleteQRCodeByIDStmt != nil {
 		if cerr := q.deleteQRCodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteQRCodeByIDStmt: %w", cerr)
 		}
 	}
+	if q.deleteScannedQRCodeStmt != nil {
+		if cerr := q.deleteScannedQRCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteScannedQRCodeStmt: %w", cerr)
+		}
+	}
 	if q.getDataByQRCodeIDStmt != nil {
 		if cerr := q.getDataByQRCodeIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getDataByQRCodeIDStmt: %w", cerr)
+		}
+	}
+	if q.getScannedQRCodeByUserIDStmt != nil {
+		if cerr := q.getScannedQRCodeByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getScannedQRCodeByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.updateQRCodeStmt != nil {
@@ -96,21 +120,27 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                    DBTX
-	tx                    *sql.Tx
-	addQRCodeStmt         *sql.Stmt
-	deleteQRCodeByIDStmt  *sql.Stmt
-	getDataByQRCodeIDStmt *sql.Stmt
-	updateQRCodeStmt      *sql.Stmt
+	db                           DBTX
+	tx                           *sql.Tx
+	addQRCodeStmt                *sql.Stmt
+	addScannedQRCodeStmt         *sql.Stmt
+	deleteQRCodeByIDStmt         *sql.Stmt
+	deleteScannedQRCodeStmt      *sql.Stmt
+	getDataByQRCodeIDStmt        *sql.Stmt
+	getScannedQRCodeByUserIDStmt *sql.Stmt
+	updateQRCodeStmt             *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                    tx,
-		tx:                    tx,
-		addQRCodeStmt:         q.addQRCodeStmt,
-		deleteQRCodeByIDStmt:  q.deleteQRCodeByIDStmt,
-		getDataByQRCodeIDStmt: q.getDataByQRCodeIDStmt,
-		updateQRCodeStmt:      q.updateQRCodeStmt,
+		db:                           tx,
+		tx:                           tx,
+		addQRCodeStmt:                q.addQRCodeStmt,
+		addScannedQRCodeStmt:         q.addScannedQRCodeStmt,
+		deleteQRCodeByIDStmt:         q.deleteQRCodeByIDStmt,
+		deleteScannedQRCodeStmt:      q.deleteScannedQRCodeStmt,
+		getDataByQRCodeIDStmt:        q.getDataByQRCodeIDStmt,
+		getScannedQRCodeByUserIDStmt: q.getScannedQRCodeByUserIDStmt,
+		updateQRCodeStmt:             q.updateQRCodeStmt,
 	}
 }

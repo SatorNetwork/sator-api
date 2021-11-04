@@ -19,3 +19,10 @@ type Qrcode struct {
 	CreatedAt    time.Time       `json:"created_at"`
 	RewardAmount sql.NullFloat64 `json:"reward_amount"`
 }
+
+type ScannedQrcode struct {
+	UserID    uuid.UUID    `json:"user_id"`
+	QrcodeID  uuid.UUID    `json:"qrcode_id"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+	CreatedAt time.Time    `json:"created_at"`
+}

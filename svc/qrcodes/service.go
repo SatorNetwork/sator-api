@@ -30,6 +30,10 @@ type (
 		AddQRCode(ctx context.Context, arg repository.AddQRCodeParams) (repository.Qrcode, error)
 		DeleteQRCodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateQRCode(ctx context.Context, arg repository.UpdateQRCodeParams) error
+
+		AddScannedQRCode(ctx context.Context, arg repository.AddScannedQRCodeParams) (repository.ScannedQrcode, error)
+		DeleteScannedQRCode(ctx context.Context, arg repository.DeleteScannedQRCodeParams) error
+		GetScannedQRCodeByUserID(ctx context.Context, arg repository.GetScannedQRCodeByUserIDParams) (repository.ScannedQrcode, error)
 	}
 
 	rewardsClient interface {
@@ -61,36 +65,56 @@ func NewService(qr qrcodeRepository, rc rewardsClient) *Service {
 
 // GetDataByQRCodeID returns show id and episode id by qrcode id
 func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (interface{}, error) {
-	qrcodeData, err := s.qr.GetDataByQRCodeID(ctx, id)
+	_, err := s.qr.GetScannedQRCodeByUserID(ctx, repository.GetScannedQRCodeByUserIDParams{
+		UserID:   userID,
+		QrcodeID: id,
+	})
 	if err != nil {
-		if !db.IsNotFoundError(err) {
-			return nil, fmt.Errorf("could not get qrcode by id: %w", err)
+		if db.IsNotFoundError(err) {
+			qrcodeData, err := s.qr.GetDataByQRCodeID(ctx, id)
+			if err != nil {
+				if !db.IsNotFoundError(err) {
+					return nil, fmt.Errorf("could not get qrcode by id: %w", err)
+				}
+				return nil, fmt.Errorf("no qrcode with such id:%s, error:%w", id, err)
+			}
+
+			now := time.Now()
+			if now.Before(qrcodeData.StartsAt) {
+				return nil, ErrQRCodeInvalid
+			}
+			if now.After(qrcodeData.ExpiresAt) {
+				return nil, ErrQRCodeExpired
+			}
+			if qrcodeData.RewardAmount.Float64 > 0 {
+				err := s.rc.AddDepositTransaction(ctx, userID, id, RelationTypeQRcodes, qrcodeData.RewardAmount.Float64)
+				if err != nil {
+					return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), id.String(), err)
+				}
+			}
+
+			_, err = s.qr.AddScannedQRCode(ctx, repository.AddScannedQRCodeParams{
+				UserID:   userID,
+				QrcodeID: id,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("could not store scanned qrcode by id: %w", err)
+			}
+
+			qrcode := &Qrcode{
+				ID:           qrcodeData.ID,
+				ShowID:       qrcodeData.ShowID,
+				EpisodeID:    qrcodeData.EpisodeID,
+				RewardAmount: qrcodeData.RewardAmount.Float64,
+			}
+
+			return qrcode, nil
 		}
-		return nil, fmt.Errorf("no qrcode with such id:%s, error:%w", id, err)
+
+		return nil, fmt.Errorf("could not check is qrcode scanned: %w", err)
 	}
 
-	now := time.Now()
-	if now.Before(qrcodeData.StartsAt) {
-		return nil, ErrQRCodeInvalid
-	}
-	if now.After(qrcodeData.ExpiresAt) {
-		return nil, ErrQRCodeExpired
-	}
-	if qrcodeData.RewardAmount.Float64 > 0 {
-		err := s.rc.AddDepositTransaction(ctx, userID, id, RelationTypeQRcodes, qrcodeData.RewardAmount.Float64)
-		if err != nil {
-			return nil, fmt.Errorf("could not add transaction for user_id=%s and qrcode_id=%s: %w", userID.String(), id.String(), err)
-		}
-	}
-
-	qrcode := &Qrcode{
-		ID:           qrcodeData.ID,
-		ShowID:       qrcodeData.ShowID,
-		EpisodeID:    qrcodeData.EpisodeID,
-		RewardAmount: qrcodeData.RewardAmount.Float64,
-	}
-
-	return qrcode, nil
+	return nil, ErrQRCodeScanned
 }
 
 // AddQRCode ..
