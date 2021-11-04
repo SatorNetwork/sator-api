@@ -472,7 +472,7 @@ func MakeUpdateUsernameEndpoint(s authService, v validator.ValidateFunc) endpoin
 			return nil, fmt.Errorf("could not get username: %w", err)
 		}
 
-		if strings.ToLower(userName) == strings.ToLower(req.Username) {
+		if strings.EqualFold(userName, req.Username) {
 			return false, nil
 		}
 

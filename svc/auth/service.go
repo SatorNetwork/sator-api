@@ -129,7 +129,7 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 }
 
 // RefreshToken returns new jwt string.
-func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error) {
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error) {
 	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
 		return "", fmt.Errorf("could not refresh access token: %w", err)
