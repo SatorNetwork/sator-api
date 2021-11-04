@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -210,6 +211,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetVerificationQuestionByEpisodeIDEndpoint ...
 func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -232,6 +237,10 @@ func MakeGetVerificationQuestionByEpisodeIDEndpoint(s service) endpoint.Endpoint
 // MakeCheckVerificationQuestionAnswerEndpoint ...
 func MakeCheckVerificationQuestionAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -264,6 +273,10 @@ func MakeCheckVerificationQuestionAnswerEndpoint(s service, v validator.Validate
 // MakeVerifyUserAccessToEpisodeEndpoint ...
 func MakeVerifyUserAccessToEpisodeEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		epid, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
@@ -286,6 +299,10 @@ func MakeVerifyUserAccessToEpisodeEndpoint(s service) endpoint.Endpoint {
 // MakeGetChallengeByIdEndpoint ...
 func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -308,6 +325,10 @@ func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 // MakeAddChallengeEndpoint ...
 func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddChallengeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -349,6 +370,10 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 // MakeDeleteChallengeByIDEndpoint ...
 func MakeDeleteChallengeByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
@@ -366,6 +391,10 @@ func MakeDeleteChallengeByIDEndpoint(s service) endpoint.Endpoint {
 // MakeUpdateChallengeEndpoint ...
 func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateChallengeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -413,6 +442,10 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 // MakeAddQuestionEndpoint ...
 func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddQuestionRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -460,6 +493,10 @@ func MakeAddQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // MakeAddQuestionOptionEndpoint ...
 func MakeAddQuestionOptionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(AnswerOptionRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -486,6 +523,10 @@ func MakeAddQuestionOptionEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeDeleteQuestionByIDEndpoint ...
 func MakeDeleteQuestionByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get question id: %w", err)
@@ -503,6 +544,10 @@ func MakeDeleteQuestionByIDEndpoint(s service) endpoint.Endpoint {
 // MakeDeleteAnswerByIDEndpoint ...
 func MakeDeleteAnswerByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(DeleteAnswerByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -530,6 +575,10 @@ func MakeDeleteAnswerByIDEndpoint(s service, v validator.ValidateFunc) endpoint.
 // MakeUpdateQuestionEndpoint ...
 func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateQuestionRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -578,6 +627,10 @@ func MakeUpdateQuestionEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeUpdateAnswerEndpoint ...
 func MakeUpdateAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateAnswerRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -609,6 +662,10 @@ func MakeUpdateAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 // MakeGetQuestionByIDEndpoint ...
 func MakeGetQuestionByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		questionID, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get question id: %w", err)
@@ -626,6 +683,10 @@ func MakeGetQuestionByIDEndpoint(s service) endpoint.Endpoint {
 // MakeGetQuestionsByChallengeIDEndpoint ...
 func MakeGetQuestionsByChallengeIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		challengeID, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
@@ -643,6 +704,10 @@ func MakeGetQuestionsByChallengeIDEndpoint(s service) endpoint.Endpoint {
 // MakeCheckAnswerEndpoint ...
 func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(CheckAnswerRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -671,6 +736,10 @@ func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // TODO: remove it, added for demo
 func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)

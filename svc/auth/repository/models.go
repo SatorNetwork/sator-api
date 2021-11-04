@@ -18,6 +18,7 @@ type User struct {
 	VerifiedAt sql.NullTime `json:"verified_at"`
 	UpdatedAt  sql.NullTime `json:"updated_at"`
 	CreatedAt  time.Time    `json:"created_at"`
+	Role       string       `json:"role"`
 }
 
 type UserVerification struct {
