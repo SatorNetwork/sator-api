@@ -37,7 +37,9 @@ INSERT INTO episodes (
     description,
     release_date,
     challenge_id,
-    verification_challenge_id
+    verification_challenge_id,
+    hint_text,
+    watch
 )
 VALUES (
            @show_id,
@@ -48,7 +50,9 @@ VALUES (
            @description,
            @release_date,
            @challenge_id,
-           @verification_challenge_id
+           @verification_challenge_id,
+           @hint_text,
+           @watch
 ) RETURNING *;
 
 -- name: UpdateEpisode :exec
@@ -61,15 +65,27 @@ SET episode_number = @episode_number,
     cover = @cover,
     title = @title,
     description = @description,
-    release_date = @release_date
+    release_date = @release_date,
+    hint_text = @hint_text,
+    watch = @watch
 WHERE id = @id;
 
 -- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
 WHERE id = @id;
 
-
 -- name: GetEpisodeIDByVerificationChallengeID :one
 SELECT id
 FROM episodes
 WHERE verification_challenge_id = $1;
+
+-- name: GetListEpisodesByIDs :many
+SELECT
+    episodes.*,
+    seasons.season_number as season_number,
+    shows.title as show_title
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+JOIN shows ON shows.id = episodes.show_id
+WHERE episodes.id = ANY(@episode_ids::uuid[])
+ORDER BY episodes.episode_number DESC;

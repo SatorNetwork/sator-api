@@ -23,10 +23,12 @@ const (
 type (
 	// Service struct
 	Service struct {
-		repo            rewardsRepository
-		ws              walletService
-		assetName       string
-		explorerURLTmpl string
+		repo              rewardsRepository
+		ws                walletService
+		getLocker         db.GetLocker
+		assetName         string
+		explorerURLTmpl   string
+		holdRewardsPeriod time.Duration
 	}
 
 	Winner struct {
@@ -36,9 +38,10 @@ type (
 
 	rewardsRepository interface {
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
-		Withdraw(ctx context.Context, userID uuid.UUID) error
+		Withdraw(ctx context.Context, arg repository.WithdrawParams) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
+		GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -58,12 +61,14 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Service {
+func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker, opt ...Option) *Service {
 	s := &Service{
-		repo:            repo,
-		ws:              ws,
-		assetName:       "SAO",
-		explorerURLTmpl: "https://explorer.solana.com/tx/%s?cluster=devnet",
+		repo:              repo,
+		ws:                ws,
+		getLocker:         getLocker,
+		assetName:         "SAO",
+		explorerURLTmpl:   "https://explorer.solana.com/tx/%s?cluster=devnet",
+		holdRewardsPeriod: time.Hour * 24 * 30,
 	}
 
 	for _, fn := range opt {
@@ -74,7 +79,7 @@ func NewService(repo rewardsRepository, ws walletService, opt ...Option) *Servic
 }
 
 func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error) {
-	amount, err := s.GetUserRewards(ctx, userID)
+	totalRewards, availableRewards, err := s.GetUserRewards(ctx, userID)
 	if err != nil {
 		return wallet.Wallet{}, fmt.Errorf("could  not get rewards wallet: %w", err)
 	}
@@ -82,10 +87,16 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 	return wallet.Wallet{
 		ID:    walletID.String(),
 		Order: 99,
-		Balance: []wallet.Balance{{
-			Currency: "UNCLAIMED",
-			Amount:   amount,
-		}},
+		Balance: []wallet.Balance{
+			{
+				Currency: "UNCLAIMED",
+				Amount:   totalRewards,
+			},
+			{
+				Currency: "Available to claim",
+				Amount:   availableRewards,
+			},
+		},
 		Actions: []wallet.Action{{
 			Type: wallet.ActionClaimRewards.String(),
 			Name: wallet.ActionClaimRewards.Name(),
@@ -98,7 +109,7 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error {
 	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
-		RelationID:      relationID,
+		RelationID:      uuid.NullUUID{UUID: relationID, Valid: true},
 		Amount:          amount,
 		TransactionType: trType,
 		RelationType:    sql.NullString{String: relationType, Valid: true},
@@ -111,7 +122,24 @@ func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID,
 
 // ClaimRewards send rewards to user by it and sets them to withdrawn.
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewardsResult, error) {
-	amount, err := s.repo.GetTotalAmount(ctx, uid)
+	// id := fmt.Sprintf("claim-rewards-%v", uid.String())
+	// lock, err := s.getLocker.GetLock(ctx, id)
+	// if err != nil {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("can't get lock by id: %v, err: %v", id, err)
+	// }
+
+	// ok, err := lock.Lock(ctx)
+	// if err != nil {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("can't acquire a lock with id: %v, err: %v", id, err)
+	// }
+	// if !ok {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
+	// }
+
+	amount, err := s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
+		UserID:       uid,
+		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
+	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return ClaimRewardsResult{}, ErrRewardsAlreadyClaimed
@@ -125,7 +153,10 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
 	}
 
-	if err = s.repo.Withdraw(ctx, uid); err != nil {
+	if err = s.repo.Withdraw(ctx, repository.WithdrawParams{
+		UserID:       uid,
+		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
+	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not update rewards status: %w", err)
 	}
 
@@ -137,6 +168,13 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}
 
+	// We should release a lock in any case, even if context was cancelled
+	// TODO(evg): get timeout from config
+	// ctxt, _ := context.WithTimeout(context.Background(), 15 * time.Second)
+	// if err := lock.Unlock(ctxt); err != nil {
+	// 	return ClaimRewardsResult{}, fmt.Errorf("can't release a lock with id: %v, err: %v", id, err)
+	// }
+
 	return ClaimRewardsResult{
 		Amount:          amount,
 		DisplayAmount:   fmt.Sprintf("%.2f %s", amount, s.assetName),
@@ -146,17 +184,25 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 }
 
 // GetUserRewards returns users available balance.
-func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
-	amount, err := s.repo.GetTotalAmount(ctx, uid)
+func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (total float64, available float64, err error) {
+	total, err = s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
-		if db.IsNotFoundError(err) {
-			return 0, nil
+		if !db.IsNotFoundError(err) {
+			return 0, 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 		}
-
-		return 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
-	return amount, nil
+	available, err = s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
+		UserID:       uid,
+		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
+	})
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return 0, 0, fmt.Errorf("could not get available amount of rewards: %w", err)
+		}
+	}
+
+	return total, available, nil
 }
 
 // GetTransactions returns list of transactions from rewards wallet.

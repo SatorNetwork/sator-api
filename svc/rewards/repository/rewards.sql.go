@@ -6,6 +6,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -29,7 +30,7 @@ VALUES (
 
 type AddTransactionParams struct {
 	UserID          uuid.UUID      `json:"user_id"`
-	RelationID      uuid.UUID      `json:"relation_id"`
+	RelationID      uuid.NullUUID  `json:"relation_id"`
 	RelationType    sql.NullString `json:"relation_type"`
 	TransactionType int32          `json:"transaction_type"`
 	Amount          float64        `json:"amount"`
@@ -46,12 +47,34 @@ func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) 
 	return err
 }
 
+const getAmountAvailableToWithdraw = `-- name: GetAmountAvailableToWithdraw :one
+SELECT SUM(amount)::DOUBLE PRECISION
+FROM rewards
+WHERE user_id = $1
+AND withdrawn = FALSE
+AND transaction_type = 1
+AND created_at < $2
+GROUP BY user_id
+`
+
+type GetAmountAvailableToWithdrawParams struct {
+	UserID       uuid.UUID `json:"user_id"`
+	NotAfterDate time.Time `json:"not_after_date"`
+}
+
+func (q *Queries) GetAmountAvailableToWithdraw(ctx context.Context, arg GetAmountAvailableToWithdrawParams) (float64, error) {
+	row := q.queryRow(ctx, q.getAmountAvailableToWithdrawStmt, getAmountAvailableToWithdraw, arg.UserID, arg.NotAfterDate)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getTotalAmount = `-- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = $1
-    AND withdrawn = FALSE
-    AND transaction_type = 1
+AND withdrawn = FALSE
+AND transaction_type = 1
 GROUP BY user_id
 `
 
@@ -67,7 +90,7 @@ SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, tran
 FROM rewards
 WHERE user_id = $1
 ORDER BY created_at DESC
-    LIMIT $2 OFFSET $3
+LIMIT $2 OFFSET $3
 `
 
 type GetTransactionsByUserIDPaginatedParams struct {
@@ -113,10 +136,16 @@ const withdraw = `-- name: Withdraw :exec
 UPDATE rewards
 SET withdrawn = TRUE
 WHERE user_id = $1
-    AND transaction_type = 1
+AND transaction_type = 1
+AND created_at < $2
 `
 
-func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.exec(ctx, q.withdrawStmt, withdraw, userID)
+type WithdrawParams struct {
+	UserID       uuid.UUID `json:"user_id"`
+	NotAfterDate time.Time `json:"not_after_date"`
+}
+
+func (q *Queries) Withdraw(ctx context.Context, arg WithdrawParams) error {
+	_, err := q.exec(ctx, q.withdrawStmt, withdraw, arg.UserID, arg.NotAfterDate)
 	return err
 }

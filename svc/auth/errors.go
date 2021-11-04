@@ -10,6 +10,7 @@ var (
 	ErrEmailAlreadyTaken    = errors.New("given email is already taken")
 	ErrEmailAlreadyVerified = errors.New("your email address is already verified")
 	ErrMissedUserID         = errors.New("missed user id")
+	ErrUserIsDisabled       = errors.New("your profile was disabled. Please contact support for details")
 
 	// ErrBadRouting is returned when an expected path variable is missing.
 	// It always indicates programmer error.

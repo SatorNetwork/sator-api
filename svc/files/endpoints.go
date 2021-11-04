@@ -23,7 +23,7 @@ type (
 	}
 
 	service interface {
-		AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, height, width int) (Image, error)
+		AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, maxHeight, maxWidth uint) (Image, error)
 		AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error)
 		GetImageByID(ctx context.Context, id uuid.UUID) (Image, error)
 		GetImagesList(ctx context.Context, limit, offset int32) ([]Image, error)
@@ -40,14 +40,8 @@ type (
 	AddImageResizeRequest struct {
 		File       multipart.File
 		FileHeader *multipart.FileHeader
-		Height     int
-		Width      int
-	}
-
-	// AddImageRequest struct
-	AddImageRequest struct {
-		File       io.ReadSeeker
-		FileHeader *multipart.FileHeader
+		MaxHeight  uint
+		MaxWidth   uint
 	}
 )
 
@@ -73,7 +67,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		AddImage:        MakeAddImageEndpoint(s, validateFunc),
+		AddImage:        MakeAddImageResizeEndpoint(s, validateFunc),
 		GetImageByID:    MakeGetImageByIDEndpoint(s),
 		GetImagesList:   MakeGetImagesListEndpoint(s, validateFunc),
 		DeleteImageByID: MakeDeleteImageByIDEndpoint(s),
@@ -113,29 +107,6 @@ func MakeGetImagesListEndpoint(s service, v validator.ValidateFunc) endpoint.End
 	}
 }
 
-// MakeAddImageEndpoint ...
-func MakeAddImageEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
-
-		req := request.(AddImageRequest)
-		if err := v(req); err != nil {
-			return nil, err
-		}
-
-		resp, err := s.AddImage(ctx, Image{
-			Filename: req.FileHeader.Filename,
-		}, req.File, req.FileHeader)
-		if err != nil {
-			return nil, err
-		}
-
-		return resp, nil
-	}
-}
-
 // MakeAddImageResizeEndpoint ...
 func MakeAddImageResizeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -150,7 +121,7 @@ func MakeAddImageResizeEndpoint(s service, v validator.ValidateFunc) endpoint.En
 
 		resp, err := s.AddImageResize(ctx, Image{
 			Filename: req.FileHeader.Filename,
-		}, req.File, req.FileHeader, req.Height, req.Width)
+		}, req.File, req.FileHeader, req.MaxHeight, req.MaxWidth)
 		if err != nil {
 			return nil, err
 		}

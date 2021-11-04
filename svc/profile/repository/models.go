@@ -16,4 +16,5 @@ type Profile struct {
 	LastName  sql.NullString `json:"last_name"`
 	UpdatedAt sql.NullTime   `json:"updated_at"`
 	CreatedAt time.Time      `json:"created_at"`
+	Avatar    sql.NullString `json:"avatar"`
 }

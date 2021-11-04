@@ -11,6 +11,7 @@ const (
 	AnswerMessage           = "answer"
 	QuestionResultMessage   = "question_result"
 	ChallengeResultMessage  = "challenge_result"
+	TimeOutMessage          = "time_out"
 )
 
 type (
@@ -24,6 +25,7 @@ type (
 	User struct {
 		UserID   string `json:"user_id"`
 		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
 	}
 
 	Countdown struct {
@@ -75,5 +77,9 @@ type (
 		Username    string  `json:"username"`
 		Prize       string  `json:"prize"`
 		PrizeAmount float64 `json:"-"`
+	}
+
+	TimeOut struct {
+		Message string `json:"message"`
 	}
 )

@@ -138,6 +138,9 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	}
 
 	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
+	if err != nil {
+		return nil, fmt.Errorf("could not found challenge: %w", err)
+	}
 	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
