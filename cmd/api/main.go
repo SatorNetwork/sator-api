@@ -252,13 +252,6 @@ func main() {
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
 		)
-		logger.Log(
-			"solanaAssetAddr", solanaAssetAddr,
-			"solanaFeePayerAddr", solanaFeePayerAddr,
-			"solanaFeePayerPrivateKey", solanaFeePayerPrivateKey,
-			"solanaTokenHolderAddr", solanaTokenHolderAddr,
-			"solanaTokenHolderPrivateKey", solanaTokenHolderPrivateKey,
-		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
