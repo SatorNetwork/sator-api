@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -55,6 +56,7 @@ type (
 	solanaClient interface {
 		GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
 		GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
+		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) (float64, error)
 		NewAccount() types.Account
 		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 		AccountFromPrivatekey(pk []byte) types.Account
@@ -154,6 +156,11 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 // GetWalletByID returns wallet details by wallet id
 func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error) {
+	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return Wallet{}, fmt.Errorf("could not get asset account: %w", err)
+	}
+
 	w, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -215,7 +222,8 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	switch sa.AccountType {
 	case TokenAccount.String():
-		if bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey); err == nil {
+		assetPublicKey := common.PublicKeyFromString(asset.PublicKey)
+		if bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, sa.PublicKey, assetPublicKey); err == nil {
 			balance = []Balance{
 				{
 					Currency: s.satorAssetName,

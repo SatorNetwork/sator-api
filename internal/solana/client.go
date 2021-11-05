@@ -114,6 +114,16 @@ func (c *Client) GetTokenAccountBalance(ctx context.Context, accPubKey string) (
 	return balance, nil
 }
 
+func (c *Client) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) (float64, error) {
+	accountPublicKey := common.PublicKeyFromString(accountAddr)
+	accountAta, _, err := common.FindAssociatedTokenAddress(accountPublicKey, assetPublicKey)
+	if err != nil {
+		return 0, err
+	}
+
+	return c.GetTokenAccountBalance(ctx, accountAta.ToBase58())
+}
+
 // GetTransactions ...
 func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList []ConfirmedTransactionResponse, err error) {
 	signatures, err := c.solana.GetConfirmedSignaturesForAddress(ctx, accPubKey, client.GetConfirmedSignaturesForAddressConfig{
