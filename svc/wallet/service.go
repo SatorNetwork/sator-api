@@ -66,7 +66,7 @@ type (
 	solanaClient interface {
 		GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
 		GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
-		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) (float64, error)
+		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
 		NewAccount() types.Account
 		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 		AccountFromPrivatekey(pk []byte) types.Account
@@ -174,11 +174,6 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 
 // GetWalletByID returns wallet details by wallet id
 func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error) {
-	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return Wallet{}, fmt.Errorf("could not get asset account: %w", err)
-	}
-
 	w, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -239,9 +234,8 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 	var balance []Balance
 
 	switch sa.AccountType {
-	case TokenAccount.String():
-		assetPublicKey := common.PublicKeyFromString(asset.PublicKey)
-		if bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, sa.PublicKey, assetPublicKey); err == nil {
+	case GeneralAccount.String():
+		if bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey); err == nil {
 			balance = []Balance{
 				{
 					Currency: s.satorAssetName,
@@ -310,7 +304,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	log.Printf("init token holder account transaction: %s", txHash)
 
 	sacc, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: TokenAccount.String(),
+		AccountType: GeneralAccount.String(),
 		PublicKey:   acc.PublicKey.ToBase58(),
 		PrivateKey:  acc.PrivateKey,
 	})
@@ -594,7 +588,7 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("could not get solana account for this wallet: %w", err)
 	}
 
-	bal, err := s.sc.GetTokenAccountBalance(ctx, sa.PublicKey)
+	bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
 	if err != nil {
 		return fmt.Errorf("could not get wallet balance")
 	}

@@ -114,8 +114,9 @@ func (c *Client) GetTokenAccountBalance(ctx context.Context, accPubKey string) (
 	return balance, nil
 }
 
-func (c *Client) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) (float64, error) {
+func (c *Client) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error) {
 	accountPublicKey := common.PublicKeyFromString(accountAddr)
+	assetPublicKey := common.PublicKeyFromString(assetAddr)
 	accountAta, _, err := common.FindAssociatedTokenAddress(accountPublicKey, assetPublicKey)
 	if err != nil {
 		return 0, err
