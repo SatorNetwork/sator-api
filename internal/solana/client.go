@@ -147,8 +147,9 @@ func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList 
 	return txList, nil
 }
 
-func (c *Client) GetTransactionsWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) (txList []ConfirmedTransactionResponse, err error) {
+func (c *Client) GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (txList []ConfirmedTransactionResponse, err error) {
 	accountPublicKey := common.PublicKeyFromString(accountAddr)
+	assetPublicKey := common.PublicKeyFromString(assetAddr)
 	accountAta, _, err := common.FindAssociatedTokenAddress(accountPublicKey, assetPublicKey)
 	if err != nil {
 		return nil, err

@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
-	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -74,10 +73,8 @@ type (
 		CreateAccountWithATA(ctx context.Context, assetAddr string, feePayer, issuer, initAcc types.Account) (string, error)
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
-		CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
-		IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error)
 		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
-		GetTransactionsWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) ([]solana.ConfirmedTransactionResponse, error)
+		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
 	ethereumClient interface {
@@ -420,11 +417,6 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
 func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (Transactions, error) {
-	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return nil, fmt.Errorf("could not get asset account: %w", err)
-	}
-
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return nil, err
@@ -443,8 +435,7 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 		return nil, err
 	}
 
-	assetPublicKey := common.PublicKeyFromString(asset.PublicKey)
-	transactions, err := s.sc.GetTransactionsWithAutoDerive(ctx, solanaAcc.PublicKey, assetPublicKey)
+	transactions, err := s.sc.GetTransactionsWithAutoDerive(ctx, s.satorAssetSolanaAddr, solanaAcc.PublicKey)
 	if err != nil {
 		return nil, err
 	}
