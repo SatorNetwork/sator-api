@@ -80,8 +80,8 @@ var (
 
 	// DB
 	dbConnString   = env.MustString("DATABASE_URL")
-	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 10)
-	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
+	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 20)
+	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 2)
 
 	// JWT
 	jwtSigningKey = env.MustString("JWT_SIGNING_KEY")
@@ -96,7 +96,12 @@ var (
 	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
-	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
+	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
+	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
+	solanaFeePayerPrivateKey    = env.MustBytes("SOLANA_FEE_PAYER_PRIVATE_KEY")
+	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
+	solanaTokenHolderPrivateKey = env.MustBytes("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -136,10 +141,6 @@ var (
 	androidPackageName = env.MustString("FIREBASE_ANDROID_PACKAGE_NAME")
 	iosBundleId        = env.MustString("FIREBASE_IOS_BUNDLE_ID")
 	suffixOption       = env.MustString("FIREBASE_SUFFIX_OPTION")
-
-	// Episode Access
-	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
-	// period         = env.GetInt("PERIOD", 24)
 )
 
 func main() {

@@ -5,15 +5,16 @@ import (
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/assotokenprog"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) CreateAccountWithATA(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error) {
+func (c *Client) CreateAccountWithATA(ctx context.Context, assetAddr string, feePayer, issuer, initAcc types.Account) (string, error) {
 	instructions := []types.Instruction{
 		assotokenprog.CreateAssociatedTokenAccount(
 			feePayer.PublicKey,
 			initAcc.PublicKey,
-			asset.PublicKey,
+			common.PublicKeyFromString(assetAddr),
 		),
 	}
 

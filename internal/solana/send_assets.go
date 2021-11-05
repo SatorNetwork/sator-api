@@ -9,11 +9,12 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, feePayer, issuer, asset types.Account, recipientAddr string, amount float64) (string, error) {
+func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
 
+	asset := common.PublicKeyFromString(assetAddr)
 	recipientPublicKey := common.PublicKeyFromString(recipientAddr)
-	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPublicKey, asset.PublicKey)
+	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPublicKey, asset)
 	if err != nil {
 		return "", err
 	}
@@ -25,7 +26,7 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, feePayer, issuer,
 		tokenprog.TransferChecked(
 			issuer.PublicKey,
 			recipientAta,
-			asset.PublicKey,
+			asset,
 			issuer.PublicKey,
 			[]common.PublicKey{},
 			amountToSend,
@@ -39,16 +40,17 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, feePayer, issuer,
 	return txHash, nil
 }
 
-func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, feePayer, asset, source types.Account, recipientAddr string, amount float64) (string, error) {
+func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
+	asset := common.PublicKeyFromString(assetAddr)
 
-	sourceAta, _, err := common.FindAssociatedTokenAddress(source.PublicKey, asset.PublicKey)
+	sourceAta, _, err := common.FindAssociatedTokenAddress(source.PublicKey, asset)
 	if err != nil {
 		return "", err
 	}
 
 	recipientPublicKey := common.PublicKeyFromString(recipientAddr)
-	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPublicKey, asset.PublicKey)
+	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPublicKey, asset)
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +61,7 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, feePayer, asset, 
 		tokenprog.TransferChecked(
 			sourceAta,
 			recipientAta,
-			asset.PublicKey,
+			asset,
 			source.PublicKey,
 			[]common.PublicKey{},
 			amountToSend,
