@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
@@ -39,8 +40,17 @@ func (c *Client) PublicKeyFromString(pk string) common.PublicKey {
 	return common.PublicKeyFromString(pk)
 }
 
-func (c *Client) AccountFromPrivatekey(pk []byte) types.Account {
+func (c *Client) AccountFromPrivateKeyBytes(pk []byte) types.Account {
 	return types.AccountFromPrivateKeyBytes(pk)
+}
+
+func (c *Client) CheckPrivateKey(addr string, pk []byte) error {
+	addrFromPk := c.AccountFromPrivateKeyBytes(pk).PublicKey.ToBase58()
+	if !strings.EqualFold(addrFromPk, addr) {
+		return fmt.Errorf("CheckPrivateKey: want = %s, got = %s", addr, addrFromPk)
+	}
+
+	return nil
 }
 
 // RequestAirdrop working only in test and dev environment

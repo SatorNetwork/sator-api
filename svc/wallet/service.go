@@ -68,7 +68,7 @@ type (
 		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
 		NewAccount() types.Account
 		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
-		AccountFromPrivatekey(pk []byte) types.Account
+		AccountFromPrivateKeyBytes(pk []byte) types.Account
 		InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
 		CreateAccountWithATA(ctx context.Context, assetAddr string, feePayer, issuer, initAcc types.Account) (string, error)
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
@@ -291,8 +291,8 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	txHash, err := s.sc.CreateAccountWithATA(
 		ctx,
 		s.satorAssetSolanaAddr,
-		s.sc.AccountFromPrivatekey(s.feePayerSolanaPrivateKey),
-		s.sc.AccountFromPrivatekey(s.tokenHolderSolanaPrivateKey),
+		s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
+		s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
 		acc,
 	)
 	if err != nil {
@@ -379,8 +379,8 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		if tx, err = s.sc.GiveAssetsWithAutoDerive(
 			ctx,
 			s.satorAssetSolanaAddr,
-			s.sc.AccountFromPrivatekey(s.feePayerSolanaPrivateKey),
-			s.sc.AccountFromPrivatekey(s.tokenHolderSolanaPrivateKey),
+			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
+			s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
 			user.PublicKey,
 			amount,
 		); err != nil {
@@ -513,8 +513,8 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 		if tx, err := s.sc.SendAssetsWithAutoDerive(
 			ctx,
 			s.satorAssetSolanaAddr,
-			s.sc.AccountFromPrivatekey(s.feePayerSolanaPrivateKey),
-			s.sc.AccountFromPrivatekey(solanaAcc.PrivateKey),
+			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
+			s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey),
 			recipientAddr,
 			amount,
 		); err != nil {

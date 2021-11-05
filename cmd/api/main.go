@@ -225,13 +225,29 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
+
+		solanaClient := solana.New(solanaApiBaseUrl)
+		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, solanaFeePayerPrivateKey); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
+		}
+		if err := solanaClient.CheckPrivateKey(solanaTokenHolderAddr, solanaTokenHolderPrivateKey); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
+		}
+
 		walletService := wallet.NewService(
 			walletRepository,
-			solana.New(solanaApiBaseUrl),
+			solanaClient,
 			ethereumClient,
 			wallet.WithAssetSolanaAddress(solanaAssetAddr),
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, solanaFeePayerPrivateKey),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, solanaTokenHolderPrivateKey),
+		)
+		logger.Log(
+			"solanaAssetAddr", solanaAssetAddr,
+			"solanaFeePayerAddr", solanaFeePayerAddr,
+			"solanaFeePayerPrivateKey", solanaFeePayerPrivateKey,
+			"solanaTokenHolderAddr", solanaTokenHolderAddr,
+			"solanaTokenHolderPrivateKey", solanaTokenHolderPrivateKey,
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
