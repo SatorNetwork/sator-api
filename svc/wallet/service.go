@@ -67,6 +67,7 @@ type (
 		CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
 		IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error)
 		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
+		GetTransactionsWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
 	ethereumClient interface {
@@ -526,6 +527,11 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 
 // getListTransactionsByWalletID returns list of all transactions of specific wallet.
 func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID) (Transactions, error) {
+	asset, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return nil, fmt.Errorf("could not get asset account: %w", err)
+	}
+
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return nil, err
@@ -544,7 +550,8 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 		return nil, err
 	}
 
-	transactions, err := s.sc.GetTransactions(ctx, solanaAcc.PublicKey)
+	assetPublicKey := common.PublicKeyFromString(asset.PublicKey)
+	transactions, err := s.sc.GetTransactionsWithAutoDerive(ctx, solanaAcc.PublicKey, assetPublicKey)
 	if err != nil {
 		return nil, err
 	}

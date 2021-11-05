@@ -145,3 +145,13 @@ func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList 
 
 	return txList, nil
 }
+
+func (c *Client) GetTransactionsWithAutoDerive(ctx context.Context, accountAddr string, assetPublicKey common.PublicKey) (txList []ConfirmedTransactionResponse, err error) {
+	accountPublicKey := common.PublicKeyFromString(accountAddr)
+	accountAta, _, err := common.FindAssociatedTokenAddress(accountPublicKey, assetPublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.GetTransactions(ctx, accountAta.ToBase58())
+}
