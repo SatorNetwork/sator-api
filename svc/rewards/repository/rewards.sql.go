@@ -69,6 +69,36 @@ func (q *Queries) GetAmountAvailableToWithdraw(ctx context.Context, arg GetAmoun
 	return column_1, err
 }
 
+const getScannedQRCodeByUserID = `-- name: GetScannedQRCodeByUserID :one
+SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type
+FROM rewards
+WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
+    LIMIT 1
+`
+
+type GetScannedQRCodeByUserIDParams struct {
+	UserID       uuid.UUID      `json:"user_id"`
+	RelationID   uuid.NullUUID  `json:"relation_id"`
+	RelationType sql.NullString `json:"relation_type"`
+}
+
+func (q *Queries) GetScannedQRCodeByUserID(ctx context.Context, arg GetScannedQRCodeByUserIDParams) (Reward, error) {
+	row := q.queryRow(ctx, q.getScannedQRCodeByUserIDStmt, getScannedQRCodeByUserID, arg.UserID, arg.RelationID, arg.RelationType)
+	var i Reward
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.RelationID,
+		&i.Amount,
+		&i.Withdrawn,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.TransactionType,
+		&i.RelationType,
+	)
+	return i, err
+}
+
 const getTotalAmount = `-- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
