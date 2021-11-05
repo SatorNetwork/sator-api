@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
@@ -113,6 +115,11 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeAddReferralCodeDataEndpoint ...
 func MakeAddReferralCodeDataEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		// FIXME: is allowed roles correct???
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -140,6 +147,10 @@ func MakeAddReferralCodeDataEndpoint(s service, v validator.ValidateFunc) endpoi
 // MakeUpdateReferralCodeDataEndpoint ...
 func MakeUpdateReferralCodeDataEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -174,6 +185,10 @@ func MakeUpdateReferralCodeDataEndpoint(s service, v validator.ValidateFunc) end
 // MakeDeleteReferralCodeDataByIDEndpoint ...
 func MakeDeleteReferralCodeDataByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get referral code id: %w", err)
@@ -191,6 +206,10 @@ func MakeDeleteReferralCodeDataByIDEndpoint(s service) endpoint.Endpoint {
 // MakeGetReferralCodesDataListEndpoint ...
 func MakeGetReferralCodesDataListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -214,6 +233,10 @@ func MakeGetReferralCodesDataListEndpoint(s service, v validator.ValidateFunc) e
 // MakeGetMyReferralCodeEndpoint ...
 func MakeGetMyReferralCodeEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -236,6 +259,11 @@ func MakeGetMyReferralCodeEndpoint(s service) endpoint.Endpoint {
 // MakeStoreUserWithValidCodeEndpoint ...
 func MakeStoreUserWithValidCodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		// FIXME: is allowed roles correct???
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -253,6 +281,10 @@ func MakeStoreUserWithValidCodeEndpoint(s service, v validator.ValidateFunc) end
 // MakeGetReferralsWithPaginationByUserIDEndpoint ...
 func MakeGetReferralsWithPaginationByUserIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
