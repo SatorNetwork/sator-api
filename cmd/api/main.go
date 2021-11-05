@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -99,9 +100,9 @@ var (
 	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
 	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
 	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
-	solanaFeePayerPrivateKey    = env.MustBytes("SOLANA_FEE_PAYER_PRIVATE_KEY")
+	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
-	solanaTokenHolderPrivateKey = env.MustBytes("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
+	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -226,11 +227,20 @@ func main() {
 			log.Fatalf("walletRepo error: %v", err)
 		}
 
+		feePayerPk, err := base64.StdEncoding.DecodeString(solanaFeePayerPrivateKey)
+		if err != nil {
+			log.Fatalf("feePayerPk base64 decoding error: %v", err)
+		}
+		tokenHolderPk, err := base64.StdEncoding.DecodeString(solanaTokenHolderPrivateKey)
+		if err != nil {
+			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
+		}
+
 		solanaClient := solana.New(solanaApiBaseUrl)
-		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, solanaFeePayerPrivateKey); err != nil {
+		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
 		}
-		if err := solanaClient.CheckPrivateKey(solanaTokenHolderAddr, solanaTokenHolderPrivateKey); err != nil {
+		if err := solanaClient.CheckPrivateKey(solanaTokenHolderAddr, tokenHolderPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
 		}
 
@@ -239,8 +249,8 @@ func main() {
 			solanaClient,
 			ethereumClient,
 			wallet.WithAssetSolanaAddress(solanaAssetAddr),
-			wallet.WithSolanaFeePayer(solanaFeePayerAddr, solanaFeePayerPrivateKey),
-			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, solanaTokenHolderPrivateKey),
+			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
+			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
 		)
 		logger.Log(
 			"solanaAssetAddr", solanaAssetAddr,
