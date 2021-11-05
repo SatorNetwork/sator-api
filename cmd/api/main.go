@@ -225,7 +225,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), ethereumClient)
+		walletService := wallet.NewService(
+			walletRepository,
+			solana.New(solanaApiBaseUrl),
+			ethereumClient,
+			wallet.WithAssetSolanaAddress(solanaAssetAddr),
+			wallet.WithSolanaFeePayer(solanaFeePayerAddr, solanaFeePayerPrivateKey),
+			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, solanaTokenHolderPrivateKey),
+		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
