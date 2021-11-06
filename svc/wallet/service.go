@@ -596,13 +596,7 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("not enough balance for payment: %v", bal)
 	}
 
-	// Get account to send payment
-	r, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not make payment for %s: %w", info, err)
-	}
-
-	if err := s.execTransfer(ctx, w.ID, r.PublicKey, amount); err != nil {
+	if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
