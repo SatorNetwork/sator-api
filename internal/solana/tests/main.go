@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
 
@@ -26,18 +26,27 @@ var (
 
 func main() {
 	ctx := context.Background()
-	sc := solana.New(client.DevnetRPCEndpoint)
+	sc := solana.New(client.MainnetRPCEndpoint)
 
-	txList, err := sc.GetTransactions(ctx, "3Z6t2topTRBVeQjbLf8mExLnEvxUz38rMkyiNSnwMkrj")
+	assetAddr := "2HeykdKjzHKGm2LKHw8pDYwjKPiFEoXAz74dirhUgQvq"
+	satorAcc := sc.AccountFromPrivateKeyBytes([]byte{49, 225, 100, 131, 118, 63, 74, 198, 190, 11, 7, 232, 100, 238, 146, 190, 233, 239, 4, 59, 241, 115, 252, 191, 38, 79, 212, 199, 254, 198, 232, 93, 175, 133, 162, 169, 39, 44, 191, 251, 151, 79, 206, 62, 226, 192, 238, 33, 54, 80, 113, 107, 122, 237, 161, 25, 158, 39, 52, 75, 60, 248, 89, 228})
+
+	tx, err := sc.GiveAssetsWithAutoDerive(ctx, assetAddr, satorAcc, satorAcc, "DdwNtswJULf3TiZbu1iJMA12p1NxkMW3gfZggdogcLzK", 1)
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
+	fmt.Printf("tx: %s", tx)
+
+	// txList, err := sc.GetTransactions(ctx, "3Z6t2topTRBVeQjbLf8mExLnEvxUz38rMkyiNSnwMkrj")
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 
 	// log.Printf("txList: %+v\n\n", txList)
 
-	for _, tx := range txList {
-		log.Printf("tx: %+v\n\n", tx)
-	}
+	// for _, tx := range txList {
+	// 	log.Printf("tx: %+v\n\n", tx)
+	// }
 
 	// acc := sc.NewAccount()
 	// log.Printf("account pub key: %#v", acc.PublicKey.ToBase58())

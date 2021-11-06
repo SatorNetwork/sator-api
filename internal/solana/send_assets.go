@@ -19,8 +19,6 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 		return "", err
 	}
 
-	fmt.Println(assetAddr, feePayer, issuer, recipientAddr, amount)
-
 	// Issue asset
 	txHash, err := c.SendTransaction(
 		ctx,
@@ -30,7 +28,7 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 			recipientAta,
 			asset,
 			issuer.PublicKey,
-			[]common.PublicKey{issuer.PublicKey},
+			[]common.PublicKey{},
 			amountToSend,
 			c.decimals,
 		),
@@ -65,7 +63,7 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 			recipientAta,
 			asset,
 			source.PublicKey,
-			[]common.PublicKey{feePayer.PublicKey, source.PublicKey},
+			[]common.PublicKey{},
 			amountToSend,
 			c.decimals,
 		),
