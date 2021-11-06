@@ -18,13 +18,17 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 	if err != nil {
 		return "", err
 	}
+	tokenHolderAta, _, err := common.FindAssociatedTokenAddress(issuer.PublicKey, asset)
+	if err != nil {
+		return "", err
+	}
 
 	// Issue asset
 	txHash, err := c.SendTransaction(
 		ctx,
 		feePayer, issuer,
 		tokenprog.TransferChecked(
-			issuer.PublicKey,
+			tokenHolderAta,
 			recipientAta,
 			asset,
 			issuer.PublicKey,
