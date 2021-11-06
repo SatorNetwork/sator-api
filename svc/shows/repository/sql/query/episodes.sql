@@ -16,6 +16,7 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
+AND episodes.archived = FALSE
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
 
@@ -25,7 +26,7 @@ SELECT
     seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = $1;
+WHERE episodes.id = $1 AND episodes.archived = FALSE;
 
 -- name: AddEpisode :one
 INSERT INTO episodes (
@@ -88,4 +89,5 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY(@episode_ids::uuid[])
+AND episodes.archived = FALSE
 ORDER BY episodes.episode_number DESC;

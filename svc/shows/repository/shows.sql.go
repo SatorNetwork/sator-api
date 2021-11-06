@@ -31,7 +31,7 @@ VALUES (
            $6,
            $7,
            $8
-) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch
+) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived
 `
 
 type AddShowParams struct {
@@ -69,6 +69,7 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 		&i.RealmsTitle,
 		&i.RealmsSubtitle,
 		&i.Watch,
+		&i.Archived,
 	)
 	return i, err
 }
@@ -93,11 +94,11 @@ WITH show_claps_sum AS (
     GROUP BY show_id  
 )
 SELECT 
-    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch,
+    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.archived,
     COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
-WHERE shows.id = $1
+WHERE shows.id = $1 AND shows.archived = FALSE
 `
 
 type GetShowByIDRow struct {
@@ -112,6 +113,7 @@ type GetShowByIDRow struct {
 	RealmsTitle    sql.NullString `json:"realms_title"`
 	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
 	Watch          sql.NullString `json:"watch"`
+	Archived       bool           `json:"archived"`
 	Claps          int64          `json:"claps"`
 }
 
@@ -130,14 +132,16 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow
 		&i.RealmsTitle,
 		&i.RealmsSubtitle,
 		&i.Watch,
+		&i.Archived,
 		&i.Claps,
 	)
 	return i, err
 }
 
 const getShows = `-- name: GetShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived
 FROM shows
+WHERE archived = FALSE
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -170,6 +174,7 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 			&i.RealmsTitle,
 			&i.RealmsSubtitle,
 			&i.Watch,
+			&i.Archived,
 		); err != nil {
 			return nil, err
 		}
@@ -185,9 +190,9 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived
 FROM shows
-WHERE category = $1
+WHERE category = $1 AND archived = FALSE
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
@@ -221,6 +226,7 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 			&i.RealmsTitle,
 			&i.RealmsSubtitle,
 			&i.Watch,
+			&i.Archived,
 		); err != nil {
 			return nil, err
 		}
