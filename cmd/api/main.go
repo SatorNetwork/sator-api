@@ -97,6 +97,7 @@ var (
 	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
+	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
 	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
 	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
 	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
@@ -270,7 +271,7 @@ func main() {
 		rewardsRepository,
 		walletSvcClient,
 		db_internal.NewAdvisoryLocks(db),
-		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
+		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster="+solanaEnv),
 		rewards.WithHoldRewardsPeriod(holdRewardsPeriod),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
