@@ -209,9 +209,9 @@ func MakeCreateTransferRequestEndpoint(s service, v validator.ValidateFunc) endp
 
 func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
+		// if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		// 	return nil, err
+		// }
 
 		req := request.(ConfirmTransferRequest)
 		if err := v(req); err != nil {
