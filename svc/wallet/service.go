@@ -384,7 +384,11 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 			user.PublicKey,
 			amount,
 		); err != nil {
-			log.Println(err)
+			if i < 4 {
+				log.Println(err)
+			} else {
+				return "", fmt.Errorf("could not claim rewards: %w", err)
+			}
 			time.Sleep(time.Second * 10)
 		} else {
 			log.Printf("user %s: successful transaction: rewards withdraw: %s", userID.String(), tx)
@@ -518,7 +522,11 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			recipientAddr,
 			amount,
 		); err != nil {
-			log.Println(err)
+			if i < 4 {
+				log.Println(err)
+			} else {
+				return fmt.Errorf("transaction: %w", err)
+			}
 			time.Sleep(time.Second * 10)
 		} else {
 			log.Printf("successful transaction: %s", tx)
