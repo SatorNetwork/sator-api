@@ -474,10 +474,10 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	// log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
 
 	return PreparedTransferTransaction{
-		AssetName:       asset,
-		Amount:          amount,
-		RecipientAddr:   recipientPK,
-		Fee:             amount * 0.025,
+		AssetName:     asset,
+		Amount:        amount,
+		RecipientAddr: recipientPK,
+		// Fee:             amount * 0.025,
 		TransactionHash: base58.Encode(encodedData),
 		SenderWalletID:  walletID.String(),
 	}, nil
