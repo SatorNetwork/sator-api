@@ -6,6 +6,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -49,13 +50,7 @@ type (
 	// GetListTransactionsByWalletIDRequest struct
 	GetListTransactionsByWalletIDRequest struct {
 		WalletID string `json:"wallet_id" validate:"required,uuid"`
-		PaginationRequest
-	}
-
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
+		utils.PaginationRequest
 	}
 
 	// SetStakeRequest struct
@@ -64,22 +59,6 @@ type (
 		WalletID string  `json:"wallet_id" validate:"required,uuid"`
 	}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()

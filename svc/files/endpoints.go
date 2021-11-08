@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -30,12 +31,6 @@ type (
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 	}
 
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page          int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ImagesPerPage int32 `json:"images_per_page,omitempty" validate:"number,gte=0"`
-	}
-
 	// AddImageResizeRequest struct
 	AddImageResizeRequest struct {
 		File       multipart.File
@@ -44,24 +39,6 @@ type (
 		MaxWidth   uint
 	}
 )
-
-// Limit of images
-func (r PaginationRequest) Limit() int32 {
-	if r.ImagesPerPage > 0 {
-		return r.ImagesPerPage
-	}
-
-	return 20
-}
-
-// Offset images
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-
-	return 0
-}
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
@@ -93,7 +70,7 @@ func MakeGetImagesListEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return nil, err
 		}
 
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}

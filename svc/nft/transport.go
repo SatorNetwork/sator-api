@@ -118,7 +118,7 @@ func decodeCreateNFTRequest(_ context.Context, r *http.Request) (interface{}, er
 }
 
 func decodeGetNFTsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return PaginationRequest{
+	return utils.PaginationRequest{
 		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
@@ -132,7 +132,7 @@ func decodeGetNFTsByCategoryRequest(_ context.Context, r *http.Request) (interfa
 
 	return &GetNFTsByCategoryRequest{
 		Category: category,
-		PaginationRequest: PaginationRequest{
+		PaginationRequest: utils.PaginationRequest{
 			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
@@ -147,7 +147,7 @@ func decodeGetNFTsByShowIDRequest(_ context.Context, r *http.Request) (interface
 
 	return &GetNFTsByShowIDRequest{
 		ShowID: showId,
-		PaginationRequest: PaginationRequest{
+		PaginationRequest: utils.PaginationRequest{
 			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
@@ -162,7 +162,7 @@ func decodeGetNFTsByEpisodeIDRequest(_ context.Context, r *http.Request) (interf
 
 	return &GetNFTsByEpisodeIDRequest{
 		EpisodeID: episodeId,
-		PaginationRequest: PaginationRequest{
+		PaginationRequest: utils.PaginationRequest{
 			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
@@ -177,7 +177,7 @@ func decodeGetNFTsByUserIDRequest(_ context.Context, r *http.Request) (interface
 
 	return &GetNFTsByUserIDRequest{
 		UserID: userId,
-		PaginationRequest: PaginationRequest{
+		PaginationRequest: utils.PaginationRequest{
 			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
