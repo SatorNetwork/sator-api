@@ -3,7 +3,6 @@ package solana
 import (
 	"context"
 	"fmt"
-
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
@@ -54,7 +53,7 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 	}
 
 	recipientPublicKey := common.PublicKeyFromString(recipientAddr)
-	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPublicKey, asset)
+	recipientAta, err := c.deriveATAPublicKey(ctx, recipientPublicKey, asset)
 	if err != nil {
 		return "", err
 	}
