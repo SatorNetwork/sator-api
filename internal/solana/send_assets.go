@@ -13,7 +13,7 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 
 	asset := common.PublicKeyFromString(assetAddr)
 	recipientPublicKey := common.PublicKeyFromString(recipientAddr)
-	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPublicKey, asset)
+	recipientAta, err := c.deriveATAPublicKey(ctx, recipientPublicKey, asset)
 	if err != nil {
 		return "", err
 	}
