@@ -90,7 +90,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 }
 
 func decodeGetReferralCodesDataListRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	return PaginationRequest{
+	return utils.PaginationRequest{
 		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
@@ -143,7 +143,7 @@ func decodeStoreUserWithValidCodeRequest(_ context.Context, r *http.Request) (in
 }
 
 func decodeGetReferralsWithPaginationByUserIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return PaginationRequest{
+	return utils.PaginationRequest{
 		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil

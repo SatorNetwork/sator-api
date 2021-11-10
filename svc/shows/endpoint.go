@@ -7,6 +7,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -69,22 +70,16 @@ type (
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
 
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
-	}
-
 	// GetShowChallengesRequest struct
 	GetShowChallengesRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	// GetShowsByCategoryRequest struct
 	GetShowsByCategoryRequest struct {
 		Category string `json:"category"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	// AddShowRequest struct
@@ -158,7 +153,7 @@ type (
 	// GetEpisodesByShowIDRequest struct
 	GetEpisodesByShowIDRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	// AddSeasonRequest struct
@@ -190,25 +185,9 @@ type (
 	// GetReviewsListRequest struct
 	GetReviewsListRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 // MakeEndpoints ...
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -281,7 +260,7 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, err
 		}
 
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -670,7 +649,7 @@ func MakeGetActivatedUserEpisodesEndpoint(s service, v validator.ValidateFunc) e
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -870,7 +849,7 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeGetReviewsListByUserIDEndpoint ...
 func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}

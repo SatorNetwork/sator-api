@@ -802,15 +802,15 @@ func (s *Service) UnlockEpisode(ctx context.Context, userID, episodeID uuid.UUID
 	}
 
 	switch unlockOption {
-	case "unlock_opt_10_2h":
+	case "unlock_opt_2h":
 		activateBefore = activateBefore.Add(time.Hour * 2)
-		amount = 10
-	case "unlock_opt_100_24h":
+		amount = 2
+	case "unlock_opt_24h":
 		activateBefore = activateBefore.Add(time.Hour * 24)
-		amount = 100
-	case "unlock_opt_500_week":
+		amount = 10
+	case "unlock_opt_week":
 		activateBefore = activateBefore.Add(time.Hour * 24 * 7)
-		amount = 500
+		amount = 50
 	}
 
 	if s.chargeForUnlockFn != nil && amount > 0 {

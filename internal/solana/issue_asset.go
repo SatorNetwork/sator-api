@@ -19,7 +19,7 @@ func (c *Client) IssueAsset(ctx context.Context, feePayer, issuer, asset, dest t
 			asset.PublicKey,
 			dest.PublicKey,
 			issuer.PublicKey,
-			[]common.PublicKey{},
+			[]common.PublicKey{feePayer.PublicKey, issuer.PublicKey},
 			amountToSend,
 			c.decimals,
 		),

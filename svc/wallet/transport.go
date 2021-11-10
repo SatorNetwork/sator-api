@@ -113,7 +113,7 @@ func decodeGetWalletByIDRequest(_ context.Context, r *http.Request) (interface{}
 func decodeGetListTransactionsByWalletIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetListTransactionsByWalletIDRequest{
 		WalletID: chi.URLParam(r, "wallet_id"),
-		PaginationRequest: PaginationRequest{
+		PaginationRequest: utils.PaginationRequest{
 			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},

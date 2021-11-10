@@ -9,5 +9,5 @@ var (
 	// ErrQRCodeExpired indicates that QR code is expired.
 	ErrQRCodeExpired = errors.New("QR code is expired")
 	ErrQRCodeInvalid = errors.New("QR code is not valid yet")
-	ErrQRCodeScanned = errors.New("QR code can be scanned only once")
+	ErrQRCodeScanned = errors.New("QR code can only be scanned once")
 )

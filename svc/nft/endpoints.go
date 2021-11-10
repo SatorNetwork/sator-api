@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -39,12 +40,6 @@ type (
 		GetMainScreenCategory(ctx context.Context) (*Category, error)
 	}
 
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
-	}
-
 	TransportNFT struct {
 		ID          uuid.UUID         `json:"id"`
 		OwnerID     *uuid.UUID        `json:"owner_id,omitempty"`
@@ -73,25 +68,25 @@ type (
 	GetNFTsByCategoryRequest struct {
 		Category string `json:"category" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	GetNFTsByShowIDRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	GetNFTsByEpisodeIDRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	GetNFTsByUserIDRequest struct {
 		UserID string `json:"user_id" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	TransportCategory struct {
@@ -102,22 +97,6 @@ type (
 
 	Empty struct{}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 func FromServiceNFTs(nfts []*NFT) []*TransportNFT {
 	transportNFTs := make([]*TransportNFT, 0, len(nfts))
@@ -264,7 +243,7 @@ func MakeCreateNFTEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 
 func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req, ok := request.(PaginationRequest)
+		req, ok := request.(utils.PaginationRequest)
 		if !ok {
 			return nil, fmt.Errorf("unexpected request type, want: PaginationRequest, got: %T", request)
 		}

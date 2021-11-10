@@ -48,7 +48,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	userRepo, err :=  userRepository.Prepare(ctx, db)
+	userRepo, err := userRepository.Prepare(ctx, db)
 	if err != nil {
 		log.Fatalf("userRepo error: %v", err)
 	}
@@ -67,7 +67,7 @@ func main() {
 
 		log.Println("Getting user")
 		ul, err := userRepo.GetUsersListDesc(ctx, userRepository.GetUsersListDescParams{
-			Limit: 1,
+			Limit:  1,
 			Offset: int32(i),
 		})
 		if err != nil {
@@ -85,7 +85,7 @@ func main() {
 
 		user := ul[0]
 
-		if err := txFn(func (tx dbx.DBTX) error {
+		if err := txFn(func(tx dbx.DBTX) error {
 			return createSolanaWalletIfNotExists(ctx, repository.New(tx), solana.New(solanaApiBaseUrl), user.ID)
 		}); err != nil {
 			log.Printf("Create user wallet if not exists: %v", err)
@@ -93,14 +93,13 @@ func main() {
 	}
 }
 
-
 func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID) error {
 	log.Println("Getting user SAO wallet")
 	userWallet, err := repo.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
-		UserID: userID,
+		UserID:     userID,
 		WalletType: wallet.WalletTypeSator,
 	})
-	if err != nil && !dbx.IsNotFoundError(err){
+	if err != nil && !dbx.IsNotFoundError(err) {
 		return nil
 	}
 
@@ -113,7 +112,7 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 		if err := repo.DeleteWalletByID(ctx, userWallet.ID); err != nil {
 			log.Printf("Could not delete wallet with id=%s: %v", userWallet.ID.String(), err)
 		}
-	} 
+	}
 
 	feePayer, err := repo.GetSolanaAccountByType(ctx, wallet.FeePayerAccount.String())
 	if err != nil {
@@ -133,9 +132,9 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 
 	txHash, err := sc.InitAccountToUseAsset(
 		ctx,
-		sc.AccountFromPrivatekey(feePayer.PrivateKey),
-		sc.AccountFromPrivatekey(issuer.PrivateKey),
-		sc.AccountFromPrivatekey(asset.PrivateKey),
+		sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey),
+		sc.AccountFromPrivateKeyBytes(issuer.PrivateKey),
+		sc.AccountFromPrivateKeyBytes(asset.PrivateKey),
 		acc,
 	)
 	if err != nil {
@@ -162,7 +161,7 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 	}
 
 	if _, err := repo.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
-		UserID: userID,
+		UserID:     userID,
 		WalletType: wallet.WalletTypeRewards,
 	}); err != nil && dbx.IsNotFoundError(err) {
 		log.Println("Creating user rewards wallet")

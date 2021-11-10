@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -40,12 +40,6 @@ type (
 		StoreUserWithValidCode(ctx context.Context, uid uuid.UUID, code string) (bool, error)
 	}
 
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
-	}
-
 	// AddReferralCodeRequest struct
 	AddReferralCodeRequest struct {
 		Title        string `json:"title,omitempty" validate:"required,gt=0"`
@@ -64,22 +58,6 @@ type (
 		UserID       string `json:"user_id"`
 	}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
@@ -210,7 +188,7 @@ func MakeGetReferralCodesDataListEndpoint(s service, v validator.ValidateFunc) e
 			return nil, err
 		}
 
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -290,7 +268,7 @@ func MakeGetReferralsWithPaginationByUserIDEndpoint(s service, v validator.Valid
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
