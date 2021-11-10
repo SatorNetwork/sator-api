@@ -38,7 +38,6 @@ WITH minted_nfts AS (
 SELECT nft_items.*
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
-    JOIN nft_relations ON nft_relations.nft_item_id = nft_items.id
 WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
                         FROM nft_relations 
                         WHERE nft_relations.relation_id = @relation_id)
