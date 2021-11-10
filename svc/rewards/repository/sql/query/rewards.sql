@@ -18,8 +18,7 @@ VALUES (
 UPDATE rewards
 SET withdrawn = TRUE
 WHERE user_id = @user_id
-AND transaction_type = 1
-AND created_at < @not_after_date;
+AND transaction_type = 1;
 
 -- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION

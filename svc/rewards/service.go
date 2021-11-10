@@ -40,7 +40,7 @@ type (
 
 	rewardsRepository interface {
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
-		Withdraw(ctx context.Context, arg repository.WithdrawParams) error
+		Withdraw(ctx context.Context, uid uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
 		// GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
@@ -153,10 +153,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
 	}
 
-	if err = s.repo.Withdraw(ctx, repository.WithdrawParams{
-		UserID:       uid,
-		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
-	}); err != nil {
+	if err = s.repo.Withdraw(ctx, uid); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not update rewards status: %w", err)
 	}
 

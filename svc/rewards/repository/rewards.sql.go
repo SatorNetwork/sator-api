@@ -167,15 +167,9 @@ UPDATE rewards
 SET withdrawn = TRUE
 WHERE user_id = $1
 AND transaction_type = 1
-AND created_at < $2
 `
 
-type WithdrawParams struct {
-	UserID       uuid.UUID `json:"user_id"`
-	NotAfterDate time.Time `json:"not_after_date"`
-}
-
-func (q *Queries) Withdraw(ctx context.Context, arg WithdrawParams) error {
-	_, err := q.exec(ctx, q.withdrawStmt, withdraw, arg.UserID, arg.NotAfterDate)
+func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.withdrawStmt, withdraw, userID)
 	return err
 }
