@@ -31,10 +31,11 @@ type (
 		Royalties  float64 // TODO(evg): add validation?
 		Blockchain string  // TODO(evg): replace with enum?
 		SellType   string  // TODO(evg): replace with enum?
+		Minted     int32
 
-		BuyNowPrice   float64
+		BuyNowPrice float64
+
 		AuctionParams *NFTAuctionParams
-
 		// NFT payload, e.g.: link to the original file, etc
 		TokenURI string
 	}
@@ -55,13 +56,13 @@ type (
 
 	nftRepository interface {
 		AddNFTItem(ctx context.Context, arg repository.AddNFTItemParams) (repository.NFTItem, error)
-		GetNFTItemByID(ctx context.Context, id uuid.UUID) (repository.NFTItem, error)
+		AddNFTItemOwner(ctx context.Context, arg repository.AddNFTItemOwnerParams) error
+		GetNFTItemByID(ctx context.Context, nftItemID uuid.UUID) (repository.GetNFTItemByIDRow, error)
 		GetNFTItemsList(ctx context.Context, arg repository.GetNFTItemsListParams) ([]repository.NFTItem, error)
 		GetNFTItemsListByRelationID(ctx context.Context, arg repository.GetNFTItemsListByRelationIDParams) ([]repository.NFTItem, error)
 		GetNFTItemsListByOwnerID(ctx context.Context, arg repository.GetNFTItemsListByOwnerIDParams) ([]repository.NFTItem, error)
 		GetNFTCategoriesList(ctx context.Context) ([]repository.NFTCategory, error)
 		GetMainNFTCategory(ctx context.Context) (repository.NFTCategory, error)
-		UpdateNFTItemOwner(ctx context.Context, arg repository.UpdateNFTItemOwnerParams) error
 	}
 
 	// Simple function
@@ -85,7 +86,7 @@ func (s *Service) CreateNFT(ctx context.Context, userID uuid.UUID, nft *NFT) (st
 		Name:        nft.Name,
 		Description: sql.NullString{String: nft.Description, Valid: len(nft.Description) > 0},
 		Cover:       nft.ImageLink,
-		Supply:      1, // TODO: multiple supplies are not supported yet
+		Supply:      int64(nft.Supply),
 		BuyNowPrice: nft.BuyNowPrice,
 		TokenURI:    nft.TokenURI,
 	})
@@ -101,17 +102,16 @@ func (s *Service) BuyNFT(ctx context.Context, userID uuid.UUID, nftID uuid.UUID)
 	if err != nil {
 		return fmt.Errorf("could not find NFT with id=%s: %w", nftID, err)
 	}
-	if item.OwnerID.Valid {
+	if item.Supply < int64(item.Minted) {
 		return ErrAlreadySold
 	}
-
 	if err := s.buyNFTFunc(ctx, userID, item.BuyNowPrice, fmt.Sprintf("NFT purchase: %s", nftID)); err != nil {
 		return fmt.Errorf("NFT purchase error: %w", err)
 	}
-
-	if err := s.nftRepo.UpdateNFTItemOwner(ctx, repository.UpdateNFTItemOwnerParams{
-		ID:      nftID,
-		OwnerID: uuid.NullUUID{UUID: userID, Valid: true},
+	//TODO: if owner db.NotFoundErr{AddItemOwner}
+	if err := s.nftRepo.AddNFTItemOwner(ctx, repository.AddNFTItemOwnerParams{
+		NFTItemID: nftID,
+		UserID:    userID,
 	}); err != nil {
 		// TODO: implement refund function or wrap operation into db transaction
 		return fmt.Errorf("could not change NFT owner: %w", err)
@@ -165,7 +165,7 @@ func (s *Service) GetNFTsByRelationID(ctx context.Context, relID uuid.UUID, limi
 
 func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*NFT, error) {
 	nftList, err := s.nftRepo.GetNFTItemsListByOwnerID(ctx, repository.GetNFTItemsListByOwnerIDParams{
-		OwnerID: uuid.NullUUID{UUID: userID, Valid: true},
+		OwnerID: userID,
 		Limit:   limit,
 		Offset:  offset,
 	})
@@ -185,7 +185,7 @@ func (s *Service) GetNFTByID(ctx context.Context, nftID uuid.UUID) (*NFT, error)
 		return nil, fmt.Errorf("could not find NFT with id=%s: %w", nftID, err)
 	}
 
-	return castNFTRawToNFT(item), nil
+	return castNFTRawToNFTRow(item), nil
 }
 
 func (s *Service) GetCategories(ctx context.Context) ([]*Category, error) {
@@ -255,6 +255,25 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 		Supply:      int(source.Supply),
 		BuyNowPrice: source.BuyNowPrice,
 		TokenURI:    source.TokenURI,
+	}
+
+	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
+		nft.OwnerID = &source.OwnerID.UUID
+	}
+
+	return nft
+}
+
+func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow) *NFT {
+	nft := &NFT{
+		ID:          source.ID,
+		ImageLink:   source.Cover,
+		Name:        source.Name,
+		Description: source.Description.String,
+		Supply:      int(source.Supply),
+		BuyNowPrice: source.BuyNowPrice,
+		TokenURI:    source.TokenURI,
+		Minted:      source.Minted,
 	}
 
 	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {

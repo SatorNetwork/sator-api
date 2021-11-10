@@ -5,5 +5,5 @@ import "errors"
 // Predefined package errors
 var (
 	ErrInvalidParameter = errors.New("invalid parameter")
-	ErrAlreadySold      = errors.New("reselling is not available in the current app version")
+	ErrAlreadySold      = errors.New("this nft sold out")
 )

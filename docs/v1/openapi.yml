@@ -47,6 +47,9 @@ components:
           type: string
           example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
           description: NFT payload, for example link to the original file
+        minted:
+          type: number
+          example: 3
         auction_params:
           type: object
           properties:
