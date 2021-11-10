@@ -41,7 +41,7 @@ FROM nft_items
 WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
                         FROM nft_relations 
                         WHERE nft_relations.relation_id = @relation_id)
-AND nft_items.supply > minted_nfts.minted
+AND (nft_items.supply > minted_nfts.minted OR minted_nfts.minted IS NULL)
 ORDER BY nft_items.created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
