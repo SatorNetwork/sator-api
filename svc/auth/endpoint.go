@@ -9,6 +9,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -24,12 +25,13 @@ type (
 		ForgotPassword            endpoint.Endpoint
 		ValidateResetPasswordCode endpoint.Endpoint
 		ResetPassword             endpoint.Endpoint
+		ChangePassword            endpoint.Endpoint
 
 		VerifyAccount endpoint.Endpoint
 
-		RequestChangeEmail      endpoint.Endpoint
-		ValidateChangeEmailCode endpoint.Endpoint
-		UpdateEmail             endpoint.Endpoint
+		RequestChangeEmail endpoint.Endpoint
+		UpdateEmail        endpoint.Endpoint
+		UpdateUsername     endpoint.Endpoint
 
 		RequestDestroyAccount endpoint.Endpoint
 		VerifyDestroyCode     endpoint.Endpoint
@@ -42,17 +44,19 @@ type (
 		Login(ctx context.Context, email, password string) (string, error)
 		Logout(ctx context.Context, tid string) error
 		SignUp(ctx context.Context, email, password, username string) (string, error)
-		RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error)
+		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error)
 
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
 		ResetPassword(ctx context.Context, email, password, otp string) error
+		ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 
 		VerifyAccount(ctx context.Context, userID uuid.UUID, otp string) error
 
 		RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error
 		ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error
 		UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error
+		UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error
 
 		RequestDestroyAccount(ctx context.Context, uid uuid.UUID) error
 		ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID, otp string) error
@@ -97,6 +101,12 @@ type (
 		OTP      string `json:"otp" validate:"required"`
 	}
 
+	// ChangePasswordRequest struct
+	ChangePasswordRequest struct {
+		OldPassword string `json:"old_password" validate:"required"`
+		NewPassword string `json:"new_password" validate:"required"`
+	}
+
 	// VerifyOTPRequest struct
 	VerifyOTPRequest struct {
 		OTP string `json:"otp" validate:"required"`
@@ -121,6 +131,10 @@ type (
 		Email string `json:"email" validate:"required,email"`
 		OTP   string `json:"otp" validate:"required"`
 	}
+
+	UpdateUsernameRequest struct {
+		Username string `json:"username" validate:"required"`
+	}
 )
 
 // MakeEndpoints ...
@@ -136,13 +150,14 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		ForgotPassword:            MakeForgotPasswordEndpoint(as, validateFunc),
 		ValidateResetPasswordCode: MakeValidateResetPasswordCodeEndpoint(as, validateFunc),
 		ResetPassword:             MakeResetPasswordEndpoint(as, validateFunc),
+		ChangePassword:            jwtMdw(MakeChangePasswordEndpoint(as, validateFunc)),
 		VerifyAccount:             jwtMdw(MakeVerifyAccountEndpoint(as, validateFunc)),
 		IsVerified:                jwtMdw(MakeIsVerifiedEndpoint(as)),
 		ResendOTP:                 jwtMdw(MakeResendOTPEndpoint(as)),
 
-		RequestChangeEmail:      jwtMdw(MakeRequestChangeEmailEndpoint(as, validateFunc)),
-		ValidateChangeEmailCode: jwtMdw(MakeValidateChangeEmailCodeEndpoint(as, validateFunc)),
-		UpdateEmail:             jwtMdw(MakeUpdateEmailEndpoint(as, validateFunc)),
+		RequestChangeEmail: jwtMdw(MakeRequestChangeEmailEndpoint(as, validateFunc)),
+		UpdateEmail:        jwtMdw(MakeUpdateEmailEndpoint(as, validateFunc)),
+		UpdateUsername:     jwtMdw(MakeUpdateUsernameEndpoint(as, validateFunc)),
 
 		RequestDestroyAccount: jwtMdw(MakeRequestDestroyAccount(as, validateFunc)),
 		VerifyDestroyCode:     jwtMdw(MakeVerifyDestroyEndpoint(as, validateFunc)),
@@ -159,14 +174,15 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.ForgotPassword = mdw(e.ForgotPassword)
 			e.ValidateResetPasswordCode = mdw(e.ValidateResetPasswordCode)
 			e.ResetPassword = mdw(e.ResetPassword)
+			e.ChangePassword = mdw(e.ChangePassword)
 
 			e.VerifyAccount = mdw(e.VerifyAccount)
 			e.IsVerified = mdw(e.IsVerified)
 			e.ResendOTP = mdw(e.ResendOTP)
 
 			e.RequestChangeEmail = mdw(e.RequestChangeEmail)
-			e.ValidateChangeEmailCode = mdw(e.ValidateChangeEmailCode)
 			e.UpdateEmail = mdw(e.UpdateEmail)
+			e.UpdateUsername = mdw(e.UpdateUsername)
 
 			e.RequestDestroyAccount = mdw(e.RequestDestroyAccount)
 			e.VerifyDestroyCode = mdw(e.VerifyDestroyCode)
@@ -253,12 +269,17 @@ func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			return nil, fmt.Errorf("could not get username: %w", err)
 		}
 
+		role, err := jwt.RoleFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get role: %w", err)
+		}
+
 		tid, err := jwt.TokenIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		token, err := s.RefreshToken(ctx, uid, username, tid.String())
+		token, err := s.RefreshToken(ctx, uid, username, role, tid.String())
 		if err != nil {
 			return nil, err
 		}
@@ -317,6 +338,27 @@ func MakeResetPasswordEndpoint(s authService, v validator.ValidateFunc) endpoint
 		req.Email = strings.ToLower(req.Email)
 
 		if err := s.ResetPassword(ctx, req.Email, req.Password, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeChangePasswordEndpoint ...
+func MakeChangePasswordEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		req := request.(ChangePasswordRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		if err := s.ChangePassword(ctx, uid, req.OldPassword, req.NewPassword); err != nil {
 			return nil, err
 		}
 
@@ -410,6 +452,36 @@ func MakeUpdateEmailEndpoint(s authService, v validator.ValidateFunc) endpoint.E
 		}
 
 		if err := s.UpdateEmail(ctx, uid, req.Email, req.OTP); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeUpdateUsernameEndpoint ...
+func MakeUpdateUsernameEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(UpdateUsernameRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		userName, err := jwt.UsernameFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get username: %w", err)
+		}
+
+		if strings.EqualFold(userName, req.Username) {
+			return false, nil
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.UpdateUsername(ctx, uid, req.Username); err != nil {
 			return nil, err
 		}
 

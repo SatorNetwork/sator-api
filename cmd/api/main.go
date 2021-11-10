@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,6 +34,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
+	"github.com/SatorNetwork/sator-api/svc/nft"
+	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
@@ -77,8 +81,8 @@ var (
 
 	// DB
 	dbConnString   = env.MustString("DATABASE_URL")
-	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 10)
-	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
+	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 20)
+	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 2)
 
 	// JWT
 	jwtSigningKey = env.MustString("JWT_SIGNING_KEY")
@@ -93,7 +97,13 @@ var (
 	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
-	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
+	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
+	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
+	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
+	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
+	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
+	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -108,6 +118,9 @@ var (
 	supportEmail   = env.GetString("SUPPORT_EMAIL", "support@sator.io")
 	companyName    = env.GetString("COMPANY_NAME", "Sator")
 	companyAddress = env.GetString("COMPANY_ADDRESS", "New York")
+
+	// Rewards
+	holdRewardsPeriod = env.GetDuration("HOLD_REWARDS_PERIOD", 0)
 
 	// Invitation
 	invitationReward = env.GetFloat("INVITATION_REWARD", 0)
@@ -130,10 +143,6 @@ var (
 	androidPackageName = env.MustString("FIREBASE_ANDROID_PACKAGE_NAME")
 	iosBundleId        = env.MustString("FIREBASE_IOS_BUNDLE_ID")
 	suffixOption       = env.MustString("FIREBASE_SUFFIX_OPTION")
-
-	// Episode Access
-	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
-	// period         = env.GetInt("PERIOD", 24)
 )
 
 func main() {
@@ -191,6 +200,8 @@ func main() {
 		r.Use(middleware.Timeout(httpRequestTimeout))
 		r.Use(cors.AllowAll().Handler)
 
+		r.Use(testingMdw)
+
 		r.NotFound(notFoundHandler)
 		r.MethodNotAllowed(methodNotAllowedHandler)
 
@@ -216,7 +227,32 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), ethereumClient)
+
+		feePayerPk, err := base64.StdEncoding.DecodeString(solanaFeePayerPrivateKey)
+		if err != nil {
+			log.Fatalf("feePayerPk base64 decoding error: %v", err)
+		}
+		tokenHolderPk, err := base64.StdEncoding.DecodeString(solanaTokenHolderPrivateKey)
+		if err != nil {
+			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
+		}
+
+		solanaClient := solana.New(solanaApiBaseUrl)
+		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
+		}
+		if err := solanaClient.CheckPrivateKey(solanaTokenHolderAddr, tokenHolderPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
+		}
+
+		walletService := wallet.NewService(
+			walletRepository,
+			solanaClient,
+			ethereumClient,
+			wallet.WithAssetSolanaAddress(solanaAssetAddr),
+			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
+			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
+		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
@@ -235,7 +271,8 @@ func main() {
 		rewardsRepository,
 		walletSvcClient,
 		db_internal.NewAdvisoryLocks(db),
-		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
+		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster="+solanaEnv),
+		rewards.WithHoldRewardsPeriod(holdRewardsPeriod),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
@@ -446,6 +483,19 @@ func main() {
 	}
 
 	{
+		// NFT service
+		nftRepository, err := nftRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("nftRepo error: %v", err)
+		}
+		nftService := nft.NewService(nftRepository, walletSvcClient.PayForService)
+		r.Mount("/nft", nft.MakeHTTPHandler(
+			nft.MakeEndpoints(nftService, jwtMdw),
+			logger,
+		))
+	}
+
+	{
 		// Init and run http server
 		httpServer := &http.Server{
 			Handler: r,
@@ -513,4 +563,21 @@ func defaultResponse(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+// Testing middleware
+// Helps to test any HTTP error
+// Pass must_err query parameter with code you want get
+// E.g.: /shows?must_err=403
+func testingMdw(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if errCodeStr := r.URL.Query().Get("must_err"); len(errCodeStr) == 3 {
+			if errCode, err := strconv.Atoi(errCodeStr); err == nil && errCode >= 400 && errCode < 600 {
+				w.WriteHeader(errCode)
+				w.Write([]byte(http.StatusText(errCode)))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

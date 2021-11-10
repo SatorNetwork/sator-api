@@ -1,5 +1,7 @@
 package rewards
 
+import "time"
+
 // WithAssetName option
 // Default value: SAO
 func WithAssetName(assetName string) Option {
@@ -13,5 +15,13 @@ func WithAssetName(assetName string) Option {
 func WithExplorerURLTmpl(explorerURLTmpl string) Option {
 	return func(s *Service) {
 		s.explorerURLTmpl = explorerURLTmpl
+	}
+}
+
+// WithHoldRewardsPeriod option
+// Default value: 30 days
+func WithHoldRewardsPeriod(period time.Duration) Option {
+	return func(s *Service) {
+		s.holdRewardsPeriod = period
 	}
 }

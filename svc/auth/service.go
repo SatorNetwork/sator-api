@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
 
@@ -36,7 +37,7 @@ type (
 	ServiceOption func(*Service)
 
 	jwtInteractor interface {
-		NewWithUserData(userID uuid.UUID, username string) (uuid.UUID, string, error)
+		NewWithUserData(userID uuid.UUID, username, role string) (uuid.UUID, string, error)
 	}
 
 	userRepository interface {
@@ -46,6 +47,7 @@ type (
 		GetUserByUsername(ctx context.Context, username string) (repository.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (repository.User, error)
 		UpdateUserEmail(ctx context.Context, arg repository.UpdateUserEmailParams) error
+		UpdateUsername(ctx context.Context, arg repository.UpdateUsernameParams) error
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
 		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
 		DestroyUser(ctx context.Context, id uuid.UUID) error
@@ -112,7 +114,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", ErrInvalidCredentials
 	}
 
-	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username)
+	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username, user.Role)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
@@ -127,12 +129,22 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 }
 
 // RefreshToken returns new jwt string.
-func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, tid string) (string, error) {
-	// TODO: add JWT id into the revoked tokens list
-	_, token, err := s.jwt.NewWithUserData(uid, username)
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error) {
+	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
 		return "", fmt.Errorf("could not refresh access token: %w", err)
 	}
+
+	if u.Disabled {
+		return "", ErrUserIsDisabled
+	}
+
+	// TODO: add JWT id into the revoked tokens list
+	_, token, err := s.jwt.NewWithUserData(uid, u.Username, role)
+	if err != nil {
+		return "", fmt.Errorf("could not refresh access token: %w", err)
+	}
+
 	return token, nil
 }
 
@@ -169,12 +181,14 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Email:    email,
 		Password: passwdHash,
 		Username: username,
+		Role:     rbac.RoleUser.String(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
+	fmt.Printf("OTP: %v\n", otp)
 	if s.mail == nil {
 		otpHash = []byte(s.masterCode)
 	} else {
@@ -203,7 +217,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username)
+	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username, u.Role)
 	if err != nil {
 		return "", fmt.Errorf("could not generate new access token: %w", err)
 	}
@@ -315,6 +329,37 @@ func (s *Service) ResetPassword(ctx context.Context, email, password, otp string
 	return nil
 }
 
+// ChangePassword changing password.
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {
+	user, err := s.ur.GetUserByID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return ErrInvalidCredentials
+		}
+		return fmt.Errorf("could not get user bu id: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(oldPassword)); err != nil {
+		return validator.NewValidationError(url.Values{
+			"old_password": []string{"invalid current password"},
+		})
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 14)
+	if err != nil {
+		return fmt.Errorf("could not reset password: %w", err)
+	}
+
+	if err := s.ur.UpdateUserPassword(ctx, repository.UpdateUserPasswordParams{
+		ID:       userID,
+		Password: passwordHash,
+	}); err != nil {
+		return fmt.Errorf("could not reset password: %w", err)
+	}
+
+	return nil
+}
+
 // VerifyAccount verifies account.
 func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp string) error {
 	u, err := s.ur.GetUserByID(ctx, userID)
@@ -365,7 +410,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 	return nil
 }
 
-// RequestChangeEmail requests password reset with email.
+// RequestChangeEmail requests change email for authorized user. Checks if email already exists in db, creates user verification and sends code to new email.
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
 	var otpHash []byte
 
@@ -434,7 +479,7 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 	return nil
 }
 
-// UpdateEmail ...
+// UpdateEmail updates user's email to provided new one in case of correct otp provided.
 func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
 	if err := s.ValidateChangeEmailCode(ctx, userID, email, otp); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
@@ -460,6 +505,19 @@ func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp 
 	}); err != nil {
 		// just log, not any error for user
 		log.Printf("could not delete verification code for user with id=%s: %v", userID.String(), err)
+	}
+
+	return nil
+}
+
+// UpdateUsername ...
+func (s *Service) UpdateUsername(ctx context.Context, userID uuid.UUID, username string) error {
+	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
+		return fmt.Errorf("user with username %s already exists", username)
+	}
+
+	if err := s.ur.UpdateUsername(ctx, repository.UpdateUsernameParams{ID: userID, Username: username}); err != nil {
+		return fmt.Errorf("could not update username: %w", err)
 	}
 
 	return nil

@@ -2,11 +2,13 @@ module github.com/SatorNetwork/sator-api
 
 go 1.16
 
+replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompatible
+
 require (
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/dmitrymomot/distlock v0.1.1
-	github.com/dmitrymomot/go-env v0.1.0
+	github.com/dmitrymomot/go-env v0.1.1
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66

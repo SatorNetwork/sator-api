@@ -22,13 +22,16 @@ type (
 	}
 
 	rewardsServiceClient interface {
-		GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error)
+		GetUserRewards(ctx context.Context, uid uuid.UUID) (total float64, available float64, err error)
 	}
 
 	// Balance struct
 	Balance struct {
 		Currency string  `json:"currency"`
 		Amount   float64 `json:"amount"`
+
+		SubCurrency string  `json:"sub_currency"`
+		SubAmount   float64 `json:"sub_amount"`
 	}
 )
 
@@ -64,15 +67,20 @@ func (s *Service) GetAccountBalance(ctx context.Context, uid uuid.UUID) (interfa
 				})
 			}
 		case wallet.WalletTypeRewards:
-			amount, err := s.rewards.GetUserRewards(ctx, uid)
+			totalRewards, availableRewards, err := s.rewards.GetUserRewards(ctx, uid)
 			if err != nil {
 				log.Printf("get user rewards: %v", err)
 				continue
 			}
-			balance = append(balance, Balance{
-				Currency: "UNCLAIMED",
-				Amount:   amount,
-			})
+			balance = append(
+				balance,
+				Balance{
+					Currency:    "UNCLAIMED",
+					Amount:      totalRewards,
+					SubCurrency: "Available to claim",
+					SubAmount:   availableRewards,
+				},
+			)
 		}
 	}
 

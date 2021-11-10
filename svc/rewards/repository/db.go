@@ -25,6 +25,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addTransactionStmt, err = db.PrepareContext(ctx, addTransaction); err != nil {
 		return nil, fmt.Errorf("error preparing query AddTransaction: %w", err)
 	}
+	if q.getAmountAvailableToWithdrawStmt, err = db.PrepareContext(ctx, getAmountAvailableToWithdraw); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAmountAvailableToWithdraw: %w", err)
+	}
+	if q.getScannedQRCodeByUserIDStmt, err = db.PrepareContext(ctx, getScannedQRCodeByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetScannedQRCodeByUserID: %w", err)
+	}
 	if q.getTotalAmountStmt, err = db.PrepareContext(ctx, getTotalAmount); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTotalAmount: %w", err)
 	}
@@ -42,6 +48,16 @@ func (q *Queries) Close() error {
 	if q.addTransactionStmt != nil {
 		if cerr := q.addTransactionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addTransactionStmt: %w", cerr)
+		}
+	}
+	if q.getAmountAvailableToWithdrawStmt != nil {
+		if cerr := q.getAmountAvailableToWithdrawStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAmountAvailableToWithdrawStmt: %w", cerr)
+		}
+	}
+	if q.getScannedQRCodeByUserIDStmt != nil {
+		if cerr := q.getScannedQRCodeByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getScannedQRCodeByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.getTotalAmountStmt != nil {
@@ -99,6 +115,8 @@ type Queries struct {
 	db                                   DBTX
 	tx                                   *sql.Tx
 	addTransactionStmt                   *sql.Stmt
+	getAmountAvailableToWithdrawStmt     *sql.Stmt
+	getScannedQRCodeByUserIDStmt         *sql.Stmt
 	getTotalAmountStmt                   *sql.Stmt
 	getTransactionsByUserIDPaginatedStmt *sql.Stmt
 	withdrawStmt                         *sql.Stmt
@@ -109,6 +127,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                                   tx,
 		tx:                                   tx,
 		addTransactionStmt:                   q.addTransactionStmt,
+		getAmountAvailableToWithdrawStmt:     q.getAmountAvailableToWithdrawStmt,
+		getScannedQRCodeByUserIDStmt:         q.getScannedQRCodeByUserIDStmt,
 		getTotalAmountStmt:                   q.getTotalAmountStmt,
 		getTransactionsByUserIDPaginatedStmt: q.getTransactionsByUserIDPaginatedStmt,
 		withdrawStmt:                         q.withdrawStmt,

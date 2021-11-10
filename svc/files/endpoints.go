@@ -6,7 +6,10 @@ import (
 	"io"
 	"mime/multipart"
 
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -28,12 +31,6 @@ type (
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 	}
 
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page          int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ImagesPerPage int32 `json:"images_per_page,omitempty" validate:"number,gte=0"`
-	}
-
 	// AddImageResizeRequest struct
 	AddImageResizeRequest struct {
 		File       multipart.File
@@ -42,24 +39,6 @@ type (
 		MaxWidth   uint
 	}
 )
-
-// Limit of images
-func (r PaginationRequest) Limit() int32 {
-	if r.ImagesPerPage > 0 {
-		return r.ImagesPerPage
-	}
-
-	return 20
-}
-
-// Offset images
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-
-	return 0
-}
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
@@ -87,7 +66,11 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetImagesListEndpoint ...
 func MakeGetImagesListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(PaginationRequest)
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -104,6 +87,10 @@ func MakeGetImagesListEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeAddImageResizeEndpoint ...
 func MakeAddImageResizeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddImageResizeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -123,6 +110,10 @@ func MakeAddImageResizeEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeGetImageByIDEndpoint ...
 func MakeGetImageByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("%w image id: %v", ErrInvalidParameter, err)
@@ -140,6 +131,10 @@ func MakeGetImageByIDEndpoint(s service) endpoint.Endpoint {
 // MakeDeleteImageByIDEndpoint ...
 func MakeDeleteImageByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get image id: %w", err)

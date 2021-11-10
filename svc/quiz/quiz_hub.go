@@ -385,14 +385,15 @@ func (h *Hub) SetAnswer(userID, questionID, answerID uuid.UUID, isCorrect bool, 
 func (h *Hub) SendQuestionResult(userID, questionID uuid.UUID) error {
 	result, ok := h.players[userID.String()].answers[questionID.String()]
 	if !ok {
-		result = QuestionResult{
-			QuestionID:      questionID.String(),
-			Result:          false,
-			CorrectAnswerID: h.GetCorrectAnswer(questionID).String(),
+		err := h.SendPersonalMessage(userID, TimeOutMessage, TimeOut{Message: "time is over"})
+		if err != nil {
+			return fmt.Errorf("could not sent quiz result message: %w", err)
 		}
-	}
-	if err := h.SendPersonalMessage(userID, QuestionResultMessage, result); err != nil {
-		return fmt.Errorf("could not sent quiz result message: %w", err)
+	} else {
+		err := h.SendPersonalMessage(userID, QuestionResultMessage, result)
+		if err != nil {
+			return fmt.Errorf("could not sent quiz result message: %w", err)
+		}
 	}
 	if !result.Result {
 		time.Sleep(h.TimeBtwQuestions)

@@ -32,11 +32,15 @@ FROM users
 WHERE username = $1
 LIMIT 1;
 -- name: CreateUser :one
-INSERT INTO users (email, username, password)
-VALUES ($1, $2, $3) RETURNING *;
+INSERT INTO users (email, username, password, role)
+VALUES ($1, $2, $3, $4) RETURNING *;
 -- name: UpdateUserEmail :exec
 UPDATE users
 SET email = $2
+WHERE id = $1;
+-- name: UpdateUsername :exec
+UPDATE users
+SET username = $2
 WHERE id = $1;
 -- name: UpdateUserPassword :exec
 UPDATE users

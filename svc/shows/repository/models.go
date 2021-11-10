@@ -22,6 +22,9 @@ type Episode struct {
 	CreatedAt               time.Time      `json:"created_at"`
 	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
 	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
+	HintText                sql.NullString `json:"hint_text"`
+	Watch                   sql.NullString `json:"watch"`
+	Archived                bool           `json:"archived"`
 }
 
 type Rating struct {
@@ -53,6 +56,7 @@ type Show struct {
 	RealmsTitle    sql.NullString `json:"realms_title"`
 	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
 	Watch          sql.NullString `json:"watch"`
+	Archived       bool           `json:"archived"`
 }
 
 type ShowClap struct {

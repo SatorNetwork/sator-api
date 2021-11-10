@@ -14,6 +14,9 @@ rename:
   id: "ID"
   guid: "GUID"
   url: "URL"
+  limit_val: "Limit"
+  offset_val: "Offset"
+  user_id: "UserID"
 overrides:
   - go_type: "github.com/google/uuid.NullUUID"
     db_type: "uuid"
