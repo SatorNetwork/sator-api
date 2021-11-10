@@ -43,7 +43,7 @@ type (
 		Withdraw(ctx context.Context, arg repository.WithdrawParams) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
-		GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
+		// GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
 		GetScannedQRCodeByUserID(ctx context.Context, arg repository.GetScannedQRCodeByUserIDParams) (repository.Reward, error)
 	}
 
@@ -82,7 +82,7 @@ func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker
 }
 
 func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error) {
-	totalRewards, availableRewards, err := s.GetUserRewards(ctx, userID)
+	totalRewards, _, err := s.GetUserRewards(ctx, userID)
 	if err != nil {
 		return wallet.Wallet{}, fmt.Errorf("could  not get rewards wallet: %w", err)
 	}
@@ -95,10 +95,10 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 				Currency: "UNCLAIMED",
 				Amount:   totalRewards,
 			},
-			{
-				Currency: "Available to claim",
-				Amount:   availableRewards,
-			},
+			// {
+			// 	Currency: "Available to claim",
+			// 	Amount:   availableRewards,
+			// },
 		},
 		Actions: []wallet.Action{{
 			Type: wallet.ActionClaimRewards.String(),
@@ -195,17 +195,17 @@ func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (total floa
 		}
 	}
 
-	available, err = s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
-		UserID:       uid,
-		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
-	})
-	if err != nil {
-		if !db.IsNotFoundError(err) {
-			return 0, 0, fmt.Errorf("could not get available amount of rewards: %w", err)
-		}
-	}
+	// available, err = s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
+	// 	UserID:       uid,
+	// 	NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
+	// })
+	// if err != nil {
+	// 	if !db.IsNotFoundError(err) {
+	// 		return 0, 0, fmt.Errorf("could not get available amount of rewards: %w", err)
+	// 	}
+	// }
 
-	return total, available, nil
+	return total, 0, nil
 }
 
 // GetTransactions returns list of transactions from rewards wallet.
