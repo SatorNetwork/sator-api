@@ -28,6 +28,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addNFTItemStmt, err = db.PrepareContext(ctx, addNFTItem); err != nil {
 		return nil, fmt.Errorf("error preparing query AddNFTItem: %w", err)
 	}
+	if q.addNFTItemOwnerStmt, err = db.PrepareContext(ctx, addNFTItemOwner); err != nil {
+		return nil, fmt.Errorf("error preparing query AddNFTItemOwner: %w", err)
+	}
 	if q.addNFTRelationStmt, err = db.PrepareContext(ctx, addNFTRelation); err != nil {
 		return nil, fmt.Errorf("error preparing query AddNFTRelation: %w", err)
 	}
@@ -64,9 +67,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateNFTCategoryStmt, err = db.PrepareContext(ctx, updateNFTCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateNFTCategory: %w", err)
 	}
-	if q.updateNFTItemOwnerStmt, err = db.PrepareContext(ctx, updateNFTItemOwner); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateNFTItemOwner: %w", err)
-	}
 	return &q, nil
 }
 
@@ -80,6 +80,11 @@ func (q *Queries) Close() error {
 	if q.addNFTItemStmt != nil {
 		if cerr := q.addNFTItemStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addNFTItemStmt: %w", cerr)
+		}
+	}
+	if q.addNFTItemOwnerStmt != nil {
+		if cerr := q.addNFTItemOwnerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addNFTItemOwnerStmt: %w", cerr)
 		}
 	}
 	if q.addNFTRelationStmt != nil {
@@ -142,11 +147,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateNFTCategoryStmt: %w", cerr)
 		}
 	}
-	if q.updateNFTItemOwnerStmt != nil {
-		if cerr := q.updateNFTItemOwnerStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateNFTItemOwnerStmt: %w", cerr)
-		}
-	}
 	return err
 }
 
@@ -188,6 +188,7 @@ type Queries struct {
 	tx                              *sql.Tx
 	addNFTCategoryStmt              *sql.Stmt
 	addNFTItemStmt                  *sql.Stmt
+	addNFTItemOwnerStmt             *sql.Stmt
 	addNFTRelationStmt              *sql.Stmt
 	deleteNFTCategoryByIDStmt       *sql.Stmt
 	deleteNFTRelationStmt           *sql.Stmt
@@ -200,7 +201,6 @@ type Queries struct {
 	getNFTItemsListByRelationIDStmt *sql.Stmt
 	resetMainNFTCategoryStmt        *sql.Stmt
 	updateNFTCategoryStmt           *sql.Stmt
-	updateNFTItemOwnerStmt          *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -209,6 +209,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                              tx,
 		addNFTCategoryStmt:              q.addNFTCategoryStmt,
 		addNFTItemStmt:                  q.addNFTItemStmt,
+		addNFTItemOwnerStmt:             q.addNFTItemOwnerStmt,
 		addNFTRelationStmt:              q.addNFTRelationStmt,
 		deleteNFTCategoryByIDStmt:       q.deleteNFTCategoryByIDStmt,
 		deleteNFTRelationStmt:           q.deleteNFTRelationStmt,
@@ -221,6 +222,5 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getNFTItemsListByRelationIDStmt: q.getNFTItemsListByRelationIDStmt,
 		resetMainNFTCategoryStmt:        q.resetMainNFTCategoryStmt,
 		updateNFTCategoryStmt:           q.updateNFTCategoryStmt,
-		updateNFTItemOwnerStmt:          q.updateNFTItemOwnerStmt,
 	}
 }
