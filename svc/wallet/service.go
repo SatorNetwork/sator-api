@@ -374,6 +374,10 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		return "", fmt.Errorf("could not get user token account: %w", err)
 	}
 
+	if thbalance, err := s.sc.GetTokenAccountBalance(ctx, s.tokenHolderSolanaAddr); err != nil || thbalance < amount {
+		return "", ErrTokenHolderBalance
+	}
+
 	// sends token
 	for i := 0; i < 5; i++ {
 		if tx, err = s.sc.GiveAssetsWithAutoDerive(
