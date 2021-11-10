@@ -95,7 +95,7 @@ WITH minted_nft_items AS (
 SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at,
     coalesce(minted_nft_items.minted, 0) AS minted
 FROM nft_items
-JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
+LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
 WHERE id = $1
 LIMIT 1
 `
