@@ -139,10 +139,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 	// 	return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
 	// }
 
-	amount, err := s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
-		UserID:       uid,
-		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
-	})
+	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return ClaimRewardsResult{}, ErrRewardsAlreadyClaimed
