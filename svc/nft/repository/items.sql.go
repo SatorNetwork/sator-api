@@ -86,12 +86,16 @@ func (q *Queries) DoesUserOwnNFT(ctx context.Context, arg DoesUserOwnNFTParams) 
 }
 
 const getNFTItemByID = `-- name: GetNFTItemByID :one
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at,
-    (SELECT COUNT(user_id)::INT
+WITH minted_nft_items AS (
+    SELECT COUNT(user_id)::INT as minted, nft_item_id
     FROM nft_owners
     WHERE nft_owners.nft_item_id = $1
-    GROUP BY nft_owners.nft_item_id) AS minted
+    GROUP BY nft_owners.nft_item_id
+)
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at,
+    coalesce(minted_nft_items.minted, 0) AS minted
 FROM nft_items
+JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
 WHERE id = $1
 LIMIT 1
 `
