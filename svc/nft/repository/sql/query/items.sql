@@ -8,6 +8,12 @@ FROM nft_items
 WHERE id = @id
 LIMIT 1;
 
+-- name: DoesUserOwnNFT :one
+SELECT count(*) > 0
+FROM nft_owners
+WHERE user_id = @user_id
+AND nft_item_id = @nft_item_id;
+
 -- name: GetNFTItemsList :many
 WITH minted_nfts AS (
     SELECT nft_item_id, COUNT(user_id)::INT AS minted

@@ -63,6 +63,7 @@ type (
 		GetNFTItemsListByOwnerID(ctx context.Context, arg repository.GetNFTItemsListByOwnerIDParams) ([]repository.NFTItem, error)
 		GetNFTCategoriesList(ctx context.Context) ([]repository.NFTCategory, error)
 		GetMainNFTCategory(ctx context.Context) (repository.NFTCategory, error)
+		DoesUserOwnNFT(ctx context.Context, arg repository.DoesUserOwnNFTParams) (bool, error)
 	}
 
 	// Simple function
@@ -179,10 +180,18 @@ func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, 
 	return castNFTRawListToNFTList(nftList), nil
 }
 
-func (s *Service) GetNFTByID(ctx context.Context, nftID uuid.UUID) (*NFT, error) {
+func (s *Service) GetNFTByID(ctx context.Context, nftID, userID uuid.UUID) (*NFT, error) {
 	item, err := s.nftRepo.GetNFTItemByID(ctx, nftID)
 	if err != nil {
 		return nil, fmt.Errorf("could not find NFT with id=%s: %w", nftID, err)
+	}
+
+	// TODO: needs refactoring! This is for backward compatibility with the app
+	if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
+		UserID:    userID,
+		NFTItemID: nftID,
+	}); yes {
+		return castNFTRawToNFTRow(item, userID), nil
 	}
 
 	return castNFTRawToNFTRow(item), nil
@@ -264,7 +273,7 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 	return nft
 }
 
-func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow) *NFT {
+func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow, ownerID ...uuid.UUID) *NFT {
 	nft := &NFT{
 		ID:          source.ID,
 		ImageLink:   source.Cover,
@@ -278,6 +287,8 @@ func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow) *NFT {
 
 	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
 		nft.OwnerID = &source.OwnerID.UUID
+	} else if len(ownerID) > 0 && ownerID[0] != uuid.Nil {
+		nft.OwnerID = &ownerID[0]
 	}
 
 	return nft

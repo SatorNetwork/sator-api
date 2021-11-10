@@ -66,6 +66,25 @@ func (q *Queries) AddNFTItemOwner(ctx context.Context, arg AddNFTItemOwnerParams
 	return err
 }
 
+const doesUserOwnNFT = `-- name: DoesUserOwnNFT :one
+SELECT count(*) > 0
+FROM nft_owners
+WHERE user_id = $1
+AND nft_item_id = $2
+`
+
+type DoesUserOwnNFTParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	NFTItemID uuid.UUID `json:"nft_item_id"`
+}
+
+func (q *Queries) DoesUserOwnNFT(ctx context.Context, arg DoesUserOwnNFTParams) (bool, error) {
+	row := q.queryRow(ctx, q.doesUserOwnNFTStmt, doesUserOwnNFT, arg.UserID, arg.NFTItemID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getNFTItemByID = `-- name: GetNFTItemByID :one
 SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at,
     (SELECT COUNT(user_id)::INT

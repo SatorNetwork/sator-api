@@ -34,7 +34,7 @@ type (
 		GetNFTsByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) ([]*NFT, error)
 		GetNFTsByEpisodeID(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error)
 		GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*NFT, error)
-		GetNFTByID(ctx context.Context, nftID uuid.UUID) (*NFT, error)
+		GetNFTByID(ctx context.Context, nftID, userID uuid.UUID) (*NFT, error)
 		BuyNFT(ctx context.Context, userUid uuid.UUID, nftID uuid.UUID) error
 		GetCategories(ctx context.Context) ([]*Category, error)
 		GetMainScreenCategory(ctx context.Context) (*Category, error)
@@ -343,7 +343,12 @@ func MakeGetNFTByIDEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("unexpected request type, want: string, got: %T", request)
 		}
 
-		nft, err := s.GetNFTByID(ctx, uuid.MustParse(nftID))
+		userUid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		nft, err := s.GetNFTByID(ctx, uuid.MustParse(nftID), userUid)
 		if err != nil {
 			return nil, fmt.Errorf("can't get nft by id: %v, err: %v", nftID, err)
 		}
