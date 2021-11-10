@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/qrcodes"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
@@ -42,6 +44,7 @@ type (
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
 		GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
+		GetScannedQRCodeByUserID(ctx context.Context, arg repository.GetScannedQRCodeByUserIDParams) (repository.Reward, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -238,4 +241,28 @@ func (s *Service) GetTransactions(ctx context.Context, userID, walletID uuid.UUI
 	}
 
 	return result, nil
+}
+
+// IsQRCodeScanned returns true if user got reward by this qrcode_id.
+func (s *Service) IsQRCodeScanned(ctx context.Context, userID, qrcodeID uuid.UUID) (bool, error) {
+	_, err := s.repo.GetScannedQRCodeByUserID(ctx, repository.GetScannedQRCodeByUserIDParams{
+		UserID: userID,
+		RelationID: uuid.NullUUID{
+			UUID:  qrcodeID,
+			Valid: true,
+		},
+		RelationType: sql.NullString{
+			String: qrcodes.RelationTypeQRcodes,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("could not get rewards transactions list: %w", err)
+	}
+
+	return true, nil
 }

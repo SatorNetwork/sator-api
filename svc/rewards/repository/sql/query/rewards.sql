@@ -44,3 +44,9 @@ FROM rewards
 WHERE user_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetScannedQRCodeByUserID :one
+SELECT *
+FROM rewards
+WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
+    LIMIT 1;
