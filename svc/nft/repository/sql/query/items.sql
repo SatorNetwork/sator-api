@@ -2,39 +2,36 @@
 SELECT nft_items.*,
     (SELECT COUNT(user_id)::INT
     FROM nft_owners
-    WHERE nft_owners.nft_item_id = $1
+    WHERE nft_owners.nft_item_id = @id
     GROUP BY nft_owners.nft_item_id) AS minted
 FROM nft_items
-    JOIN nft_owners ON nft_owners.nft_item_id = nft_items.id
-WHERE id = $1
+WHERE id = @id
 LIMIT 1;
 
 -- name: GetNFTItemsList :many
 WITH minted_nfts AS (
-    SELECT COUNT(user_id)::INT AS minted,
-            nft_item_id
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
     FROM nft_owners
     GROUP BY nft_item_id
 )
 SELECT nft_items.*
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
-ORDER BY updated_at DESC, created_at DESC
+ORDER BY nft_items.updated_at DESC, nft_items.created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
 -- name: GetNFTItemsListByOwnerID :many
 SELECT *
 FROM nft_items
-WHERE id = ANY(SELECT DISTINCT nft_item_id
-                FROM nft_owners
-                WHERE user_id = @owner_id)
-ORDER BY updated_at DESC, created_at DESC
+WHERE nft_items.id = ANY(SELECT DISTINCT nft_owners.nft_item_id
+                        FROM nft_owners
+                        WHERE nft_owners.user_id = @owner_id)
+ORDER BY nft_items.updated_at DESC, nft_items.created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
 -- name: GetNFTItemsListByRelationID :many
 WITH minted_nfts AS (
-    SELECT COUNT(user_id)::INT AS minted,
-           nft_item_id
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
     FROM nft_owners
     GROUP BY nft_item_id
 )
@@ -42,10 +39,12 @@ SELECT nft_items.*
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
     JOIN nft_relations ON nft_relations.nft_item_id = nft_items.id
-WHERE nft_relations.relation_id = @relation_id
-  AND nft_items.supply > minted_nfts.minted
+WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
+                        FROM nft_relations 
+                        WHERE nft_relations.relation_id = @relation_id)
+AND nft_items.supply > minted_nfts.minted
 ORDER BY nft_items.created_at DESC
-    LIMIT @limit_val OFFSET @offset_val;
+LIMIT @limit_val OFFSET @offset_val;
 
 -- name: AddNFTItem :one
 INSERT INTO nft_items (name, description, cover, supply, buy_now_price, token_uri)
