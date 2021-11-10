@@ -188,6 +188,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
+	fmt.Printf("OTP: %v\n", otp)
 	if s.mail == nil {
 		otpHash = []byte(s.masterCode)
 	} else {

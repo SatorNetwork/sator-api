@@ -38,7 +38,7 @@ VALUES (
            $9,
            $10,
            $11
-) RETURNING id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch
+) RETURNING id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, archived
 `
 
 type AddEpisodeParams struct {
@@ -85,6 +85,7 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) (Episode
 		&i.VerificationChallengeID,
 		&i.HintText,
 		&i.Watch,
+		&i.Archived,
 	)
 	return i, err
 }
@@ -101,11 +102,11 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 
 const getEpisodeByID = `-- name: GetEpisodeByID :one
 SELECT 
-    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.archived, 
     seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = $1
+WHERE episodes.id = $1 AND episodes.archived = FALSE
 `
 
 type GetEpisodeByIDRow struct {
@@ -123,6 +124,7 @@ type GetEpisodeByIDRow struct {
 	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	HintText                sql.NullString `json:"hint_text"`
 	Watch                   sql.NullString `json:"watch"`
+	Archived                bool           `json:"archived"`
 	SeasonNumber            int32          `json:"season_number"`
 }
 
@@ -144,6 +146,7 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (GetEpisodeB
 		&i.VerificationChallengeID,
 		&i.HintText,
 		&i.Watch,
+		&i.Archived,
 		&i.SeasonNumber,
 	)
 	return i, err
@@ -172,7 +175,7 @@ WITH avg_ratings AS (
     GROUP BY episode_id
 )
 SELECT 
-    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.archived, 
     seasons.season_number as season_number,
     coalesce(avg_ratings.avg_rating, 0) as avg_rating,
     coalesce(avg_ratings.ratings, 0) as ratings
@@ -180,6 +183,7 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
+AND episodes.archived = FALSE
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3
 `
@@ -205,6 +209,7 @@ type GetEpisodesByShowIDRow struct {
 	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	HintText                sql.NullString `json:"hint_text"`
 	Watch                   sql.NullString `json:"watch"`
+	Archived                bool           `json:"archived"`
 	SeasonNumber            int32          `json:"season_number"`
 	AvgRating               float64        `json:"avg_rating"`
 	Ratings                 int64          `json:"ratings"`
@@ -234,6 +239,7 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 			&i.VerificationChallengeID,
 			&i.HintText,
 			&i.Watch,
+			&i.Archived,
 			&i.SeasonNumber,
 			&i.AvgRating,
 			&i.Ratings,
@@ -253,13 +259,14 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 
 const getListEpisodesByIDs = `-- name: GetListEpisodesByIDs :many
 SELECT
-    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch,
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.archived,
     seasons.season_number as season_number,
     shows.title as show_title
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY($1::uuid[])
+AND episodes.archived = FALSE
 ORDER BY episodes.episode_number DESC
 `
 
@@ -278,6 +285,7 @@ type GetListEpisodesByIDsRow struct {
 	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
 	HintText                sql.NullString `json:"hint_text"`
 	Watch                   sql.NullString `json:"watch"`
+	Archived                bool           `json:"archived"`
 	SeasonNumber            int32          `json:"season_number"`
 	ShowTitle               string         `json:"show_title"`
 }
@@ -306,6 +314,7 @@ func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UU
 			&i.VerificationChallengeID,
 			&i.HintText,
 			&i.Watch,
+			&i.Archived,
 			&i.SeasonNumber,
 			&i.ShowTitle,
 		); err != nil {

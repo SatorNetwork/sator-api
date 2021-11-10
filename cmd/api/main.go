@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -80,8 +81,8 @@ var (
 
 	// DB
 	dbConnString   = env.MustString("DATABASE_URL")
-	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 10)
-	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
+	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 20)
+	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 2)
 
 	// JWT
 	jwtSigningKey = env.MustString("JWT_SIGNING_KEY")
@@ -96,7 +97,13 @@ var (
 	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
-	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
+	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
+	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
+	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
+	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
+	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
+	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -136,10 +143,6 @@ var (
 	androidPackageName = env.MustString("FIREBASE_ANDROID_PACKAGE_NAME")
 	iosBundleId        = env.MustString("FIREBASE_IOS_BUNDLE_ID")
 	suffixOption       = env.MustString("FIREBASE_SUFFIX_OPTION")
-
-	// Episode Access
-	// numberAttempts = env.GetInt("NUMBER_ATTEMPTS", 2)
-	// period         = env.GetInt("PERIOD", 24)
 )
 
 func main() {
@@ -224,7 +227,32 @@ func main() {
 		if err != nil {
 			log.Fatalf("walletRepo error: %v", err)
 		}
-		walletService := wallet.NewService(walletRepository, solana.New(solanaApiBaseUrl), ethereumClient)
+
+		feePayerPk, err := base64.StdEncoding.DecodeString(solanaFeePayerPrivateKey)
+		if err != nil {
+			log.Fatalf("feePayerPk base64 decoding error: %v", err)
+		}
+		tokenHolderPk, err := base64.StdEncoding.DecodeString(solanaTokenHolderPrivateKey)
+		if err != nil {
+			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
+		}
+
+		solanaClient := solana.New(solanaApiBaseUrl)
+		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
+		}
+		if err := solanaClient.CheckPrivateKey(solanaTokenHolderAddr, tokenHolderPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
+		}
+
+		walletService := wallet.NewService(
+			walletRepository,
+			solanaClient,
+			ethereumClient,
+			wallet.WithAssetSolanaAddress(solanaAssetAddr),
+			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
+			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
+		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
 			wallet.MakeEndpoints(walletService, jwtMdw),
@@ -243,7 +271,7 @@ func main() {
 		rewardsRepository,
 		walletSvcClient,
 		db_internal.NewAdvisoryLocks(db),
-		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster=testnet"),
+		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster="+solanaEnv),
 		rewards.WithHoldRewardsPeriod(holdRewardsPeriod),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
@@ -39,8 +40,37 @@ func (c *Client) PublicKeyFromString(pk string) common.PublicKey {
 	return common.PublicKeyFromString(pk)
 }
 
-func (c *Client) AccountFromPrivatekey(pk []byte) types.Account {
+func (c *Client) AccountFromPrivateKeyBytes(pk []byte) types.Account {
 	return types.AccountFromPrivateKeyBytes(pk)
+}
+
+func (c *Client) CheckPrivateKey(addr string, pk []byte) error {
+	addrFromPk := c.AccountFromPrivateKeyBytes(pk).PublicKey.ToBase58()
+	if !strings.EqualFold(addrFromPk, addr) {
+		return fmt.Errorf("CheckPrivateKey: want = %s, got = %s", addr, addrFromPk)
+	}
+
+	return nil
+}
+
+func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
+	recipientAddr := recipientPK.ToBase58()
+	resp, err := c.solana.GetAccountInfo(ctx, recipientAddr, client.GetAccountInfoConfig{
+		Encoding: client.GetAccountInfoConfigEncodingBase64,
+	})
+	if err != nil {
+		return common.PublicKey{}, err
+	}
+	if resp.Owner == common.TokenProgramID.ToBase58() {
+		// given recipient public key is already an SPL token account
+		return recipientPK, nil
+	}
+
+	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPK, assetPK)
+	if err != nil {
+		return common.PublicKey{}, err
+	}
+	return recipientAta, nil
 }
 
 // RequestAirdrop working only in test and dev environment
@@ -114,6 +144,17 @@ func (c *Client) GetTokenAccountBalance(ctx context.Context, accPubKey string) (
 	return balance, nil
 }
 
+func (c *Client) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error) {
+	accountPublicKey := common.PublicKeyFromString(accountAddr)
+	assetPublicKey := common.PublicKeyFromString(assetAddr)
+	accountAta, _, err := common.FindAssociatedTokenAddress(accountPublicKey, assetPublicKey)
+	if err != nil {
+		return 0, err
+	}
+
+	return c.GetTokenAccountBalance(ctx, accountAta.ToBase58())
+}
+
 // GetTransactions ...
 func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList []ConfirmedTransactionResponse, err error) {
 	signatures, err := c.solana.GetConfirmedSignaturesForAddress(ctx, accPubKey, client.GetConfirmedSignaturesForAddressConfig{
@@ -134,4 +175,15 @@ func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList 
 	}
 
 	return txList, nil
+}
+
+func (c *Client) GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (txList []ConfirmedTransactionResponse, err error) {
+	accountPublicKey := common.PublicKeyFromString(accountAddr)
+	assetPublicKey := common.PublicKeyFromString(assetAddr)
+	accountAta, _, err := common.FindAssociatedTokenAddress(accountPublicKey, assetPublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.GetTransactions(ctx, accountAta.ToBase58())
 }

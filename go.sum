@@ -142,8 +142,8 @@ github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8
 github.com/dlclark/regexp2 v1.2.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
 github.com/dmitrymomot/distlock v0.1.1 h1:e5w0dwvEVBsGwx21z13GBsPuwWM314MXu46XRkiom5Q=
 github.com/dmitrymomot/distlock v0.1.1/go.mod h1:QX13Grcii9rh9SU8nROmjpqwkaAGWI049aB5RSWHHOg=
-github.com/dmitrymomot/go-env v0.1.0 h1:HoX6h7lizCU8WDaP2WF98PvPM2A/XIDyUrKQidqgr4k=
-github.com/dmitrymomot/go-env v0.1.0/go.mod h1:NM1eMH8iEskjkdd78BIBqK4PH7XC7tnAwW4i++62uLM=
+github.com/dmitrymomot/go-env v0.1.1 h1:Yx7gev20j7zMA1LW/GMBrdJx2PQQy7/LY7tkWGKhGcM=
+github.com/dmitrymomot/go-env v0.1.1/go.mod h1:NM1eMH8iEskjkdd78BIBqK4PH7XC7tnAwW4i++62uLM=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3 h1:yF6awAXyo0ZoZGrqGGDMeavVlNB5VOWmTGG7nau6cm8=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3/go.mod h1:mnH1ZTKNPliDCV/96Lmz5JeDFmdiQWqfgR4zgzmk8vU=
 github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3 h1:dKlGNcnOBhfOUcmYpmElj7GP8Y2RU4YLoV9xkZXhBwM=
