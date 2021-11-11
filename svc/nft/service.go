@@ -294,9 +294,7 @@ func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow, ownerID ...uuid.UUI
 		Minted:      source.Minted,
 	}
 
-	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
-		nft.OwnerID = &source.OwnerID.UUID
-	} else if len(ownerID) > 0 && ownerID[0] != uuid.Nil {
+	if len(ownerID) > 0 && ownerID[0] != uuid.Nil {
 		nft.OwnerID = &ownerID[0]
 	}
 
