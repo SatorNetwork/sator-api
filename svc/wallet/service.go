@@ -196,11 +196,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 			Order:                  w.Sort,
 			EthereumAccountAddress: ea.Address,
 			Actions: []Action{
-				// {
-				// 	Type: ActionSendTokens.String(),
-				// 	Name: ActionSendTokens.Name(),
-				// 	URL:  "",
-				// },
+				{
+					Type: ActionSendTokens.String(),
+					Name: ActionSendTokens.Name(),
+					URL:  "",
+				},
 				{
 					Type: ActionReceiveTokens.String(),
 					Name: ActionReceiveTokens.Name(),
@@ -264,11 +264,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 		Order:                w.Sort,
 		SolanaAccountAddress: sa.PublicKey,
 		Actions: []Action{
-			// {
-			// 	Type: ActionSendTokens.String(),
-			// 	Name: ActionSendTokens.Name(),
-			// 	URL:  "",
-			// },
+			{
+				Type: ActionSendTokens.String(),
+				Name: ActionSendTokens.Name(),
+				URL:  "",
+			},
 			{
 				Type: ActionReceiveTokens.String(),
 				Name: ActionReceiveTokens.Name(),
