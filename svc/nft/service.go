@@ -106,9 +106,18 @@ func (s *Service) BuyNFT(ctx context.Context, userID uuid.UUID, nftID uuid.UUID)
 	if item.Supply < int64(item.Minted) {
 		return ErrAlreadySold
 	}
+
+	if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
+		UserID:    userID,
+		NFTItemID: nftID,
+	}); yes {
+		return ErrAlreadyBought
+	}
+
 	if err := s.buyNFTFunc(ctx, userID, item.BuyNowPrice, fmt.Sprintf("NFT purchase: %s", nftID)); err != nil {
 		return fmt.Errorf("NFT purchase error: %w", err)
 	}
+
 	//TODO: if owner db.NotFoundErr{AddItemOwner}
 	if err := s.nftRepo.AddNFTItemOwner(ctx, repository.AddNFTItemOwnerParams{
 		NFTItemID: nftID,
