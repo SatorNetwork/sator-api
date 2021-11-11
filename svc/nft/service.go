@@ -145,19 +145,19 @@ func (s *Service) GetNFTs(ctx context.Context, limit, offset int32) ([]*NFT, err
 	return castNFTRawListToNFTList(nftList), nil
 }
 
-func (s *Service) GetNFTsByCategory(ctx context.Context, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error) {
-	return s.GetNFTsByRelationID(ctx, categoryID, limit, offset)
+func (s *Service) GetNFTsByCategory(ctx context.Context, uid, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+	return s.GetNFTsByRelationID(ctx, uid, categoryID, limit, offset)
 }
 
-func (s *Service) GetNFTsByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) ([]*NFT, error) {
-	return s.GetNFTsByRelationID(ctx, showID, limit, offset)
+func (s *Service) GetNFTsByShowID(ctx context.Context, uid, showID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+	return s.GetNFTsByRelationID(ctx, uid, showID, limit, offset)
 }
 
-func (s *Service) GetNFTsByEpisodeID(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error) {
-	return s.GetNFTsByRelationID(ctx, episodeID, limit, offset)
+func (s *Service) GetNFTsByEpisodeID(ctx context.Context, uid, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+	return s.GetNFTsByRelationID(ctx, uid, episodeID, limit, offset)
 }
 
-func (s *Service) GetNFTsByRelationID(ctx context.Context, relID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+func (s *Service) GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error) {
 	nftList, err := s.nftRepo.GetNFTItemsListByRelationID(ctx, repository.GetNFTItemsListByRelationIDParams{
 		RelationID: relID,
 		Limit:      limit,
@@ -170,7 +170,18 @@ func (s *Service) GetNFTsByRelationID(ctx context.Context, relID uuid.UUID, limi
 		return nil, err
 	}
 
-	return castNFTRawListToNFTList(nftList), nil
+	result := castNFTRawListToNFTList(nftList)
+	for k, item := range result {
+		// TODO: needs refactoring! This is for backward compatibility with the app
+		if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
+			UserID:    uid,
+			NFTItemID: item.ID,
+		}); yes {
+			result[k].OwnerID = &uid
+		}
+	}
+
+	return result, nil
 }
 
 func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*NFT, error) {
@@ -186,7 +197,12 @@ func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, 
 		return nil, err
 	}
 
-	return castNFTRawListToNFTList(nftList), nil
+	result := castNFTRawListToNFTList(nftList)
+	for k := range result {
+		result[k].OwnerID = &userID
+	}
+
+	return result, nil
 }
 
 func (s *Service) GetNFTByID(ctx context.Context, nftID, userID uuid.UUID) (*NFT, error) {
