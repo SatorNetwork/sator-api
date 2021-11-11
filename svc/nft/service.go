@@ -275,9 +275,9 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 		TokenURI:    source.TokenURI,
 	}
 
-	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
-		nft.OwnerID = &source.OwnerID.UUID
-	}
+	// if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
+	// 	nft.OwnerID = &source.OwnerID.UUID
+	// }
 
 	return nft
 }
