@@ -31,10 +31,11 @@ type (
 		Royalties  float64 // TODO(evg): add validation?
 		Blockchain string  // TODO(evg): replace with enum?
 		SellType   string  // TODO(evg): replace with enum?
+		Minted     int32
 
-		BuyNowPrice   float64
+		BuyNowPrice float64
+
 		AuctionParams *NFTAuctionParams
-
 		// NFT payload, e.g.: link to the original file, etc
 		TokenURI string
 	}
@@ -55,13 +56,14 @@ type (
 
 	nftRepository interface {
 		AddNFTItem(ctx context.Context, arg repository.AddNFTItemParams) (repository.NFTItem, error)
-		GetNFTItemByID(ctx context.Context, id uuid.UUID) (repository.NFTItem, error)
+		AddNFTItemOwner(ctx context.Context, arg repository.AddNFTItemOwnerParams) error
+		GetNFTItemByID(ctx context.Context, nftItemID uuid.UUID) (repository.GetNFTItemByIDRow, error)
 		GetNFTItemsList(ctx context.Context, arg repository.GetNFTItemsListParams) ([]repository.NFTItem, error)
 		GetNFTItemsListByRelationID(ctx context.Context, arg repository.GetNFTItemsListByRelationIDParams) ([]repository.NFTItem, error)
 		GetNFTItemsListByOwnerID(ctx context.Context, arg repository.GetNFTItemsListByOwnerIDParams) ([]repository.NFTItem, error)
 		GetNFTCategoriesList(ctx context.Context) ([]repository.NFTCategory, error)
 		GetMainNFTCategory(ctx context.Context) (repository.NFTCategory, error)
-		UpdateNFTItemOwner(ctx context.Context, arg repository.UpdateNFTItemOwnerParams) error
+		DoesUserOwnNFT(ctx context.Context, arg repository.DoesUserOwnNFTParams) (bool, error)
 	}
 
 	// Simple function
@@ -85,7 +87,7 @@ func (s *Service) CreateNFT(ctx context.Context, userID uuid.UUID, nft *NFT) (st
 		Name:        nft.Name,
 		Description: sql.NullString{String: nft.Description, Valid: len(nft.Description) > 0},
 		Cover:       nft.ImageLink,
-		Supply:      1, // TODO: multiple supplies are not supported yet
+		Supply:      int64(nft.Supply),
 		BuyNowPrice: nft.BuyNowPrice,
 		TokenURI:    nft.TokenURI,
 	})
@@ -101,17 +103,25 @@ func (s *Service) BuyNFT(ctx context.Context, userID uuid.UUID, nftID uuid.UUID)
 	if err != nil {
 		return fmt.Errorf("could not find NFT with id=%s: %w", nftID, err)
 	}
-	if item.OwnerID.Valid {
+	if item.Supply < int64(item.Minted) {
 		return ErrAlreadySold
+	}
+
+	if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
+		UserID:    userID,
+		NFTItemID: nftID,
+	}); yes {
+		return ErrAlreadyBought
 	}
 
 	if err := s.buyNFTFunc(ctx, userID, item.BuyNowPrice, fmt.Sprintf("NFT purchase: %s", nftID)); err != nil {
 		return fmt.Errorf("NFT purchase error: %w", err)
 	}
 
-	if err := s.nftRepo.UpdateNFTItemOwner(ctx, repository.UpdateNFTItemOwnerParams{
-		ID:      nftID,
-		OwnerID: uuid.NullUUID{UUID: userID, Valid: true},
+	//TODO: if owner db.NotFoundErr{AddItemOwner}
+	if err := s.nftRepo.AddNFTItemOwner(ctx, repository.AddNFTItemOwnerParams{
+		NFTItemID: nftID,
+		UserID:    userID,
 	}); err != nil {
 		// TODO: implement refund function or wrap operation into db transaction
 		return fmt.Errorf("could not change NFT owner: %w", err)
@@ -135,19 +145,19 @@ func (s *Service) GetNFTs(ctx context.Context, limit, offset int32) ([]*NFT, err
 	return castNFTRawListToNFTList(nftList), nil
 }
 
-func (s *Service) GetNFTsByCategory(ctx context.Context, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error) {
-	return s.GetNFTsByRelationID(ctx, categoryID, limit, offset)
+func (s *Service) GetNFTsByCategory(ctx context.Context, uid, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+	return s.GetNFTsByRelationID(ctx, uid, categoryID, limit, offset)
 }
 
-func (s *Service) GetNFTsByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) ([]*NFT, error) {
-	return s.GetNFTsByRelationID(ctx, showID, limit, offset)
+func (s *Service) GetNFTsByShowID(ctx context.Context, uid, showID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+	return s.GetNFTsByRelationID(ctx, uid, showID, limit, offset)
 }
 
-func (s *Service) GetNFTsByEpisodeID(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error) {
-	return s.GetNFTsByRelationID(ctx, episodeID, limit, offset)
+func (s *Service) GetNFTsByEpisodeID(ctx context.Context, uid, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+	return s.GetNFTsByRelationID(ctx, uid, episodeID, limit, offset)
 }
 
-func (s *Service) GetNFTsByRelationID(ctx context.Context, relID uuid.UUID, limit, offset int32) ([]*NFT, error) {
+func (s *Service) GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error) {
 	nftList, err := s.nftRepo.GetNFTItemsListByRelationID(ctx, repository.GetNFTItemsListByRelationIDParams{
 		RelationID: relID,
 		Limit:      limit,
@@ -160,12 +170,23 @@ func (s *Service) GetNFTsByRelationID(ctx context.Context, relID uuid.UUID, limi
 		return nil, err
 	}
 
-	return castNFTRawListToNFTList(nftList), nil
+	result := castNFTRawListToNFTList(nftList)
+	for k, item := range result {
+		// TODO: needs refactoring! This is for backward compatibility with the app
+		if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
+			UserID:    uid,
+			NFTItemID: item.ID,
+		}); yes {
+			result[k].OwnerID = &uid
+		}
+	}
+
+	return result, nil
 }
 
 func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*NFT, error) {
 	nftList, err := s.nftRepo.GetNFTItemsListByOwnerID(ctx, repository.GetNFTItemsListByOwnerIDParams{
-		OwnerID: uuid.NullUUID{UUID: userID, Valid: true},
+		OwnerID: userID,
 		Limit:   limit,
 		Offset:  offset,
 	})
@@ -176,16 +197,29 @@ func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, 
 		return nil, err
 	}
 
-	return castNFTRawListToNFTList(nftList), nil
+	result := castNFTRawListToNFTList(nftList)
+	for k := range result {
+		result[k].OwnerID = &userID
+	}
+
+	return result, nil
 }
 
-func (s *Service) GetNFTByID(ctx context.Context, nftID uuid.UUID) (*NFT, error) {
+func (s *Service) GetNFTByID(ctx context.Context, nftID, userID uuid.UUID) (*NFT, error) {
 	item, err := s.nftRepo.GetNFTItemByID(ctx, nftID)
 	if err != nil {
 		return nil, fmt.Errorf("could not find NFT with id=%s: %w", nftID, err)
 	}
 
-	return castNFTRawToNFT(item), nil
+	// TODO: needs refactoring! This is for backward compatibility with the app
+	if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
+		UserID:    userID,
+		NFTItemID: nftID,
+	}); yes {
+		return castNFTRawToNFTRow(item, userID), nil
+	}
+
+	return castNFTRawToNFTRow(item), nil
 }
 
 func (s *Service) GetCategories(ctx context.Context) ([]*Category, error) {
@@ -257,8 +291,27 @@ func castNFTRawToNFT(source repository.NFTItem) *NFT {
 		TokenURI:    source.TokenURI,
 	}
 
-	if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
-		nft.OwnerID = &source.OwnerID.UUID
+	// if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
+	// 	nft.OwnerID = &source.OwnerID.UUID
+	// }
+
+	return nft
+}
+
+func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow, ownerID ...uuid.UUID) *NFT {
+	nft := &NFT{
+		ID:          source.ID,
+		ImageLink:   source.Cover,
+		Name:        source.Name,
+		Description: source.Description.String,
+		Supply:      int(source.Supply),
+		BuyNowPrice: source.BuyNowPrice,
+		TokenURI:    source.TokenURI,
+		Minted:      source.Minted,
+	}
+
+	if len(ownerID) > 0 && ownerID[0] != uuid.Nil {
+		nft.OwnerID = &ownerID[0]
 	}
 
 	return nft

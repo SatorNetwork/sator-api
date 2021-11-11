@@ -6,6 +6,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -50,15 +51,72 @@ func (q *Queries) AddNFTItem(ctx context.Context, arg AddNFTItemParams) (NFTItem
 	return i, err
 }
 
+const addNFTItemOwner = `-- name: AddNFTItemOwner :exec
+INSERT INTO nft_owners (nft_item_id, user_id)
+VALUES ($1, $2)
+`
+
+type AddNFTItemOwnerParams struct {
+	NFTItemID uuid.UUID `json:"nft_item_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) AddNFTItemOwner(ctx context.Context, arg AddNFTItemOwnerParams) error {
+	_, err := q.exec(ctx, q.addNFTItemOwnerStmt, addNFTItemOwner, arg.NFTItemID, arg.UserID)
+	return err
+}
+
+const doesUserOwnNFT = `-- name: DoesUserOwnNFT :one
+SELECT count(*) > 0
+FROM nft_owners
+WHERE user_id = $1
+AND nft_item_id = $2
+`
+
+type DoesUserOwnNFTParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	NFTItemID uuid.UUID `json:"nft_item_id"`
+}
+
+func (q *Queries) DoesUserOwnNFT(ctx context.Context, arg DoesUserOwnNFTParams) (bool, error) {
+	row := q.queryRow(ctx, q.doesUserOwnNFTStmt, doesUserOwnNFT, arg.UserID, arg.NFTItemID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getNFTItemByID = `-- name: GetNFTItemByID :one
-SELECT id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at FROM nft_items
+WITH minted_nft_items AS (
+    SELECT COUNT(user_id)::INT as minted, nft_item_id
+    FROM nft_owners
+    WHERE nft_owners.nft_item_id = $1
+    GROUP BY nft_owners.nft_item_id
+)
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at,
+    coalesce(minted_nft_items.minted, 0) AS minted
+FROM nft_items
+LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
 WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetNFTItemByID(ctx context.Context, id uuid.UUID) (NFTItem, error) {
+type GetNFTItemByIDRow struct {
+	ID          uuid.UUID      `json:"id"`
+	OwnerID     uuid.NullUUID  `json:"owner_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Cover       string         `json:"cover"`
+	Supply      int64          `json:"supply"`
+	BuyNowPrice float64        `json:"buy_now_price"`
+	TokenURI    string         `json:"token_uri"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Minted      int32          `json:"minted"`
+}
+
+func (q *Queries) GetNFTItemByID(ctx context.Context, id uuid.UUID) (GetNFTItemByIDRow, error) {
 	row := q.queryRow(ctx, q.getNFTItemByIDStmt, getNFTItemByID, id)
-	var i NFTItem
+	var i GetNFTItemByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OwnerID,
@@ -70,13 +128,21 @@ func (q *Queries) GetNFTItemByID(ctx context.Context, id uuid.UUID) (NFTItem, er
 		&i.TokenURI,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Minted,
 	)
 	return i, err
 }
 
 const getNFTItemsList = `-- name: GetNFTItemsList :many
-SELECT id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at FROM nft_items
-ORDER BY updated_at DESC, created_at DESC
+WITH minted_nfts AS (
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
+    FROM nft_owners
+    GROUP BY nft_item_id
+)
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at
+FROM nft_items
+    LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+ORDER BY nft_items.updated_at DESC, nft_items.created_at DESC
 LIMIT $2 OFFSET $1
 `
 
@@ -120,16 +186,19 @@ func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams
 }
 
 const getNFTItemsListByOwnerID = `-- name: GetNFTItemsListByOwnerID :many
-SELECT id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at FROM nft_items
-WHERE owner_id = $1
-ORDER BY updated_at DESC, created_at DESC
+SELECT id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at
+FROM nft_items
+WHERE nft_items.id = ANY(SELECT DISTINCT nft_owners.nft_item_id
+                        FROM nft_owners
+                        WHERE nft_owners.user_id = $1)
+ORDER BY nft_items.updated_at DESC, nft_items.created_at DESC
 LIMIT $3 OFFSET $2
 `
 
 type GetNFTItemsListByOwnerIDParams struct {
-	OwnerID uuid.NullUUID `json:"owner_id"`
-	Offset  int32         `json:"offset_val"`
-	Limit   int32         `json:"limit_val"`
+	OwnerID uuid.UUID `json:"owner_id"`
+	Offset  int32     `json:"offset_val"`
+	Limit   int32     `json:"limit_val"`
 }
 
 func (q *Queries) GetNFTItemsListByOwnerID(ctx context.Context, arg GetNFTItemsListByOwnerIDParams) ([]NFTItem, error) {
@@ -167,10 +236,18 @@ func (q *Queries) GetNFTItemsListByOwnerID(ctx context.Context, arg GetNFTItemsL
 }
 
 const getNFTItemsListByRelationID = `-- name: GetNFTItemsListByRelationID :many
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at FROM nft_items
-JOIN nft_relations ON nft_relations.nft_item_id =  nft_items.id
-WHERE nft_relations.relation_id = $1
-AND nft_items.owner_id IS NULL
+WITH minted_nfts AS (
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
+    FROM nft_owners
+    GROUP BY nft_item_id
+)
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at
+FROM nft_items
+    LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
+                        FROM nft_relations 
+                        WHERE nft_relations.relation_id = $1)
+AND (nft_items.supply > minted_nfts.minted OR minted_nfts.minted IS NULL)
 ORDER BY nft_items.created_at DESC
 LIMIT $3 OFFSET $2
 `
@@ -213,19 +290,4 @@ func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTIte
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateNFTItemOwner = `-- name: UpdateNFTItemOwner :exec
-UPDATE nft_items SET owner_id = $1
-WHERE id = $2
-`
-
-type UpdateNFTItemOwnerParams struct {
-	OwnerID uuid.NullUUID `json:"owner_id"`
-	ID      uuid.UUID     `json:"id"`
-}
-
-func (q *Queries) UpdateNFTItemOwner(ctx context.Context, arg UpdateNFTItemOwnerParams) error {
-	_, err := q.exec(ctx, q.updateNFTItemOwnerStmt, updateNFTItemOwner, arg.OwnerID, arg.ID)
-	return err
 }
