@@ -212,10 +212,10 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 					Currency: "SAOE",
 					Amount:   0,
 				},
-				{
-					Currency: "USD",
-					Amount:   0,
-				},
+				// {
+				// 	Currency: "USD",
+				// 	Amount:   0,
+				// },
 			},
 		}, nil
 	}
@@ -238,10 +238,10 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 					Currency: s.satorAssetName,
 					Amount:   bal,
 				},
-				{
-					Currency: "USD",
-					Amount:   bal * 0.04, // FIXME: setup currency rate
-				},
+				// {
+				// 	Currency: "USD",
+				// 	Amount:   bal * 0.04, // FIXME: setup currency rate
+				// },
 			}
 		}
 	case GeneralAccount.String():
@@ -251,10 +251,10 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 					Currency: s.solanaAssetName,
 					Amount:   bal,
 				},
-				{
-					Currency: "USD",
-					Amount:   bal * 70, // FIXME: setup currency rate
-				},
+				// {
+				// 	Currency: "USD",
+				// 	Amount:   bal * 70, // FIXME: setup currency rate
+				// },
 			}
 		}
 	}
