@@ -64,6 +64,8 @@ type (
 		GetNFTCategoriesList(ctx context.Context) ([]repository.NFTCategory, error)
 		GetMainNFTCategory(ctx context.Context) (repository.NFTCategory, error)
 		DoesUserOwnNFT(ctx context.Context, arg repository.DoesUserOwnNFTParams) (bool, error)
+		UpdateNFTItem(ctx context.Context, arg repository.UpdateNFTItemParams) error
+		DeleteNFTItemByID(ctx context.Context, id uuid.UUID) error
 	}
 
 	// Simple function
@@ -315,4 +317,46 @@ func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow, ownerID ...uuid.UUI
 	}
 
 	return nft
+}
+
+func (s *Service) DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error {
+	item, err := s.nftRepo.GetNFTItemByID(ctx, nftID)
+	if err != nil {
+		return fmt.Errorf("could not find NFT with id=%s: %w", nftID, err)
+	}
+	if item.Minted > 0 {
+		return ErrAlreadyMinted
+	}
+
+	err = s.nftRepo.DeleteNFTItemByID(ctx, nftID)
+	if err != nil {
+		return fmt.Errorf("could not delete NFT with id=%s: %w", nftID, err)
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateNFTItem(ctx context.Context, nft *NFT) error {
+	item, err := s.nftRepo.GetNFTItemByID(ctx, nft.ID)
+	if err != nil {
+		return fmt.Errorf("could not find NFT with id=%s: %w", nft.ID, err)
+	}
+	if item.Minted > 0 {
+		return ErrAlreadyMinted
+	}
+
+	err = s.nftRepo.UpdateNFTItem(ctx, repository.UpdateNFTItemParams{
+		ID:          nft.ID,
+		Cover:       nft.ImageLink,
+		Name:        nft.Name,
+		Description: sql.NullString{String: nft.Description, Valid: len(nft.Description) > 0},
+		Supply:      int64(nft.Supply),
+		BuyNowPrice: nft.BuyNowPrice,
+		TokenURI:    nft.TokenURI,
+	})
+	if err != nil {
+		return fmt.Errorf("could not update NFT with id=%s: %w", nft.ID, err)
+	}
+
+	return nil
 }

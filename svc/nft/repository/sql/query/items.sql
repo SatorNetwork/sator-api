@@ -63,3 +63,17 @@ RETURNING *;
 -- name: AddNFTItemOwner :exec
 INSERT INTO nft_owners (nft_item_id, user_id)
 VALUES (@nft_item_id, @user_id);
+
+-- name: DeleteNFTItemByID :exec
+DELETE FROM nft_items
+WHERE id = @id;
+
+-- name: UpdateNFTItem :exec
+UPDATE nft_items
+SET name = @name,
+    description = @description,
+    cover = @cover,
+    supply = @supply,
+    buy_now_price = @buy_now_price,
+    token_uri = @token_uri
+WHERE id = @id;

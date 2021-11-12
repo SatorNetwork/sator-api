@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 
@@ -88,6 +90,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Post("/{nft_id}/buy", httptransport.NewServer(
 		e.BuyNFT,
 		decodeBuyNFTRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/{nft_id}", httptransport.NewServer(
+		e.DeleteNFTItemByID,
+		decodeDeleteNFTByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/{nft_id}", httptransport.NewServer(
+		e.UpdateNFTItem,
+		decodeUpdateNFTItemRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -206,6 +222,36 @@ func decodeGetCategoriesRequest(_ context.Context, r *http.Request) (interface{}
 
 func decodeGetMainScreenDataRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return Empty{}, nil
+}
+
+func decodeDeleteNFTByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	nftID := chi.URLParam(r, "nft_id")
+	if nftID == "" {
+		return nil, fmt.Errorf("%w: missed nft id", ErrInvalidParameter)
+	}
+
+	return nftID, nil
+}
+
+func decodeUpdateNFTItemRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateNFTRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	nftID := chi.URLParam(r, "nft_id")
+	if nftID == "" {
+		return nil, fmt.Errorf("%w: missed nft id", ErrInvalidParameter)
+	}
+
+	id, err := uuid.Parse(nftID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get nft id: %w", err)
+	}
+
+	req.ID = id
+
+	return req, nil
 }
 
 // returns http error code by error type
