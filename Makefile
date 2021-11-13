@@ -34,3 +34,5 @@ up: ## Run all needed containers, including postgres with exposed port :5432
 down: ## Stop and remove all related containers
 	docker-compose down -v --rmi=local
 
+test:
+	go test ./internal/test/...
