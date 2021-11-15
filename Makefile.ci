@@ -11,7 +11,7 @@ down: ## Stop and remove all related containers
 	docker-compose down -v --rmi=local
 run-local: ## Run api via `go run`
 	@APP_PORT=8080 \
-	APP_BASE_URL=https://aec45cb3e117.ngrok.io/ \
+	APP_BASE_URL=XXXXXXXXXX \
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	JWT_SIGNING_KEY=secret \
 	QUIZ_WS_CONN_URL=https://aec45cb3e117.ngrok.io/quiz \
