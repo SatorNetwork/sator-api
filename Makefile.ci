@@ -1,0 +1,48 @@
+# Variables
+LATEST_COMMIT := $$(git rev-parse HEAD)
+.PHONY: help up down run-local migrate-local
+help: ## Show this help
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+%:
+	@:
+up: ## Run all needed containers, including postgres with exposed port :5432
+	docker-compose up -d
+down: ## Stop and remove all related containers
+	docker-compose down -v --rmi=local
+run-local: ## Run api via `go run`
+	@APP_PORT=8080 \
+	APP_BASE_URL=https://aec45cb3e117.ngrok.io/ \
+	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
+	JWT_SIGNING_KEY=secret \
+	QUIZ_WS_CONN_URL=https://aec45cb3e117.ngrok.io/quiz \
+	SOLANA_API_BASE_URL=http://localhost:8899/ \
+	POSTMARK_SERVER_TOKEN=local \
+	POSTMARK_ACCOUNT_TOKEN=local \
+	STORAGE_KEY=XXXXXXXXXX \
+	STORAGE_SECRET=XXXXXXXXXX \
+	STORAGE_ENDPOINT=XXXXXXXXXX \
+	STORAGE_REGION=XXXXXXXXXX \
+	STORAGE_BUCKET=XXXXXXXXXX \
+	STORAGE_URL=XXXXXXXXXX \
+	STORAGE_FORCE_PATH_STYLE=false \
+	STORAGE_DISABLE_SSL=true \
+	FIREBASE_BASE_URL=https://satorio.page.link \
+	FIREBASE_WEB_API_KEY=XXXXXXXXXXXXXXXXXXXXXX \
+	FIREBASE_MAIN_SITE_LINK=https://sator.io/ \
+	FIREBASE_ANDROID_PACKAGE_NAME=com.satorio.app \
+	FIREBASE_IOS_BUNDLE_ID=io.sator \
+	FIREBASE_SUFFIX_OPTION=UNGUESSABLE \
+	SOLANA_FEE_PAYER_ADDR=67CXqkdKLhZxeDaHos2dxNGpqaiJvvva77TDnEipxXPx \
+	SOLANA_FEE_PAYER_PRIVATE_KEY=tg3BEHU1lH24lo9JccmqLL13DLOzLMptxh0aa3NXJUtL4PVdkvwOmbpCqMTFG7a8CJles911d0uu7SYeuck8Uw== \
+	SOLANA_ASSET_ADDR=3yKB53R6DCuq2VL7aBfJY4VT9jv3w67NixyWoWoZZe5v \
+	SOLANA_TOKEN_HOLDER_ADDR=uFhu3UDp2ymFYKRwPf1jrvfhDj1R7eiWjDnkdVQJhGQ \
+	SOLANA_TOKEN_HOLDER_PRIVATE_KEY=I52q0J0qsUY2NLTSScSKre1lH6XZRu69FGS0pa3xypsNYtRHIr9ICfw0SXUd1Vcr0sf3tqQuG3whne/UvJfBNQ== \
+	MASTER_OTP_HASH='$$2a$$04$$JEj1CnjccUr237U8lOWMVOUPcm4xG/a3SHcJM00uNQKAx.ujaP5Pa' \
+	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go &
+migrate-local: ## Run all migrations on local environment
+	@rm -Rvf migrations/*.sql && \
+	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \
+	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
+	go run ./cmd/migrate/main.go
+test:
+	go test -count=1 ./internal/test/...

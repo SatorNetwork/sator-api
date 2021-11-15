@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -12,7 +13,12 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/test/framework/accounts"
 )
 
+var bootstrapLock = &sync.Mutex{}
+
 func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
+	bootstrapLock.Lock()
+	defer bootstrapLock.Unlock()
+
 	needed, err := CheckIfBootstrapNeeded(ctx)
 	if err != nil {
 		return err
