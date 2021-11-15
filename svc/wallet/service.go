@@ -625,12 +625,11 @@ func (s *Service) erc20ToSplPayment(
 
 	// our wallet -> recipient payment (SPL)
 	for i := 0; i < 5; i++ {
-		if _, err := s.sc.SendAssets(
+		if _, err := s.sc.GiveAssetsWithAutoDerive(
 			ctx,
-			s.sc.AccountFromPrivatekey(feePayer.PrivateKey),
-			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
-			s.sc.AccountFromPrivatekey(asset.PrivateKey),
-			s.sc.AccountFromPrivatekey(issuer.PrivateKey),
+			s.satorAssetSolanaAddr,
+			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
+			s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
 			recipientAddr,
 			10,
 		); err != nil {
