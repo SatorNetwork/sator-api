@@ -2,19 +2,23 @@ package wallet
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethereum_common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/google/uuid"
+	"github.com/mr-tron/base58"
+	"github.com/portto/solana-go-sdk/types"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
-
-	"github.com/google/uuid"
-	"github.com/mr-tron/base58"
-	"github.com/portto/solana-go-sdk/types"
 )
 
 type (
@@ -79,6 +83,8 @@ type (
 
 	ethereumClient interface {
 		CreateAccount() (ethereum.Wallet, error)
+		TransferERC20(keyedTransactor *bind.TransactOpts, toAddr ethereum_common.Address, amount uint64) error
+		NewKeyedTransactor(privateKey *ecdsa.PrivateKey, address ethereum_common.Address) (*bind.TransactOpts, error)
 	}
 
 	// rewardsService interface {
@@ -326,8 +332,6 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 		return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
 	}
 
-	/** Disabled untill the next release **
-
 	ethAccount, err := s.ec.CreateAccount()
 	if err != nil {
 		return fmt.Errorf("could not create new eth account for user with id=%s: %w", userID.String(), err)
@@ -359,7 +363,6 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	}); err != nil {
 		return fmt.Errorf("could not create new ethereum wallet for user with id=%s: %w", userID.String(), err)
 	}
-	**/
 
 	return nil
 }
@@ -543,6 +546,126 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 	}
 
 	return err
+}
+
+func (s *Service) CreateCrossBlockchainTransfer(
+	ctx context.Context,
+	walletID uuid.UUID,
+	recipientAddr string,
+	asset string,
+	amount float64,
+) error {
+	feePayerAccount, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get fee payer account: %w", err)
+	}
+	issuerAccount, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get issuer account: %w", err)
+	}
+	assetAccount, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get asset account: %w", err)
+	}
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	isEthereumAddress := ethereum.IsEthereumAddress(recipientAddr)
+	isSolanaAddress := solana.IsSolanaAddress(recipientAddr)
+
+	switch {
+	case wallet.WalletType == WalletTypeERC20Sator && isEthereumAddress:
+		// ETH -> ETH
+		// TODO(evg): implement
+
+	case wallet.WalletType == WalletTypeSolana && isSolanaAddress:
+		// SOL -> SOL
+		// TODO(evg): implement
+
+	case wallet.WalletType == WalletTypeERC20Sator && isSolanaAddress:
+		// ETH -> SOL
+
+		err = s.erc20ToSplPayment(ctx, wallet, feePayerAccount, issuerAccount, assetAccount, recipientAddr, amount)
+		if err != nil {
+			return err
+		}
+
+	case wallet.WalletType == WalletTypeSolana && isEthereumAddress:
+		// SOL -> ETH
+		// TODO(evg): implement
+	}
+
+	return nil
+}
+
+func (s *Service) erc20ToSplPayment(
+	ctx context.Context,
+	wallet repository.Wallet,
+	feePayer repository.SolanaAccount,
+	issuer repository.SolanaAccount,
+	asset repository.SolanaAccount,
+	recipientAddr string,
+	amount float64,
+) error {
+	// user -> our wallet (ERC20)
+	keyedTransactor, err := s.transactorFromWallet(ctx, wallet)
+	if err != nil {
+		return err
+	}
+	rootEthAddress := ethereum_common.HexToAddress(ethereum.RootEthAddressHex)
+	err = s.ec.TransferERC20(keyedTransactor, rootEthAddress, 10)
+	if err != nil {
+		return err
+	}
+
+	// TODO: waitForConfirm
+
+	// our wallet -> recipient payment (SPL)
+	for i := 0; i < 5; i++ {
+		if _, err := s.sc.GiveAssetsWithAutoDerive(
+			ctx,
+			s.satorAssetSolanaAddr,
+			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
+			s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
+			recipientAddr,
+			10,
+		); err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 10)
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) transactorFromWallet(ctx context.Context, wallet repository.Wallet) (*bind.TransactOpts, error) {
+	if wallet.EthereumAccountID == uuid.Nil {
+		return nil, fmt.Errorf("ethereum account ID is not set for this wallet")
+	}
+	ea, err := s.wr.GetEthereumAccountByID(ctx, wallet.EthereumAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
+		}
+		return nil, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
+	}
+
+	privateKey, err := crypto.ToECDSA(ea.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	sourceEthAddr := ethereum_common.HexToAddress(ea.Address)
+
+	keyedTransactor, err := s.ec.NewKeyedTransactor(privateKey, sourceEthAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return keyedTransactor, nil
 }
 
 // GetStake Mocked method for stake

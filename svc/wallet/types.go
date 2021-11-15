@@ -2,10 +2,11 @@ package wallet
 
 // Predefined wallet types
 const (
-	WalletTypeSolana   string = "sol"
-	WalletTypeSator    string = "sao"
-	WalletTypeRewards  string = "rewards"
-	WalletTypeEthereum string = "eth"
+	WalletTypeSolana     string = "sol"
+	WalletTypeSator      string = "sao"
+	WalletTypeRewards    string = "rewards"
+	WalletTypeEthereum   string = "eth"
+	WalletTypeERC20Sator string = "erc20-sator"
 )
 
 // Predefined  solana account types

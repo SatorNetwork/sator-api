@@ -17,6 +17,7 @@ type (
 	// Endpoints collection of profile service
 	Endpoints struct {
 		CreateTransfer                endpoint.Endpoint
+		CreateCrossBlockchainTransfer endpoint.Endpoint
 		ConfirmTransfer               endpoint.Endpoint
 		GetWallets                    endpoint.Endpoint
 		GetWalletByID                 endpoint.Endpoint
@@ -31,6 +32,7 @@ type (
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
+		CreateCrossBlockchainTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr, asset string, amount float64) error
 		GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error)
 	}
@@ -47,6 +49,13 @@ type (
 		TransactionHash string `json:"tx_hash"`
 	}
 
+	CreateCrossBlockchainTransferRequest struct {
+		SenderWalletID   string  `json:"-"`
+		RecipientAddress string  `json:"recipient_address" validate:"required"`
+		Amount           float64 `json:"amount" validate:"required,number,gt=0"`
+		Asset            string  `json:"asset,omitempty"`
+	}
+
 	// GetListTransactionsByWalletIDRequest struct
 	GetListTransactionsByWalletIDRequest struct {
 		WalletID string `json:"wallet_id" validate:"required,uuid"`
@@ -58,6 +67,8 @@ type (
 		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
 		WalletID string  `json:"wallet_id" validate:"required,uuid"`
 	}
+
+	Empty struct{}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -68,6 +79,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
 		CreateTransfer:                MakeCreateTransferRequestEndpoint(s, validateFunc),
+		CreateCrossBlockchainTransfer: MakeCreateCrossBlockchainTransferEndpoint(s, validateFunc),
 		ConfirmTransfer:               MakeConfirmTransferRequestEndpoint(s, validateFunc),
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
@@ -207,6 +219,27 @@ func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) end
 		}
 
 		return true, nil
+	}
+}
+
+func MakeCreateCrossBlockchainTransferEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(CreateCrossBlockchainTransferRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		walletID, err := uuid.Parse(req.SenderWalletID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid sender wallet id: %w", err)
+		}
+
+		err = s.CreateCrossBlockchainTransfer(ctx, walletID, req.RecipientAddress, req.Asset, req.Amount)
+		if err != nil {
+			return nil, err
+		}
+
+		return Empty{}, nil
 	}
 }
 
