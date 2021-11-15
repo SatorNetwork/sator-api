@@ -18,8 +18,7 @@ VALUES (
 UPDATE rewards
 SET withdrawn = TRUE
 WHERE user_id = @user_id
-AND transaction_type = 1
-AND created_at < @not_after_date;
+AND transaction_type = 1;
 
 -- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
@@ -44,3 +43,9 @@ FROM rewards
 WHERE user_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetScannedQRCodeByUserID :one
+SELECT *
+FROM rewards
+WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
+    LIMIT 1;

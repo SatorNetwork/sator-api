@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -24,25 +26,23 @@ type (
 		BuyNFT             endpoint.Endpoint
 		GetCategories      endpoint.Endpoint
 		GetMainScreenData  endpoint.Endpoint
+		DeleteNFTItemByID  endpoint.Endpoint
+		UpdateNFTItem      endpoint.Endpoint
 	}
 
 	service interface {
 		CreateNFT(ctx context.Context, userUid uuid.UUID, nft *NFT) (string, error)
 		GetNFTs(ctx context.Context, limit, offset int32) ([]*NFT, error)
-		GetNFTsByCategory(ctx context.Context, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error)
-		GetNFTsByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) ([]*NFT, error)
-		GetNFTsByEpisodeID(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error)
+		GetNFTsByCategory(ctx context.Context, uid, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error)
+		GetNFTsByShowID(ctx context.Context, uid, showID uuid.UUID, limit, offset int32) ([]*NFT, error)
+		GetNFTsByEpisodeID(ctx context.Context, uid, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error)
 		GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*NFT, error)
-		GetNFTByID(ctx context.Context, nftID uuid.UUID) (*NFT, error)
+		GetNFTByID(ctx context.Context, nftID, userID uuid.UUID) (*NFT, error)
 		BuyNFT(ctx context.Context, userUid uuid.UUID, nftID uuid.UUID) error
 		GetCategories(ctx context.Context) ([]*Category, error)
 		GetMainScreenCategory(ctx context.Context) (*Category, error)
-	}
-
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
+		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
+		UpdateNFTItem(ctx context.Context, nft *NFT) error
 	}
 
 	TransportNFT struct {
@@ -73,25 +73,25 @@ type (
 	GetNFTsByCategoryRequest struct {
 		Category string `json:"category" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	GetNFTsByShowIDRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	GetNFTsByEpisodeIDRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	GetNFTsByUserIDRequest struct {
 		UserID string `json:"user_id" validate:"required,uuid"`
 
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	TransportCategory struct {
@@ -101,23 +101,17 @@ type (
 	}
 
 	Empty struct{}
+
+	UpdateNFTRequest struct {
+		ID          uuid.UUID `json:"id"`
+		ImageLink   string    `json:"image_link"`
+		Name        string    `json:"name" validate:"required"`
+		Description string    `json:"description"`
+		Supply      int       `json:"supply"`
+		BuyNowPrice float64   `json:"buy_now_price"`
+		TokenURI    string    `json:"token_uri" validate:"required"`
+	}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 func FromServiceNFTs(nfts []*NFT) []*TransportNFT {
 	transportNFTs := make([]*TransportNFT, 0, len(nfts))
@@ -141,6 +135,7 @@ func FromServiceNFT(n *NFT) *TransportNFT {
 		Blockchain:  n.Blockchain,
 		SellType:    n.SellType,
 		BuyNowPrice: n.BuyNowPrice,
+		TokenURI:    n.TokenURI,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = FromServiceNFTAuctionParams(n.AuctionParams)
@@ -216,6 +211,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		BuyNFT:             MakeBuyNFTEndpoint(s),
 		GetCategories:      MakeGetCategoriesEndpoint(s),
 		GetMainScreenData:  MakeGetMainScreenDataEndpoint(s),
+		DeleteNFTItemByID:  MakeDeleteNFTItemByIDEndpoint(s),
+		UpdateNFTItem:      MakeUpdateNFTItemEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -231,6 +228,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.BuyNFT = mdw(e.BuyNFT)
 			e.GetCategories = mdw(e.GetCategories)
 			e.GetMainScreenData = mdw(e.GetMainScreenData)
+			e.DeleteNFTItemByID = mdw(e.DeleteNFTItemByID)
+			e.UpdateNFTItem = mdw(e.UpdateNFTItem)
 		}
 	}
 
@@ -263,7 +262,7 @@ func MakeCreateNFTEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 
 func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req, ok := request.(PaginationRequest)
+		req, ok := request.(utils.PaginationRequest)
 		if !ok {
 			return nil, fmt.Errorf("unexpected request type, want: PaginationRequest, got: %T", request)
 		}
@@ -290,7 +289,12 @@ func MakeGetNFTsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		nfts, err := s.GetNFTsByCategory(ctx, uuid.MustParse(req.Category), req.Limit(), req.Offset())
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		nfts, err := s.GetNFTsByCategory(ctx, uid, uuid.MustParse(req.Category), req.Limit(), req.Offset())
 		if err != nil {
 			return nil, fmt.Errorf("can't get NFTs by category: %v, %v", req.Category, err)
 		}
@@ -309,7 +313,12 @@ func MakeGetNFTsByShowIDEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			return nil, err
 		}
 
-		nfts, err := s.GetNFTsByShowID(ctx, uuid.MustParse(req.ShowID), req.Limit(), req.Offset())
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		nfts, err := s.GetNFTsByShowID(ctx, uid, uuid.MustParse(req.ShowID), req.Limit(), req.Offset())
 		if err != nil {
 			return nil, fmt.Errorf("can't get NFTs by show id: %v, err: %v", req.ShowID, err)
 		}
@@ -328,7 +337,12 @@ func MakeGetNFTsByEpisodeIDEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
-		nfts, err := s.GetNFTsByEpisodeID(ctx, uuid.MustParse(req.EpisodeID), req.Limit(), req.Offset())
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		nfts, err := s.GetNFTsByEpisodeID(ctx, uid, uuid.MustParse(req.EpisodeID), req.Limit(), req.Offset())
 		if err != nil {
 			return nil, fmt.Errorf("can't get NFTs by episode id: %v, err: %v", req.EpisodeID, err)
 		}
@@ -363,7 +377,12 @@ func MakeGetNFTByIDEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("unexpected request type, want: string, got: %T", request)
 		}
 
-		nft, err := s.GetNFTByID(ctx, uuid.MustParse(nftID))
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		nft, err := s.GetNFTByID(ctx, uuid.MustParse(nftID), uid)
 		if err != nil {
 			return nil, fmt.Errorf("can't get nft by id: %v, err: %v", nftID, err)
 		}
@@ -411,7 +430,12 @@ func MakeGetMainScreenDataEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not found any category to show on main screen: %v", err)
 		}
 
-		nfts, err := s.GetNFTsByCategory(ctx, cat.ID, 3, 0)
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		nfts, err := s.GetNFTsByCategory(ctx, uid, cat.ID, 3, 0)
 		if err != nil {
 			return nil, fmt.Errorf("can't get NFTs by category: %v, %v", cat.ID.String(), err)
 		}
@@ -420,5 +444,53 @@ func MakeGetMainScreenDataEndpoint(s service) endpoint.Endpoint {
 		category.Items = FromServiceNFTs(nfts)
 
 		return category, nil
+	}
+}
+
+func MakeDeleteNFTItemByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		err = s.DeleteNFTItemByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+func MakeUpdateNFTItemEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(UpdateNFTRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.UpdateNFTItem(ctx, &NFT{
+			ID:          req.ID,
+			ImageLink:   req.ImageLink,
+			Name:        req.Name,
+			Description: req.Description,
+			Supply:      req.Supply,
+			BuyNowPrice: req.BuyNowPrice,
+			TokenURI:    req.TokenURI,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }

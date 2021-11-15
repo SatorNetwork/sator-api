@@ -47,6 +47,9 @@ components:
           type: string
           example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
           description: NFT payload, for example link to the original file
+        minted:
+          type: number
+          example: 3
         auction_params:
           type: object
           properties:
@@ -3083,9 +3086,86 @@ paths:
       summary: Get NFT by ID
       security:
         - bearerAuth: []
+      parameters:
+        - name: nft_id
+          in: path
+          description: NFT ID.
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           $ref: "#/components/responses/NFT"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "NFT"
+      summary: Used for delete not minted NFT by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: nft_id
+          in: path
+          description: NFT ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    put:
+      tags:
+        - "NFT"
+      summary: Used for update not minted NFT by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: nft_id
+          in: path
+          description: NFT ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image_link:
+                  type: string
+                  example: "www.link.to@nft.com"
+                name:
+                  type: string
+                  example: "name"
+                description:
+                  type: string
+                  example: "description"
+                supply:
+                  type: integer
+                  example: 2
+                buy_now_price:
+                  type: number
+                  example: 2
+                token_uri:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -3098,6 +3178,13 @@ paths:
       summary: Buy NFT
       security:
         - bearerAuth: []
+      parameters:
+        - name: nft_id
+          in: path
+          description: NFT ID.
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Buy NFT.

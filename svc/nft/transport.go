@@ -6,12 +6,21 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+)
+
+// Predefined request query keys
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -85,6 +94,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Delete("/{nft_id}", httptransport.NewServer(
+		e.DeleteNFTItemByID,
+		decodeDeleteNFTByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/{nft_id}", httptransport.NewServer(
+		e.UpdateNFTItem,
+		decodeUpdateNFTItemRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/categories", httptransport.NewServer(
 		e.GetCategories,
 		decodeGetCategoriesRequest,
@@ -111,7 +134,10 @@ func decodeCreateNFTRequest(_ context.Context, r *http.Request) (interface{}, er
 }
 
 func decodeGetNFTsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return Empty{}, nil
+	return utils.PaginationRequest{
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
 }
 
 func decodeGetNFTsByCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -122,6 +148,10 @@ func decodeGetNFTsByCategoryRequest(_ context.Context, r *http.Request) (interfa
 
 	return &GetNFTsByCategoryRequest{
 		Category: category,
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -133,6 +163,10 @@ func decodeGetNFTsByShowIDRequest(_ context.Context, r *http.Request) (interface
 
 	return &GetNFTsByShowIDRequest{
 		ShowID: showId,
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -144,6 +178,10 @@ func decodeGetNFTsByEpisodeIDRequest(_ context.Context, r *http.Request) (interf
 
 	return &GetNFTsByEpisodeIDRequest{
 		EpisodeID: episodeId,
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -155,6 +193,10 @@ func decodeGetNFTsByUserIDRequest(_ context.Context, r *http.Request) (interface
 
 	return &GetNFTsByUserIDRequest{
 		UserID: userId,
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 
@@ -180,6 +222,36 @@ func decodeGetCategoriesRequest(_ context.Context, r *http.Request) (interface{}
 
 func decodeGetMainScreenDataRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return Empty{}, nil
+}
+
+func decodeDeleteNFTByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	nftID := chi.URLParam(r, "nft_id")
+	if nftID == "" {
+		return nil, fmt.Errorf("%w: missed nft id", ErrInvalidParameter)
+	}
+
+	return nftID, nil
+}
+
+func decodeUpdateNFTItemRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateNFTRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	nftID := chi.URLParam(r, "nft_id")
+	if nftID == "" {
+		return nil, fmt.Errorf("%w: missed nft id", ErrInvalidParameter)
+	}
+
+	id, err := uuid.Parse(nftID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get nft id: %w", err)
+	}
+
+	req.ID = id
+
+	return req, nil
 }
 
 // returns http error code by error type

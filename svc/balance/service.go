@@ -67,7 +67,7 @@ func (s *Service) GetAccountBalance(ctx context.Context, uid uuid.UUID) (interfa
 				})
 			}
 		case wallet.WalletTypeRewards:
-			totalRewards, availableRewards, err := s.rewards.GetUserRewards(ctx, uid)
+			totalRewards, _, err := s.rewards.GetUserRewards(ctx, uid)
 			if err != nil {
 				log.Printf("get user rewards: %v", err)
 				continue
@@ -75,10 +75,10 @@ func (s *Service) GetAccountBalance(ctx context.Context, uid uuid.UUID) (interfa
 			balance = append(
 				balance,
 				Balance{
-					Currency:    "UNCLAIMED",
-					Amount:      totalRewards,
-					SubCurrency: "Available to claim",
-					SubAmount:   availableRewards,
+					Currency: "UNCLAIMED",
+					Amount:   totalRewards,
+					// SubCurrency: "Available to claim",
+					// SubAmount:   availableRewards,
 				},
 			)
 		}

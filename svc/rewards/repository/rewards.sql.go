@@ -69,6 +69,36 @@ func (q *Queries) GetAmountAvailableToWithdraw(ctx context.Context, arg GetAmoun
 	return column_1, err
 }
 
+const getScannedQRCodeByUserID = `-- name: GetScannedQRCodeByUserID :one
+SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type
+FROM rewards
+WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
+    LIMIT 1
+`
+
+type GetScannedQRCodeByUserIDParams struct {
+	UserID       uuid.UUID      `json:"user_id"`
+	RelationID   uuid.NullUUID  `json:"relation_id"`
+	RelationType sql.NullString `json:"relation_type"`
+}
+
+func (q *Queries) GetScannedQRCodeByUserID(ctx context.Context, arg GetScannedQRCodeByUserIDParams) (Reward, error) {
+	row := q.queryRow(ctx, q.getScannedQRCodeByUserIDStmt, getScannedQRCodeByUserID, arg.UserID, arg.RelationID, arg.RelationType)
+	var i Reward
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.RelationID,
+		&i.Amount,
+		&i.Withdrawn,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.TransactionType,
+		&i.RelationType,
+	)
+	return i, err
+}
+
 const getTotalAmount = `-- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
@@ -137,15 +167,9 @@ UPDATE rewards
 SET withdrawn = TRUE
 WHERE user_id = $1
 AND transaction_type = 1
-AND created_at < $2
 `
 
-type WithdrawParams struct {
-	UserID       uuid.UUID `json:"user_id"`
-	NotAfterDate time.Time `json:"not_after_date"`
-}
-
-func (q *Queries) Withdraw(ctx context.Context, arg WithdrawParams) error {
-	_, err := q.exec(ctx, q.withdrawStmt, withdraw, arg.UserID, arg.NotAfterDate)
+func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.withdrawStmt, withdraw, userID)
 	return err
 }

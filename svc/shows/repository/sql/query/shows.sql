@@ -1,6 +1,7 @@
 -- name: GetShows :many
 SELECT *
 FROM shows
+WHERE archived = FALSE
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -19,11 +20,11 @@ SELECT
     COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
-WHERE shows.id = @id;
+WHERE shows.id = @id AND shows.archived = FALSE;
 -- name: GetShowsByCategory :many
 SELECT *
 FROM shows
-WHERE category = $1
+WHERE category = $1 AND archived = FALSE
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC

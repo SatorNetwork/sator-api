@@ -34,6 +34,7 @@ type (
 
 	rewardsClient interface {
 		AddDepositTransaction(ctx context.Context, userID, relationID uuid.UUID, relationType string, amount float64) error
+		IsQRCodeScanned(ctx context.Context, userID, qrcodeID uuid.UUID) (bool, error)
 	}
 
 	// Qrcode struct
@@ -61,6 +62,14 @@ func NewService(qr qrcodeRepository, rc rewardsClient) *Service {
 
 // GetDataByQRCodeID returns show id and episode id by qrcode id
 func (s *Service) GetDataByQRCodeID(ctx context.Context, id, userID uuid.UUID) (interface{}, error) {
+	scanned, err := s.rc.IsQRCodeScanned(ctx, userID, id)
+	if err != nil {
+		return nil, fmt.Errorf("could not check is qrcode=%v scanned by user=:%s, error:%w", id, userID, err)
+	}
+	if scanned == true {
+		return nil, ErrQRCodeScanned
+	}
+
 	qrcodeData, err := s.qr.GetDataByQRCodeID(ctx, id)
 	if err != nil {
 		if !db.IsNotFoundError(err) {

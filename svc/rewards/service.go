@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/qrcodes"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
@@ -38,10 +40,11 @@ type (
 
 	rewardsRepository interface {
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
-		Withdraw(ctx context.Context, arg repository.WithdrawParams) error
+		Withdraw(ctx context.Context, uid uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
-		GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
+		// GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
+		GetScannedQRCodeByUserID(ctx context.Context, arg repository.GetScannedQRCodeByUserIDParams) (repository.Reward, error)
 	}
 
 	ClaimRewardsResult struct {
@@ -79,7 +82,7 @@ func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker
 }
 
 func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error) {
-	totalRewards, availableRewards, err := s.GetUserRewards(ctx, userID)
+	totalRewards, _, err := s.GetUserRewards(ctx, userID)
 	if err != nil {
 		return wallet.Wallet{}, fmt.Errorf("could  not get rewards wallet: %w", err)
 	}
@@ -92,10 +95,10 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 				Currency: "UNCLAIMED",
 				Amount:   totalRewards,
 			},
-			{
-				Currency: "Available to claim",
-				Amount:   availableRewards,
-			},
+			// {
+			// 	Currency: "Available to claim",
+			// 	Amount:   availableRewards,
+			// },
 		},
 		Actions: []wallet.Action{{
 			Type: wallet.ActionClaimRewards.String(),
@@ -136,10 +139,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 	// 	return ClaimRewardsResult{}, fmt.Errorf("lock %v is already acquired", id)
 	// }
 
-	amount, err := s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
-		UserID:       uid,
-		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
-	})
+	amount, err := s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return ClaimRewardsResult{}, ErrRewardsAlreadyClaimed
@@ -153,10 +153,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
 	}
 
-	if err = s.repo.Withdraw(ctx, repository.WithdrawParams{
-		UserID:       uid,
-		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
-	}); err != nil {
+	if err = s.repo.Withdraw(ctx, uid); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not update rewards status: %w", err)
 	}
 
@@ -187,25 +184,22 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (total float64, available float64, err error) {
 	total, err = s.repo.GetTotalAmount(ctx, uid)
 	if err != nil {
-		if db.IsNotFoundError(err) {
-			return
-		}
-
-		return 0, 0, fmt.Errorf("could not get total amount of rewards: %w", err)
-	}
-
-	available, err = s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
-		UserID:       uid,
-		NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
-	})
-	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return 0, 0, fmt.Errorf("could not get available amount of rewards: %w", err)
+			return 0, 0, fmt.Errorf("could not get total amount of rewards: %w", err)
 		}
-
 	}
 
-	return total, available, nil
+	// available, err = s.repo.GetAmountAvailableToWithdraw(ctx, repository.GetAmountAvailableToWithdrawParams{
+	// 	UserID:       uid,
+	// 	NotAfterDate: time.Now().Add(-s.holdRewardsPeriod),
+	// })
+	// if err != nil {
+	// 	if !db.IsNotFoundError(err) {
+	// 		return 0, 0, fmt.Errorf("could not get available amount of rewards: %w", err)
+	// 	}
+	// }
+
+	return total, 0, nil
 }
 
 // GetTransactions returns list of transactions from rewards wallet.
@@ -241,4 +235,28 @@ func (s *Service) GetTransactions(ctx context.Context, userID, walletID uuid.UUI
 	}
 
 	return result, nil
+}
+
+// IsQRCodeScanned returns true if user got reward by this qrcode_id.
+func (s *Service) IsQRCodeScanned(ctx context.Context, userID, qrcodeID uuid.UUID) (bool, error) {
+	_, err := s.repo.GetScannedQRCodeByUserID(ctx, repository.GetScannedQRCodeByUserIDParams{
+		UserID: userID,
+		RelationID: uuid.NullUUID{
+			UUID:  qrcodeID,
+			Valid: true,
+		},
+		RelationType: sql.NullString{
+			String: qrcodes.RelationTypeQRcodes,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("could not get rewards transactions list: %w", err)
+	}
+
+	return true, nil
 }

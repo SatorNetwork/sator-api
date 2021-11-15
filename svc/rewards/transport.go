@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -74,9 +74,9 @@ func decodeGetRewardsWalletRequest(_ context.Context, r *http.Request) (interfac
 func decodeGetTransactionsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetTransactionsRequest{
 		WalletID: chi.URLParam(r, "wallet_id"),
-		PaginationRequest: PaginationRequest{
-			Page:         castStrToInt32(r.URL.Query().Get(pageParam)),
-			ItemsPerPage: castStrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 		},
 	}, nil
 }
@@ -84,12 +84,4 @@ func decodeGetTransactionsRequest(_ context.Context, r *http.Request) (interface
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
 	return httpencoder.CodeAndMessageFrom(err)
-}
-
-func castStrToInt32(source string) int32 {
-	res, err := strconv.ParseInt(source, 10, 32)
-	if err != nil {
-		return 0
-	}
-	return int32(res)
 }

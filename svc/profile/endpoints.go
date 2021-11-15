@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -51,6 +52,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetProfileEndpoint ...
 func MakeGetProfileEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)

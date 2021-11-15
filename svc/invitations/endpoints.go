@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -48,6 +49,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeSendInvitationEndpoint ...
 func MakeSendInvitationEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(SendInvitationRequest)
 		if err := v(req); err != nil {
 			return nil, err

@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -57,13 +59,7 @@ type (
 	// GetListTransactionsByWalletIDRequest struct
 	GetListTransactionsByWalletIDRequest struct {
 		WalletID string `json:"wallet_id" validate:"required,uuid"`
-		PaginationRequest
-	}
-
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
+		utils.PaginationRequest
 	}
 
 	// SetStakeRequest struct
@@ -74,22 +70,6 @@ type (
 
 	Empty struct{}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
@@ -120,6 +100,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 func MakeGetListTransactionsByWalletIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -146,6 +130,10 @@ func MakeGetListTransactionsByWalletIDEndpoint(s service, v validator.ValidateFu
 
 func MakeGetWalletsEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -162,6 +150,10 @@ func MakeGetWalletsEndpoint(s service) endpoint.Endpoint {
 
 func MakeGetWalletByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		walletID, err := uuid.Parse(req.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get wallet id: %w", err)
@@ -183,6 +175,10 @@ func MakeGetWalletByIDEndpoint(s service) endpoint.Endpoint {
 
 func MakeCreateTransferRequestEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(CreateTransferRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -204,6 +200,10 @@ func MakeCreateTransferRequestEndpoint(s service, v validator.ValidateFunc) endp
 
 func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		// if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		// 	return nil, err
+		// }
+
 		req := request.(ConfirmTransferRequest)
 		if err := v(req); err != nil {
 			return false, err
@@ -245,6 +245,10 @@ func MakeCreateCrossBlockchainTransferEndpoint(s service, v validator.ValidateFu
 
 func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(SetStakeRequest)
 		if err := v(req); err != nil {
 			return false, err
@@ -266,6 +270,10 @@ func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 
 func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		walletID, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get wallet id: %w", err)

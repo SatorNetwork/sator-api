@@ -33,3 +33,9 @@ type NFTRelation struct {
 	NFTItemID  uuid.UUID `json:"nft_item_id"`
 	RelationID uuid.UUID `json:"relation_id"`
 }
+
+type NftOwner struct {
+	NFTItemID uuid.UUID `json:"nft_item_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}

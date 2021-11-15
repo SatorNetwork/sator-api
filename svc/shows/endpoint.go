@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
 	"github.com/go-kit/kit/endpoint"
@@ -68,22 +70,16 @@ type (
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
 
-	// PaginationRequest struct
-	PaginationRequest struct {
-		Page         int32 `json:"page,omitempty" validate:"number,gte=0"`
-		ItemsPerPage int32 `json:"items_per_page,omitempty" validate:"number,gte=0"`
-	}
-
 	// GetShowChallengesRequest struct
 	GetShowChallengesRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	// GetShowsByCategoryRequest struct
 	GetShowsByCategoryRequest struct {
 		Category string `json:"category"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	// AddShowRequest struct
@@ -157,7 +153,7 @@ type (
 	// GetEpisodesByShowIDRequest struct
 	GetEpisodesByShowIDRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 
 	// AddSeasonRequest struct
@@ -189,25 +185,9 @@ type (
 	// GetReviewsListRequest struct
 	GetReviewsListRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
-		PaginationRequest
+		utils.PaginationRequest
 	}
 )
-
-// Limit of items
-func (r PaginationRequest) Limit() int32 {
-	if r.ItemsPerPage > 0 {
-		return r.ItemsPerPage
-	}
-	return 20
-}
-
-// Offset items
-func (r PaginationRequest) Offset() int32 {
-	if r.Page > 1 {
-		return (r.Page - 1) * r.Limit()
-	}
-	return 0
-}
 
 // MakeEndpoints ...
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -237,7 +217,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetReviewsList:         MakeGetReviewsListEndpoint(s, validateFunc),
 		GetReviewsListByUserID: MakeGetReviewsListByUserIDEndpoint(s, validateFunc),
 
-		AddClapsForShow: MakeAddClapsForShowEndpoint(s, validateFunc),
+		AddClapsForShow: MakeAddClapsForShowEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -276,7 +256,11 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetShowsEndpoint ...
 func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(PaginationRequest)
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -293,6 +277,10 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 // MakeGetShowChallengesEndpoint ...
 func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -320,6 +308,10 @@ func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetShowByIDEndpoint ...
 func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
@@ -337,6 +329,10 @@ func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 // MakeGetShowsByCategoryEndpoint ...
 func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(GetShowsByCategoryRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -363,6 +359,10 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 // MakeAddShowEndpoint ...
 func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddShowRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -389,6 +389,10 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 // MakeUpdateShowEndpoint ...
 func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateShowRequest)
 
 		id, err := uuid.Parse(req.ID)
@@ -418,6 +422,10 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 // MakeDeleteShowByIDEndpoint ...
 func MakeDeleteShowByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
 			return nil, fmt.Errorf("could not get show id: %w", err)
@@ -435,6 +443,10 @@ func MakeDeleteShowByIDEndpoint(s service) endpoint.Endpoint {
 // MakeAddEpisodeEndpoint ...
 func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddEpisodeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -494,6 +506,10 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 // MakeUpdateEpisodeEndpoint ...
 func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(UpdateEpisodeRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -558,6 +574,10 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeDeleteEpisodeByIDEndpoint ...
 func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(DeleteEpisodeByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -584,6 +604,10 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetEpisodeByIDEndpoint ...
 func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -616,12 +640,16 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeGetActivatedUserEpisodesEndpoint ...
 func MakeGetActivatedUserEpisodesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -638,6 +666,10 @@ func MakeGetActivatedUserEpisodesEndpoint(s service, v validator.ValidateFunc) e
 // MakeGetEpisodesByShowIDEndpoint ...
 func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -665,6 +697,10 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 // MakeAddSeasonEndpoint ...
 func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(AddSeasonRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -690,6 +726,10 @@ func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 // MakeDeleteSeasonByIDEndpoint ...
 func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
 		req := request.(DeleteSeasonByIDRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -717,6 +757,10 @@ func MakeDeleteSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.
 // MakeRateEpisodeEndpoint ...
 func MakeRateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -744,6 +788,10 @@ func MakeRateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // MakeReviewEpisodeEndpoint ...
 func MakeReviewEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
@@ -775,6 +823,10 @@ func MakeReviewEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeGetReviewsListEndpoint ...
 func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		req := request.(GetReviewsListRequest)
 		if err := v(req); err != nil {
 			return nil, err
@@ -797,7 +849,7 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 // MakeGetReviewsListByUserIDEndpoint ...
 func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(PaginationRequest)
+		req := request.(utils.PaginationRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
@@ -817,8 +869,12 @@ func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) end
 }
 
 // MakeAddClapsForShowEndpoint ...
-func MakeAddClapsForShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+func MakeAddClapsForShowEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)

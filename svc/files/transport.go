@@ -72,9 +72,9 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 }
 
 func decodeGetImagesListRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return PaginationRequest{
+	return utils.PaginationRequest{
 		Page:          utils.StrToInt32(r.URL.Query().Get(pageParam)),
-		ImagesPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
 }
 
