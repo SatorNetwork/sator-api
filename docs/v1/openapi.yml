@@ -3106,7 +3106,7 @@ paths:
         - "NFT"
       summary: Used for delete not minted NFT by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: nft_id
           in: path
@@ -3129,7 +3129,7 @@ paths:
         - "NFT"
       summary: Used for update not minted NFT by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: nft_id
           in: path
@@ -3799,7 +3799,7 @@ paths:
         - "File Storage / Images"
       summary: used to store new file.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -3807,9 +3807,9 @@ paths:
             schema:
               type: object
               required:
-                - image
+                - file
               properties:
-                image:
+                file:
                   type: string
                   format: binary
 
