@@ -139,16 +139,13 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 
 func decodeAddFileRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	rules := govalidator.MapData{
-		"file:image": []string{
-			"required",
-			"size:2097152",
-		},
+		"file:file": []string{"required"},
 	}
 	if err := utils.Validate(r, rules, nil); err != nil {
 		return nil, err
 	}
 
-	file, header, err := r.FormFile("image")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
 	}
