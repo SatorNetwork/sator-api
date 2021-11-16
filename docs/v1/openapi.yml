@@ -3106,7 +3106,7 @@ paths:
         - "NFT"
       summary: Used for delete not minted NFT by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: nft_id
           in: path
@@ -3129,7 +3129,7 @@ paths:
         - "NFT"
       summary: Used for update not minted NFT by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: nft_id
           in: path
@@ -3787,6 +3787,56 @@ paths:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
                       description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+  /files:
+    post:
+      tags:
+        - "File Storage / Images"
+      summary: used to store new file.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+
+      responses:
+        "200":
+          description: Returns qrcode data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  file_name:
+                    type: string
+                    example: "filename"
+                  file_path:
+                    type: string
+                    example: "filepath"
+                  file_url:
+                    type: string
+                    example: "file_url"
+                  created_at:
+                    type: string
+                    example: "2006-01-02T15:04:05Z07:00"
+                    description: "RFC3339"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

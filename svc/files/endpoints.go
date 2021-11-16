@@ -17,6 +17,7 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
+		AddFile         endpoint.Endpoint
 		AddImage        endpoint.Endpoint
 		GetImageByID    endpoint.Endpoint
 		GetImagesList   endpoint.Endpoint
@@ -24,10 +25,11 @@ type (
 	}
 
 	service interface {
-		AddImageResize(ctx context.Context, it Image, file multipart.File, fileHeader *multipart.FileHeader, maxHeight, maxWidth uint) (Image, error)
-		AddImage(ctx context.Context, it Image, file io.ReadSeeker, fileHeader *multipart.FileHeader) (Image, error)
-		GetImageByID(ctx context.Context, id uuid.UUID) (Image, error)
-		GetImagesList(ctx context.Context, limit, offset int32) ([]Image, error)
+		AddFile(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error)
+		AddImage(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error)
+		AddImageResize(ctx context.Context, it File, file multipart.File, fileHeader *multipart.FileHeader, maxHeight, maxWidth uint) (File, error)
+		GetImageByID(ctx context.Context, id uuid.UUID) (File, error)
+		GetImagesList(ctx context.Context, limit, offset int32) ([]File, error)
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 	}
 
@@ -38,12 +40,19 @@ type (
 		MaxHeight  uint
 		MaxWidth   uint
 	}
+
+	// AddFileRequest struct
+	AddFileRequest struct {
+		File       multipart.File
+		FileHeader *multipart.FileHeader
+	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
+		AddFile:         MakeAddFileEndpoint(s, validateFunc),
 		AddImage:        MakeAddImageResizeEndpoint(s, validateFunc),
 		GetImageByID:    MakeGetImageByIDEndpoint(s),
 		GetImagesList:   MakeGetImagesListEndpoint(s, validateFunc),
@@ -53,6 +62,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	// setup middlewares for each endpoint
 	if len(m) > 0 {
 		for _, mdw := range m {
+			e.AddFile = mdw(e.AddFile)
 			e.AddImage = mdw(e.AddImage)
 			e.GetImageByID = mdw(e.GetImageByID)
 			e.GetImagesList = mdw(e.GetImagesList)
@@ -96,9 +106,32 @@ func MakeAddImageResizeEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, err
 		}
 
-		resp, err := s.AddImageResize(ctx, Image{
+		resp, err := s.AddImageResize(ctx, File{
 			Filename: req.FileHeader.Filename,
 		}, req.File, req.FileHeader, req.MaxHeight, req.MaxWidth)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeAddFileEndpoint ...
+func MakeAddFileEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(AddFileRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.AddFile(ctx, File{
+			Filename: req.FileHeader.Filename,
+		}, req.File, req.FileHeader)
 		if err != nil {
 			return nil, err
 		}

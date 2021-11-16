@@ -68,12 +68,19 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		).ServeHTTP)
 	})
 
+	r.Post("/", httptransport.NewServer(
+		e.AddFile,
+		decodeAddFileRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
 func decodeGetImagesListRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return utils.PaginationRequest{
-		Page:          utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
 		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
 	}, nil
 }
@@ -125,6 +132,28 @@ func decodeAddImageRequest(_ context.Context, r *http.Request) (interface{}, err
 
 	if width := r.FormValue("width"); width != "" {
 		req.MaxWidth = utils.StrToUint(width)
+	}
+
+	return req, nil
+}
+
+func decodeAddFileRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	rules := govalidator.MapData{
+		"file:file": []string{"required"},
+	}
+	if err := utils.Validate(r, rules, nil); err != nil {
+		return nil, err
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		return nil, fmt.Errorf("could not parse image from request: %w", err)
+	}
+	defer file.Close()
+
+	req := AddFileRequest{
+		File:       file,
+		FileHeader: header,
 	}
 
 	return req, nil
