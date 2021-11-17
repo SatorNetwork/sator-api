@@ -23,13 +23,14 @@ import (
 type (
 	// Service struct
 	Service struct {
-		ur         userRepository
-		ws         walletService
-		jwt        jwtInteractor
-		mail       mailer
-		ic         invitationsClient
-		otpLen     int
-		masterCode string
+		ur                    userRepository
+		ws                    walletService
+		jwt                   jwtInteractor
+		mail                  mailer
+		ic                    invitationsClient
+		otpLen                int
+		masterCode            string
+		blacklistEmailDomains []string
 	}
 
 	// ServiceOption function
@@ -57,6 +58,9 @@ type (
 		GetUserVerificationByUserID(ctx context.Context, arg repository.GetUserVerificationByUserIDParams) (repository.UserVerification, error)
 		GetUserVerificationByEmail(ctx context.Context, arg repository.GetUserVerificationByEmailParams) (repository.UserVerification, error)
 		DeleteUserVerificationsByUserID(ctx context.Context, arg repository.DeleteUserVerificationsByUserIDParams) error
+
+		// Blacklist
+		IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
 	}
 
 	mailer interface {
@@ -110,6 +114,14 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", fmt.Errorf("could not log in: %w", err)
 	}
 
+	if user.Disabled {
+		return "", ErrUserIsDisabled
+	}
+
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+		return "", ErrUserIsDisabled
+	}
+
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
 		return "", ErrInvalidCredentials
 	}
@@ -139,6 +151,10 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return "", ErrUserIsDisabled
 	}
 
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		return "", ErrUserIsDisabled
+	}
+
 	// TODO: add JWT id into the revoked tokens list
 	_, token, err := s.jwt.NewWithUserData(uid, u.Username, role)
 	if err != nil {
@@ -153,6 +169,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	var otpHash []byte
 	// Make email address case-insensitive
 	email = strings.ToLower(email)
+
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+		return "", validator.NewValidationError(url.Values{
+			"email": []string{ErrRestrictedEmailDomain.Error()},
+		})
+	}
 
 	// Check if the passed email address is not taken yet
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {

@@ -9,6 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type Blacklist struct {
+	RestrictedType  string `json:"restricted_type"`
+	RestrictedValue string `json:"restricted_value"`
+}
+
 type User struct {
 	ID         uuid.UUID    `json:"id"`
 	Username   string       `json:"username"`

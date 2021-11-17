@@ -199,7 +199,7 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 }
 
 const getVerifiedUsersListDesc = `-- name: GetVerifiedUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
 FROM users
 WHERE verified_at IS NOT NULL
 ORDER BY created_at DESC
@@ -229,6 +229,7 @@ func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedU
 			&i.VerifiedAt,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}
