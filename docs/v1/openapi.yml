@@ -62,6 +62,11 @@ components:
             end_timestamp:
               type: string
               example: "2006-01-02T15:04:05Z07:00"
+        relation_ids:
+          type: array
+          items:
+            type: string
+
     Category:
       type: object
       properties:
@@ -2940,9 +2945,32 @@ paths:
     get:
       tags:
         - "NFT"
-      summary: Get all NFTs.
+      summary: Get all NFTs by relation id if it's provided.
       security:
         - bearerAuth: []
+      parameters:
+        - name: relation_id
+          in: query
+          description: NFTs relation id.
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           $ref: "#/components/responses/NFTs"
