@@ -48,6 +48,9 @@ func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims claimsFa
 					case e.Errors&jwt.ValidationErrorExpired != 0:
 						// Token is expired
 						return nil, kitjwt.ErrTokenExpired
+					case e.Errors&jwt.ValidationErrorSignatureInvalid != 0:
+						// Token is expired
+						return nil, kitjwt.ErrTokenInvalid
 					case e.Errors&jwt.ValidationErrorNotValidYet != 0:
 						// Token is not active yet
 						return nil, kitjwt.ErrTokenNotActive
