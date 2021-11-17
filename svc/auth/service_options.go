@@ -23,3 +23,11 @@ func WithMasterOTPCode(hash string) ServiceOption {
 		s.masterCode = hash
 	}
 }
+
+// WithBlacklistEmailDomains option
+// Sets up email domains which have to be blocked to signup
+func WithBlacklistEmailDomains(domains ...string) ServiceOption {
+	return func(s *Service) {
+		s.blacklistEmailDomains = domains
+	}
+}

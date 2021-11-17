@@ -22,9 +22,6 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.checkEmailStmt, err = db.PrepareContext(ctx, checkEmail); err != nil {
-		return nil, fmt.Errorf("error preparing query CheckEmail: %w", err)
-	}
 	if q.countAllUsersStmt, err = db.PrepareContext(ctx, countAllUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query CountAllUsers: %w", err)
 	}
@@ -67,6 +64,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getVerifiedUsersListDescStmt, err = db.PrepareContext(ctx, getVerifiedUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetVerifiedUsersListDesc: %w", err)
 	}
+	if q.isEmailBlacklistedStmt, err = db.PrepareContext(ctx, isEmailBlacklisted); err != nil {
+		return nil, fmt.Errorf("error preparing query IsEmailBlacklisted: %w", err)
+	}
 	if q.updateUserEmailStmt, err = db.PrepareContext(ctx, updateUserEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserEmail: %w", err)
 	}
@@ -87,11 +87,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
-	if q.checkEmailStmt != nil {
-		if cerr := q.checkEmailStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing checkEmailStmt: %w", cerr)
-		}
-	}
 	if q.countAllUsersStmt != nil {
 		if cerr := q.countAllUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countAllUsersStmt: %w", cerr)
@@ -162,6 +157,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getVerifiedUsersListDescStmt: %w", cerr)
 		}
 	}
+	if q.isEmailBlacklistedStmt != nil {
+		if cerr := q.isEmailBlacklistedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isEmailBlacklistedStmt: %w", cerr)
+		}
+	}
 	if q.updateUserEmailStmt != nil {
 		if cerr := q.updateUserEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserEmailStmt: %w", cerr)
@@ -226,7 +226,6 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                                  DBTX
 	tx                                  *sql.Tx
-	checkEmailStmt                      *sql.Stmt
 	countAllUsersStmt                   *sql.Stmt
 	createUserStmt                      *sql.Stmt
 	createUserVerificationStmt          *sql.Stmt
@@ -241,6 +240,7 @@ type Queries struct {
 	getUserVerificationByUserIDStmt     *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
 	getVerifiedUsersListDescStmt        *sql.Stmt
+	isEmailBlacklistedStmt              *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
@@ -252,7 +252,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                                  tx,
 		tx:                                  tx,
-		checkEmailStmt:                      q.checkEmailStmt,
 		countAllUsersStmt:                   q.countAllUsersStmt,
 		createUserStmt:                      q.createUserStmt,
 		createUserVerificationStmt:          q.createUserVerificationStmt,
@@ -267,6 +266,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
+		isEmailBlacklistedStmt:              q.isEmailBlacklistedStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,

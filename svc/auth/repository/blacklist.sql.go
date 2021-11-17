@@ -7,17 +7,17 @@ import (
 	"context"
 )
 
-const checkEmail = `-- name: CheckEmail :one
+const isEmailBlacklisted = `-- name: IsEmailBlacklisted :one
 SELECT count(*) > 0 FROM blacklist
 WHERE (restricted_type = 'email_domain'
-AND $1::text LIKE '%'+restricted_value)
+AND $1::text LIKE CONCAT('%', restricted_value))
 OR (restricted_type = 'email'
 AND restricted_value = $1::text)
 LIMIT 1
 `
 
-func (q *Queries) CheckEmail(ctx context.Context, email string) (bool, error) {
-	row := q.queryRow(ctx, q.checkEmailStmt, checkEmail, email)
+func (q *Queries) IsEmailBlacklisted(ctx context.Context, email string) (bool, error) {
+	row := q.queryRow(ctx, q.isEmailBlacklistedStmt, isEmailBlacklisted, email)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
