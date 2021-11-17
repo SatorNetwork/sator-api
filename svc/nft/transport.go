@@ -21,6 +21,7 @@ import (
 const (
 	pageParam         = "page"
 	itemsPerPageParam = "items_per_page"
+	relationId        = "relation_id"
 )
 
 type (
@@ -134,9 +135,12 @@ func decodeCreateNFTRequest(_ context.Context, r *http.Request) (interface{}, er
 }
 
 func decodeGetNFTsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return utils.PaginationRequest{
-		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
-		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	return &GetNFTsWithFilterRequest{
+		RelationID: r.URL.Query().Get(relationId),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
 	}, nil
 }
 

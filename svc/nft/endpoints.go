@@ -43,6 +43,7 @@ type (
 		GetMainScreenCategory(ctx context.Context) (*Category, error)
 		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
 		UpdateNFTItem(ctx context.Context, nft *NFT) error
+		GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error)
 	}
 
 	TransportNFT struct {
@@ -62,6 +63,7 @@ type (
 		TokenURI    string  `json:"token_uri" validate:"required"`
 
 		AuctionParams *TransportNFTAuctionParams `json:"auction_params"`
+		RelationIDs   []uuid.UUID                `json:"relation_ids"`
 	}
 
 	TransportNFTAuctionParams struct {
@@ -72,6 +74,12 @@ type (
 
 	GetNFTsByCategoryRequest struct {
 		Category string `json:"category" validate:"required,uuid"`
+
+		utils.PaginationRequest
+	}
+
+	GetNFTsWithFilterRequest struct {
+		RelationID string `json:"relation_id" validate:"uuid"`
 
 		utils.PaginationRequest
 	}
@@ -153,6 +161,11 @@ func FromServiceNFTAuctionParams(a *NFTAuctionParams) *TransportNFTAuctionParams
 }
 
 func (n *TransportNFT) ToServiceNFT() *NFT {
+	relationIds := make([]uuid.UUID, 0, len(n.RelationIDs))
+	for _, r := range n.RelationIDs {
+		relationIds = append(relationIds, r)
+	}
+
 	nft := &NFT{
 		ID:          n.ID,
 		ImageLink:   n.ImageLink,
@@ -165,6 +178,7 @@ func (n *TransportNFT) ToServiceNFT() *NFT {
 		SellType:    n.SellType,
 		BuyNowPrice: n.BuyNowPrice,
 		TokenURI:    n.TokenURI,
+		RelationIDs: relationIds,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = n.AuctionParams.ToServiceNFTAuctionParams()
@@ -262,12 +276,31 @@ func MakeCreateNFTEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 
 func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req, ok := request.(utils.PaginationRequest)
-		if !ok {
-			return nil, fmt.Errorf("unexpected request type, want: PaginationRequest, got: %T", request)
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
 		}
+
+		req := request.(GetNFTsWithFilterRequest)
 		if err := v(req); err != nil {
 			return nil, err
+		}
+		if req.RelationID != "" {
+			uid, err := jwt.UserIDFromContext(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("could not get user profile id: %w", err)
+			}
+
+			relationID, err := uuid.Parse(req.RelationID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get relation id: %w", err)
+			}
+
+			nfts, err := s.GetNFTsByRelationID(ctx, uid, relationID, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return nfts, nil
 		}
 
 		nfts, err := s.GetNFTs(ctx, req.Limit(), req.Offset())
