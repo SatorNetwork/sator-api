@@ -50,6 +50,7 @@ type (
 		GetWalletBySolanaAccountID(ctx context.Context, solanaAccountID uuid.UUID) (repository.Wallet, error)
 		GetWalletByID(ctx context.Context, id uuid.UUID) (repository.Wallet, error)
 		GetWalletByUserIDAndType(ctx context.Context, arg repository.GetWalletByUserIDAndTypeParams) (repository.Wallet, error)
+		DeleteWalletByID(ctx context.Context, id uuid.UUID) error
 
 		AddSolanaAccount(ctx context.Context, arg repository.AddSolanaAccountParams) (repository.SolanaAccount, error)
 		GetSolanaAccountByID(ctx context.Context, id uuid.UUID) (repository.SolanaAccount, error)
@@ -144,7 +145,7 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 	result := make(Wallets, 0, len(wallets))
 	for _, w := range wallets {
 		if w.WalletType == WalletTypeEthereum {
-			// disable etherium wallet
+			// disable ethereum wallet
 			continue
 		}
 
@@ -167,6 +168,111 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 	}
 
 	return result, nil
+}
+
+// GetOrCreateWallet returns current user's wallets by wallet type.
+func (s *Service) GetOrCreateWallet(ctx context.Context, uid uuid.UUID, walletType string) (Wallet, error) {
+	userWallet, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     uid,
+		WalletType: walletType,
+	})
+	if err != nil && !db.IsNotFoundError(err) {
+		return Wallet{}, nil
+	}
+
+	if userWallet.UserID != uid {
+		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
+	}
+
+	if userWallet.SolanaAccountID != uuid.Nil && userWallet.WalletType == walletType {
+		return Wallet{}, nil
+	}
+
+	if userWallet.SolanaAccountID == uuid.Nil && userWallet.WalletType == walletType {
+		log.Println("Deleting user SAO wallet without solana SPL token account")
+		if err := s.wr.DeleteWalletByID(ctx, userWallet.ID); err != nil {
+			log.Printf("Could not delete wallet with id=%s: %v", userWallet.ID.String(), err)
+		}
+	}
+	if err != nil && !db.IsNotFoundError(err) {
+		err = s.CreateWallet(ctx, uid)
+		if err != nil {
+			return Wallet{}, fmt.Errorf("could not create wallet: %w", err)
+		}
+		userWallet, err = s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+			UserID:     uid,
+			WalletType: walletType,
+		})
+		if err != nil {
+			if db.IsNotFoundError(err) {
+				return Wallet{}, ErrTemporarilyUnavailable
+			}
+			return Wallet{}, fmt.Errorf("could not get wallets list: %w", err)
+		}
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, userWallet.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Wallet{}, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return Wallet{}, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	var balance []Balance
+
+	switch sa.AccountType {
+	case GeneralAccount.String():
+		if bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey); err == nil {
+			balance = []Balance{
+				{
+					Currency: s.satorAssetName,
+					Amount:   bal,
+				},
+				// {
+				// 	Currency: "USD",
+				// 	Amount:   bal * 0.04, // FIXME: setup currency rate
+				// },
+			}
+		}
+	case GeneralAccount.String():
+		if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
+			balance = []Balance{
+				{
+					Currency: s.solanaAssetName,
+					Amount:   bal,
+				},
+				// {
+				// 	Currency: "USD",
+				// 	Amount:   bal * 70, // FIXME: setup currency rate
+				// },
+			}
+		}
+	}
+
+	return Wallet{
+		ID:                   userWallet.ID.String(),
+		Order:                userWallet.Sort,
+		SolanaAccountAddress: sa.PublicKey,
+		Actions: []Action{
+			{
+				Type: ActionSendTokens.String(),
+				Name: ActionSendTokens.Name(),
+				URL:  "",
+			},
+			{
+				Type: ActionReceiveTokens.String(),
+				Name: ActionReceiveTokens.Name(),
+				URL:  "",
+			},
+			// {
+			// 	Type: ActionStakeTokens.String(),
+			// 	Name: ActionStakeTokens.Name(),
+			// 	URL:  "",
+			// },
+		},
+		Balance: balance,
+	}, nil
 }
 
 // GetWalletByID returns wallet details by wallet id
