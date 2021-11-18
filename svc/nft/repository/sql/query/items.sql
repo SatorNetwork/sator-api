@@ -10,6 +10,7 @@ SELECT nft_items.*,
 FROM nft_items
 LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
 WHERE id = @id
+AND nft_items.supply > 0
 LIMIT 1;
 
 -- name: DoesUserOwnNFT :one
@@ -27,6 +28,7 @@ WITH minted_nfts AS (
 SELECT nft_items.*
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+WHERE nft_items.supply > 0
 ORDER BY nft_items.updated_at DESC, nft_items.created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
@@ -52,6 +54,7 @@ WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id
                         FROM nft_relations 
                         WHERE nft_relations.relation_id = @relation_id)
 AND (nft_items.supply > minted_nfts.minted OR minted_nfts.minted IS NULL)
+AND nft_items.supply > 0
 ORDER BY nft_items.created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
