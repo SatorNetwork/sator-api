@@ -97,6 +97,7 @@ SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, 
 FROM nft_items
 LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
 WHERE id = $1
+AND nft_items.supply > 0
 LIMIT 1
 `
 
@@ -142,6 +143,7 @@ WITH minted_nfts AS (
 SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+WHERE nft_items.supply > 0
 ORDER BY nft_items.updated_at DESC, nft_items.created_at DESC
 LIMIT $2 OFFSET $1
 `
@@ -248,6 +250,7 @@ WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id
                         FROM nft_relations 
                         WHERE nft_relations.relation_id = $1)
 AND (nft_items.supply > minted_nfts.minted OR minted_nfts.minted IS NULL)
+AND nft_items.supply > 0
 ORDER BY nft_items.created_at DESC
 LIMIT $3 OFFSET $2
 `
