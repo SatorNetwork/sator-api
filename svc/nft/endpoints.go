@@ -79,7 +79,7 @@ type (
 	}
 
 	GetNFTsWithFilterRequest struct {
-		RelationID string `json:"relation_id" validate:"uuid"`
+		RelationID string `json:"relation_id,omitempty"`
 
 		utils.PaginationRequest
 	}
@@ -280,7 +280,7 @@ func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		req := request.(GetNFTsWithFilterRequest)
+		req := request.(*GetNFTsWithFilterRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
