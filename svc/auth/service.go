@@ -265,6 +265,14 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 		return fmt.Errorf("could not get user: %w", err)
 	}
 
+	if u.Disabled {
+		return ErrUserIsDisabled
+	}
+
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		return ErrUserIsDisabled
+	}
+
 	otp := random.String(uint8(s.otpLen), random.Numeric)
 	if s.mail == nil {
 		otpHash = []byte(s.masterCode)
@@ -395,6 +403,14 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrEmailAlreadyVerified
 	}
 
+	if u.Disabled {
+		return ErrUserIsDisabled
+	}
+
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		return ErrUserIsDisabled
+	}
+
 	uv, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
 		RequestType: repository.VerifyConfirmAccount,
 		UserID:      userID,
@@ -442,6 +458,14 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 			return fmt.Errorf("user %w", ErrNotFound)
 		}
 		return fmt.Errorf("could not get user: %w", err)
+	}
+
+	if u.Disabled {
+		return ErrUserIsDisabled
+	}
+
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		return ErrUserIsDisabled
 	}
 
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
@@ -550,6 +574,14 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 	u, err := s.ur.GetUserByID(ctx, userID)
 	if err != nil {
 		return false, fmt.Errorf("failed to get user by provided id: %w", err)
+	}
+
+	if u.Disabled {
+		return false, ErrUserIsDisabled
+	}
+
+	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		return false, ErrUserIsDisabled
 	}
 
 	return u.VerifiedAt.Valid, nil
