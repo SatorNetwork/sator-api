@@ -17,6 +17,8 @@ import (
 type (
 	// Endpoints struct
 	Endpoints struct {
+		Auth endpoint.Endpoint
+
 		Login        endpoint.Endpoint
 		Logout       endpoint.Endpoint
 		SignUp       endpoint.Endpoint
@@ -142,6 +144,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
+		Auth: jwtMdw(MakeAuthEndpoint()),
+
 		Login:        MakeLoginEndpoint(as, validateFunc),
 		Logout:       jwtMdw(MakeLogoutEndpoint(as)),
 		SignUp:       MakeSignUpEndpoint(as, validateFunc),
@@ -166,6 +170,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 
 	if len(m) > 0 {
 		for _, mdw := range m {
+			e.Auth = mdw(e.Login)
 			e.Login = mdw(e.Login)
 			e.Logout = mdw(e.Logout)
 			e.SignUp = mdw(e.SignUp)
@@ -191,6 +196,13 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 	}
 
 	return e
+}
+
+// MakeAuthEndpoint ...
+func MakeAuthEndpoint() endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		return true, nil
+	}
 }
 
 // MakeLoginEndpoint ...
