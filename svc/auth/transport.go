@@ -30,6 +30,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
+	r.Get("/", httptransport.NewServer(
+		e.Auth,
+		decodeAuthRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/login", httptransport.NewServer(
 		e.Login,
 		decodeLoginRequest,
@@ -157,6 +164,10 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	return r
+}
+
+func decodeAuthRequest(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	return nil, nil
 }
 
 func decodeLoginRequest(_ context.Context, r *http.Request) (request interface{}, err error) {

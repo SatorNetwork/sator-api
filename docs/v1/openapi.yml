@@ -191,6 +191,21 @@ paths:
         "204":
           description: Get current API running status.
 
+  /auth:
+    get:
+      tags:
+        - "Auth"
+      summary: Validate access token (JWT).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /auth/login:
     post:
       tags:
