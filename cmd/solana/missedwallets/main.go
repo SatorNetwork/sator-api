@@ -9,7 +9,6 @@ import (
 
 	dbx "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/solana"
-	userRepository "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/go-env"
@@ -63,46 +62,31 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	userRepo, err := userRepository.Prepare(ctx, db)
+	mwr, err := Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("missed wallet repo error: %v", err)
+	}
+
+	usersWithoutWallets, err := mwr.GetUsersWithoutWallet(ctx)
 	if err != nil {
 		log.Fatalf("userRepo error: %v", err)
 	}
 
-	usersNumber, err := userRepo.CountAllUsers(ctx)
-	if err != nil {
-		log.Fatalf("userRepo error: %v", err)
-	}
-
-	log.Printf("USERS NUMBER: %d", usersNumber)
+	log.Printf("NUMBER OF USERS WITHOUT WALLETS: %d", len(usersWithoutWallets))
 
 	txFn := dbx.Transaction(db)
 
-	for i := 0; int64(i) < usersNumber; i++ {
-		// time.Sleep(time.Second*5)
+	counter := 0
 
-		log.Println("Getting user")
-		ul, err := userRepo.GetUsersListDesc(ctx, userRepository.GetUsersListDescParams{
-			Limit:  1,
-			Offset: int32(i),
-		})
-		if err != nil {
-			if dbx.IsNotFoundError(err) {
-				log.Print("No more users")
-				break
-			}
-			continue
-		}
-
-		if len(ul) < 1 {
-			log.Print("No more users")
-			break
-		}
-
-		user := ul[0]
-
+	for _, user := range usersWithoutWallets {
 		if !user.VerifiedAt.Valid {
 			continue
 		}
+		if skip, _ := mwr.IsEmailBlacklisted(ctx, user.Email); skip {
+			continue
+		}
+
+		counter++
 
 		if err := txFn(func(tx dbx.DBTX) error {
 			return createSolanaWalletIfNotExists(
@@ -117,6 +101,8 @@ func main() {
 			log.Printf("Create user wallet if not exists: %v", err)
 		}
 	}
+
+	fmt.Printf("finished: %d", counter)
 }
 
 func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID, feePayerPk, tokenHolderPk []byte) error {
