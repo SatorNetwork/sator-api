@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
+	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 )
 
@@ -79,10 +80,6 @@ type Tx struct {
 	CreatedAt string `json:"created_at"`
 }
 
-func IsStatusCodeSuccess(code int) bool {
-	return code >= http.StatusOK && code < 300
-}
-
 func (w *WalletClient) GetWallets(accessToken string) ([]*Wallet, error) {
 	url := "http://localhost:8080/wallets"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -98,7 +95,7 @@ func (w *WalletClient) GetWallets(accessToken string) ([]*Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -125,7 +122,7 @@ func (w *WalletClient) GetWalletByID(accessToken string, walletDetailsUrl string
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -152,7 +149,7 @@ func (w *WalletClient) GetWalletTxs(accessToken string, walletTransactionsUrl st
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -185,7 +182,7 @@ func (w *WalletClient) CreateTransfer(accessToken string, req *wallet.CreateTran
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -217,7 +214,7 @@ func (w *WalletClient) ConfirmTransfer(accessToken string, req *wallet.ConfirmTr
 	if err != nil {
 		return errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 

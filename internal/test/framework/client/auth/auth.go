@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -58,11 +59,6 @@ func RandomSignUpRequest() *SignUpRequest {
 	}
 }
 
-// TODO(evg): avoid code duplication
-func IsStatusCodeSuccess(code int) bool {
-	return code >= http.StatusOK && code < 300
-}
-
 func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
 	url := fmt.Sprintf("http://localhost:8080/auth/login")
 	body, err := json.Marshal(req)
@@ -82,7 +78,7 @@ func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -113,7 +109,7 @@ func (a *AuthClient) SignUp(req *SignUpRequest) (*SignUpResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -145,7 +141,7 @@ func (a *AuthClient) VerifyAcount(accessToken string, req *VerifyAccountRequest)
 	if err != nil {
 		return errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 

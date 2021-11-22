@@ -27,6 +27,7 @@ require (
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
 	github.com/mr-tron/base58 v1.2.0
+	github.com/nats-io/nats.go v1.9.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
