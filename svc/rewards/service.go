@@ -148,6 +148,10 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
+	if amount < 100 {
+		return ClaimRewardsResult{}, fmt.Errorf("%w: %d", ErrNotEnoughBalance, 100)
+	}
+
 	txHash, err := s.ws.WithdrawRewards(ctx, uid, amount)
 	if err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
