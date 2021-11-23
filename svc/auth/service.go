@@ -38,7 +38,7 @@ type (
 	ServiceOption func(*Service)
 
 	jwtInteractor interface {
-		NewWithUserData(userID uuid.UUID, username, role string) (uuid.UUID, string, error)
+		NewWithRefreshToken(userID uuid.UUID, username, role string) (access, refresh string, err error)
 	}
 
 	userRepository interface {
@@ -78,6 +78,12 @@ type (
 		AcceptInvitation(ctx context.Context, inviteeID uuid.UUID, inviteeEmail string) error
 		IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error)
 	}
+
+	// JWTs
+	Token struct {
+		AccessToken  string
+		RefreshToken string
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
@@ -106,33 +112,36 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 }
 
 // Login by email and password, returns token.
-func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+func (s *Service) Login(ctx context.Context, email, password string) (Token, error) {
 	user, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return "", ErrInvalidCredentials
+			return Token{}, ErrInvalidCredentials
 		}
-		return "", fmt.Errorf("could not log in: %w", err)
+		return Token{}, fmt.Errorf("could not log in: %w", err)
 	}
 
 	if user.Disabled {
-		return "", ErrUserIsDisabled
+		return Token{}, ErrUserIsDisabled
 	}
 
 	if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
-		return "", ErrUserIsDisabled
+		return Token{}, ErrUserIsDisabled
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
-		return "", ErrInvalidCredentials
+		return Token{}, ErrInvalidCredentials
 	}
 
-	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username, user.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(user.ID, user.Username, user.Role)
 	if err != nil {
-		return "", fmt.Errorf("could not generate new access token: %w", err)
+		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
 
-	return token, nil
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // Logout revokes JWT token.
@@ -142,62 +151,65 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 }
 
 // RefreshToken returns new jwt string.
-func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error) {
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (Token, error) {
 	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
-		return "", fmt.Errorf("could not refresh access token: %w", err)
+		return Token{}, fmt.Errorf("could not refresh access token: %w", err)
 	}
 
 	if u.Disabled {
-		return "", ErrUserIsDisabled
+		return Token{}, ErrUserIsDisabled
 	}
 
 	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		return "", ErrUserIsDisabled
+		return Token{}, ErrUserIsDisabled
 	}
 
 	// TODO: add JWT id into the revoked tokens list
-	_, token, err := s.jwt.NewWithUserData(uid, u.Username, role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role)
 	if err != nil {
-		return "", fmt.Errorf("could not refresh access token: %w", err)
+		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
 
-	return token, nil
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // SignUp registers account with email, password and username.
-func (s *Service) SignUp(ctx context.Context, email, password, username string) (string, error) {
+func (s *Service) SignUp(ctx context.Context, email, password, username string) (Token, error) {
 	var otpHash []byte
 	// Make email address case-insensitive
 	email = strings.ToLower(email)
 
 	if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
-		return "", validator.NewValidationError(url.Values{
+		return Token{}, validator.NewValidationError(url.Values{
 			"email": []string{ErrRestrictedEmailDomain.Error()},
 		})
 	}
 
 	// Check if the passed email address is not taken yet
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
-		return "", validator.NewValidationError(url.Values{
+		return Token{}, validator.NewValidationError(url.Values{
 			"email": []string{"email is already taken"},
 		})
 	} else if !db.IsNotFoundError(err) {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	// Check if the passed username is not taken yet
 	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
-		return "", validator.NewValidationError(url.Values{
+		return Token{}, validator.NewValidationError(url.Values{
 			"username": []string{"username is already taken"},
 		})
 	} else if !db.IsNotFoundError(err) {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	passwdHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	u, err := s.ur.CreateUser(ctx, repository.CreateUserParams{
@@ -207,7 +219,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Role:     rbac.RoleUser.String(),
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -216,7 +228,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	} else {
 		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 		if err != nil {
-			return "", fmt.Errorf("could not create a new account: %w", err)
+			return Token{}, fmt.Errorf("could not create a new account: %w", err)
 		}
 	}
 
@@ -226,12 +238,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Email:            email,
 		VerificationCode: otpHash,
 	}); err != nil {
-		return "", fmt.Errorf("could not generate verification code: %w", err)
+		return Token{}, fmt.Errorf("could not generate verification code: %w", err)
 	}
 
 	if s.mail != nil {
 		if err := s.mail.SendVerificationCode(ctx, email, otp); err != nil {
-			return "", fmt.Errorf("could not send verification code: %w", err)
+			return Token{}, fmt.Errorf("could not send verification code: %w", err)
 		}
 	} else {
 		// log data for debug mode
@@ -239,9 +251,9 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username, u.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role)
 	if err != nil {
-		return "", fmt.Errorf("could not generate new access token: %w", err)
+		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
 
 	if isInvited, _ := s.ic.IsEmailInvited(ctx, email); isInvited {
@@ -250,7 +262,10 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		}
 	}
 
-	return token, nil
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // ForgotPassword requests password reset with email.

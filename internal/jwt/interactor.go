@@ -21,6 +21,7 @@ type (
 	JWT struct {
 		signingKey []byte
 		expIn      time.Duration
+		expInRt    time.Duration
 	}
 )
 
@@ -30,6 +31,7 @@ func NewInteractor(signingKey string, expiresIn time.Duration) *JWT {
 	return &JWT{
 		signingKey: []byte(signingKey),
 		expIn:      expiresIn,
+		expInRt:    expiresIn + (time.Hour * 24 * 30), // expiresIn + 30 days
 	}
 }
 
@@ -81,7 +83,7 @@ func (i *JWT) NewWithRefreshToken(userID uuid.UUID, username, role string) (acce
 		jwt.StandardClaims{
 			Id:        uuid.New().String(),
 			Subject:   RefreshToken,
-			ExpiresAt: time.Now().Add(i.expIn + (30 * 24 * time.Hour)).Unix(), // access token exp time + 30 days
+			ExpiresAt: time.Now().Add(i.expInRt).Unix(), // access token exp time + 30 days
 			NotBefore: time.Now().Unix(),
 			IssuedAt:  time.Now().Unix(),
 		},
