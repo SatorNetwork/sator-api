@@ -8,4 +8,5 @@ var (
 	ErrNotFound           = errors.New("not found")
 	ErrForbidden          = errors.New("forbidden")
 	ErrTokenHolderBalance = errors.New("could not claim rewards, please try again later")
+	ErrNotEnoughBalance   = errors.New("minimal amount to send")
 )

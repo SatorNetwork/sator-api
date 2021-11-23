@@ -8,4 +8,6 @@ var (
 
 	// ErrInvalidParameter indicates that passed invalid parameter.
 	ErrInvalidParameter = errors.New("invalid parameter")
+
+	ErrNotEnoughBalance = errors.New("minimal amount to claim")
 )
