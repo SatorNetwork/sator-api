@@ -67,6 +67,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.isEmailBlacklistedStmt, err = db.PrepareContext(ctx, isEmailBlacklisted); err != nil {
 		return nil, fmt.Errorf("error preparing query IsEmailBlacklisted: %w", err)
 	}
+	if q.isEmailWhitelistedStmt, err = db.PrepareContext(ctx, isEmailWhitelisted); err != nil {
+		return nil, fmt.Errorf("error preparing query IsEmailWhitelisted: %w", err)
+	}
 	if q.updateUserEmailStmt, err = db.PrepareContext(ctx, updateUserEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserEmail: %w", err)
 	}
@@ -162,6 +165,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing isEmailBlacklistedStmt: %w", cerr)
 		}
 	}
+	if q.isEmailWhitelistedStmt != nil {
+		if cerr := q.isEmailWhitelistedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isEmailWhitelistedStmt: %w", cerr)
+		}
+	}
 	if q.updateUserEmailStmt != nil {
 		if cerr := q.updateUserEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserEmailStmt: %w", cerr)
@@ -241,6 +249,7 @@ type Queries struct {
 	getUsersListDescStmt                *sql.Stmt
 	getVerifiedUsersListDescStmt        *sql.Stmt
 	isEmailBlacklistedStmt              *sql.Stmt
+	isEmailWhitelistedStmt              *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
@@ -267,6 +276,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
 		isEmailBlacklistedStmt:              q.isEmailBlacklistedStmt,
+		isEmailWhitelistedStmt:              q.isEmailWhitelistedStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,

@@ -161,11 +161,6 @@ func FromServiceNFTAuctionParams(a *NFTAuctionParams) *TransportNFTAuctionParams
 }
 
 func (n *TransportNFT) ToServiceNFT() *NFT {
-	relationIds := make([]uuid.UUID, 0, len(n.RelationIDs))
-	for _, r := range n.RelationIDs {
-		relationIds = append(relationIds, r)
-	}
-
 	nft := &NFT{
 		ID:          n.ID,
 		ImageLink:   n.ImageLink,
@@ -178,7 +173,7 @@ func (n *TransportNFT) ToServiceNFT() *NFT {
 		SellType:    n.SellType,
 		BuyNowPrice: n.BuyNowPrice,
 		TokenURI:    n.TokenURI,
-		RelationIDs: relationIds,
+		RelationIDs: n.RelationIDs,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = n.AuctionParams.ToServiceNFTAuctionParams()
@@ -300,7 +295,7 @@ func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 				return nil, err
 			}
 
-			return nfts, nil
+			return FromServiceNFTs(nfts), nil
 		}
 
 		nfts, err := s.GetNFTs(ctx, req.Limit(), req.Offset())

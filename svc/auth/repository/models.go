@@ -33,3 +33,8 @@ type UserVerification struct {
 	VerificationCode []byte    `json:"verification_code"`
 	CreatedAt        time.Time `json:"created_at"`
 }
+
+type Whitelist struct {
+	AllowedType  string `json:"allowed_type"`
+	AllowedValue string `json:"allowed_value"`
+}

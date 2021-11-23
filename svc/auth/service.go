@@ -61,6 +61,7 @@ type (
 
 		// Blacklist
 		IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
+		IsEmailWhitelisted(ctx context.Context, email string) (bool, error)
 	}
 
 	mailer interface {
@@ -118,7 +119,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
 		return "", ErrUserIsDisabled
 	}
 
@@ -151,7 +152,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return "", ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 		return "", ErrUserIsDisabled
 	}
 
@@ -170,7 +171,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	// Make email address case-insensitive
 	email = strings.ToLower(email)
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
 		return "", validator.NewValidationError(url.Values{
 			"email": []string{ErrRestrictedEmailDomain.Error()},
 		})
@@ -268,7 +269,7 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 		return ErrUserIsDisabled
 	}
 
@@ -406,7 +407,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 		return ErrUserIsDisabled
 	}
 
@@ -463,7 +464,7 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 		return ErrUserIsDisabled
 	}
 
@@ -579,7 +580,7 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 		return false, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 		return false, ErrUserIsDisabled
 	}
 
