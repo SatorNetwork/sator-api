@@ -88,17 +88,18 @@ func (s *Service) AddImageResize(ctx context.Context, it File, file multipart.Fi
 func (s *Service) AddImage(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error) {
 	id := uuid.New()
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
+	filePath := s.storage.FilePath(fileName)
 	ct := fileHeader.Header.Get("Content-Type")
 
-	if err := s.storage.Upload(file, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
+	if err := s.storage.Upload(file, filePath, storage.Public, ct); err != nil {
 		return File{}, errors.Wrap(err, "upload image")
 	}
 
 	image, err := s.msr.AddFile(ctx, repository.AddFileParams{
 		ID:       id,
 		FileName: fileHeader.Filename,
-		FilePath: s.storage.FilePath(fileName),
-		FileUrl:  s.storage.FileURL(strconv.Itoa(time.Now().Year()) + "/" + time.Now().Month().String() + "/" + s.storage.FilePath(fileName)),
+		FilePath: filePath,
+		FileUrl:  s.storage.FileURL(filePath),
 	})
 	if err != nil {
 		return File{}, fmt.Errorf("could not add image with file name=%s: %w", it.Filename, err)
@@ -154,17 +155,18 @@ func (s *Service) GetImagesList(ctx context.Context, limit, offset int32) ([]Fil
 func (s *Service) AddFile(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error) {
 	id := uuid.New()
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
+	filePath := s.storage.FilePath(fileName)
 	ct := fileHeader.Header.Get("Content-Type")
 
-	if err := s.storage.Upload(file, s.storage.FilePath(fileName), storage.Public, ct); err != nil {
+	if err := s.storage.Upload(file, filePath, storage.Public, ct); err != nil {
 		return File{}, errors.Wrap(err, "upload image")
 	}
 
 	image, err := s.msr.AddFile(ctx, repository.AddFileParams{
 		ID:       id,
 		FileName: fileHeader.Filename,
-		FilePath: s.storage.FilePath(fileName),
-		FileUrl:  s.storage.FileURL(strconv.Itoa(time.Now().Year()) + "/" + time.Now().Month().String() + "/" + s.storage.FilePath(fileName)),
+		FilePath: filePath,
+		FileUrl:  s.storage.FileURL(filePath),
 	})
 	if err != nil {
 		return File{}, fmt.Errorf("could not add image with file name=%s: %w", it.Filename, err)
