@@ -43,10 +43,10 @@ type (
 	}
 
 	authService interface {
-		Login(ctx context.Context, email, password string) (string, error)
+		Login(ctx context.Context, email, password string) (Token, error)
 		Logout(ctx context.Context, tid string) error
-		SignUp(ctx context.Context, email, password, username string) (string, error)
-		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error)
+		SignUp(ctx context.Context, email, password, username string) (Token, error)
+		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (Token, error)
 
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
@@ -69,7 +69,8 @@ type (
 
 	// AccessToken struct
 	AccessToken struct {
-		Token string `json:"access_token"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	// LoginRequest struct
@@ -228,7 +229,7 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 			return nil, err
 		}
 
-		return AccessToken{Token: token}, nil
+		return AccessToken(token), nil
 	}
 }
 
@@ -264,7 +265,7 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 			return nil, err
 		}
 
-		return AccessToken{Token: token}, nil
+		return AccessToken(token), nil
 	}
 }
 
@@ -296,7 +297,7 @@ func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			return nil, err
 		}
 
-		return AccessToken{Token: token}, nil
+		return AccessToken(token), nil
 	}
 }
 
