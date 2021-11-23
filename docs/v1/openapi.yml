@@ -542,6 +542,107 @@ paths:
         "422":
           $ref: "#/components/responses/ValidationError"
 
+  /auth/whitelist:
+    get:
+      tags:
+        - "Whitelist"
+      summary: Get whitelist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns shows list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    allowed_type:
+                      type: string
+                      example: "email"
+                    allowed_value:
+                      type: string
+                      example: "qwe@gmail.com"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - "Whitelist"
+      summary: Used for add allowed type and value to whitelist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                allowed_type:
+                  type: string
+                  example: "email"
+                allowed_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - "Whitelist"
+      summary: Used for delete allowed type and value to whitelist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                allowed_type:
+                  type: string
+                  example: "email"
+                allowed_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /profile:
     get:
       tags:

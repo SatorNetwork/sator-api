@@ -1,5 +1,11 @@
 package utils
 
+// Predefined request query keys
+const (
+	PageParam         = "page"
+	ItemsPerPageParam = "items_per_page"
+)
+
 // PaginationRequest struct
 type PaginationRequest struct {
 	Page         int32 `json:"page,omitempty" validate:"number,gte=0"`

@@ -7,6 +7,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
+
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -40,6 +43,10 @@ type (
 		DestroyAccount        endpoint.Endpoint
 		IsVerified            endpoint.Endpoint
 		ResendOTP             endpoint.Endpoint
+
+		AddToWhitelist      endpoint.Endpoint
+		DeleteFromWhitelist endpoint.Endpoint
+		GetWhitelist        endpoint.Endpoint
 	}
 
 	authService interface {
@@ -65,6 +72,10 @@ type (
 		DestroyAccount(ctx context.Context, uid uuid.UUID, otp string) error
 		IsVerified(ctx context.Context, userID uuid.UUID) (bool, error)
 		ResendOTP(ctx context.Context, userID uuid.UUID) error
+
+		AddToWhitelist(ctx context.Context, allowedType, allowedValue string) error
+		DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error
+		GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error)
 	}
 
 	// AccessToken struct
@@ -137,6 +148,12 @@ type (
 	UpdateUsernameRequest struct {
 		Username string `json:"username" validate:"required"`
 	}
+
+	// WhitelistRequest struct
+	WhitelistRequest struct {
+		AllowedType  string `json:"allowed_type,omitempty" validate:"required"`
+		AllowedValue string `json:"allowed_value,omitempty" validate:"required"`
+	}
 )
 
 // MakeEndpoints ...
@@ -166,6 +183,9 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		RequestDestroyAccount: jwtMdw(MakeRequestDestroyAccount(as, validateFunc)),
 		VerifyDestroyCode:     jwtMdw(MakeVerifyDestroyEndpoint(as, validateFunc)),
 		DestroyAccount:        jwtMdw(MakeDestroyAccountEndpoint(as, validateFunc)),
+		AddToWhitelist:        jwtMdw(MakeRequestAddToWhitelist(as, validateFunc)),
+		DeleteFromWhitelist:   jwtMdw(MakeRequestDeleteFromWhitelist(as, validateFunc)),
+		GetWhitelist:          jwtMdw(MakeRequestGetWhitelist(as, validateFunc)),
 	}
 
 	if len(m) > 0 {
@@ -192,6 +212,10 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.RequestDestroyAccount = mdw(e.RequestDestroyAccount)
 			e.VerifyDestroyCode = mdw(e.VerifyDestroyCode)
 			e.DestroyAccount = mdw(e.DestroyAccount)
+
+			e.AddToWhitelist = mdw(e.AddToWhitelist)
+			e.DeleteFromWhitelist = mdw(e.DeleteFromWhitelist)
+			e.GetWhitelist = mdw(e.GetWhitelist)
 		}
 	}
 
@@ -589,5 +613,68 @@ func MakeResendOTPEndpoint(s authService) endpoint.Endpoint {
 		}
 
 		return nil, nil
+	}
+}
+
+// MakeRequestAddToWhitelist ...
+func MakeRequestAddToWhitelist(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(WhitelistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.AddToWhitelist(ctx, req.AllowedType, req.AllowedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeRequestDeleteFromWhitelist ...
+func MakeRequestDeleteFromWhitelist(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(WhitelistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.DeleteFromWhitelist(ctx, req.AllowedType, req.AllowedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeRequestGetWhitelist ...
+func MakeRequestGetWhitelist(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(utils.PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetWhitelist(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }
