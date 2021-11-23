@@ -60,7 +60,7 @@ type (
 		DeleteUserVerificationsByUserID(ctx context.Context, arg repository.DeleteUserVerificationsByUserIDParams) error
 
 		// Blacklist
-		IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
+		// IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
 		IsEmailWhitelisted(ctx context.Context, email string) (bool, error)
 	}
 
@@ -125,8 +125,10 @@ func (s *Service) Login(ctx context.Context, email, password string) (Token, err
 		return Token{}, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
-		return Token{}, ErrUserIsDisabled
+	if !strings.Contains(email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
+			return Token{}, ErrUserIsDisabled
+		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
@@ -161,8 +163,10 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return Token{}, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		return Token{}, ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return Token{}, ErrUserIsDisabled
+		}
 	}
 
 	// TODO: add JWT id into the revoked tokens list
@@ -183,10 +187,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	// Make email address case-insensitive
 	email = strings.ToLower(email)
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
-		return Token{}, validator.NewValidationError(url.Values{
-			"email": []string{ErrRestrictedEmailDomain.Error()},
-		})
+	if !strings.Contains(email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrRestrictedEmailDomain.Error()},
+			})
+		}
 	}
 
 	// Check if the passed email address is not taken yet
@@ -284,8 +290,10 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		return ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return ErrUserIsDisabled
+		}
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -422,8 +430,10 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		return ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return ErrUserIsDisabled
+		}
 	}
 
 	uv, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
@@ -479,8 +489,10 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		return ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return ErrUserIsDisabled
+		}
 	}
 
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
@@ -595,8 +607,10 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 		return false, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		return false, ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return false, ErrUserIsDisabled
+		}
 	}
 
 	return u.VerifiedAt.Valid, nil
