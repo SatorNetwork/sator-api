@@ -82,7 +82,7 @@ func main() {
 		if !user.VerifiedAt.Valid {
 			continue
 		}
-		if skip, _ := mwr.IsEmailBlacklisted(ctx, user.Email); skip {
+		if yes, _ := mwr.IsEmailWhitelisted(ctx, user.Email); !yes {
 			continue
 		}
 

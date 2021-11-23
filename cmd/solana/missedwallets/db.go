@@ -25,8 +25,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUsersWithoutWalletStmt, err = db.PrepareContext(ctx, getUsersWithoutWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUsersWithoutWallet: %w", err)
 	}
-	if q.isEmailBlacklistedStmt, err = db.PrepareContext(ctx, isEmailBlacklisted); err != nil {
-		return nil, fmt.Errorf("error preparing query IsEmailBlacklisted: %w", err)
+	if q.isEmailWhitelistedStmt, err = db.PrepareContext(ctx, isEmailWhitelisted); err != nil {
+		return nil, fmt.Errorf("error preparing query IsEmailWhitelisted: %w", err)
 	}
 	return &q, nil
 }
@@ -38,9 +38,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUsersWithoutWalletStmt: %w", cerr)
 		}
 	}
-	if q.isEmailBlacklistedStmt != nil {
-		if cerr := q.isEmailBlacklistedStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing isEmailBlacklistedStmt: %w", cerr)
+	if q.isEmailWhitelistedStmt != nil {
+		if cerr := q.isEmailWhitelistedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isEmailWhitelistedStmt: %w", cerr)
 		}
 	}
 	return err
@@ -83,7 +83,7 @@ type Queries struct {
 	db                        DBTX
 	tx                        *sql.Tx
 	getUsersWithoutWalletStmt *sql.Stmt
-	isEmailBlacklistedStmt    *sql.Stmt
+	isEmailWhitelistedStmt    *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -91,6 +91,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                        tx,
 		tx:                        tx,
 		getUsersWithoutWalletStmt: q.getUsersWithoutWalletStmt,
-		isEmailBlacklistedStmt:    q.isEmailBlacklistedStmt,
+		isEmailWhitelistedStmt:    q.isEmailWhitelistedStmt,
 	}
 }
