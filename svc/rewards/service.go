@@ -148,8 +148,8 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
-	if amount < 100 {
-		return ClaimRewardsResult{}, fmt.Errorf("%w: %d", ErrNotEnoughBalance, 100)
+	if amount < 50 {
+		return ClaimRewardsResult{}, fmt.Errorf("%w: %d", ErrNotEnoughBalance, 50)
 	}
 
 	txHash, err := s.ws.WithdrawRewards(ctx, uid, amount)
