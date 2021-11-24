@@ -13,7 +13,7 @@ WHERE allowed_type = $1 AND allowed_value = $2;
 -- name: GetWhitelist :many
 SELECT *
 FROM whitelist
-ORDER BY allowed_value DESC
+ORDER BY allowed_value ASC
     LIMIT $1 OFFSET $2;
 
 -- name: AddToWhitelist :one

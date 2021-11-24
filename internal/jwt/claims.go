@@ -78,3 +78,15 @@ func TokenIDFromContext(ctx context.Context) (uuid.UUID, error) {
 	}
 	return uuid.Nil, ErrInvalidJWTClaims
 }
+
+// TokenSubjectFromContext returns jwt subject from request context
+func TokenSubjectFromContext(ctx context.Context) (string, error) {
+	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
+	if cl, ok := claims.(*Claims); ok {
+		if cl.Subject == "" {
+			return "", ErrJWTSubjectEmpty
+		}
+		return cl.Subject, nil
+	}
+	return "", ErrInvalidJWTClaims
+}

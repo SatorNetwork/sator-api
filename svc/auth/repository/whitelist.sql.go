@@ -48,7 +48,7 @@ func (q *Queries) DeleteFromWhitelist(ctx context.Context, arg DeleteFromWhiteli
 const getWhitelist = `-- name: GetWhitelist :many
 SELECT allowed_type, allowed_value
 FROM whitelist
-ORDER BY allowed_value DESC
+ORDER BY allowed_value ASC
     LIMIT $1 OFFSET $2
 `
 
