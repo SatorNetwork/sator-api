@@ -18,7 +18,7 @@ import (
 
 // Predefined request query keys
 const (
-	allowed_value = "allowed_value"
+	allowedValue = "allowed_value"
 )
 
 type (
@@ -344,7 +344,7 @@ func encodeTokenResponse(_ context.Context, w http.ResponseWriter, response inte
 
 func decodeGetWhitelist(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetWhitelistRequest{
-		AllowedValue: r.URL.Query().Get(allowed_value),
+		AllowedValue: r.URL.Query().Get(allowedValue),
 		PaginationRequest: utils.PaginationRequest{
 			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),

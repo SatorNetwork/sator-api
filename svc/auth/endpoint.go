@@ -75,7 +75,8 @@ type (
 
 		AddToWhitelist(ctx context.Context, allowedType, allowedValue string) error
 		DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error
-		GetWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error)
+		GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error)
+		SearchInWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error)
 	}
 
 	// AccessToken struct
@@ -158,7 +159,7 @@ type (
 
 	// GetWhitelistRequest struct
 	GetWhitelistRequest struct {
-		AllowedValue string `json:"allowed_value"`
+		AllowedValue string `json:"allowed_value,omitempty"`
 		utils.PaginationRequest
 	}
 )
@@ -190,9 +191,10 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		RequestDestroyAccount: jwtMdw(MakeRequestDestroyAccount(as, validateFunc)),
 		VerifyDestroyCode:     jwtMdw(MakeVerifyDestroyEndpoint(as, validateFunc)),
 		DestroyAccount:        jwtMdw(MakeDestroyAccountEndpoint(as, validateFunc)),
-		AddToWhitelist:        jwtMdw(MakeRequestAddToWhitelist(as, validateFunc)),
-		DeleteFromWhitelist:   jwtMdw(MakeRequestDeleteFromWhitelist(as, validateFunc)),
-		GetWhitelist:          jwtMdw(MakeRequestGetWhitelist(as, validateFunc)),
+
+		GetWhitelist:        jwtMdw(MakeGetWhitelistEndpoint(as, validateFunc)),
+		AddToWhitelist:      jwtMdw(MakeAddToWhitelistEndpoint(as, validateFunc)),
+		DeleteFromWhitelist: jwtMdw(MakeDeleteFromWhitelistEndpoint(as, validateFunc)),
 	}
 
 	if len(m) > 0 {
@@ -623,8 +625,8 @@ func MakeResendOTPEndpoint(s authService) endpoint.Endpoint {
 	}
 }
 
-// MakeRequestAddToWhitelist ...
-func MakeRequestAddToWhitelist(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+// MakeAddToWhitelistEndpoint ...
+func MakeAddToWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
 			return nil, err
@@ -644,8 +646,8 @@ func MakeRequestAddToWhitelist(s authService, v validator.ValidateFunc) endpoint
 	}
 }
 
-// MakeRequestDeleteFromWhitelist ...
-func MakeRequestDeleteFromWhitelist(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+// MakeDeleteFromWhitelistEndpoint ...
+func MakeDeleteFromWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
 			return nil, err
@@ -665,8 +667,8 @@ func MakeRequestDeleteFromWhitelist(s authService, v validator.ValidateFunc) end
 	}
 }
 
-// MakeRequestGetWhitelist ...
-func MakeRequestGetWhitelist(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+// MakeGetWhitelistEndpoint ...
+func MakeGetWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
 			return nil, err
@@ -677,9 +679,19 @@ func MakeRequestGetWhitelist(s authService, v validator.ValidateFunc) endpoint.E
 			return nil, err
 		}
 
-		resp, err := s.GetWhitelist(ctx, req.Limit(), req.Offset(), req.AllowedValue)
-		if err != nil {
-			return nil, err
+		var resp []Whitelist
+		var err error
+
+		if req.AllowedValue == "" {
+			resp, err = s.GetWhitelist(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			resp, err = s.SearchInWhitelist(ctx, req.Limit(), req.Offset(), req.AllowedValue)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return resp, nil

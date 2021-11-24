@@ -767,46 +767,43 @@ func (s *Service) AddToWhitelist(ctx context.Context, allowedType, allowedValue 
 }
 
 // GetWhitelist returns whitelist with pagination.
-func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error) {
-	if query != "" {
-		whitelist, err := s.ur.GetWhitelistByAllowedValue(ctx, repository.GetWhitelistByAllowedValueParams{
-			Query:     query,
-			OffsetVal: offset,
-			LimitVal:  limit,
-		})
-		if err != nil {
-			return []Whitelist{}, fmt.Errorf("could not add allowed type and value to whitelist: %w", err)
-		}
-
-		result := make([]Whitelist, 0, len(whitelist))
-		for _, w := range whitelist {
-			wh := Whitelist{
-				AllowedType:  w.AllowedType,
-				AllowedValue: w.AllowedValue,
-			}
-
-			result = append(result, wh)
-		}
-
-		return result, nil
-	}
-
+func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error) {
 	whitelist, err := s.ur.GetWhitelist(ctx, repository.GetWhitelistParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return []Whitelist{}, fmt.Errorf("could not add allowed type and value to whitelist: %w", err)
+		return nil, fmt.Errorf("could not get whitelist: %w", err)
 	}
 
 	result := make([]Whitelist, 0, len(whitelist))
 	for _, w := range whitelist {
-		wh := Whitelist{
+		result = append(result, Whitelist{
 			AllowedType:  w.AllowedType,
 			AllowedValue: w.AllowedValue,
-		}
+		})
+	}
 
-		result = append(result, wh)
+	return result, nil
+}
+
+// SearchInWhitelist returns whitelist with pagination.
+func (s *Service) SearchInWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error) {
+	whitelist, err := s.ur.GetWhitelistByAllowedValue(ctx, repository.GetWhitelistByAllowedValueParams{
+		Query:     query,
+		OffsetVal: offset,
+		LimitVal:  limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get whitelist by query %v: %w", query, err)
+	}
+
+	result := make([]Whitelist, 0, len(whitelist))
+	for _, w := range whitelist {
+		result = append(result, Whitelist{
+			AllowedType:  w.AllowedType,
+			AllowedValue: w.AllowedValue,
+		})
 	}
 
 	return result, nil
@@ -814,12 +811,11 @@ func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32, query s
 
 // DeleteFromWhitelist used for delete allowed type and value from whitelist.
 func (s *Service) DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error {
-	err := s.ur.DeleteFromWhitelist(ctx, repository.DeleteFromWhitelistParams{
+	if err := s.ur.DeleteFromWhitelist(ctx, repository.DeleteFromWhitelistParams{
 		AllowedType:  allowedType,
 		AllowedValue: allowedValue,
-	})
-	if err != nil {
-		return fmt.Errorf("could not delete allowed type and value from whitelist: %w", err)
+	}); err != nil {
+		return fmt.Errorf("could not delete record from whitelist: %w", err)
 	}
 
 	return nil
