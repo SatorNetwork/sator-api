@@ -228,7 +228,7 @@ paths:
               properties:
                 email:
                   type: string
-                  example: "john.doe@mail.dev"
+                  example: "john.doe@gmail.com"
                 password:
                   type: string
                   example: "qwerty12345"
@@ -571,6 +571,13 @@ paths:
           required: false
           schema:
             type: integer
+        - name: allowed_value
+          in: query
+          description: allowed value will be filtered by this parameter.
+          required: false
+          schema:
+            type: string
+
       responses:
         "200":
           description: Returns shows list with pagination.

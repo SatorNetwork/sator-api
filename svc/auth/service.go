@@ -70,6 +70,7 @@ type (
 		AddToWhitelist(ctx context.Context, arg repository.AddToWhitelistParams) (repository.Whitelist, error)
 		DeleteFromWhitelist(ctx context.Context, arg repository.DeleteFromWhitelistParams) error
 		GetWhitelist(ctx context.Context, arg repository.GetWhitelistParams) ([]repository.Whitelist, error)
+		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
 	}
 
 	mailer interface {
@@ -766,7 +767,30 @@ func (s *Service) AddToWhitelist(ctx context.Context, allowedType, allowedValue 
 }
 
 // GetWhitelist returns whitelist with pagination.
-func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error) {
+func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error) {
+	if query != "" {
+		whitelist, err := s.ur.GetWhitelistByAllowedValue(ctx, repository.GetWhitelistByAllowedValueParams{
+			Query:     query,
+			OffsetVal: offset,
+			LimitVal:  limit,
+		})
+		if err != nil {
+			return []Whitelist{}, fmt.Errorf("could not add allowed type and value to whitelist: %w", err)
+		}
+
+		result := make([]Whitelist, 0, len(whitelist))
+		for _, w := range whitelist {
+			wh := Whitelist{
+				AllowedType:  w.AllowedType,
+				AllowedValue: w.AllowedValue,
+			}
+
+			result = append(result, wh)
+		}
+
+		return result, nil
+	}
+
 	whitelist, err := s.ur.GetWhitelist(ctx, repository.GetWhitelistParams{
 		Limit:  limit,
 		Offset: offset,

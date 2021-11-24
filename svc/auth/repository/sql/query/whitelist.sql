@@ -25,3 +25,10 @@ VALUES (
            @allowed_type,
            @allowed_value
        ) RETURNING *;
+
+-- name: GetWhitelistByAllowedValue :many
+SELECT *
+FROM whitelist
+WHERE allowed_value LIKE CONCAT('%', @query::text, '%')
+ORDER BY allowed_value ASC
+    LIMIT @limit_val::INT OFFSET @offset_val::INT;

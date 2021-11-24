@@ -73,6 +73,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getWhitelistStmt, err = db.PrepareContext(ctx, getWhitelist); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWhitelist: %w", err)
 	}
+	if q.getWhitelistByAllowedValueStmt, err = db.PrepareContext(ctx, getWhitelistByAllowedValue); err != nil {
+		return nil, fmt.Errorf("error preparing query GetWhitelistByAllowedValue: %w", err)
+	}
 	if q.isEmailBlacklistedStmt, err = db.PrepareContext(ctx, isEmailBlacklisted); err != nil {
 		return nil, fmt.Errorf("error preparing query IsEmailBlacklisted: %w", err)
 	}
@@ -184,6 +187,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getWhitelistStmt: %w", cerr)
 		}
 	}
+	if q.getWhitelistByAllowedValueStmt != nil {
+		if cerr := q.getWhitelistByAllowedValueStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getWhitelistByAllowedValueStmt: %w", cerr)
+		}
+	}
 	if q.isEmailBlacklistedStmt != nil {
 		if cerr := q.isEmailBlacklistedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing isEmailBlacklistedStmt: %w", cerr)
@@ -275,6 +283,7 @@ type Queries struct {
 	getUsersListDescStmt                *sql.Stmt
 	getVerifiedUsersListDescStmt        *sql.Stmt
 	getWhitelistStmt                    *sql.Stmt
+	getWhitelistByAllowedValueStmt      *sql.Stmt
 	isEmailBlacklistedStmt              *sql.Stmt
 	isEmailWhitelistedStmt              *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
@@ -305,6 +314,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
 		getWhitelistStmt:                    q.getWhitelistStmt,
+		getWhitelistByAllowedValueStmt:      q.getWhitelistByAllowedValueStmt,
 		isEmailBlacklistedStmt:              q.isEmailBlacklistedStmt,
 		isEmailWhitelistedStmt:              q.isEmailWhitelistedStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,

@@ -16,6 +16,11 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+// Predefined request query keys
+const (
+	allowed_value = "allowed_value"
+)
+
 type (
 	logger interface {
 		Log(keyvals ...interface{}) error
@@ -338,9 +343,12 @@ func encodeTokenResponse(_ context.Context, w http.ResponseWriter, response inte
 }
 
 func decodeGetWhitelist(_ context.Context, r *http.Request) (interface{}, error) {
-	return utils.PaginationRequest{
-		Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
-		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+	return GetWhitelistRequest{
+		AllowedValue: r.URL.Query().Get(allowed_value),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
 	}, nil
 }
 

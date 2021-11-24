@@ -80,6 +80,43 @@ func (q *Queries) GetWhitelist(ctx context.Context, arg GetWhitelistParams) ([]W
 	return items, nil
 }
 
+const getWhitelistByAllowedValue = `-- name: GetWhitelistByAllowedValue :many
+SELECT allowed_type, allowed_value
+FROM whitelist
+WHERE allowed_value LIKE CONCAT('%', $1::text, '%')
+ORDER BY allowed_value ASC
+    LIMIT $3::INT OFFSET $2::INT
+`
+
+type GetWhitelistByAllowedValueParams struct {
+	Query     string `json:"query"`
+	OffsetVal int32  `json:"offset_val"`
+	LimitVal  int32  `json:"limit_val"`
+}
+
+func (q *Queries) GetWhitelistByAllowedValue(ctx context.Context, arg GetWhitelistByAllowedValueParams) ([]Whitelist, error) {
+	rows, err := q.query(ctx, q.getWhitelistByAllowedValueStmt, getWhitelistByAllowedValue, arg.Query, arg.OffsetVal, arg.LimitVal)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Whitelist
+	for rows.Next() {
+		var i Whitelist
+		if err := rows.Scan(&i.AllowedType, &i.AllowedValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isEmailWhitelisted = `-- name: IsEmailWhitelisted :one
 SELECT count(*) > 0 FROM whitelist
 WHERE (allowed_type = 'email_domain'

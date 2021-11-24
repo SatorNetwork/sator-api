@@ -75,7 +75,7 @@ type (
 
 		AddToWhitelist(ctx context.Context, allowedType, allowedValue string) error
 		DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error
-		GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error)
+		GetWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error)
 	}
 
 	// AccessToken struct
@@ -154,6 +154,12 @@ type (
 	WhitelistRequest struct {
 		AllowedType  string `json:"allowed_type,omitempty" validate:"required,oneof=email email_domain"`
 		AllowedValue string `json:"allowed_value,omitempty" validate:"required"`
+	}
+
+	// GetWhitelistRequest struct
+	GetWhitelistRequest struct {
+		AllowedValue string `json:"allowed_value"`
+		utils.PaginationRequest
 	}
 )
 
@@ -666,12 +672,12 @@ func MakeRequestGetWhitelist(s authService, v validator.ValidateFunc) endpoint.E
 			return nil, err
 		}
 
-		req := request.(utils.PaginationRequest)
+		req := request.(GetWhitelistRequest)
 		if err := v(req); err != nil {
 			return nil, err
 		}
 
-		resp, err := s.GetWhitelist(ctx, req.Limit(), req.Offset())
+		resp, err := s.GetWhitelist(ctx, req.Limit(), req.Offset(), req.AllowedValue)
 		if err != nil {
 			return nil, err
 		}
