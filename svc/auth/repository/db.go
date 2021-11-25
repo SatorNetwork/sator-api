@@ -22,6 +22,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addToWhitelistStmt, err = db.PrepareContext(ctx, addToWhitelist); err != nil {
+		return nil, fmt.Errorf("error preparing query AddToWhitelist: %w", err)
+	}
 	if q.countAllUsersStmt, err = db.PrepareContext(ctx, countAllUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query CountAllUsers: %w", err)
 	}
@@ -30,6 +33,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.createUserVerificationStmt, err = db.PrepareContext(ctx, createUserVerification); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUserVerification: %w", err)
+	}
+	if q.deleteFromWhitelistStmt, err = db.PrepareContext(ctx, deleteFromWhitelist); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteFromWhitelist: %w", err)
 	}
 	if q.deleteUserByIDStmt, err = db.PrepareContext(ctx, deleteUserByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUserByID: %w", err)
@@ -64,6 +70,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getVerifiedUsersListDescStmt, err = db.PrepareContext(ctx, getVerifiedUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetVerifiedUsersListDesc: %w", err)
 	}
+	if q.getWhitelistStmt, err = db.PrepareContext(ctx, getWhitelist); err != nil {
+		return nil, fmt.Errorf("error preparing query GetWhitelist: %w", err)
+	}
+	if q.getWhitelistByAllowedValueStmt, err = db.PrepareContext(ctx, getWhitelistByAllowedValue); err != nil {
+		return nil, fmt.Errorf("error preparing query GetWhitelistByAllowedValue: %w", err)
+	}
 	if q.isEmailBlacklistedStmt, err = db.PrepareContext(ctx, isEmailBlacklisted); err != nil {
 		return nil, fmt.Errorf("error preparing query IsEmailBlacklisted: %w", err)
 	}
@@ -90,6 +102,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addToWhitelistStmt != nil {
+		if cerr := q.addToWhitelistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addToWhitelistStmt: %w", cerr)
+		}
+	}
 	if q.countAllUsersStmt != nil {
 		if cerr := q.countAllUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countAllUsersStmt: %w", cerr)
@@ -103,6 +120,11 @@ func (q *Queries) Close() error {
 	if q.createUserVerificationStmt != nil {
 		if cerr := q.createUserVerificationStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserVerificationStmt: %w", cerr)
+		}
+	}
+	if q.deleteFromWhitelistStmt != nil {
+		if cerr := q.deleteFromWhitelistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteFromWhitelistStmt: %w", cerr)
 		}
 	}
 	if q.deleteUserByIDStmt != nil {
@@ -158,6 +180,16 @@ func (q *Queries) Close() error {
 	if q.getVerifiedUsersListDescStmt != nil {
 		if cerr := q.getVerifiedUsersListDescStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getVerifiedUsersListDescStmt: %w", cerr)
+		}
+	}
+	if q.getWhitelistStmt != nil {
+		if cerr := q.getWhitelistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getWhitelistStmt: %w", cerr)
+		}
+	}
+	if q.getWhitelistByAllowedValueStmt != nil {
+		if cerr := q.getWhitelistByAllowedValueStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getWhitelistByAllowedValueStmt: %w", cerr)
 		}
 	}
 	if q.isEmailBlacklistedStmt != nil {
@@ -234,9 +266,11 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                                  DBTX
 	tx                                  *sql.Tx
+	addToWhitelistStmt                  *sql.Stmt
 	countAllUsersStmt                   *sql.Stmt
 	createUserStmt                      *sql.Stmt
 	createUserVerificationStmt          *sql.Stmt
+	deleteFromWhitelistStmt             *sql.Stmt
 	deleteUserByIDStmt                  *sql.Stmt
 	deleteUserVerificationsByEmailStmt  *sql.Stmt
 	deleteUserVerificationsByUserIDStmt *sql.Stmt
@@ -248,6 +282,8 @@ type Queries struct {
 	getUserVerificationByUserIDStmt     *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
 	getVerifiedUsersListDescStmt        *sql.Stmt
+	getWhitelistStmt                    *sql.Stmt
+	getWhitelistByAllowedValueStmt      *sql.Stmt
 	isEmailBlacklistedStmt              *sql.Stmt
 	isEmailWhitelistedStmt              *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
@@ -261,9 +297,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                                  tx,
 		tx:                                  tx,
+		addToWhitelistStmt:                  q.addToWhitelistStmt,
 		countAllUsersStmt:                   q.countAllUsersStmt,
 		createUserStmt:                      q.createUserStmt,
 		createUserVerificationStmt:          q.createUserVerificationStmt,
+		deleteFromWhitelistStmt:             q.deleteFromWhitelistStmt,
 		deleteUserByIDStmt:                  q.deleteUserByIDStmt,
 		deleteUserVerificationsByEmailStmt:  q.deleteUserVerificationsByEmailStmt,
 		deleteUserVerificationsByUserIDStmt: q.deleteUserVerificationsByUserIDStmt,
@@ -275,6 +313,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
+		getWhitelistStmt:                    q.getWhitelistStmt,
+		getWhitelistByAllowedValueStmt:      q.getWhitelistByAllowedValueStmt,
 		isEmailBlacklistedStmt:              q.isEmailBlacklistedStmt,
 		isEmailWhitelistedStmt:              q.isEmailWhitelistedStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
