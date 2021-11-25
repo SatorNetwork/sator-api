@@ -143,6 +143,10 @@ var (
 	androidPackageName = env.MustString("FIREBASE_ANDROID_PACKAGE_NAME")
 	iosBundleId        = env.MustString("FIREBASE_IOS_BUNDLE_ID")
 	suffixOption       = env.MustString("FIREBASE_SUFFIX_OPTION")
+
+	// Min amounts
+	minAmountToTransfer = env.GetFloat("MIN_AMOUNT_TO_TRANSFER", 0)
+	minAmountToClaim    = env.GetFloat("MIN_AMOUNT_TO_CLAIM", 0)
 )
 
 func main() {
@@ -252,6 +256,7 @@ func main() {
 			wallet.WithAssetSolanaAddress(solanaAssetAddr),
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
+			wallet.WithMinAmountToTransfer(minAmountToTransfer),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -273,6 +278,7 @@ func main() {
 		db_internal.NewAdvisoryLocks(db),
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster="+solanaEnv),
 		rewards.WithHoldRewardsPeriod(holdRewardsPeriod),
+		rewards.WithMinAmountToClaim(minAmountToClaim),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(

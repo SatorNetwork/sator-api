@@ -25,3 +25,10 @@ func WithHoldRewardsPeriod(period time.Duration) Option {
 		s.holdRewardsPeriod = period
 	}
 }
+
+// WithMinAmountToClaim ...
+func WithMinAmountToClaim(amount float64) Option {
+	return func(s *Service) {
+		s.minAmountToClaim = amount
+	}
+}

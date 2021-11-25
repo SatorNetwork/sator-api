@@ -38,6 +38,8 @@ type (
 		walletTransactionsURL   string // url template to get SOL & SAO wallet types transactions list
 		rewardsWalletDetailsURL string // url template to get rewards wallet type details
 		rewardsTransactionsURL  string // url template to get rewards wallet type transactions list
+
+		minAmountToTransfer float64 // minimum amount to transfer request
 	}
 
 	// ServiceOption function
@@ -122,6 +124,8 @@ func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, opt ...
 		walletTransactionsURL:   "wallets/%s/transactions",
 		rewardsWalletDetailsURL: "rewards/wallet/%s",
 		rewardsTransactionsURL:  "rewards/wallet/%s/transactions",
+
+		minAmountToTransfer: 0,
 	}
 
 	for _, o := range opt {
@@ -480,7 +484,7 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 		return PreparedTransferTransaction{}, fmt.Errorf("could not get wallet balance")
 	}
 
-	if bal < 50 {
+	if bal < s.minAmountToTransfer {
 		return PreparedTransferTransaction{}, fmt.Errorf("%w: %d", ErrNotEnoughBalance, 50)
 	}
 
