@@ -147,6 +147,34 @@ func (q *Queries) GetChallengeByID(ctx context.Context, id uuid.UUID) (Challenge
 	return i, err
 }
 
+const getChallengeByTitle = `-- name: GetChallengeByTitle :one
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
+FROM challenges
+WHERE title = $1
+ORDER BY created_at DESC
+    LIMIT 1
+`
+
+func (q *Queries) GetChallengeByTitle(ctx context.Context, title string) (Challenge, error) {
+	row := q.queryRow(ctx, q.getChallengeByTitleStmt, getChallengeByTitle, title)
+	var i Challenge
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.Title,
+		&i.Description,
+		&i.PrizePool,
+		&i.PlayersToStart,
+		&i.TimePerQuestion,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.EpisodeID,
+		&i.Kind,
+		&i.UserMaxAttempts,
+	)
+	return i, err
+}
+
 const getChallenges = `-- name: GetChallenges :many
 SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
 FROM challenges

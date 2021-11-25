@@ -1,3 +1,3 @@
 package consts
 
-const DefaultChallengeID = "c0184f8f-6327-4741-b2e1-9cca0a0eb278"
+//const DefaultChallengeID = "00cfe310-eb1e-42e5-9d6b-801e288a3f8f"

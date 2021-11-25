@@ -13,7 +13,7 @@ import (
 
 type QuizClient struct{}
 
-func NewQuizClient() *QuizClient {
+func New() *QuizClient {
 	return new(QuizClient)
 }
 

@@ -2,7 +2,6 @@ package message
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type MessageType uint8
@@ -13,6 +12,7 @@ const (
 	QuestionMessageType
 	AnswerMessageType
 	AnswerReplyMessageType
+	WinnersTableMessageType
 )
 
 func (m MessageType) String() string {
@@ -27,19 +27,21 @@ func (m MessageType) String() string {
 		return "answer_message_type"
 	case AnswerReplyMessageType:
 		return "answer_reply_message_type"
+	case WinnersTableMessageType:
+		return "winners_table_message_type"
 	default:
 		return "<unknown message type>"
 	}
 }
 
 type Message struct {
-	MessageType MessageType `json:"message_type,omitempty"`
-	//Payload     interface{}
+	MessageType           MessageType            `json:"message_type,omitempty"`
 	PlayerIsJoinedMessage *PlayerIsJoinedMessage `json:"player_is_joined_message,omitempty"`
 	CountdownMessage      *CountdownMessage      `json:"countdown_message,omitempty"`
 	QuestionMessage       *QuestionMessage       `json:"question_message,omitempty"`
 	AnswerMessage         *AnswerMessage         `json:"answer_message,omitempty"`
 	AnswerReplyMessage    *AnswerReplyMessage    `json:"answer_reply_message,omitempty"`
+	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message"`
 }
 
 func (m *Message) String() string {
@@ -48,8 +50,8 @@ func (m *Message) String() string {
 }
 
 type PlayerIsJoinedMessage struct {
-	PlayerID string
-	Username string
+	PlayerID string `json:"player_id"`
+	Username string `json:"username"`
 }
 
 func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) *Message {
@@ -59,14 +61,7 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) *Message {
 	}
 }
 
-func (m *PlayerIsJoinedMessage) String() string {
-	tmpl := `
-PlayerID: %v
-`
-	return fmt.Sprintf(tmpl, m.PlayerID)
-}
-
-type CountdownMessage struct{
+type CountdownMessage struct {
 	SecondsLeft int
 }
 
@@ -78,7 +73,16 @@ func NewCountdownMessage(payload *CountdownMessage) *Message {
 }
 
 type QuestionMessage struct {
-	Text string
+	QuestionID     string         `json:"question_id"`
+	QuestionText   string         `json:"question_text"`
+	TimeForAnswer  int            `json:"time_for_answer"`
+	QuestionNumber int            `json:"question_number"`
+	AnswerOptions  []AnswerOption `json:"answer_options"`
+}
+
+type AnswerOption struct {
+	AnswerID   string `json:"answer_id"`
+	AnswerText string `json:"answer_text"`
 }
 
 func NewQuestionMessage(payload *QuestionMessage) *Message {
@@ -89,8 +93,10 @@ func NewQuestionMessage(payload *QuestionMessage) *Message {
 }
 
 type AnswerMessage struct {
-	AnswerFlag bool
-	UserID     string
+	UserID string `json:"user_id"`
+	// TODO(evg): check that QuestionID is correct
+	QuestionID string `json:"question_id"`
+	AnswerID   string `json:"answer_id"`
 }
 
 func NewAnswerMessage(payload *AnswerMessage) *Message {
@@ -101,12 +107,25 @@ func NewAnswerMessage(payload *AnswerMessage) *Message {
 }
 
 type AnswerReplyMessage struct {
-	Success bool
+	Success         bool `json:"success"`
+	SegmentNum      int  `json:"segment_num"`
+	IsFastestAnswer bool `json:"is_fastest_answer"`
 }
 
 func NewAnswerReplyMessage(payload *AnswerReplyMessage) *Message {
 	return &Message{
 		MessageType:        AnswerReplyMessageType,
 		AnswerReplyMessage: payload,
+	}
+}
+
+type WinnersTableMessage struct {
+	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
+}
+
+func NewWinnersTableMessage(payload *WinnersTableMessage) *Message {
+	return &Message{
+		MessageType:         WinnersTableMessageType,
+		WinnersTableMessage: payload,
 	}
 }

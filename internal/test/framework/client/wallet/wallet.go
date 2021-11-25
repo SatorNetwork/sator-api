@@ -18,7 +18,7 @@ type WalletClient struct {
 	solanaClient *solana.Client
 }
 
-func NewWalletClient() *WalletClient {
+func New() *WalletClient {
 	return &WalletClient{
 		solanaClient: solana.New("http://localhost:8899"),
 	}

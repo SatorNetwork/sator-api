@@ -15,6 +15,7 @@ const (
 	RoomIsFullStatus
 	CountdownFinishedStatus
 	QuestionAreSentStatus
+	WinnersTableAreSent
 	RoomIsFinished
 )
 

@@ -12,15 +12,17 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/test/framework/message_verifier"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/nats_subscriber"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/utils"
-	"github.com/SatorNetwork/sator-api/svc/quiz_v2/consts"
+	"github.com/SatorNetwork/sator-api/internal/test/quiz_v2/message_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 )
 
-func TestQuizV2Sandbox(t *testing.T) {
+func TestWrongAnswers(t *testing.T) {
 	err := utils.BootstrapIfNeeded(context.Background(), t)
 	require.NoError(t, err)
 
 	c := client.NewClient()
+	defaultChallengeID, err := c.DB.ChallengeDB().DefaultChallengeID(context.Background())
+	require.NoError(t, err)
 
 	signUpRequest := auth.RandomSignUpRequest()
 	signUpResp, err := c.Auth.SignUp(signUpRequest)
@@ -44,83 +46,17 @@ func TestQuizV2Sandbox(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	var (
-		user1ExpectedMessages = []*message.Message{
-			{
-				MessageType: message.PlayerIsJoinedMessageType,
-				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequest.Username,
-				},
-			},
-		}
-
-		user2ExpectedMessages = []*message.Message{
-			{
-				MessageType: message.PlayerIsJoinedMessageType,
-				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequest2.Username,
-				},
-			},
-			{
-				MessageType: message.CountdownMessageType,
-				CountdownMessage: &message.CountdownMessage{
-					SecondsLeft: 3,
-				},
-			},
-			{
-				MessageType: message.CountdownMessageType,
-				CountdownMessage: &message.CountdownMessage{
-					SecondsLeft: 2,
-				},
-			},
-			{
-				MessageType: message.CountdownMessageType,
-				CountdownMessage: &message.CountdownMessage{
-					SecondsLeft: 1,
-				},
-			},
-			{
-				MessageType: message.QuestionMessageType,
-				QuestionMessage: &message.QuestionMessage{
-					Text: "question1",
-				},
-			},
-			{
-				MessageType: message.AnswerReplyMessageType,
-				AnswerReplyMessage: &message.AnswerReplyMessage{
-					Success: true,
-				},
-			},
-			{
-				MessageType: message.QuestionMessageType,
-				QuestionMessage: &message.QuestionMessage{
-					Text: "question2",
-				},
-			},
-			{
-				MessageType: message.AnswerReplyMessageType,
-				AnswerReplyMessage: &message.AnswerReplyMessage{
-					Success: true,
-				},
-			},
-			{
-				MessageType: message.QuestionMessageType,
-				QuestionMessage: &message.QuestionMessage{
-					Text: "question3",
-				},
-			},
-			{
-				MessageType: message.AnswerReplyMessageType,
-				AnswerReplyMessage: &message.AnswerReplyMessage{
-					Success: true,
-				},
-			},
-		}
-	)
+	user1ExpectedMessages := message_container.New(defaultUser1ExpectedMessages).
+		Modify(
+			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+			func(msg *message.Message) {
+				msg.PlayerIsJoinedMessage.Username = signUpRequest.Username
+			}).
+		Messages()
 
 	var user1MessageVerifier *message_verifier.MessageVerifier
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResp.AccessToken, consts.DefaultChallengeID)
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResp.AccessToken, defaultChallengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
@@ -129,7 +65,7 @@ func TestQuizV2Sandbox(t *testing.T) {
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
-		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithTrueCallback)
+		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
@@ -137,7 +73,7 @@ func TestQuizV2Sandbox(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		messageVerifier := message_verifier.New(user1ExpectedMessages, natsSubscriber.GetMessageChan())
+		messageVerifier := message_verifier.New(user1ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
@@ -150,7 +86,7 @@ func TestQuizV2Sandbox(t *testing.T) {
 	}
 
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResp2.AccessToken, consts.DefaultChallengeID)
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResp2.AccessToken, defaultChallengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
@@ -159,7 +95,7 @@ func TestQuizV2Sandbox(t *testing.T) {
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
-		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithTrueCallback)
+		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithWrongAnswerCallback)
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
@@ -167,7 +103,19 @@ func TestQuizV2Sandbox(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		messageVerifier := message_verifier.New(user2ExpectedMessages, natsSubscriber.GetMessageChan())
+		user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
+			Modify(
+				message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+				func(msg *message.Message) {
+					msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
+				}).
+			Modify(
+				message_container.PFuncMessageType(message.AnswerReplyMessageType),
+				func(msg *message.Message) {
+					msg.AnswerReplyMessage.Success = false
+				}).
+			Messages()
+		messageVerifier := message_verifier.New(user2ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
@@ -178,6 +126,13 @@ func TestQuizV2Sandbox(t *testing.T) {
 	}
 
 	{
+		user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
+			Modify(
+				message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+				func(msg *message.Message) {
+					msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
+				}).
+			Messages()
 		user1ExpectedMessages = append(user1ExpectedMessages, user2ExpectedMessages...)
 		user1MessageVerifier.SetExpectedMessages(user1ExpectedMessages)
 

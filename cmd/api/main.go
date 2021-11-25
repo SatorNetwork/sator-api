@@ -484,7 +484,7 @@ func main() {
 	}
 
 	{
-		quizV2Svc := quiz_v2.NewService()
+		quizV2Svc := quiz_v2.NewService(challengeSvcClient)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
 			logger,

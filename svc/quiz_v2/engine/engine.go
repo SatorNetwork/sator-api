@@ -3,6 +3,7 @@ package engine
 import (
 	"time"
 
+	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room"
@@ -12,13 +13,17 @@ type Engine struct {
 	newPlayersChan    chan player.Player
 	challengeIDToRoom map[string]room.Room
 
+	challenges quiz_v2_challenge.ChallengesService
+
 	done chan struct{}
 }
 
-func New() *Engine {
+func New(challenges quiz_v2_challenge.ChallengesService) *Engine {
 	return &Engine{
 		newPlayersChan:    make(chan player.Player),
 		challengeIDToRoom: make(map[string]room.Room, 0),
+
+		challenges: challenges,
 
 		done: make(chan struct{}),
 	}
@@ -55,7 +60,7 @@ func (e *Engine) AddPlayer(p player.Player) {
 
 func (e *Engine) getOrCreateRoom(challengeID string) room.Room {
 	if _, ok := e.challengeIDToRoom[challengeID]; !ok {
-		room := default_room.New(challengeID)
+		room := default_room.New(challengeID, e.challenges)
 		e.challengeIDToRoom[challengeID] = room
 		go room.Start()
 	}

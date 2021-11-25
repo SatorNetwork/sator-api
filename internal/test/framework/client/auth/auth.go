@@ -20,7 +20,7 @@ const (
 
 type AuthClient struct{}
 
-func NewAuthClient() *AuthClient {
+func New() *AuthClient {
 	return new(AuthClient)
 }
 
