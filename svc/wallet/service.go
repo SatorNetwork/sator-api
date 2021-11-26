@@ -290,37 +290,24 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 // CreateWallet creates wallet for user with specified id.
 func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
-	// acc := s.sc.NewAccount()
+	acc := s.sc.NewAccount()
+	sacc, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
+		AccountType: GeneralAccount.String(),
+		PublicKey:   acc.PublicKey.ToBase58(),
+		PrivateKey:  acc.PrivateKey,
+	})
+	if err != nil {
+		return fmt.Errorf("could not store solana account: %w", err)
+	}
 
-	// txHash, err := s.sc.CreateAccountWithATA(
-	// 	ctx,
-	// 	s.satorAssetSolanaAddr,
-	// 	s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
-	// 	s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
-	// 	acc,
-	// )
-	// if err != nil {
-	// 	return fmt.Errorf("could not init token holder account: %w", err)
-	// }
-	// log.Printf("init token holder account transaction: %s", txHash)
-
-	// sacc, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-	// 	AccountType: GeneralAccount.String(),
-	// 	PublicKey:   acc.PublicKey.ToBase58(),
-	// 	PrivateKey:  acc.PrivateKey,
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("could not store solana account: %w", err)
-	// }
-
-	// if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
-	// 	UserID:          userID,
-	// 	SolanaAccountID: sacc.ID,
-	// 	WalletType:      WalletTypeSator,
-	// 	Sort:            1,
-	// }); err != nil {
-	// 	return fmt.Errorf("could not create new SAO wallet for user with id=%s: %w", userID.String(), err)
-	// }
+	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
+		UserID:          userID,
+		SolanaAccountID: sacc.ID,
+		WalletType:      WalletTypeSator,
+		Sort:            1,
+	}); err != nil {
+		return fmt.Errorf("could not create new SAO wallet for user with id=%s: %w", userID.String(), err)
+	}
 
 	if _, err := s.wr.CreateWallet(ctx, repository.CreateWalletParams{
 		UserID:     userID,
