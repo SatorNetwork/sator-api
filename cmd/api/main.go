@@ -96,7 +96,7 @@ var (
 	quizWsConnURL   = env.MustString("QUIZ_WS_CONN_URL")
 	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
-	// Solanacopy_file_range
+	// Solana
 	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
 	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
 	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
