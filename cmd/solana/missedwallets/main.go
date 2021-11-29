@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
 	"log"
 
@@ -26,23 +25,9 @@ var (
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
-	solanaAssetAddr  = env.MustString("SOLANA_ASSET_ADDR")
-	// solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
-	solanaFeePayerPrivateKey = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
-	// solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
-	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 )
 
 func main() {
-	feePayerPk, err := base64.StdEncoding.DecodeString(solanaFeePayerPrivateKey)
-	if err != nil {
-		log.Fatalf("feePayerPk base64 decoding error: %v", err)
-	}
-	tokenHolderPk, err := base64.StdEncoding.DecodeString(solanaTokenHolderPrivateKey)
-	if err != nil {
-		log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
-	}
-
 	// Init DB connection
 	db, err := sql.Open("postgres", dbConnString)
 	if err != nil {
@@ -82,9 +67,9 @@ func main() {
 		if !user.VerifiedAt.Valid {
 			continue
 		}
-		if yes, _ := mwr.IsEmailWhitelisted(ctx, user.Email); !yes {
-			continue
-		}
+		// if yes, _ := mwr.IsEmailWhitelisted(ctx, user.Email); !yes {
+		// 	continue
+		// }
 
 		counter++
 
@@ -94,8 +79,6 @@ func main() {
 				repository.New(tx),
 				solana.New(solanaApiBaseUrl),
 				user.ID,
-				feePayerPk,
-				tokenHolderPk,
 			)
 		}); err != nil {
 			log.Printf("Create user wallet if not exists: %v", err)
@@ -105,7 +88,7 @@ func main() {
 	fmt.Printf("finished: %d", counter)
 }
 
-func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID, feePayerPk, tokenHolderPk []byte) error {
+func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID) error {
 	log.Println("Getting user SAO wallet")
 	userWallet, err := repo.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     userID,
@@ -160,18 +143,6 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 			return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
 		}
 	}
-
-	txHash, err := sc.CreateAccountWithATA(
-		ctx,
-		solanaAssetAddr,
-		sc.AccountFromPrivateKeyBytes(feePayerPk),
-		sc.AccountFromPrivateKeyBytes(tokenHolderPk),
-		acc,
-	)
-	if err != nil {
-		return fmt.Errorf("could not init token holder account: %w", err)
-	}
-	log.Printf("init token holder account transaction: %s", txHash)
 
 	return nil
 }
