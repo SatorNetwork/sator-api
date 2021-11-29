@@ -58,6 +58,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserByUsernameStmt, err = db.PrepareContext(ctx, getUserByUsername); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByUsername: %w", err)
 	}
+	if q.getUserIDsOnTheSameDeviceStmt, err = db.PrepareContext(ctx, getUserIDsOnTheSameDevice); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserIDsOnTheSameDevice: %w", err)
+	}
 	if q.getUserVerificationByEmailStmt, err = db.PrepareContext(ctx, getUserVerificationByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserVerificationByEmail: %w", err)
 	}
@@ -81,6 +84,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.isEmailWhitelistedStmt, err = db.PrepareContext(ctx, isEmailWhitelisted); err != nil {
 		return nil, fmt.Errorf("error preparing query IsEmailWhitelisted: %w", err)
+	}
+	if q.isUserDisabledStmt, err = db.PrepareContext(ctx, isUserDisabled); err != nil {
+		return nil, fmt.Errorf("error preparing query IsUserDisabled: %w", err)
+	}
+	if q.linkDeviceToUserStmt, err = db.PrepareContext(ctx, linkDeviceToUser); err != nil {
+		return nil, fmt.Errorf("error preparing query LinkDeviceToUser: %w", err)
 	}
 	if q.updateUserEmailStmt, err = db.PrepareContext(ctx, updateUserEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserEmail: %w", err)
@@ -162,6 +171,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserByUsernameStmt: %w", cerr)
 		}
 	}
+	if q.getUserIDsOnTheSameDeviceStmt != nil {
+		if cerr := q.getUserIDsOnTheSameDeviceStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserIDsOnTheSameDeviceStmt: %w", cerr)
+		}
+	}
 	if q.getUserVerificationByEmailStmt != nil {
 		if cerr := q.getUserVerificationByEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserVerificationByEmailStmt: %w", cerr)
@@ -200,6 +214,16 @@ func (q *Queries) Close() error {
 	if q.isEmailWhitelistedStmt != nil {
 		if cerr := q.isEmailWhitelistedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing isEmailWhitelistedStmt: %w", cerr)
+		}
+	}
+	if q.isUserDisabledStmt != nil {
+		if cerr := q.isUserDisabledStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isUserDisabledStmt: %w", cerr)
+		}
+	}
+	if q.linkDeviceToUserStmt != nil {
+		if cerr := q.linkDeviceToUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing linkDeviceToUserStmt: %w", cerr)
 		}
 	}
 	if q.updateUserEmailStmt != nil {
@@ -278,6 +302,7 @@ type Queries struct {
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
 	getUserByUsernameStmt               *sql.Stmt
+	getUserIDsOnTheSameDeviceStmt       *sql.Stmt
 	getUserVerificationByEmailStmt      *sql.Stmt
 	getUserVerificationByUserIDStmt     *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
@@ -286,6 +311,8 @@ type Queries struct {
 	getWhitelistByAllowedValueStmt      *sql.Stmt
 	isEmailBlacklistedStmt              *sql.Stmt
 	isEmailWhitelistedStmt              *sql.Stmt
+	isUserDisabledStmt                  *sql.Stmt
+	linkDeviceToUserStmt                *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
@@ -309,6 +336,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
 		getUserByUsernameStmt:               q.getUserByUsernameStmt,
+		getUserIDsOnTheSameDeviceStmt:       q.getUserIDsOnTheSameDeviceStmt,
 		getUserVerificationByEmailStmt:      q.getUserVerificationByEmailStmt,
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
@@ -317,6 +345,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getWhitelistByAllowedValueStmt:      q.getWhitelistByAllowedValueStmt,
 		isEmailBlacklistedStmt:              q.isEmailBlacklistedStmt,
 		isEmailWhitelistedStmt:              q.isEmailWhitelistedStmt,
+		isUserDisabledStmt:                  q.isUserDisabledStmt,
+		linkDeviceToUserStmt:                q.linkDeviceToUserStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,

@@ -21,42 +21,52 @@ SELECT *
 FROM users
 WHERE id = $1
 LIMIT 1;
+
 -- name: GetUserByEmail :one
 SELECT *
 FROM users
 WHERE email = $1
 LIMIT 1;
+
 -- name: GetUserByUsername :one
 SELECT *
 FROM users
 WHERE username = $1
 LIMIT 1;
+
 -- name: CreateUser :one
 INSERT INTO users (email, username, password, role)
 VALUES ($1, $2, $3, $4) RETURNING *;
+
 -- name: UpdateUserEmail :exec
 UPDATE users
 SET email = $2
 WHERE id = $1;
+
 -- name: UpdateUsername :exec
 UPDATE users
 SET username = $2
 WHERE id = $1;
+
 -- name: UpdateUserPassword :exec
 UPDATE users
 SET password = $2
 WHERE id = $1;
+
 -- name: UpdateUserStatus :exec
 UPDATE users
-SET disabled = $2
+SET disabled = $2, block_reason = $3
 WHERE id = $1;
+
 -- name: DeleteUserByID :exec
 DELETE FROM users
 WHERE id = $1;
+
 -- name: UpdateUserVerifiedAt :exec
 UPDATE users
 SET verified_at = @verified_at
 WHERE id = @user_id;
+
 -- name: DestroyUser :exec
 UPDATE users
 SET email = 'deleted',
@@ -64,3 +74,9 @@ SET email = 'deleted',
     password = NULL,
     disabled = TRUE
 WHERE id = @user_id;
+
+-- name: IsUserDisabled :one
+SELECT disabled
+FROM users
+WHERE id = $1
+LIMIT 1;

@@ -15,15 +15,16 @@ type Blacklist struct {
 }
 
 type User struct {
-	ID         uuid.UUID    `json:"id"`
-	Username   string       `json:"username"`
-	Email      string       `json:"email"`
-	Password   []byte       `json:"password"`
-	Disabled   bool         `json:"disabled"`
-	VerifiedAt sql.NullTime `json:"verified_at"`
-	UpdatedAt  sql.NullTime `json:"updated_at"`
-	CreatedAt  time.Time    `json:"created_at"`
-	Role       string       `json:"role"`
+	ID          uuid.UUID      `json:"id"`
+	Username    string         `json:"username"`
+	Email       string         `json:"email"`
+	Password    []byte         `json:"password"`
+	Disabled    bool           `json:"disabled"`
+	VerifiedAt  sql.NullTime   `json:"verified_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Role        string         `json:"role"`
+	BlockReason sql.NullString `json:"block_reason"`
 }
 
 type UserVerification struct {
@@ -32,6 +33,11 @@ type UserVerification struct {
 	Email            string    `json:"email"`
 	VerificationCode []byte    `json:"verification_code"`
 	CreatedAt        time.Time `json:"created_at"`
+}
+
+type UsersDevice struct {
+	UserID   uuid.UUID `json:"user_id"`
+	DeviceID string    `json:"device_id"`
 }
 
 type Whitelist struct {
