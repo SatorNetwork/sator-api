@@ -14,8 +14,8 @@ SELECT user_id FROM users_devices
 WHERE device_id IN (
     SELECT device_id 
     FROM users_devices 
-    WHERE count(user_id) > 1 
     GROUP BY device_id
+    HAVING count(user_id) > 1 
 )
 `
 
