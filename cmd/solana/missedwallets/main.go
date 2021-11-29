@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	dbx "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/solana"
@@ -12,6 +16,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/go-env"
 	"github.com/google/uuid"
+	"github.com/oklog/run"
 	"github.com/zeebo/errs"
 
 	_ "github.com/lib/pq" // init pg driver
@@ -52,40 +57,58 @@ func main() {
 		log.Fatalf("missed wallet repo error: %v", err)
 	}
 
-	usersWithoutWallets, err := mwr.GetUsersWithoutWallet(ctx)
-	if err != nil {
-		log.Fatalf("userRepo error: %v", err)
-	}
-
-	log.Printf("NUMBER OF USERS WITHOUT WALLETS: %d", len(usersWithoutWallets))
-
 	txFn := dbx.Transaction(db)
 
-	counter := 0
+	// runtime group
+	var g run.Group
 
-	for _, user := range usersWithoutWallets {
-		if !user.VerifiedAt.Valid {
-			continue
+	stop := false
+	g.Add(func() error {
+		for {
+			usersWithoutWallets, err := mwr.GetUsersWithoutWallet(ctx)
+			if err != nil {
+				log.Fatalf("[ERROR] userRepo error: %v", err)
+			}
+
+			log.Printf("NUMBER OF USERS WITHOUT WALLETS: %d", len(usersWithoutWallets))
+
+			for _, user := range usersWithoutWallets {
+				if stop {
+					return nil
+				}
+
+				if !user.VerifiedAt.Valid {
+					continue
+				}
+				if err := txFn(func(tx dbx.DBTX) error {
+					return createSolanaWalletIfNotExists(
+						ctx,
+						repository.New(tx),
+						solana.New(solanaApiBaseUrl),
+						user.ID,
+					)
+				}); err != nil {
+					log.Printf("[ERROR] Create user wallet if not exists: %v", err)
+				}
+			}
+
+			time.Sleep(time.Hour)
 		}
-		// if yes, _ := mwr.IsEmailWhitelisted(ctx, user.Email); !yes {
-		// 	continue
-		// }
+	}, func(err error) {
+		stop = true
+	})
 
-		counter++
+	g.Add(func() error {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		c := <-sigChan
+		return fmt.Errorf("terminated with sig %q", c)
+	}, func(err error) {})
 
-		if err := txFn(func(tx dbx.DBTX) error {
-			return createSolanaWalletIfNotExists(
-				ctx,
-				repository.New(tx),
-				solana.New(solanaApiBaseUrl),
-				user.ID,
-			)
-		}); err != nil {
-			log.Printf("Create user wallet if not exists: %v", err)
-		}
+	if err := g.Run(); err != nil {
+		log.Println("terminated with error:", err)
 	}
 
-	fmt.Printf("finished: %d", counter)
 }
 
 func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID) error {
