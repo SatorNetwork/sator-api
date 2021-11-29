@@ -25,6 +25,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addToWhitelistStmt, err = db.PrepareContext(ctx, addToWhitelist); err != nil {
 		return nil, fmt.Errorf("error preparing query AddToWhitelist: %w", err)
 	}
+	if q.blockUsersOnTheSameDeviceStmt, err = db.PrepareContext(ctx, blockUsersOnTheSameDevice); err != nil {
+		return nil, fmt.Errorf("error preparing query BlockUsersOnTheSameDevice: %w", err)
+	}
 	if q.countAllUsersStmt, err = db.PrepareContext(ctx, countAllUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query CountAllUsers: %w", err)
 	}
@@ -114,6 +117,11 @@ func (q *Queries) Close() error {
 	if q.addToWhitelistStmt != nil {
 		if cerr := q.addToWhitelistStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addToWhitelistStmt: %w", cerr)
+		}
+	}
+	if q.blockUsersOnTheSameDeviceStmt != nil {
+		if cerr := q.blockUsersOnTheSameDeviceStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing blockUsersOnTheSameDeviceStmt: %w", cerr)
 		}
 	}
 	if q.countAllUsersStmt != nil {
@@ -291,6 +299,7 @@ type Queries struct {
 	db                                  DBTX
 	tx                                  *sql.Tx
 	addToWhitelistStmt                  *sql.Stmt
+	blockUsersOnTheSameDeviceStmt       *sql.Stmt
 	countAllUsersStmt                   *sql.Stmt
 	createUserStmt                      *sql.Stmt
 	createUserVerificationStmt          *sql.Stmt
@@ -325,6 +334,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                                  tx,
 		tx:                                  tx,
 		addToWhitelistStmt:                  q.addToWhitelistStmt,
+		blockUsersOnTheSameDeviceStmt:       q.blockUsersOnTheSameDeviceStmt,
 		countAllUsersStmt:                   q.countAllUsersStmt,
 		createUserStmt:                      q.createUserStmt,
 		createUserVerificationStmt:          q.createUserVerificationStmt,

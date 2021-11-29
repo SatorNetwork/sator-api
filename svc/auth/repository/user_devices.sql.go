@@ -9,6 +9,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const blockUsersOnTheSameDevice = `-- name: BlockUsersOnTheSameDevice :exec
+UPDATE users SET disabled = TRUE, block_reason = 'suspicion of fraud: created multiple accounts'
+WHERE device_id IN (
+    SELECT device_id 
+    FROM users_devices 
+    GROUP BY device_id
+    HAVING count(user_id) > 1 
+)
+`
+
+func (q *Queries) BlockUsersOnTheSameDevice(ctx context.Context) error {
+	_, err := q.exec(ctx, q.blockUsersOnTheSameDeviceStmt, blockUsersOnTheSameDevice)
+	return err
+}
+
 const getUserIDsOnTheSameDevice = `-- name: GetUserIDsOnTheSameDevice :many
 SELECT user_id FROM users_devices
 WHERE device_id IN (

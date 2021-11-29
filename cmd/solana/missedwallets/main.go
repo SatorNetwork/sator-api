@@ -108,7 +108,6 @@ func main() {
 	if err := g.Run(); err != nil {
 		log.Println("terminated with error:", err)
 	}
-
 }
 
 func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID) error {
