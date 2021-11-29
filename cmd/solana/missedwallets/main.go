@@ -30,6 +30,8 @@ var (
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+
+	interval = env.GetDuration("EXEC_INTERVAL", time.Hour)
 )
 
 func main() {
@@ -92,7 +94,7 @@ func main() {
 				}
 			}
 
-			time.Sleep(time.Hour)
+			time.Sleep(interval)
 		}
 	}, func(err error) {
 		stop = true
