@@ -111,7 +111,7 @@ func main() {
 }
 
 func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID) error {
-	log.Println("Getting user SAO wallet")
+	// log.Println("Getting user SAO wallet")
 	userWallet, err := repo.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     userID,
 		WalletType: wallet.WalletTypeSator,
@@ -125,13 +125,13 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 	}
 
 	if userWallet.SolanaAccountID == uuid.Nil && userWallet.WalletType == wallet.WalletTypeSator {
-		log.Println("Deleting user SAO wallet without solana SPL token account")
+		// log.Println("Deleting user SAO wallet without solana SPL token account")
 		if err := repo.DeleteWalletByID(ctx, userWallet.ID); err != nil {
 			log.Printf("Could not delete wallet with id=%s: %v", userWallet.ID.String(), err)
 		}
 	}
 
-	log.Println("Creating user SAO wallet")
+	// log.Println("Creating user SAO wallet")
 	acc := sc.NewAccount()
 
 	sacc, err := repo.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
@@ -156,7 +156,7 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 		UserID:     userID,
 		WalletType: wallet.WalletTypeRewards,
 	}); err != nil && dbx.IsNotFoundError(err) {
-		log.Println("Creating user rewards wallet")
+		// log.Println("Creating user rewards wallet")
 		if _, err := repo.CreateWallet(ctx, repository.CreateWalletParams{
 			UserID:     userID,
 			WalletType: wallet.WalletTypeRewards,
@@ -165,6 +165,8 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 			return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
 		}
 	}
+
+	log.Printf("wallets has been created for user=%s", userID.String())
 
 	return nil
 }
