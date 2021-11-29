@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -145,14 +146,24 @@ func decodeAddFileRequest(_ context.Context, r *http.Request) (interface{}, erro
 		return nil, err
 	}
 
+	err := r.ParseMultipartForm(100 << 20)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse multipart form: %w", err)
+	}
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image from request: %w", err)
 	}
 	defer file.Close()
 
+	readFile, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file: %w", err)
+	}
+
 	req := AddFileRequest{
-		File:       file,
+		File:       readFile,
 		FileHeader: header,
 	}
 

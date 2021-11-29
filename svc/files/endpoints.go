@@ -25,7 +25,7 @@ type (
 	}
 
 	service interface {
-		AddFile(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error)
+		AddFile(ctx context.Context, it File, file []byte, fileHeader *multipart.FileHeader) (File, error)
 		AddImage(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error)
 		AddImageResize(ctx context.Context, it File, file multipart.File, fileHeader *multipart.FileHeader, maxHeight, maxWidth uint) (File, error)
 		GetImageByID(ctx context.Context, id uuid.UUID) (File, error)
@@ -43,7 +43,7 @@ type (
 
 	// AddFileRequest struct
 	AddFileRequest struct {
-		File       multipart.File
+		File       []byte
 		FileHeader *multipart.FileHeader
 	}
 )

@@ -1,6 +1,7 @@
 package files
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -151,13 +152,15 @@ func (s *Service) GetImagesList(ctx context.Context, limit, offset int32) ([]Fil
 }
 
 // AddFile used to create new file.
-func (s *Service) AddFile(ctx context.Context, it File, file io.ReadSeeker, fileHeader *multipart.FileHeader) (File, error) {
+func (s *Service) AddFile(ctx context.Context, it File, file []byte, fileHeader *multipart.FileHeader) (File, error) {
 	id := uuid.New()
 	fileName := fmt.Sprintf("%s%s", id.String(), path.Ext(fileHeader.Filename))
 	filePath := s.storage.FilePath(fileName)
 	ct := fileHeader.Header.Get("Content-Type")
 
-	if err := s.storage.Upload(file, filePath, storage.Public, ct); err != nil {
+	r := bytes.NewReader(file)
+
+	if err := s.storage.Upload(r, filePath, storage.Public, ct); err != nil {
 		return File{}, errors.Wrap(err, "upload image")
 	}
 
