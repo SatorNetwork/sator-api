@@ -122,6 +122,8 @@ func main() {
 								}); err != nil {
 									log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
 								}
+
+								log.Printf("Sanitized user with id=%s and email=%s", user.ID, user.Email)
 							}
 						}
 					}
