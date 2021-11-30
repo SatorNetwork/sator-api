@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/svc/nft/repository"
@@ -37,7 +38,7 @@ type (
 
 		AuctionParams *NFTAuctionParams
 		// NFT payload, e.g.: link to the original file, etc
-		TokenURI string
+		TokenURI    string
 		RelationIDs []uuid.UUID
 	}
 
@@ -59,8 +60,8 @@ type (
 		AddNFTItem(ctx context.Context, arg repository.AddNFTItemParams) (repository.NFTItem, error)
 		AddNFTItemOwner(ctx context.Context, arg repository.AddNFTItemOwnerParams) error
 		GetNFTItemByID(ctx context.Context, nftItemID uuid.UUID) (repository.GetNFTItemByIDRow, error)
-		GetNFTItemsList(ctx context.Context, arg repository.GetNFTItemsListParams) ([]repository.NFTItem, error)
-		GetNFTItemsListByRelationID(ctx context.Context, arg repository.GetNFTItemsListByRelationIDParams) ([]repository.NFTItem, error)
+		GetNFTItemsList(ctx context.Context, arg repository.GetNFTItemsListParams) ([]repository.GetNFTItemsListRow, error)
+		GetNFTItemsListByRelationID(ctx context.Context, arg repository.GetNFTItemsListByRelationIDParams) ([]repository.GetNFTItemsListByRelationIDRow, error)
 		GetNFTItemsListByOwnerID(ctx context.Context, arg repository.GetNFTItemsListByOwnerIDParams) ([]repository.NFTItem, error)
 		GetNFTCategoriesList(ctx context.Context) ([]repository.NFTCategory, error)
 		GetMainNFTCategory(ctx context.Context) (repository.NFTCategory, error)
@@ -68,6 +69,20 @@ type (
 		UpdateNFTItem(ctx context.Context, arg repository.UpdateNFTItemParams) error
 		DeleteNFTItemByID(ctx context.Context, id uuid.UUID) error
 		AddNFTRelation(ctx context.Context, arg repository.AddNFTRelationParams) error
+	}
+
+	NFTItemRow struct {
+		ID          uuid.UUID      `json:"id"`
+		OwnerID     uuid.NullUUID  `json:"owner_id"`
+		Name        string         `json:"name"`
+		Description sql.NullString `json:"description"`
+		Cover       string         `json:"cover"`
+		Supply      int64          `json:"supply"`
+		BuyNowPrice float64        `json:"buy_now_price"`
+		TokenURI    string         `json:"token_uri"`
+		UpdatedAt   sql.NullTime   `json:"updated_at"`
+		CreatedAt   time.Time      `json:"created_at"`
+		Minted      sql.NullInt32  `json:"minted"`
 	}
 
 	// Simple function
@@ -155,7 +170,12 @@ func (s *Service) GetNFTs(ctx context.Context, limit, offset int32) ([]*NFT, err
 		return nil, err
 	}
 
-	return castNFTRawListToNFTList(nftList), nil
+	ls := make([]NFTItemRow, 0, len(nftList))
+	for _, v := range nftList {
+		ls = append(ls, NFTItemRow(v))
+	}
+
+	return castNFTRawListToNFTList(ls), nil
 }
 
 func (s *Service) GetNFTsByCategory(ctx context.Context, uid, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error) {
@@ -183,7 +203,12 @@ func (s *Service) GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID,
 		return nil, err
 	}
 
-	result := castNFTRawListToNFTList(nftList)
+	ls := make([]NFTItemRow, 0, len(nftList))
+	for _, v := range nftList {
+		ls = append(ls, NFTItemRow(v))
+	}
+
+	result := castNFTRawListToNFTList(ls)
 	for k, item := range result {
 		// TODO: needs refactoring! This is for backward compatibility with the app
 		if yes, _ := s.nftRepo.DoesUserOwnNFT(ctx, repository.DoesUserOwnNFTParams{
@@ -210,7 +235,7 @@ func (s *Service) GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, 
 		return nil, err
 	}
 
-	result := castNFTRawListToNFTList(nftList)
+	result := castNFTListToNFTList(nftList)
 	for k := range result {
 		result[k].OwnerID = &userID
 	}
@@ -284,7 +309,7 @@ func castCategoryRawToCategory(source repository.NFTCategory) *Category {
 	}
 }
 
-func castNFTRawListToNFTList(source []repository.NFTItem) []*NFT {
+func castNFTRawListToNFTList(source []NFTItemRow) []*NFT {
 	res := make([]*NFT, 0, len(source))
 	for _, i := range source {
 		res = append(res, castNFTRawToNFT(i))
@@ -293,7 +318,35 @@ func castNFTRawListToNFTList(source []repository.NFTItem) []*NFT {
 	return res
 }
 
-func castNFTRawToNFT(source repository.NFTItem) *NFT {
+func castNFTListToNFTList(source []repository.NFTItem) []*NFT {
+	res := make([]*NFT, 0, len(source))
+	for _, i := range source {
+		res = append(res, castNFTItemToNFT(i))
+	}
+
+	return res
+}
+
+func castNFTRawToNFT(source NFTItemRow) *NFT {
+	nft := &NFT{
+		ID:          source.ID,
+		ImageLink:   source.Cover,
+		Name:        source.Name,
+		Description: fmt.Sprintf("Rarity: #%d of %d. %s", source.Minted.Int32+1, source.Supply, source.Description.String),
+		Supply:      int(source.Supply),
+		BuyNowPrice: source.BuyNowPrice,
+		TokenURI:    source.TokenURI,
+		Minted:      source.Minted.Int32,
+	}
+
+	// if source.OwnerID.Valid && source.OwnerID.UUID != uuid.Nil {
+	// 	nft.OwnerID = &source.OwnerID.UUID
+	// }
+
+	return nft
+}
+
+func castNFTItemToNFT(source repository.NFTItem) *NFT {
 	nft := &NFT{
 		ID:          source.ID,
 		ImageLink:   source.Cover,
@@ -316,7 +369,7 @@ func castNFTRawToNFTRow(source repository.GetNFTItemByIDRow, ownerID ...uuid.UUI
 		ID:          source.ID,
 		ImageLink:   source.Cover,
 		Name:        source.Name,
-		Description: source.Description.String,
+		Description: fmt.Sprintf("Rarity: #%d of %d. %s", source.Minted+1, source.Supply, source.Description.String),
 		Supply:      int(source.Supply),
 		BuyNowPrice: source.BuyNowPrice,
 		TokenURI:    source.TokenURI,
