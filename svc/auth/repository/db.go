@@ -55,6 +55,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.destroyUserStmt, err = db.PrepareContext(ctx, destroyUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DestroyUser: %w", err)
 	}
+	if q.getNotSanitizedUsersListDescStmt, err = db.PrepareContext(ctx, getNotSanitizedUsersListDesc); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNotSanitizedUsersListDesc: %w", err)
+	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
 	}
@@ -105,6 +108,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateUserPasswordStmt, err = db.PrepareContext(ctx, updateUserPassword); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserPassword: %w", err)
+	}
+	if q.updateUserSanitizedEmailStmt, err = db.PrepareContext(ctx, updateUserSanitizedEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserSanitizedEmail: %w", err)
 	}
 	if q.updateUserStatusStmt, err = db.PrepareContext(ctx, updateUserStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserStatus: %w", err)
@@ -173,6 +179,11 @@ func (q *Queries) Close() error {
 	if q.destroyUserStmt != nil {
 		if cerr := q.destroyUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing destroyUserStmt: %w", cerr)
+		}
+	}
+	if q.getNotSanitizedUsersListDescStmt != nil {
+		if cerr := q.getNotSanitizedUsersListDescStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNotSanitizedUsersListDescStmt: %w", cerr)
 		}
 	}
 	if q.getUserByEmailStmt != nil {
@@ -260,6 +271,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateUserPasswordStmt: %w", cerr)
 		}
 	}
+	if q.updateUserSanitizedEmailStmt != nil {
+		if cerr := q.updateUserSanitizedEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserSanitizedEmailStmt: %w", cerr)
+		}
+	}
 	if q.updateUserStatusStmt != nil {
 		if cerr := q.updateUserStatusStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserStatusStmt: %w", cerr)
@@ -325,6 +341,7 @@ type Queries struct {
 	deleteUserVerificationsByEmailStmt  *sql.Stmt
 	deleteUserVerificationsByUserIDStmt *sql.Stmt
 	destroyUserStmt                     *sql.Stmt
+	getNotSanitizedUsersListDescStmt    *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
 	getUserBySanitizedEmailStmt         *sql.Stmt
@@ -342,6 +359,7 @@ type Queries struct {
 	linkDeviceToUserStmt                *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
+	updateUserSanitizedEmailStmt        *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
 	updateUserVerifiedAtStmt            *sql.Stmt
 	updateUsernameStmt                  *sql.Stmt
@@ -362,6 +380,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteUserVerificationsByEmailStmt:  q.deleteUserVerificationsByEmailStmt,
 		deleteUserVerificationsByUserIDStmt: q.deleteUserVerificationsByUserIDStmt,
 		destroyUserStmt:                     q.destroyUserStmt,
+		getNotSanitizedUsersListDescStmt:    q.getNotSanitizedUsersListDescStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
 		getUserBySanitizedEmailStmt:         q.getUserBySanitizedEmailStmt,
@@ -379,6 +398,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		linkDeviceToUserStmt:                q.linkDeviceToUserStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
+		updateUserSanitizedEmailStmt:        q.updateUserSanitizedEmailStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,
 		updateUserVerifiedAtStmt:            q.updateUserVerifiedAtStmt,
 		updateUsernameStmt:                  q.updateUsernameStmt,

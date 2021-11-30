@@ -10,7 +10,7 @@ import (
 )
 
 const blockUsersOnTheSameDevice = `-- name: BlockUsersOnTheSameDevice :exec
-UPDATE users SET disabled = TRUE, block_reason = 'detected scam: created multiple accounts'
+UPDATE users SET disabled = TRUE, block_reason = 'detected scam: multiple accounts on the same device'
 WHERE id IN (
     SELECT user_id FROM users_devices
     WHERE device_id IN (
@@ -22,6 +22,7 @@ WHERE id IN (
     )
 ) 
 AND email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
+AND disabled = FALSE
 `
 
 func (q *Queries) BlockUsersOnTheSameDevice(ctx context.Context, excludeDeviceID string) error {

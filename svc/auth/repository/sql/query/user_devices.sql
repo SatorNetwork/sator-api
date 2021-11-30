@@ -13,7 +13,7 @@ WHERE device_id IN (
 );
 
 -- name: BlockUsersOnTheSameDevice :exec 
-UPDATE users SET disabled = TRUE, block_reason = 'detected scam: created multiple accounts'
+UPDATE users SET disabled = TRUE, block_reason = 'detected scam: multiple accounts on the same device'
 WHERE id IN (
     SELECT user_id FROM users_devices
     WHERE device_id IN (
@@ -24,4 +24,5 @@ WHERE id IN (
         HAVING count(users_devices.user_id) > 1 
     )
 ) 
-AND email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email');
+AND email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
+AND disabled = FALSE;

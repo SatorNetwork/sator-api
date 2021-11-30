@@ -89,11 +89,25 @@ LIMIT 1;
 
 
 -- name: BlockUsersWithDuplicateEmail :exec 
-UPDATE users SET disabled = TRUE, block_reason = 'detected scam: created multiple accounts'
+UPDATE users SET disabled = TRUE, block_reason = 'detected scam: multiple accounts with duplicate email address'
 WHERE sanitized_email IN (
         SELECT users.sanitized_email
         FROM users 
+        WHERE users.sanitized_email <> '' AND users.sanitized_email IS NOT NULL
         GROUP BY users.sanitized_email
         HAVING count(users.id) > 1 
     )
-AND sanitized_email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email');
+AND sanitized_email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
+AND disabled = FALSE;
+
+-- name: GetNotSanitizedUsersListDesc :many
+SELECT *
+FROM users
+WHERE sanitized_email IS NULL OR sanitized_email = ''
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: UpdateUserSanitizedEmail :exec
+UPDATE users
+SET sanitized_email = @sanitized_email::text
+WHERE id = @id;
