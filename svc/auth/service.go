@@ -72,6 +72,8 @@ type (
 		DeleteFromWhitelist(ctx context.Context, arg repository.DeleteFromWhitelistParams) error
 		GetWhitelist(ctx context.Context, arg repository.GetWhitelistParams) ([]repository.Whitelist, error)
 		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
+
+		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
 	}
 
 	mailer interface {
@@ -122,13 +124,22 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 }
 
 // Login by email and password, returns token.
-func (s *Service) Login(ctx context.Context, email, password string) (Token, error) {
+func (s *Service) Login(ctx context.Context, email, password, deviceID string) (Token, error) {
 	user, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
 		if db.IsNotFoundError(err) {
 			return Token{}, ErrInvalidCredentials
 		}
 		return Token{}, fmt.Errorf("could not log in: %w", err)
+	}
+
+	if deviceID != "" {
+		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+			UserID:   user.ID,
+			DeviceID: deviceID,
+		}); err != nil {
+			log.Printf("could not link device to user: %v", err)
+		}
 	}
 
 	if user.Disabled {
@@ -163,7 +174,16 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 }
 
 // RefreshToken returns new jwt string.
-func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (Token, error) {
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error) {
+	if deviceID != "" {
+		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+			UserID:   uid,
+			DeviceID: deviceID,
+		}); err != nil {
+			log.Printf("could not link device to user: %v", err)
+		}
+	}
+
 	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
 		return Token{}, fmt.Errorf("could not refresh access token: %w", err)
@@ -192,7 +212,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 }
 
 // SignUp registers account with email, password and username.
-func (s *Service) SignUp(ctx context.Context, email, password, username string) (Token, error) {
+func (s *Service) SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error) {
 	var otpHash []byte
 	// Sanitize email address
 	email, err := utils.SanitizeEmail(email)
@@ -241,6 +261,15 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	})
 	if err != nil {
 		return Token{}, fmt.Errorf("could not create a new account: %w", err)
+	}
+
+	if deviceID != "" {
+		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+			UserID:   u.ID,
+			DeviceID: deviceID,
+		}); err != nil {
+			log.Printf("could not link device to user: %v", err)
+		}
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/SatorNetwork/sator-api/internal/deviceid"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 
@@ -50,10 +51,10 @@ type (
 	}
 
 	authService interface {
-		Login(ctx context.Context, email, password string) (Token, error)
+		Login(ctx context.Context, email, password, deviceID string) (Token, error)
 		Logout(ctx context.Context, tid string) error
-		SignUp(ctx context.Context, email, password, username string) (Token, error)
-		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (Token, error)
+		SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error)
+		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error)
 
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
@@ -250,6 +251,7 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 			ctx,
 			strings.ToLower(strings.TrimSpace(req.Email)),
 			strings.TrimSpace(req.Password),
+			deviceid.FromContext(ctx),
 		)
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
@@ -292,6 +294,7 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 			strings.ToLower(strings.TrimSpace(req.Email)),
 			strings.TrimSpace(req.Password),
 			strings.TrimSpace(req.Username),
+			deviceid.FromContext(ctx),
 		)
 		if err != nil {
 			return nil, err
@@ -319,12 +322,7 @@ func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			return nil, fmt.Errorf("could not get role: %w", err)
 		}
 
-		tid, err := jwt.TokenIDFromContext(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not get user id: %w", err)
-		}
-
-		token, err := s.RefreshToken(ctx, uid, username, role, tid.String())
+		token, err := s.RefreshToken(ctx, uid, username, role, deviceid.FromContext(ctx))
 		if err != nil {
 			return nil, err
 		}

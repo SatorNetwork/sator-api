@@ -218,9 +218,15 @@ func main() {
 		r.Get("/ws", testWsHandler)
 	}
 
+	// auth repo
+	authRepository, err := authRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("authRepo error: %v", err)
+	}
+
 	// Init JWT parser middleware
 	// not depends on transport
-	jwtMdw := jwt.NewParser(jwtSigningKey)
+	jwtMdw := jwt.NewParser(jwtSigningKey, jwt.CheckUser(authRepository.IsUserDisabled))
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
 	ethereumClient, err := ethereum.NewClient()
@@ -307,11 +313,6 @@ func main() {
 
 	// Auth service
 	{
-		// auth
-		authRepository, err := authRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("authRepo error: %v", err)
-		}
 		r.Mount("/auth", auth.MakeHTTPHandler(
 			auth.MakeEndpoints(auth.NewService(
 				jwtInteractor,
