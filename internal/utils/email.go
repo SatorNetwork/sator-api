@@ -1,20 +1,30 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/mcnijman/go-emailaddress"
 )
+
+var ErrInvalidEmailAddress = errors.New("invalid email address")
 
 // SanitizeEmail cleans email address from dots, dashes, etc
 func SanitizeEmail(s string) (string, error) {
 	s = strings.ToLower(strings.TrimSpace(s))
-	parts := strings.Split(s, "@")
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid email address")
+
+	email, err := emailaddress.Parse(s)
+	if err != nil {
+		return "", ErrInvalidEmailAddress
 	}
 
-	username := parts[0]
-	domain := parts[1]
+	if err := email.ValidateIcanSuffix(); err != nil {
+		return "", ErrInvalidEmailAddress
+	}
+
+	username := email.LocalPart
+	domain := email.Domain
 
 	if strings.Contains(username, "+") {
 		p := strings.Split(username, "+")
