@@ -126,6 +126,7 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 
 // Login by email and password, returns token.
 func (s *Service) Login(ctx context.Context, email, password, deviceID string) (Token, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
 	user, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -140,6 +141,24 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 			DeviceID: deviceID,
 		}); err != nil {
 			log.Printf("could not link device to user: %v", err)
+		}
+	}
+
+	if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(user.Email)
+		if err != nil {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrInvalidEmailFormat.Error()},
+			})
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             user.ID,
+			Email:          user.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
 		}
 	}
 
@@ -190,6 +209,22 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return Token{}, fmt.Errorf("could not refresh access token: %w", err)
 	}
 
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return Token{}, ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
+	}
+
 	if u.Disabled {
 		return Token{}, ErrUserIsDisabled
 	}
@@ -215,6 +250,9 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 // SignUp registers account with email, password and username.
 func (s *Service) SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error) {
 	var otpHash []byte
+
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	// Sanitize email address
 	sanitizedEmail, err := utils.SanitizeEmail(email)
 	if err != nil {
@@ -331,6 +369,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 // ForgotPassword requests password reset with email.
 func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	var otpHash []byte
+	email = strings.ToLower(strings.TrimSpace(email))
 
 	u, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -338,6 +377,22 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 			return errors.New("please check if you set correct email")
 		}
 		return fmt.Errorf("could not get user: %w", err)
+	}
+
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
 	}
 
 	if u.Disabled {
@@ -385,6 +440,8 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 // ValidateResetPasswordCode validates reset password code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyResetPassword,
 		Email:       email,
@@ -408,6 +465,8 @@ func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp stri
 
 // ResetPassword changing password.
 func (s *Service) ResetPassword(ctx context.Context, email, password, otp string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	userID, err := s.ValidateResetPasswordCode(ctx, email, otp)
 	if err != nil {
 		return fmt.Errorf("could not reset password: %w", err)
@@ -476,6 +535,23 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		}
 		return fmt.Errorf("could not get user: %w", err)
 	}
+
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
+	}
+
 	if u.VerifiedAt.Valid {
 		return ErrEmailAlreadyVerified
 	}
@@ -530,6 +606,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 // RequestChangeEmail requests change email for authorized user. Checks if email already exists in db, creates user verification and sends code to new email.
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
 	var otpHash []byte
+	email = strings.ToLower(strings.TrimSpace(email))
 
 	// Sanitize email address
 	sanitizedEmail, err := utils.SanitizeEmail(email)
@@ -545,6 +622,22 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 			return fmt.Errorf("user %w", ErrNotFound)
 		}
 		return fmt.Errorf("could not get user: %w", err)
+	}
+
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
 	}
 
 	if u.Disabled {
@@ -596,6 +689,8 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 // ValidateChangeEmailCode validates change email code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyChangeEmail,
 		Email:       email,
@@ -616,6 +711,8 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 
 // UpdateEmail updates user's email to provided new one in case of correct otp provided.
 func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	// Sanitize email address
 	sanitizedEmail, err := utils.SanitizeEmail(email)
 	if err != nil {
@@ -818,6 +915,7 @@ func (s *Service) DestroyAccount(ctx context.Context, uid uuid.UUID, otp string)
 
 // AddToWhitelist used for add allowed type and value to whitelist.
 func (s *Service) AddToWhitelist(ctx context.Context, allowedType, allowedValue string) error {
+	allowedValue = strings.ToLower(strings.TrimSpace(allowedValue))
 	if _, err := s.ur.AddToWhitelist(ctx, repository.AddToWhitelistParams{
 		AllowedType:  allowedType,
 		AllowedValue: allowedValue,
@@ -851,6 +949,7 @@ func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32) ([]Whit
 
 // SearchInWhitelist returns whitelist with pagination.
 func (s *Service) SearchInWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
 	whitelist, err := s.ur.GetWhitelistByAllowedValue(ctx, repository.GetWhitelistByAllowedValueParams{
 		Query:     query,
 		OffsetVal: offset,
@@ -873,6 +972,7 @@ func (s *Service) SearchInWhitelist(ctx context.Context, limit, offset int32, qu
 
 // DeleteFromWhitelist used for delete allowed type and value from whitelist.
 func (s *Service) DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error {
+	allowedValue = strings.ToLower(strings.TrimSpace(allowedValue))
 	if err := s.ur.DeleteFromWhitelist(ctx, repository.DeleteFromWhitelistParams{
 		AllowedType:  allowedType,
 		AllowedValue: allowedValue,
