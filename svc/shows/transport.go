@@ -157,6 +157,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Delete("/reviews/{review_id}", httptransport.NewServer(
+		e.DeleteReviewByID,
+		decodeDeleteReviewByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	// Seasons
 	r.Post("/{show_id}/seasons", httptransport.NewServer(
 		e.AddSeason,
@@ -441,6 +448,15 @@ func decodeGetReviewsListRequest(_ context.Context, r *http.Request) (interface{
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
 		},
 	}, nil
+}
+
+func decodeDeleteReviewByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "review_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed review_id", ErrInvalidParameter)
+	}
+
+	return id, nil
 }
 
 func decodeAddClapsForShowRequest(_ context.Context, r *http.Request) (interface{}, error) {

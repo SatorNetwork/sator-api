@@ -10,6 +10,16 @@ import (
 	"github.com/google/uuid"
 )
 
+const deleteReview = `-- name: DeleteReview :exec
+DELETE FROM ratings
+WHERE id = $1
+`
+
+func (q *Queries) DeleteReview(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteReviewStmt, deleteReview, id)
+	return err
+}
+
 const didUserRateEpisode = `-- name: DidUserRateEpisode :one
 SELECT EXISTS(
     SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings 
@@ -140,7 +150,7 @@ func (q *Queries) ReviewEpisode(ctx context.Context, arg ReviewEpisodeParams) er
 }
 
 const reviewsList = `-- name: ReviewsList :many
-SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings 
+SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
 WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL

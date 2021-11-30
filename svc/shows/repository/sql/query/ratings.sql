@@ -55,7 +55,7 @@ SELECT EXISTS(
 );
 
 -- name: ReviewsList :many
-SELECT * FROM ratings 
+SELECT * FROM ratings
 WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
@@ -69,3 +69,7 @@ WHERE user_id = $1
   AND review IS NOT NULL
 ORDER BY created_at DESC
     LIMIT $2 OFFSET $3;
+
+-- name: DeleteReview :exec
+DELETE FROM ratings
+WHERE id = @id;

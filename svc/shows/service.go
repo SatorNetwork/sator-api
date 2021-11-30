@@ -114,6 +114,7 @@ type (
 		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
+		DeleteReview(ctx context.Context, id uuid.UUID) error
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -771,6 +772,15 @@ func castReviewsList(source []repository.Rating) []Review {
 	}
 
 	return result
+}
+
+// DeleteReviewByID ..
+func (s *Service) DeleteReviewByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.sr.DeleteReview(ctx, id); err != nil {
+		return fmt.Errorf("could not delete review with id=%s:%w", id, err)
+	}
+
+	return nil
 }
 
 // AddClapsForShow ...
