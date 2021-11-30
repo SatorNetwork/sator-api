@@ -25,7 +25,13 @@ LIMIT 1;
 -- name: GetUserByEmail :one
 SELECT *
 FROM users
-WHERE email = $1
+WHERE email = @email
+LIMIT 1;
+
+-- name: GetUserBySanitizedEmail :one
+SELECT *
+FROM users
+WHERE sanitized_email = @email::text
 LIMIT 1;
 
 -- name: GetUserByUsername :one
@@ -35,12 +41,12 @@ WHERE username = $1
 LIMIT 1;
 
 -- name: CreateUser :one
-INSERT INTO users (email, username, password, role)
-VALUES ($1, $2, $3, $4) RETURNING *;
+INSERT INTO users (email, username, password, role, sanitized_email)
+VALUES ($1, $2, $3, $4, $5) RETURNING *;
 
 -- name: UpdateUserEmail :exec
 UPDATE users
-SET email = $2
+SET email = $2, sanitized_email = $3
 WHERE id = $1;
 
 -- name: UpdateUsername :exec

@@ -58,6 +58,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserByIDStmt, err = db.PrepareContext(ctx, getUserByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByID: %w", err)
 	}
+	if q.getUserBySanitizedEmailStmt, err = db.PrepareContext(ctx, getUserBySanitizedEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserBySanitizedEmail: %w", err)
+	}
 	if q.getUserByUsernameStmt, err = db.PrepareContext(ctx, getUserByUsername); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByUsername: %w", err)
 	}
@@ -172,6 +175,11 @@ func (q *Queries) Close() error {
 	if q.getUserByIDStmt != nil {
 		if cerr := q.getUserByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByIDStmt: %w", cerr)
+		}
+	}
+	if q.getUserBySanitizedEmailStmt != nil {
+		if cerr := q.getUserBySanitizedEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserBySanitizedEmailStmt: %w", cerr)
 		}
 	}
 	if q.getUserByUsernameStmt != nil {
@@ -310,6 +318,7 @@ type Queries struct {
 	destroyUserStmt                     *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
+	getUserBySanitizedEmailStmt         *sql.Stmt
 	getUserByUsernameStmt               *sql.Stmt
 	getUserIDsOnTheSameDeviceStmt       *sql.Stmt
 	getUserVerificationByEmailStmt      *sql.Stmt
@@ -345,6 +354,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		destroyUserStmt:                     q.destroyUserStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
+		getUserBySanitizedEmailStmt:         q.getUserBySanitizedEmailStmt,
 		getUserByUsernameStmt:               q.getUserByUsernameStmt,
 		getUserIDsOnTheSameDeviceStmt:       q.getUserIDsOnTheSameDeviceStmt,
 		getUserVerificationByEmailStmt:      q.getUserVerificationByEmailStmt,

@@ -51,6 +51,7 @@ type (
 		// user
 		CreateUser(ctx context.Context, arg repository.CreateUserParams) (repository.User, error)
 		GetUserByEmail(ctx context.Context, email string) (repository.User, error)
+		GetUserBySanitizedEmail(ctx context.Context, email string) (repository.User, error)
 		GetUserByUsername(ctx context.Context, username string) (repository.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (repository.User, error)
 		UpdateUserEmail(ctx context.Context, arg repository.UpdateUserEmailParams) error
@@ -215,7 +216,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 func (s *Service) SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error) {
 	var otpHash []byte
 	// Sanitize email address
-	email, err := utils.SanitizeEmail(email)
+	sanitizedEmail, err := utils.SanitizeEmail(email)
 	if err != nil {
 		return Token{}, validator.NewValidationError(url.Values{
 			"email": []string{ErrInvalidEmailFormat.Error()},
@@ -239,6 +240,14 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
+	if _, err := s.ur.GetUserBySanitizedEmail(ctx, sanitizedEmail); err == nil {
+		return Token{}, validator.NewValidationError(url.Values{
+			"email": []string{"email is already taken"},
+		})
+	} else if !db.IsNotFoundError(err) {
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
+	}
+
 	// Check if the passed username is not taken yet
 	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
 		return Token{}, validator.NewValidationError(url.Values{
@@ -254,10 +263,11 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 	}
 
 	u, err := s.ur.CreateUser(ctx, repository.CreateUserParams{
-		Email:    email,
-		Password: passwdHash,
-		Username: username,
-		Role:     rbac.RoleUser.String(),
+		Email:          email,
+		SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		Password:       passwdHash,
+		Username:       username,
+		Role:           rbac.RoleUser.String(),
 	})
 	if err != nil {
 		return Token{}, fmt.Errorf("could not create a new account: %w", err)
@@ -522,7 +532,7 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 	var otpHash []byte
 
 	// Sanitize email address
-	email, err := utils.SanitizeEmail(email)
+	sanitizedEmail, err := utils.SanitizeEmail(email)
 	if err != nil {
 		return validator.NewValidationError(url.Values{
 			"email": []string{ErrInvalidEmailFormat.Error()},
@@ -541,13 +551,13 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 		return ErrUserIsDisabled
 	}
 
-	if !strings.Contains(u.Email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+	if !strings.Contains(sanitizedEmail, "@sator.io") {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
 			return ErrUserIsDisabled
 		}
 	}
 
-	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
+	if _, err := s.ur.GetUserBySanitizedEmail(ctx, sanitizedEmail); err == nil {
 		return fmt.Errorf("could not update email: %w", ErrEmailAlreadyTaken)
 	}
 
@@ -586,14 +596,6 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 // ValidateChangeEmailCode validates change email code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error {
-	// Sanitize email address
-	email, err := utils.SanitizeEmail(email)
-	if err != nil {
-		return validator.NewValidationError(url.Values{
-			"email": []string{ErrInvalidEmailFormat.Error()},
-		})
-	}
-
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyChangeEmail,
 		Email:       email,
@@ -615,7 +617,7 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 // UpdateEmail updates user's email to provided new one in case of correct otp provided.
 func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
 	// Sanitize email address
-	email, err := utils.SanitizeEmail(email)
+	sanitizedEmail, err := utils.SanitizeEmail(email)
 	if err != nil {
 		return validator.NewValidationError(url.Values{
 			"email": []string{ErrInvalidEmailFormat.Error()},
@@ -627,8 +629,9 @@ func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp 
 	}
 
 	if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
-		ID:    userID,
-		Email: email,
+		ID:             userID,
+		Email:          email,
+		SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
 	}); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
 	}
