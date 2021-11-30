@@ -112,7 +112,16 @@ func main() {
 								// Sanitize email address
 								sanitizedEmail, err := utils.SanitizeEmail(user.Email)
 								if err != nil {
-									log.Printf("could not cleam email: %s: %v", user.Email, err)
+									log.Printf("could not clean email: %s: %v", user.Email, err)
+
+									if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+										ID:          user.ID,
+										Disabled:    true,
+										BlockReason: sql.NullString{String: "invalid email address", Valid: true},
+									}); err != nil {
+										log.Printf("could not block user with id=%s: %v", user.ID, err)
+									}
+
 									continue
 								}
 
