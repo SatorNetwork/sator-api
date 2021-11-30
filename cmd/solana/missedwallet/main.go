@@ -163,9 +163,8 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 	txHash, err := sc.CreateAccountWithATA(
 		ctx,
 		solanaAssetAddr,
+		acc.PublicKey.ToBase58(),
 		sc.AccountFromPrivateKeyBytes(feePayerPk),
-		sc.AccountFromPrivateKeyBytes(tokenHolderPk),
-		acc,
 	)
 	if err != nil {
 		return fmt.Errorf("could not init token holder account: %w", err)

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
-	"github.com/portto/solana-go-sdk/assotokenprog"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
@@ -28,12 +28,17 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 			return "", err
 		}
 		// Add instruction to create token account
-		instructions = append(instructions,
-			assotokenprog.CreateAssociatedTokenAccount(
-				feePayer.PublicKey,
-				recipientPublicKey,
-				common.PublicKeyFromString(assetAddr),
-			))
+		// instructions = append(instructions,
+		// 	assotokenprog.CreateAssociatedTokenAccount(
+		// 		feePayer.PublicKey,
+		// 		recipientPublicKey,
+		// 		common.PublicKeyFromString(assetAddr),
+		// 	))
+		res, err := c.CreateAccountWithATA(ctx, assetAddr, recipientPublicKey.ToBase58(), feePayer)
+		if err != nil {
+			return "", fmt.Errorf("CreateAccountWithATA: %w", err)
+		}
+		log.Printf("CreateAccountWithATA: %s", res)
 	}
 
 	instructions = append(instructions, tokenprog.TransferChecked(
@@ -70,12 +75,18 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 			return "", err
 		}
 		// Add instruction to create token account
-		instructions = append(instructions,
-			assotokenprog.CreateAssociatedTokenAccount(
-				feePayer.PublicKey,
-				recipientPublicKey,
-				common.PublicKeyFromString(assetAddr),
-			))
+		// instructions = append(instructions,
+		// 	assotokenprog.CreateAssociatedTokenAccount(
+		// 		feePayer.PublicKey,
+		// 		recipientPublicKey,
+		// 		common.PublicKeyFromString(assetAddr),
+		// 	))
+
+		res, err := c.CreateAccountWithATA(ctx, assetAddr, recipientPublicKey.ToBase58(), feePayer)
+		if err != nil {
+			return "", fmt.Errorf("CreateAccountWithATA: %w", err)
+		}
+		log.Printf("CreateAccountWithATA: %s", res)
 	}
 
 	instructions = append(instructions, tokenprog.TransferChecked(
