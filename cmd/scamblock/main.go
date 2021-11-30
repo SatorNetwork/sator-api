@@ -23,6 +23,7 @@ var (
 	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 3)
 	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
 	interval       = env.GetDuration("EXEC_INTERVAL", time.Minute)
+	bid            = env.MustString("BACKOFFICE_DEVICE_ID")
 )
 
 func main() {
@@ -65,7 +66,7 @@ func main() {
 			case <-done:
 				return nil
 			case <-ticker.C:
-				if err := repo.BlockUsersOnTheSameDevice(ctx); err != nil {
+				if err := repo.BlockUsersOnTheSameDevice(ctx, bid); err != nil {
 					log.Printf("[ERROR] BlockUsersOnTheSameDevice: %v", err)
 				}
 			}

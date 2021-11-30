@@ -14,16 +14,18 @@ UPDATE users SET disabled = TRUE, block_reason = 'detected scam: created multipl
 WHERE id IN (
     SELECT user_id FROM users_devices
     WHERE device_id IN (
-        SELECT device_id 
+        SELECT users_devices.device_id 
         FROM users_devices 
-        GROUP BY device_id
-        HAVING count(user_id) > 1 
+        WHERE users_devices.device_id != $1
+        GROUP BY users_devices.device_id
+        HAVING count(users_devices.user_id) > 1 
     )
-)
+) 
+AND email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
 `
 
-func (q *Queries) BlockUsersOnTheSameDevice(ctx context.Context) error {
-	_, err := q.exec(ctx, q.blockUsersOnTheSameDeviceStmt, blockUsersOnTheSameDevice)
+func (q *Queries) BlockUsersOnTheSameDevice(ctx context.Context, excludeDeviceID string) error {
+	_, err := q.exec(ctx, q.blockUsersOnTheSameDeviceStmt, blockUsersOnTheSameDevice, excludeDeviceID)
 	return err
 }
 
