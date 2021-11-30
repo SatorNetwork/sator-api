@@ -150,7 +150,7 @@ WITH minted_nfts AS (
     FROM nft_owners
     GROUP BY nft_item_id
 )
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, minted_nfts.minted as minted
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
 WHERE nft_items.supply > 0
@@ -163,15 +163,29 @@ type GetNFTItemsListParams struct {
 	Limit  int32 `json:"limit_val"`
 }
 
-func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams) ([]NFTItem, error) {
+type GetNFTItemsListRow struct {
+	ID          uuid.UUID      `json:"id"`
+	OwnerID     uuid.NullUUID  `json:"owner_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Cover       string         `json:"cover"`
+	Supply      int64          `json:"supply"`
+	BuyNowPrice float64        `json:"buy_now_price"`
+	TokenURI    string         `json:"token_uri"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Minted      sql.NullInt32  `json:"minted"`
+}
+
+func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams) ([]GetNFTItemsListRow, error) {
 	rows, err := q.query(ctx, q.getNFTItemsListStmt, getNFTItemsList, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []NFTItem
+	var items []GetNFTItemsListRow
 	for rows.Next() {
-		var i NFTItem
+		var i GetNFTItemsListRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OwnerID,
@@ -183,6 +197,7 @@ func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams
 			&i.TokenURI,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Minted,
 		); err != nil {
 			return nil, err
 		}
@@ -253,7 +268,7 @@ WITH minted_nfts AS (
     FROM nft_owners
     GROUP BY nft_item_id
 )
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, minted_nfts.minted as minted
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
 WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
@@ -271,15 +286,29 @@ type GetNFTItemsListByRelationIDParams struct {
 	Limit      int32     `json:"limit_val"`
 }
 
-func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTItemsListByRelationIDParams) ([]NFTItem, error) {
+type GetNFTItemsListByRelationIDRow struct {
+	ID          uuid.UUID      `json:"id"`
+	OwnerID     uuid.NullUUID  `json:"owner_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Cover       string         `json:"cover"`
+	Supply      int64          `json:"supply"`
+	BuyNowPrice float64        `json:"buy_now_price"`
+	TokenURI    string         `json:"token_uri"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Minted      sql.NullInt32  `json:"minted"`
+}
+
+func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTItemsListByRelationIDParams) ([]GetNFTItemsListByRelationIDRow, error) {
 	rows, err := q.query(ctx, q.getNFTItemsListByRelationIDStmt, getNFTItemsListByRelationID, arg.RelationID, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []NFTItem
+	var items []GetNFTItemsListByRelationIDRow
 	for rows.Next() {
-		var i NFTItem
+		var i GetNFTItemsListByRelationIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OwnerID,
@@ -291,6 +320,7 @@ func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTIte
 			&i.TokenURI,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Minted,
 		); err != nil {
 			return nil, err
 		}

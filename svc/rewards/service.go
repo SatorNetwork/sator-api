@@ -151,7 +151,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 	}
 
 	if amount < s.minAmountToClaim {
-		return ClaimRewardsResult{}, fmt.Errorf("%w: %d", ErrNotEnoughBalance, 50)
+		return ClaimRewardsResult{}, fmt.Errorf("%w: %.2f", ErrNotEnoughBalance, s.minAmountToClaim)
 	}
 
 	txHash, err := s.ws.WithdrawRewards(ctx, uid, amount)

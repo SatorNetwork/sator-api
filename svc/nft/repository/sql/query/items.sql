@@ -25,7 +25,7 @@ WITH minted_nfts AS (
     FROM nft_owners
     GROUP BY nft_item_id
 )
-SELECT nft_items.*
+SELECT nft_items.*, minted_nfts.minted as minted
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
 WHERE nft_items.supply > 0
@@ -47,7 +47,7 @@ WITH minted_nfts AS (
     FROM nft_owners
     GROUP BY nft_item_id
 )
-SELECT nft_items.*
+SELECT nft_items.*, minted_nfts.minted as minted
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
 WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
