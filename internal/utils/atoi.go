@@ -59,7 +59,7 @@ func StrToUint(source string) uint {
 		return DefaultAllocate
 	}
 
-	if res < 0 && res > math.MaxUint32 {
+	if res > math.MaxUint32 {
 		log.Printf("error in StrToUint: %v", err)
 		return DefaultAllocate
 	}

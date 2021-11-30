@@ -10,6 +10,24 @@ import (
 	"github.com/google/uuid"
 )
 
+const blockUsersWithDuplicateEmail = `-- name: BlockUsersWithDuplicateEmail :exec
+UPDATE users SET disabled = TRUE, block_reason = 'detected scam: multiple accounts with duplicate email address'
+WHERE sanitized_email IN (
+        SELECT users.sanitized_email
+        FROM users 
+        WHERE users.sanitized_email <> '' AND users.sanitized_email IS NOT NULL
+        GROUP BY users.sanitized_email
+        HAVING count(users.id) > 1 
+    )
+AND sanitized_email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
+AND disabled = FALSE
+`
+
+func (q *Queries) BlockUsersWithDuplicateEmail(ctx context.Context) error {
+	_, err := q.exec(ctx, q.blockUsersWithDuplicateEmailStmt, blockUsersWithDuplicateEmail)
+	return err
+}
+
 const countAllUsers = `-- name: CountAllUsers :one
 SELECT count(id)
 FROM users
@@ -24,15 +42,16 @@ func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, username, password, role)
-VALUES ($1, $2, $3, $4) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role
+INSERT INTO users (email, username, password, role, sanitized_email)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 `
 
 type CreateUserParams struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password []byte `json:"password"`
-	Role     string `json:"role"`
+	Email          string         `json:"email"`
+	Username       string         `json:"username"`
+	Password       []byte         `json:"password"`
+	Role           string         `json:"role"`
+	SanitizedEmail sql.NullString `json:"sanitized_email"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -41,6 +60,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Username,
 		arg.Password,
 		arg.Role,
+		arg.SanitizedEmail,
 	)
 	var i User
 	err := row.Scan(
@@ -53,6 +73,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.Role,
+		&i.BlockReason,
+		&i.SanitizedEmail,
+		&i.EmailHash,
 	)
 	return i, err
 }
@@ -81,8 +104,58 @@ func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
 	return err
 }
 
+const getNotSanitizedUsersListDesc = `-- name: GetNotSanitizedUsersListDesc :many
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+FROM users
+WHERE (sanitized_email IS NULL OR sanitized_email = '')
+AND disabled = FALSE
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetNotSanitizedUsersListDescParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetNotSanitizedUsersListDesc(ctx context.Context, arg GetNotSanitizedUsersListDescParams) ([]User, error) {
+	rows, err := q.query(ctx, q.getNotSanitizedUsersListDescStmt, getNotSanitizedUsersListDesc, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Password,
+			&i.Disabled,
+			&i.VerifiedAt,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Role,
+			&i.BlockReason,
+			&i.SanitizedEmail,
+			&i.EmailHash,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -101,12 +174,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.Role,
+		&i.BlockReason,
+		&i.SanitizedEmail,
+		&i.EmailHash,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 FROM users
 WHERE id = $1
 LIMIT 1
@@ -125,12 +201,42 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.Role,
+		&i.BlockReason,
+		&i.SanitizedEmail,
+		&i.EmailHash,
+	)
+	return i, err
+}
+
+const getUserBySanitizedEmail = `-- name: GetUserBySanitizedEmail :one
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+FROM users
+WHERE sanitized_email = $1::text
+LIMIT 1
+`
+
+func (q *Queries) GetUserBySanitizedEmail(ctx context.Context, email string) (User, error) {
+	row := q.queryRow(ctx, q.getUserBySanitizedEmailStmt, getUserBySanitizedEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.Disabled,
+		&i.VerifiedAt,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.Role,
+		&i.BlockReason,
+		&i.SanitizedEmail,
+		&i.EmailHash,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 FROM users
 WHERE username = $1
 LIMIT 1
@@ -149,12 +255,15 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.Role,
+		&i.BlockReason,
+		&i.SanitizedEmail,
+		&i.EmailHash,
 	)
 	return i, err
 }
 
 const getUsersListDesc = `-- name: GetUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -184,6 +293,9 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.Role,
+			&i.BlockReason,
+			&i.SanitizedEmail,
+			&i.EmailHash,
 		); err != nil {
 			return nil, err
 		}
@@ -199,7 +311,7 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 }
 
 const getVerifiedUsersListDesc = `-- name: GetVerifiedUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 FROM users
 WHERE verified_at IS NOT NULL
 ORDER BY created_at DESC
@@ -230,6 +342,9 @@ func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedU
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.Role,
+			&i.BlockReason,
+			&i.SanitizedEmail,
+			&i.EmailHash,
 		); err != nil {
 			return nil, err
 		}
@@ -244,19 +359,34 @@ func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedU
 	return items, nil
 }
 
+const isUserDisabled = `-- name: IsUserDisabled :one
+SELECT disabled
+FROM users
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) IsUserDisabled(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.queryRow(ctx, q.isUserDisabledStmt, isUserDisabled, id)
+	var disabled bool
+	err := row.Scan(&disabled)
+	return disabled, err
+}
+
 const updateUserEmail = `-- name: UpdateUserEmail :exec
 UPDATE users
-SET email = $2
+SET email = $2, sanitized_email = $3
 WHERE id = $1
 `
 
 type UpdateUserEmailParams struct {
-	ID    uuid.UUID `json:"id"`
-	Email string    `json:"email"`
+	ID             uuid.UUID      `json:"id"`
+	Email          string         `json:"email"`
+	SanitizedEmail sql.NullString `json:"sanitized_email"`
 }
 
 func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
-	_, err := q.exec(ctx, q.updateUserEmailStmt, updateUserEmail, arg.ID, arg.Email)
+	_, err := q.exec(ctx, q.updateUserEmailStmt, updateUserEmail, arg.ID, arg.Email, arg.SanitizedEmail)
 	return err
 }
 
@@ -276,19 +406,36 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 	return err
 }
 
+const updateUserSanitizedEmail = `-- name: UpdateUserSanitizedEmail :exec
+UPDATE users
+SET sanitized_email = $1::text
+WHERE id = $2
+`
+
+type UpdateUserSanitizedEmailParams struct {
+	SanitizedEmail string    `json:"sanitized_email"`
+	ID             uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUserSanitizedEmail(ctx context.Context, arg UpdateUserSanitizedEmailParams) error {
+	_, err := q.exec(ctx, q.updateUserSanitizedEmailStmt, updateUserSanitizedEmail, arg.SanitizedEmail, arg.ID)
+	return err
+}
+
 const updateUserStatus = `-- name: UpdateUserStatus :exec
 UPDATE users
-SET disabled = $2
+SET disabled = $2, block_reason = $3
 WHERE id = $1
 `
 
 type UpdateUserStatusParams struct {
-	ID       uuid.UUID `json:"id"`
-	Disabled bool      `json:"disabled"`
+	ID          uuid.UUID      `json:"id"`
+	Disabled    bool           `json:"disabled"`
+	BlockReason sql.NullString `json:"block_reason"`
 }
 
 func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
-	_, err := q.exec(ctx, q.updateUserStatusStmt, updateUserStatus, arg.ID, arg.Disabled)
+	_, err := q.exec(ctx, q.updateUserStatusStmt, updateUserStatus, arg.ID, arg.Disabled, arg.BlockReason)
 	return err
 }
 

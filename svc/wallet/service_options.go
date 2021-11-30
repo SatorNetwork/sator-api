@@ -22,3 +22,10 @@ func WithSolanaTokenHolder(addr string, pk []byte) ServiceOption {
 		s.tokenHolderSolanaPrivateKey = pk
 	}
 }
+
+// WithMinAmountToTransfer ...
+func WithMinAmountToTransfer(amount float64) ServiceOption {
+	return func(s *Service) {
+		s.minAmountToTransfer = amount
+	}
+}

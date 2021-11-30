@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -25,6 +26,8 @@ type (
 		BuyNFT             endpoint.Endpoint
 		GetCategories      endpoint.Endpoint
 		GetMainScreenData  endpoint.Endpoint
+		DeleteNFTItemByID  endpoint.Endpoint
+		UpdateNFTItem      endpoint.Endpoint
 	}
 
 	service interface {
@@ -38,6 +41,9 @@ type (
 		BuyNFT(ctx context.Context, userUid uuid.UUID, nftID uuid.UUID) error
 		GetCategories(ctx context.Context) ([]*Category, error)
 		GetMainScreenCategory(ctx context.Context) (*Category, error)
+		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
+		UpdateNFTItem(ctx context.Context, nft *NFT) error
+		GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error)
 	}
 
 	TransportNFT struct {
@@ -57,6 +63,7 @@ type (
 		TokenURI    string  `json:"token_uri" validate:"required"`
 
 		AuctionParams *TransportNFTAuctionParams `json:"auction_params"`
+		RelationIDs   []uuid.UUID                `json:"relation_ids"`
 	}
 
 	TransportNFTAuctionParams struct {
@@ -67,6 +74,12 @@ type (
 
 	GetNFTsByCategoryRequest struct {
 		Category string `json:"category" validate:"required,uuid"`
+
+		utils.PaginationRequest
+	}
+
+	GetNFTsWithFilterRequest struct {
+		RelationID string `json:"relation_id,omitempty"`
 
 		utils.PaginationRequest
 	}
@@ -96,6 +109,16 @@ type (
 	}
 
 	Empty struct{}
+
+	UpdateNFTRequest struct {
+		ID          uuid.UUID `json:"id"`
+		ImageLink   string    `json:"image_link"`
+		Name        string    `json:"name" validate:"required"`
+		Description string    `json:"description"`
+		Supply      int       `json:"supply"`
+		BuyNowPrice float64   `json:"buy_now_price"`
+		TokenURI    string    `json:"token_uri" validate:"required"`
+	}
 )
 
 func FromServiceNFTs(nfts []*NFT) []*TransportNFT {
@@ -150,6 +173,7 @@ func (n *TransportNFT) ToServiceNFT() *NFT {
 		SellType:    n.SellType,
 		BuyNowPrice: n.BuyNowPrice,
 		TokenURI:    n.TokenURI,
+		RelationIDs: n.RelationIDs,
 	}
 	if n.AuctionParams != nil {
 		nft.AuctionParams = n.AuctionParams.ToServiceNFTAuctionParams()
@@ -196,6 +220,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		BuyNFT:             MakeBuyNFTEndpoint(s),
 		GetCategories:      MakeGetCategoriesEndpoint(s),
 		GetMainScreenData:  MakeGetMainScreenDataEndpoint(s),
+		DeleteNFTItemByID:  MakeDeleteNFTItemByIDEndpoint(s),
+		UpdateNFTItem:      MakeUpdateNFTItemEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -211,6 +237,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.BuyNFT = mdw(e.BuyNFT)
 			e.GetCategories = mdw(e.GetCategories)
 			e.GetMainScreenData = mdw(e.GetMainScreenData)
+			e.DeleteNFTItemByID = mdw(e.DeleteNFTItemByID)
+			e.UpdateNFTItem = mdw(e.UpdateNFTItem)
 		}
 	}
 
@@ -243,12 +271,31 @@ func MakeCreateNFTEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 
 func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req, ok := request.(utils.PaginationRequest)
-		if !ok {
-			return nil, fmt.Errorf("unexpected request type, want: PaginationRequest, got: %T", request)
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
 		}
+
+		req := request.(*GetNFTsWithFilterRequest)
 		if err := v(req); err != nil {
 			return nil, err
+		}
+		if req.RelationID != "" {
+			uid, err := jwt.UserIDFromContext(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("could not get user profile id: %w", err)
+			}
+
+			relationID, err := uuid.Parse(req.RelationID)
+			if err != nil {
+				return nil, fmt.Errorf("could not get relation id: %w", err)
+			}
+
+			nfts, err := s.GetNFTsByRelationID(ctx, uid, relationID, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return FromServiceNFTs(nfts), nil
 		}
 
 		nfts, err := s.GetNFTs(ctx, req.Limit(), req.Offset())
@@ -425,5 +472,53 @@ func MakeGetMainScreenDataEndpoint(s service) endpoint.Endpoint {
 		category.Items = FromServiceNFTs(nfts)
 
 		return category, nil
+	}
+}
+
+func MakeDeleteNFTItemByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		err = s.DeleteNFTItemByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+func MakeUpdateNFTItemEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(UpdateNFTRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.UpdateNFTItem(ctx, &NFT{
+			ID:          req.ID,
+			ImageLink:   req.ImageLink,
+			Name:        req.Name,
+			Description: req.Description,
+			Supply:      req.Supply,
+			BuyNowPrice: req.BuyNowPrice,
+			TokenURI:    req.TokenURI,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }

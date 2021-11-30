@@ -5,14 +5,18 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	dbx "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/solana"
-	userRepository "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/dmitrymomot/go-env"
 	"github.com/google/uuid"
+	"github.com/oklog/run"
 	"github.com/zeebo/errs"
 
 	_ "github.com/lib/pq" // init pg driver
@@ -21,11 +25,13 @@ import (
 var (
 	// DB
 	dbConnString   = env.MustString("DATABASE_URL")
-	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 10)
+	dbMaxOpenConns = env.GetInt("DATABASE_MAX_OPEN_CONNS", 3)
 	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
 
 	// Solana
 	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+
+	interval = env.GetDuration("EXEC_INTERVAL", time.Hour)
 )
 
 func main() {
@@ -48,53 +54,66 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	userRepo, err := userRepository.Prepare(ctx, db)
+	mwr, err := Prepare(ctx, db)
 	if err != nil {
-		log.Fatalf("userRepo error: %v", err)
+		log.Fatalf("missed wallet repo error: %v", err)
 	}
-
-	usersNumber, err := userRepo.CountAllUsers(ctx)
-	if err != nil {
-		log.Fatalf("userRepo error: %v", err)
-	}
-
-	log.Printf("USERS NUMBER: %d", usersNumber)
 
 	txFn := dbx.Transaction(db)
 
-	for i := 0; int64(i) < usersNumber; i++ {
-		// time.Sleep(time.Second*5)
+	// runtime group
+	var g run.Group
 
-		log.Println("Getting user")
-		ul, err := userRepo.GetUsersListDesc(ctx, userRepository.GetUsersListDescParams{
-			Limit:  1,
-			Offset: int32(i),
-		})
-		if err != nil {
-			if dbx.IsNotFoundError(err) {
-				log.Print("No more users")
-				break
+	stop := false
+	g.Add(func() error {
+		for {
+			usersWithoutWallets, err := mwr.GetUsersWithoutWallet(ctx)
+			if err != nil {
+				log.Fatalf("[ERROR] userRepo error: %v", err)
 			}
-			continue
-		}
 
-		if len(ul) < 1 {
-			log.Print("No more users")
-			break
-		}
+			log.Printf("NUMBER OF USERS WITHOUT WALLETS: %d", len(usersWithoutWallets))
 
-		user := ul[0]
+			for _, user := range usersWithoutWallets {
+				if stop {
+					return nil
+				}
 
-		if err := txFn(func(tx dbx.DBTX) error {
-			return createSolanaWalletIfNotExists(ctx, repository.New(tx), solana.New(solanaApiBaseUrl), user.ID)
-		}); err != nil {
-			log.Printf("Create user wallet if not exists: %v", err)
+				if !user.VerifiedAt.Valid {
+					continue
+				}
+				if err := txFn(func(tx dbx.DBTX) error {
+					return createSolanaWalletIfNotExists(
+						ctx,
+						repository.New(tx),
+						solana.New(solanaApiBaseUrl),
+						user.ID,
+					)
+				}); err != nil {
+					log.Printf("[ERROR] Create user wallet if not exists: %v", err)
+				}
+			}
+
+			time.Sleep(interval)
 		}
+	}, func(err error) {
+		stop = true
+	})
+
+	g.Add(func() error {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		c := <-sigChan
+		return fmt.Errorf("terminated with sig %q", c)
+	}, func(err error) {})
+
+	if err := g.Run(); err != nil {
+		log.Println("terminated with error:", err)
 	}
 }
 
 func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID) error {
-	log.Println("Getting user SAO wallet")
+	// log.Println("Getting user SAO wallet")
 	userWallet, err := repo.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     userID,
 		WalletType: wallet.WalletTypeSator,
@@ -108,42 +127,17 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 	}
 
 	if userWallet.SolanaAccountID == uuid.Nil && userWallet.WalletType == wallet.WalletTypeSator {
-		log.Println("Deleting user SAO wallet without solana SPL token account")
+		// log.Println("Deleting user SAO wallet without solana SPL token account")
 		if err := repo.DeleteWalletByID(ctx, userWallet.ID); err != nil {
 			log.Printf("Could not delete wallet with id=%s: %v", userWallet.ID.String(), err)
 		}
 	}
 
-	feePayer, err := repo.GetSolanaAccountByType(ctx, wallet.FeePayerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get fee payer account: %w", err)
-	}
-	issuer, err := repo.GetSolanaAccountByType(ctx, wallet.IssuerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get issuer account: %w", err)
-	}
-	asset, err := repo.GetSolanaAccountByType(ctx, wallet.AssetAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get asset account: %w", err)
-	}
-
-	log.Println("Creating user SAO wallet")
+	// log.Println("Creating user SAO wallet")
 	acc := sc.NewAccount()
 
-	txHash, err := sc.InitAccountToUseAsset(
-		ctx,
-		sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey),
-		sc.AccountFromPrivateKeyBytes(issuer.PrivateKey),
-		sc.AccountFromPrivateKeyBytes(asset.PrivateKey),
-		acc,
-	)
-	if err != nil {
-		return fmt.Errorf("could not init token holder account: %w", err)
-	}
-	log.Printf("init token holder account transaction: %s", txHash)
-
 	sacc, err := repo.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
-		AccountType: wallet.TokenAccount.String(),
+		AccountType: wallet.GeneralAccount.String(),
 		PublicKey:   acc.PublicKey.ToBase58(),
 		PrivateKey:  acc.PrivateKey,
 	})
@@ -164,7 +158,7 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 		UserID:     userID,
 		WalletType: wallet.WalletTypeRewards,
 	}); err != nil && dbx.IsNotFoundError(err) {
-		log.Println("Creating user rewards wallet")
+		// log.Println("Creating user rewards wallet")
 		if _, err := repo.CreateWallet(ctx, repository.CreateWalletParams{
 			UserID:     userID,
 			WalletType: wallet.WalletTypeRewards,
@@ -173,6 +167,8 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 			return fmt.Errorf("could not new rewards wallet for user with id=%s: %w", userID.String(), err)
 		}
 	}
+
+	log.Printf("wallets has been created for user=%s", userID.String())
 
 	return nil
 }

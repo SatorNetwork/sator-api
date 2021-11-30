@@ -66,6 +66,16 @@ func (q *Queries) AddNFTItemOwner(ctx context.Context, arg AddNFTItemOwnerParams
 	return err
 }
 
+const deleteNFTItemByID = `-- name: DeleteNFTItemByID :exec
+DELETE FROM nft_items
+WHERE id = $1
+`
+
+func (q *Queries) DeleteNFTItemByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteNFTItemByIDStmt, deleteNFTItemByID, id)
+	return err
+}
+
 const doesUserOwnNFT = `-- name: DoesUserOwnNFT :one
 SELECT count(*) > 0
 FROM nft_owners
@@ -293,4 +303,38 @@ func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTIte
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateNFTItem = `-- name: UpdateNFTItem :exec
+UPDATE nft_items
+SET name = $1,
+    description = $2,
+    cover = $3,
+    supply = $4,
+    buy_now_price = $5,
+    token_uri = $6
+WHERE id = $7
+`
+
+type UpdateNFTItemParams struct {
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Cover       string         `json:"cover"`
+	Supply      int64          `json:"supply"`
+	BuyNowPrice float64        `json:"buy_now_price"`
+	TokenURI    string         `json:"token_uri"`
+	ID          uuid.UUID      `json:"id"`
+}
+
+func (q *Queries) UpdateNFTItem(ctx context.Context, arg UpdateNFTItemParams) error {
+	_, err := q.exec(ctx, q.updateNFTItemStmt, updateNFTItem,
+		arg.Name,
+		arg.Description,
+		arg.Cover,
+		arg.Supply,
+		arg.BuyNowPrice,
+		arg.TokenURI,
+		arg.ID,
+	)
+	return err
 }

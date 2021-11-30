@@ -9,7 +9,7 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 )
 
-func (c *Client) IssueAsset(ctx context.Context, feePayer, issuer, asset, dest types.Account, amount float64) (string, error) {
+func (c *Client) IssueAsset(ctx context.Context, feePayer, issuer, asset types.Account, dest common.PublicKey, amount float64) (string, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
 	// Issue asset
 	tx, err := c.SendTransaction(
@@ -17,7 +17,7 @@ func (c *Client) IssueAsset(ctx context.Context, feePayer, issuer, asset, dest t
 		feePayer, issuer,
 		tokenprog.MintToChecked(
 			asset.PublicKey,
-			dest.PublicKey,
+			dest,
 			issuer.PublicKey,
 			[]common.PublicKey{feePayer.PublicKey, issuer.PublicKey},
 			amountToSend,

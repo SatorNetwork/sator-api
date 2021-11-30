@@ -7,6 +7,116 @@ import (
 	"context"
 )
 
+const addToWhitelist = `-- name: AddToWhitelist :one
+INSERT INTO whitelist (
+    allowed_type,
+    allowed_value
+)
+VALUES (
+           $1,
+           $2
+       ) RETURNING allowed_type, allowed_value
+`
+
+type AddToWhitelistParams struct {
+	AllowedType  string `json:"allowed_type"`
+	AllowedValue string `json:"allowed_value"`
+}
+
+func (q *Queries) AddToWhitelist(ctx context.Context, arg AddToWhitelistParams) (Whitelist, error) {
+	row := q.queryRow(ctx, q.addToWhitelistStmt, addToWhitelist, arg.AllowedType, arg.AllowedValue)
+	var i Whitelist
+	err := row.Scan(&i.AllowedType, &i.AllowedValue)
+	return i, err
+}
+
+const deleteFromWhitelist = `-- name: DeleteFromWhitelist :exec
+DELETE FROM whitelist
+WHERE allowed_type = $1 AND allowed_value = $2
+`
+
+type DeleteFromWhitelistParams struct {
+	AllowedType  string `json:"allowed_type"`
+	AllowedValue string `json:"allowed_value"`
+}
+
+func (q *Queries) DeleteFromWhitelist(ctx context.Context, arg DeleteFromWhitelistParams) error {
+	_, err := q.exec(ctx, q.deleteFromWhitelistStmt, deleteFromWhitelist, arg.AllowedType, arg.AllowedValue)
+	return err
+}
+
+const getWhitelist = `-- name: GetWhitelist :many
+SELECT allowed_type, allowed_value
+FROM whitelist
+ORDER BY allowed_value ASC
+    LIMIT $1 OFFSET $2
+`
+
+type GetWhitelistParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetWhitelist(ctx context.Context, arg GetWhitelistParams) ([]Whitelist, error) {
+	rows, err := q.query(ctx, q.getWhitelistStmt, getWhitelist, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Whitelist
+	for rows.Next() {
+		var i Whitelist
+		if err := rows.Scan(&i.AllowedType, &i.AllowedValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getWhitelistByAllowedValue = `-- name: GetWhitelistByAllowedValue :many
+SELECT allowed_type, allowed_value
+FROM whitelist
+WHERE allowed_value LIKE CONCAT('%', $1::text, '%')
+ORDER BY allowed_value ASC
+    LIMIT $3::INT OFFSET $2::INT
+`
+
+type GetWhitelistByAllowedValueParams struct {
+	Query     string `json:"query"`
+	OffsetVal int32  `json:"offset_val"`
+	LimitVal  int32  `json:"limit_val"`
+}
+
+func (q *Queries) GetWhitelistByAllowedValue(ctx context.Context, arg GetWhitelistByAllowedValueParams) ([]Whitelist, error) {
+	rows, err := q.query(ctx, q.getWhitelistByAllowedValueStmt, getWhitelistByAllowedValue, arg.Query, arg.OffsetVal, arg.LimitVal)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Whitelist
+	for rows.Next() {
+		var i Whitelist
+		if err := rows.Scan(&i.AllowedType, &i.AllowedValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isEmailWhitelisted = `-- name: IsEmailWhitelisted :one
 SELECT count(*) > 0 FROM whitelist
 WHERE (allowed_type = 'email_domain'

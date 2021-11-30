@@ -12,6 +12,7 @@ var (
 	ErrMissedUserID          = errors.New("missed user id")
 	ErrUserIsDisabled        = errors.New("your profile was disabled. Please contact support for details")
 	ErrRestrictedEmailDomain = errors.New("please use real email address, or contact administrator")
+	ErrInvalidEmailFormat    = errors.New("email addrss must be a valid email address")
 
 	// ErrBadRouting is returned when an expected path variable is missing.
 	// It always indicates programmer error.

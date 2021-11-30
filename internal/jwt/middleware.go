@@ -12,11 +12,13 @@ import (
 // Useful in NewParser middleware.
 type claimsFactory func() jwt.Claims
 
+type checkUserFunc func(ctx context.Context) error
+
 // NewParser creates a new JWT token parsing middleware, specifying a
 // jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
 // adds the resulting claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
-func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims claimsFactory) endpoint.Middleware {
+func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims claimsFactory, checkUser checkUserFunc) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers.
@@ -70,14 +72,20 @@ func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims claimsFa
 
 			ctx = context.WithValue(ctx, kitjwt.JWTClaimsContextKey, token.Claims)
 
+			if checkUser != nil {
+				if err := checkUser(ctx); err != nil {
+					return nil, err
+				}
+			}
+
 			return next(ctx, request)
 		}
 	}
 }
 
 // NewParser returns go-kit parser middleware
-func NewParser(signingKey string) endpoint.Middleware {
+func NewParser(signingKey string, checkUser checkUserFunc) endpoint.Middleware {
 	return newParser(func(token *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
-	}, defaultSigningMethod, ClaimsFactory)
+	}, defaultSigningMethod, ClaimsFactory, checkUser)
 }

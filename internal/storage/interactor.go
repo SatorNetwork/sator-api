@@ -2,12 +2,12 @@ package storage
 
 import (
 	"fmt"
-	"io"
-	"path"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/pkg/errors"
+	"io"
+	"path"
+	"time"
 )
 
 // Predefined ACL permissions
@@ -101,7 +101,7 @@ func (i *Interactor) Remove(filepath string) error {
 
 // FilePath returns absolute file path in the storage
 func (i *Interactor) FilePath(filename string) string {
-	return path.Join("uploads", filename)
+	return path.Join("uploads", time.Now().Format("2006/01/02"), filename)
 }
 
 // FileURL return public url for a file

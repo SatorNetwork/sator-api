@@ -39,6 +39,7 @@ type (
 		ReviewEpisode          endpoint.Endpoint
 		GetReviewsList         endpoint.Endpoint
 		GetReviewsListByUserID endpoint.Endpoint
+		DeleteReviewByID       endpoint.Endpoint
 
 		AddClapsForShow endpoint.Endpoint
 	}
@@ -66,6 +67,7 @@ type (
 		ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error
 		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
 		GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error)
+		DeleteReviewByID(ctx context.Context, id uuid.UUID) error
 
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
@@ -216,6 +218,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		ReviewEpisode:          MakeReviewEpisodeEndpoint(s, validateFunc),
 		GetReviewsList:         MakeGetReviewsListEndpoint(s, validateFunc),
 		GetReviewsListByUserID: MakeGetReviewsListByUserIDEndpoint(s, validateFunc),
+		DeleteReviewByID:       MakeDeleteReviewByIDEndpoint(s),
 
 		AddClapsForShow: MakeAddClapsForShowEndpoint(s),
 	}
@@ -245,6 +248,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.ReviewEpisode = mdw(e.ReviewEpisode)
 			e.GetReviewsList = mdw(e.GetReviewsList)
 			e.GetReviewsListByUserID = mdw(e.GetReviewsListByUserID)
+			e.DeleteReviewByID = mdw(e.DeleteReviewByID)
 
 			e.AddClapsForShow = mdw(e.AddClapsForShow)
 		}
@@ -865,6 +869,27 @@ func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) end
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeDeleteReviewByIDEndpoint ...
+func MakeDeleteReviewByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get review id: %w", err)
+		}
+
+		err = s.DeleteReviewByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }
 

@@ -31,6 +31,7 @@ type (
 		assetName         string
 		explorerURLTmpl   string
 		holdRewardsPeriod time.Duration
+		minAmountToClaim  float64 // minimum amount to claim rewards
 	}
 
 	Winner struct {
@@ -72,6 +73,7 @@ func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker
 		assetName:         "SAO",
 		explorerURLTmpl:   "https://explorer.solana.com/tx/%s?cluster=devnet",
 		holdRewardsPeriod: time.Hour * 24 * 30,
+		minAmountToClaim:  0,
 	}
 
 	for _, fn := range opt {
@@ -148,7 +150,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not get total amount of rewards: %w", err)
 	}
 
-	if amount < 50 {
+	if amount < s.minAmountToClaim {
 		return ClaimRewardsResult{}, fmt.Errorf("%w: %d", ErrNotEnoughBalance, 50)
 	}
 

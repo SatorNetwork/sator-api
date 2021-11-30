@@ -104,6 +104,7 @@ var (
 	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
+	tokenCirculatingSupply      = env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844)
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -143,7 +144,13 @@ var (
 	androidPackageName = env.MustString("FIREBASE_ANDROID_PACKAGE_NAME")
 	iosBundleId        = env.MustString("FIREBASE_IOS_BUNDLE_ID")
 	suffixOption       = env.MustString("FIREBASE_SUFFIX_OPTION")
+
+	// Min amounts
+	minAmountToTransfer = env.GetFloat("MIN_AMOUNT_TO_TRANSFER", 0)
+	minAmountToClaim    = env.GetFloat("MIN_AMOUNT_TO_CLAIM", 0)
 )
+
+var circulatingSupply float64 = 0
 
 func main() {
 	log.SetFlags(log.LUTC | log.Ldate | log.Ltime | log.Llongfile)
@@ -207,12 +214,19 @@ func main() {
 
 		r.Get("/", rootHandler)
 		r.Get("/health", healthCheckHandler)
+		r.Get("/supply", supplyHandler)
 		r.Get("/ws", testWsHandler)
+	}
+
+	// auth repo
+	authRepository, err := authRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("authRepo error: %v", err)
 	}
 
 	// Init JWT parser middleware
 	// not depends on transport
-	jwtMdw := jwt.NewParser(jwtSigningKey)
+	jwtMdw := jwt.NewParser(jwtSigningKey, jwt.CheckUser(authRepository.IsUserDisabled))
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
 	ethereumClient, err := ethereum.NewClient()
@@ -252,6 +266,7 @@ func main() {
 			wallet.WithAssetSolanaAddress(solanaAssetAddr),
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
+			wallet.WithMinAmountToTransfer(minAmountToTransfer),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -273,6 +288,7 @@ func main() {
 		db_internal.NewAdvisoryLocks(db),
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster="+solanaEnv),
 		rewards.WithHoldRewardsPeriod(holdRewardsPeriod),
+		rewards.WithMinAmountToClaim(minAmountToClaim),
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
@@ -297,11 +313,6 @@ func main() {
 
 	// Auth service
 	{
-		// auth
-		authRepository, err := authRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("authRepo error: %v", err)
-		}
 		r.Mount("/auth", auth.MakeHTTPHandler(
 			auth.MakeEndpoints(auth.NewService(
 				jwtInteractor,
@@ -503,11 +514,11 @@ func main() {
 		}
 		g.Add(func() error {
 			log.Printf("[http-server] start listening on :%d...\n", appPort)
-			err := httpServer.ListenAndServe()
-			if err != nil {
+			if err := httpServer.ListenAndServe(); err != nil {
 				fmt.Println("[http-server] stopped listening with error:", err)
+				return err
 			}
-			return err
+			return nil
 		}, func(err error) {
 			fmt.Println("[http-server] terminating because of error:", err)
 			_ = httpServer.Shutdown(context.Background())
@@ -519,6 +530,26 @@ func main() {
 			c := <-sigChan
 			return fmt.Errorf("terminated with sig %q", c)
 		}, func(err error) {})
+
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+
+		tickerDone := make(chan bool)
+		defer close(tickerDone)
+
+		g.Add(func() error {
+			circulatingSupply = tokenCirculatingSupply
+			for {
+				select {
+				case <-tickerDone:
+					return nil
+				case <-ticker.C:
+					circulatingSupply++
+				}
+			}
+		}, func(err error) {
+			tickerDone <- true
+		})
 	}
 
 	if err := g.Run(); err != nil {
@@ -532,6 +563,13 @@ func rootHandler(w http.ResponseWriter, _ *http.Request) {
 		buildTag = buildTagDO
 	}
 	defaultResponse(w, http.StatusOK, map[string]interface{}{"build_tag": buildTag})
+}
+
+// returns token circulating supply
+func supplyHandler(w http.ResponseWriter, _ *http.Request) {
+	defaultResponse(w, http.StatusOK, map[string]interface{}{
+		"supply": circulatingSupply,
+	})
 }
 
 // returns html page to test websocket
