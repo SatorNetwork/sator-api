@@ -291,6 +291,14 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 
 // ForgotPassword requests password reset with email.
 func (s *Service) ForgotPassword(ctx context.Context, email string) error {
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	var otpHash []byte
 
 	u, err := s.ur.GetUserByEmail(ctx, email)
@@ -346,6 +354,14 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 // ValidateResetPasswordCode validates reset password code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error) {
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return uuid.Nil, validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyResetPassword,
 		Email:       email,
@@ -369,6 +385,14 @@ func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp stri
 
 // ResetPassword changing password.
 func (s *Service) ResetPassword(ctx context.Context, email, password, otp string) error {
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	userID, err := s.ValidateResetPasswordCode(ctx, email, otp)
 	if err != nil {
 		return fmt.Errorf("could not reset password: %w", err)
@@ -492,6 +516,14 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
 	var otpHash []byte
 
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	u, err := s.ur.GetUserByID(ctx, userID)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -549,6 +581,14 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 // ValidateChangeEmailCode validates change email code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyChangeEmail,
 		Email:       email,
@@ -569,6 +609,14 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 
 // UpdateEmail updates user's email to provided new one in case of correct otp provided.
 func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	if err := s.ValidateChangeEmailCode(ctx, userID, email, otp); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
 	}
