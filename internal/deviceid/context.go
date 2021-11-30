@@ -2,7 +2,6 @@ package deviceid
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -24,5 +23,9 @@ func ToContext() httptransport.RequestFunc {
 
 // FromContext gets device id from context
 func FromContext(ctx context.Context) string {
-	return fmt.Sprintf("%v", ctx.Value(deviceIDContextKey))
+	v := ctx.Value(deviceIDContextKey)
+	if id, ok := v.(string); ok {
+		return id
+	}
+	return ""
 }
