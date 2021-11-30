@@ -12,6 +12,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
 
@@ -193,8 +194,13 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 // SignUp registers account with email, password and username.
 func (s *Service) SignUp(ctx context.Context, email, password, username string) (Token, error) {
 	var otpHash []byte
-	// Make email address case-insensitive
-	email = strings.ToLower(email)
+	// Sanitize email address
+	email, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return Token{}, validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
 
 	if !strings.Contains(email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
