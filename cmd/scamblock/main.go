@@ -69,6 +69,9 @@ func main() {
 				if err := repo.BlockUsersOnTheSameDevice(ctx, bid); err != nil {
 					log.Printf("[ERROR] BlockUsersOnTheSameDevice: %v", err)
 				}
+				if err := repo.BlockUsersWithDuplicateEmail(ctx); err != nil {
+					log.Printf("[ERROR] BlockUsersWithDuplicateEmail: %v", err)
+				}
 			}
 		}
 	}, func(err error) {

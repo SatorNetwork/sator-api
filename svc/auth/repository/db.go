@@ -28,6 +28,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.blockUsersOnTheSameDeviceStmt, err = db.PrepareContext(ctx, blockUsersOnTheSameDevice); err != nil {
 		return nil, fmt.Errorf("error preparing query BlockUsersOnTheSameDevice: %w", err)
 	}
+	if q.blockUsersWithDuplicateEmailStmt, err = db.PrepareContext(ctx, blockUsersWithDuplicateEmail); err != nil {
+		return nil, fmt.Errorf("error preparing query BlockUsersWithDuplicateEmail: %w", err)
+	}
 	if q.countAllUsersStmt, err = db.PrepareContext(ctx, countAllUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query CountAllUsers: %w", err)
 	}
@@ -125,6 +128,11 @@ func (q *Queries) Close() error {
 	if q.blockUsersOnTheSameDeviceStmt != nil {
 		if cerr := q.blockUsersOnTheSameDeviceStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing blockUsersOnTheSameDeviceStmt: %w", cerr)
+		}
+	}
+	if q.blockUsersWithDuplicateEmailStmt != nil {
+		if cerr := q.blockUsersWithDuplicateEmailStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing blockUsersWithDuplicateEmailStmt: %w", cerr)
 		}
 	}
 	if q.countAllUsersStmt != nil {
@@ -308,6 +316,7 @@ type Queries struct {
 	tx                                  *sql.Tx
 	addToWhitelistStmt                  *sql.Stmt
 	blockUsersOnTheSameDeviceStmt       *sql.Stmt
+	blockUsersWithDuplicateEmailStmt    *sql.Stmt
 	countAllUsersStmt                   *sql.Stmt
 	createUserStmt                      *sql.Stmt
 	createUserVerificationStmt          *sql.Stmt
@@ -344,6 +353,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                                  tx,
 		addToWhitelistStmt:                  q.addToWhitelistStmt,
 		blockUsersOnTheSameDeviceStmt:       q.blockUsersOnTheSameDeviceStmt,
+		blockUsersWithDuplicateEmailStmt:    q.blockUsersWithDuplicateEmailStmt,
 		countAllUsersStmt:                   q.countAllUsersStmt,
 		createUserStmt:                      q.createUserStmt,
 		createUserVerificationStmt:          q.createUserVerificationStmt,

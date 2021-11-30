@@ -86,3 +86,14 @@ SELECT disabled
 FROM users
 WHERE id = $1
 LIMIT 1;
+
+
+-- name: BlockUsersWithDuplicateEmail :exec 
+UPDATE users SET disabled = TRUE, block_reason = 'detected scam: created multiple accounts'
+WHERE sanitized_email IN (
+        SELECT users.sanitized_email
+        FROM users 
+        GROUP BY users.sanitized_email
+        HAVING count(users.id) > 1 
+    )
+AND sanitized_email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email');

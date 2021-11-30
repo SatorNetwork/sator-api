@@ -10,6 +10,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const blockUsersWithDuplicateEmail = `-- name: BlockUsersWithDuplicateEmail :exec
+UPDATE users SET disabled = TRUE, block_reason = 'detected scam: created multiple accounts'
+WHERE sanitized_email IN (
+        SELECT users.sanitized_email
+        FROM users 
+        GROUP BY users.sanitized_email
+        HAVING count(users.id) > 1 
+    )
+AND sanitized_email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
+`
+
+func (q *Queries) BlockUsersWithDuplicateEmail(ctx context.Context) error {
+	_, err := q.exec(ctx, q.blockUsersWithDuplicateEmailStmt, blockUsersWithDuplicateEmail)
+	return err
+}
+
 const countAllUsers = `-- name: CountAllUsers :one
 SELECT count(id)
 FROM users
