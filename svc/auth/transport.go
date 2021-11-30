@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/SatorNetwork/sator-api/internal/deviceid"
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 
@@ -22,26 +23,10 @@ const (
 )
 
 type (
-	contextKey string
-
 	logger interface {
 		Log(keyvals ...interface{}) error
 	}
 )
-
-var deviceIDContextKey contextKey = "DeviceID"
-
-// deviceIDToContext moves a Device-ID from request header to context.
-func deviceIDToContext() httptransport.RequestFunc {
-	return func(ctx context.Context, r *http.Request) context.Context {
-		return context.WithValue(ctx, deviceIDContextKey, r.Header.Get("Device-ID"))
-	}
-}
-
-// GetDeviceID gets device id from context
-func GetDeviceID(ctx context.Context) string {
-	return fmt.Sprintf("%v", ctx.Value(deviceIDContextKey))
-}
 
 // MakeHTTPHandler ...
 func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
@@ -50,8 +35,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(log)),
 		httptransport.ServerErrorEncoder(httpencoder.EncodeError(log, codeAndMessageFrom)),
-		httptransport.ServerBefore(jwtkit.HTTPToContext()),
-		httptransport.ServerBefore(deviceIDToContext()),
+		httptransport.ServerBefore(jwtkit.HTTPToContext(), deviceid.ToContext()),
 	}
 
 	r.Get("/", httptransport.NewServer(
