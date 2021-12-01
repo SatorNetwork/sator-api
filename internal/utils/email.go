@@ -8,7 +8,10 @@ import (
 	"github.com/mcnijman/go-emailaddress"
 )
 
-var ErrInvalidEmailAddress = errors.New("invalid email address")
+var (
+	ErrInvalidEmailAddress = errors.New("invalid email address")
+	ErrInvalidIcanSuffix   = errors.New("invalid ICAN suffix")
+)
 
 // SanitizeEmail cleans email address from dots, dashes, etc
 func SanitizeEmail(s string) (string, error) {
@@ -16,10 +19,6 @@ func SanitizeEmail(s string) (string, error) {
 
 	email, err := emailaddress.Parse(s)
 	if err != nil {
-		return "", ErrInvalidEmailAddress
-	}
-
-	if err := email.ValidateIcanSuffix(); err != nil {
 		return "", ErrInvalidEmailAddress
 	}
 
@@ -41,5 +40,11 @@ func SanitizeEmail(s string) (string, error) {
 		username = strings.Join(p, "")
 	}
 
-	return fmt.Sprintf("%s@%s", username, domain), nil
+	result := fmt.Sprintf("%s@%s", username, domain)
+
+	if err := email.ValidateIcanSuffix(); err != nil {
+		return result, ErrInvalidIcanSuffix
+	}
+
+	return result, nil
 }

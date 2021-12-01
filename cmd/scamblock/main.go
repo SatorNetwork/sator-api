@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -122,7 +123,9 @@ func main() {
 										log.Printf("could not block user with id=%s: %v", user.ID, err)
 									}
 
-									continue
+									if !errors.Is(err, utils.ErrInvalidIcanSuffix) {
+										sanitizedEmail = "n/a"
+									}
 								}
 
 								if err := repo.UpdateUserSanitizedEmail(ctx, repository.UpdateUserSanitizedEmailParams{
