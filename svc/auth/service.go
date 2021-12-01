@@ -142,6 +142,8 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		}); err != nil {
 			log.Printf("could not link device to user: %v", err)
 		}
+	} else {
+		log.Printf("[SCAM] Login: user with email=%s has no device id", user.Email)
 	}
 
 	if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
@@ -202,6 +204,8 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		}); err != nil {
 			log.Printf("could not link device to user: %v", err)
 		}
+	} else {
+		log.Printf("[SCAM] RefreshToken: user with id=%s has no device id", uid.String())
 	}
 
 	u, err := s.ur.GetUserByID(ctx, uid)
@@ -318,6 +322,8 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 		}); err != nil {
 			log.Printf("could not link device to user: %v", err)
 		}
+	} else {
+		log.Printf("[SCAM] SignUp: user with email=%s has no device id", u.Email)
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
