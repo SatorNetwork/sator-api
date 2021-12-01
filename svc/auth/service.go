@@ -39,6 +39,11 @@ type (
 		AllowedValue string `json:"allowed_value"`
 	}
 
+	Blacklist struct {
+		RestrictedType  string `json:"restricted_type"`
+		RestrictedValue string `json:"restricted_value"`
+	}
+
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
@@ -67,7 +72,13 @@ type (
 		DeleteUserVerificationsByUserID(ctx context.Context, arg repository.DeleteUserVerificationsByUserIDParams) error
 
 		// Blacklist
-		// IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
+		IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
+		AddToBlacklist(ctx context.Context, arg repository.AddToBlacklistParams) (repository.Blacklist, error)
+		DeleteFromBlacklist(ctx context.Context, arg repository.DeleteFromBlacklistParams) error
+		GetBlacklist(ctx context.Context, arg repository.GetBlacklistParams) ([]repository.Blacklist, error)
+		GetBlacklistByRestrictedValue(ctx context.Context, arg repository.GetBlacklistByRestrictedValueParams) ([]repository.Blacklist, error)
+
+		// Whitelist
 		IsEmailWhitelisted(ctx context.Context, email string) (bool, error)
 		AddToWhitelist(ctx context.Context, arg repository.AddToWhitelistParams) (repository.Whitelist, error)
 		DeleteFromWhitelist(ctx context.Context, arg repository.DeleteFromWhitelistParams) error
@@ -978,6 +989,76 @@ func (s *Service) DeleteFromWhitelist(ctx context.Context, allowedType, allowedV
 		AllowedValue: allowedValue,
 	}); err != nil {
 		return fmt.Errorf("could not delete record from whitelist: %w", err)
+	}
+
+	return nil
+}
+
+// AddToBlacklist used for add restricted type and value to blacklist.
+func (s *Service) AddToBlacklist(ctx context.Context, restrictedType, restrictedValue string) error {
+	restrictedValue = strings.ToLower(strings.TrimSpace(restrictedValue))
+	if _, err := s.ur.AddToBlacklist(ctx, repository.AddToBlacklistParams{
+		RestrictedType:  restrictedType,
+		RestrictedValue: restrictedValue,
+	}); err != nil {
+		return fmt.Errorf("could not add llowed type and value to blacklist: %w", err)
+	}
+
+	return nil
+}
+
+// GetBlacklist returns blacklist with pagination.
+func (s *Service) GetBlacklist(ctx context.Context, limit, offset int32) ([]Blacklist, error) {
+	blacklist, err := s.ur.GetBlacklist(ctx, repository.GetBlacklistParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get blacklist: %w", err)
+	}
+
+	result := make([]Blacklist, 0, len(blacklist))
+	for _, b := range blacklist {
+		result = append(result, Blacklist{
+			RestrictedType:  b.RestrictedType,
+			RestrictedValue: b.RestrictedValue,
+		})
+	}
+
+	return result, nil
+}
+
+// SearchInBlacklist returns blacklist with pagination.
+func (s *Service) SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
+	blacklist, err := s.ur.GetBlacklistByRestrictedValue(ctx, repository.GetBlacklistByRestrictedValueParams{
+		Query:     query,
+		OffsetVal: offset,
+		LimitVal:  limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get blacklist by query %v: %w", query, err)
+	}
+
+	result := make([]Blacklist, 0, len(blacklist))
+	for _, w := range blacklist {
+		result = append(result, Blacklist{
+			RestrictedType:  w.RestrictedType,
+			RestrictedValue: w.RestrictedValue,
+		})
+	}
+
+	return result, nil
+}
+
+// DeleteFromBlacklist used for delete restricted type and value from blacklist.
+func (s *Service) DeleteFromBlacklist(ctx context.Context, restrictedType, restrictedValue string) error {
+	restrictedValue = strings.ToLower(strings.TrimSpace(restrictedValue))
+	if err := s.ur.DeleteFromBlacklist(ctx, repository.DeleteFromBlacklistParams{
+		RestrictedType:  restrictedType,
+		RestrictedValue: restrictedValue,
+	}); err != nil {
+		return fmt.Errorf("could not delete record from blacklist: %w", err)
 	}
 
 	return nil
