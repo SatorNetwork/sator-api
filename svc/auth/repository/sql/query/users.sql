@@ -104,7 +104,6 @@ AND disabled = FALSE;
 SELECT *
 FROM users
 WHERE (sanitized_email IS NULL OR sanitized_email = '')
-AND disabled = FALSE
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 

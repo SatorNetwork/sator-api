@@ -108,7 +108,6 @@ const getNotSanitizedUsersListDesc = `-- name: GetNotSanitizedUsersListDesc :man
 SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
 FROM users
 WHERE (sanitized_email IS NULL OR sanitized_email = '')
-AND disabled = FALSE
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
