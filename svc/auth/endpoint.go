@@ -48,6 +48,10 @@ type (
 		AddToWhitelist      endpoint.Endpoint
 		DeleteFromWhitelist endpoint.Endpoint
 		GetWhitelist        endpoint.Endpoint
+
+		AddToBlacklist      endpoint.Endpoint
+		DeleteFromBlacklist endpoint.Endpoint
+		GetBlacklist        endpoint.Endpoint
 	}
 
 	authService interface {
@@ -78,6 +82,11 @@ type (
 		DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error
 		GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error)
 		SearchInWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error)
+
+		AddToBlacklist(ctx context.Context, restrictedType, restrictedValue string) error
+		DeleteFromBlacklist(ctx context.Context, restrictedType, restrictedValue string) error
+		GetBlacklist(ctx context.Context, limit, offset int32) ([]Blacklist, error)
+		SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error)
 	}
 
 	// AccessToken struct
@@ -163,6 +172,18 @@ type (
 		AllowedValue string `json:"allowed_value,omitempty"`
 		utils.PaginationRequest
 	}
+
+	// BlacklistRequest struct
+	BlacklistRequest struct {
+		RestrictedType  string `json:"restricted_type,omitempty" validate:"required,oneof=email email_domain"`
+		RestrictedValue string `json:"restricted_value,omitempty" validate:"required"`
+	}
+
+	// GetBlacklistRequest struct
+	GetBlacklistRequest struct {
+		RestrictedValue string `json:"restricted_value,omitempty"`
+		utils.PaginationRequest
+	}
 )
 
 // MakeEndpoints ...
@@ -196,6 +217,10 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		GetWhitelist:        jwtMdw(MakeGetWhitelistEndpoint(as, validateFunc)),
 		AddToWhitelist:      jwtMdw(MakeAddToWhitelistEndpoint(as, validateFunc)),
 		DeleteFromWhitelist: jwtMdw(MakeDeleteFromWhitelistEndpoint(as, validateFunc)),
+
+		GetBlacklist:        jwtMdw(MakeGetBlacklistEndpoint(as, validateFunc)),
+		AddToBlacklist:      jwtMdw(MakeAddToBlacklistEndpoint(as, validateFunc)),
+		DeleteFromBlacklist: jwtMdw(MakeDeleteFromBlacklistEndpoint(as, validateFunc)),
 	}
 
 	if len(m) > 0 {
@@ -226,6 +251,10 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.AddToWhitelist = mdw(e.AddToWhitelist)
 			e.DeleteFromWhitelist = mdw(e.DeleteFromWhitelist)
 			e.GetWhitelist = mdw(e.GetWhitelist)
+
+			e.AddToBlacklist = mdw(e.AddToBlacklist)
+			e.DeleteFromBlacklist = mdw(e.DeleteFromBlacklist)
+			e.GetBlacklist = mdw(e.GetBlacklist)
 		}
 	}
 
@@ -687,6 +716,79 @@ func MakeGetWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			}
 		} else {
 			resp, err = s.SearchInWhitelist(ctx, req.Limit(), req.Offset(), req.AllowedValue)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeAddToBlacklistEndpoint ...
+func MakeAddToBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(BlacklistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.AddToBlacklist(ctx, req.RestrictedType, req.RestrictedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDeleteFromBlacklistEndpoint ...
+func MakeDeleteFromBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(BlacklistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.DeleteFromBlacklist(ctx, req.RestrictedType, req.RestrictedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetBlacklistEndpoint ...
+func MakeGetBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetBlacklistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		var resp []Blacklist
+		var err error
+
+		if req.RestrictedValue == "" {
+			resp, err = s.GetBlacklist(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			resp, err = s.SearchInBlacklist(ctx, req.Limit(), req.Offset(), req.RestrictedValue)
 			if err != nil {
 				return nil, err
 			}
