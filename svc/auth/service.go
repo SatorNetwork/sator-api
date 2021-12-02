@@ -233,7 +233,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return Token{}, ErrUserIsDisabled
 	}
 
-	if !strings.Contains(u.Email, "@sator.io") {
+	if !strings.HasSuffix(u.Email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 			return Token{}, ErrUserIsDisabled
 		}
