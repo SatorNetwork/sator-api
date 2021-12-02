@@ -32,6 +32,8 @@ var (
 	rewardsInterval       = env.GetDuration("REWARDS_INTERVAL", time.Minute)
 	rewardsEarnPeriod     = env.GetString("REWARDS_EARN_PERIOD", "00:05")
 	rewardsWithdrawPeriod = env.GetString("REWARDS_WITHDRAW_PERIOD", "01:00")
+	rewardsMinOperations  = env.GetInt("REWARDS_MIN_OPERATIONS", 10)
+	rewardsCheckForPeriod = env.GetDuration("REWARDS_CHECK_FOR_PERIOD", time.Hour*24*1)
 )
 
 func main() {
@@ -130,7 +132,9 @@ func main() {
 					return nil
 				case <-ticker.C:
 					if err := blockUsersWithFrequentTransactions(
-						ctx, db, repo, rewardsEarnPeriod, rewardsWithdrawPeriod,
+						ctx, db, repo, rewardsEarnPeriod,
+						rewardsWithdrawPeriod, rewardsMinOperations,
+						rewardsCheckForPeriod,
 					); err != nil {
 						log.Printf("[ERROR] blockUsersWithFrequentTransactions: %v", err)
 					}
@@ -222,21 +226,33 @@ WHERE
 	return result, err
 }
 
-func getRewardedUserIDs(ctx context.Context, db *sql.DB) ([]string, error) {
+func getRewardedUserIDs(ctx context.Context, db *sql.DB, limit, offset int32, minOperations int, forPeriod time.Duration) ([]string, error) {
 	query := `
-SELECT DISTINCT
+SELECT
 	user_id
-FROM
-	rewards
-WHERE
-	user_id NOT IN(
-		SELECT
-			id FROM users
-		WHERE
-			disabled = TRUE)
-LIMIT 10;
+FROM (
+	SELECT
+		user_id
+	FROM
+		rewards
+	WHERE
+		user_id NOT IN(
+			SELECT
+				id FROM users
+			WHERE
+				disabled = TRUE)
+		AND created_at >= $4
+	ORDER BY
+		created_at DESC) AS rew_usr
+GROUP BY
+	user_id
+HAVING
+	count(*) > $3
+LIMIT $1
+OFFSET $2;
 	`
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.QueryContext(ctx, query, limit, offset,
+		minOperations, time.Now().Add(-forPeriod).Format("2006-01-02"))
 	if err != nil {
 		return nil, err
 	}
@@ -261,53 +277,61 @@ LIMIT 10;
 	return items, nil
 }
 
-func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries, earnPeriod, withdrawPeriod string) error {
-	userIDs, err := getRewardedUserIDs(ctx, db)
-	if err != nil {
-		return fmt.Errorf("getRewardedUserIDs: %w", err)
-	}
+func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries, earnPeriod, withdrawPeriod string, minOperations int, checkForPeriod time.Duration) error {
+	var (
+		limit  int32 = 10
+		offset int32 = 0
+	)
+	for {
+		userIDs, err := getRewardedUserIDs(ctx, db, limit, offset, minOperations, checkForPeriod)
+		if err != nil {
+			return fmt.Errorf("getRewardedUserIDs: %w", err)
+		}
 
-	for _, id := range userIDs {
-		// Earning
-		{
-			isScam, err := determineScamTransactions(ctx, db, id, 1, earnPeriod)
-			if err != nil {
-				continue
-			}
-			if isScam {
-				userID := uuid.MustParse(id)
-				if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
-					ID:          userID,
-					Disabled:    true,
-					BlockReason: sql.NullString{String: "frequent rewards earning", Valid: true},
-				}); err != nil {
-					log.Printf("could not block user with id=%s: %v", userID, err)
+		offset += limit
+
+		for _, id := range userIDs {
+			// log.Printf("userID: %s", id)
+			// Earning
+			{
+				isScam, err := determineScamTransactions(ctx, db, id, 1, earnPeriod)
+				if err != nil {
+					continue
 				}
-				log.Printf("blocked user with id=%s by reason: frequent rewards earning", id)
-				continue
+				if isScam {
+					userID := uuid.MustParse(id)
+					if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+						ID:          userID,
+						Disabled:    true,
+						BlockReason: sql.NullString{String: "frequent rewards earning", Valid: true},
+					}); err != nil {
+						log.Printf("could not block user with id=%s: %v", userID, err)
+					}
+					log.Printf("blocked user with id=%s by reason: frequent rewards earning", id)
+					continue
+				}
+			}
+
+			// Withdrawing
+			{
+				isScam, err := determineScamTransactions(ctx, db, id, 2, withdrawPeriod)
+				if err != nil {
+					continue
+				}
+				if isScam {
+					userID := uuid.MustParse(id)
+					if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+						ID:          userID,
+						Disabled:    true,
+						BlockReason: sql.NullString{String: "frequent rewards withdrawn", Valid: true},
+					}); err != nil {
+						log.Printf("could not block user with id=%s: %v", userID, err)
+					}
+					log.Printf("blocked user with id=%s by reason: frequent rewards withdrawn", id)
+					continue
+				}
 			}
 		}
 
-		// Withdrawing
-		{
-			isScam, err := determineScamTransactions(ctx, db, id, 2, withdrawPeriod)
-			if err != nil {
-				continue
-			}
-			if isScam {
-				userID := uuid.MustParse(id)
-				if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
-					ID:          userID,
-					Disabled:    true,
-					BlockReason: sql.NullString{String: "frequent rewards withdrawn", Valid: true},
-				}); err != nil {
-					log.Printf("could not block user with id=%s: %v", userID, err)
-				}
-				log.Printf("blocked user with id=%s by reason: frequent rewards withdrawn", id)
-				continue
-			}
-		}
 	}
-
-	return nil
 }
