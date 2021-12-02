@@ -197,7 +197,6 @@ func sanitizeUserEmails(ctx context.Context, repo *repository.Queries) {
 }
 
 func determineScamTransactions(ctx context.Context, db *sql.DB, uid string, trType int, period string) (bool, error) {
-	log.Println("Run determineScamTransactions")
 	query := `
 SELECT
 	COUNT(*) > 0 AS scam
@@ -224,7 +223,6 @@ WHERE
 }
 
 func getRewardedUserIDs(ctx context.Context, db *sql.DB) ([]string, error) {
-	log.Println("Run getRewardedUserIDs")
 	query := `
 SELECT DISTINCT
 	user_id
@@ -264,8 +262,6 @@ LIMIT 10;
 }
 
 func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries, earnPeriod, withdrawPeriod string) error {
-	log.Println("Run blockUsersWithFrequentTransactions")
-
 	userIDs, err := getRewardedUserIDs(ctx, db)
 	if err != nil {
 		return fmt.Errorf("getRewardedUserIDs: %w", err)
