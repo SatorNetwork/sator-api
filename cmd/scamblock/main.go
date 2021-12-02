@@ -290,10 +290,8 @@ func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *r
 
 		offset += limit
 
-		log.Printf("userIDs: %+v", userIDs)
-
 		for _, id := range userIDs {
-			log.Printf("userID: %s", id)
+			// log.Printf("userID: %s", id)
 			// Earning
 			{
 				isScam, err := determineScamTransactions(ctx, db, id, 1, earnPeriod)
