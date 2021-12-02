@@ -19,7 +19,8 @@ import (
 
 // Predefined request query keys
 const (
-	allowedValue = "allowed_value"
+	allowedValue    = "allowed_value"
+	restrictedValue = "restricted_value"
 )
 
 type (
@@ -192,6 +193,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/blacklist", httptransport.NewServer(
+		e.GetBlacklist,
+		decodeGetBlacklist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/blacklist", httptransport.NewServer(
+		e.AddToBlacklist,
+		decodeEditBlacklist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/blacklist", httptransport.NewServer(
+		e.DeleteFromBlacklist,
+		decodeEditBlacklist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -355,6 +377,25 @@ func decodeGetWhitelist(_ context.Context, r *http.Request) (interface{}, error)
 
 func decodeEditWhitelist(_ context.Context, r *http.Request) (interface{}, error) {
 	var req WhitelistRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeGetBlacklist(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetBlacklistRequest{
+		RestrictedValue: r.URL.Query().Get(restrictedValue),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
+	}, nil
+}
+
+func decodeEditBlacklist(_ context.Context, r *http.Request) (interface{}, error) {
+	var req BlacklistRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}

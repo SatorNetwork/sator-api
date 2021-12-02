@@ -7,6 +7,116 @@ import (
 	"context"
 )
 
+const addToBlacklist = `-- name: AddToBlacklist :one
+INSERT INTO blacklist (
+    restricted_type,
+    restricted_value
+)
+VALUES (
+           $1,
+           $2
+       ) RETURNING restricted_type, restricted_value
+`
+
+type AddToBlacklistParams struct {
+	RestrictedType  string `json:"restricted_type"`
+	RestrictedValue string `json:"restricted_value"`
+}
+
+func (q *Queries) AddToBlacklist(ctx context.Context, arg AddToBlacklistParams) (Blacklist, error) {
+	row := q.queryRow(ctx, q.addToBlacklistStmt, addToBlacklist, arg.RestrictedType, arg.RestrictedValue)
+	var i Blacklist
+	err := row.Scan(&i.RestrictedType, &i.RestrictedValue)
+	return i, err
+}
+
+const deleteFromBlacklist = `-- name: DeleteFromBlacklist :exec
+DELETE FROM blacklist
+WHERE restricted_type = $1 AND restricted_value = $2
+`
+
+type DeleteFromBlacklistParams struct {
+	RestrictedType  string `json:"restricted_type"`
+	RestrictedValue string `json:"restricted_value"`
+}
+
+func (q *Queries) DeleteFromBlacklist(ctx context.Context, arg DeleteFromBlacklistParams) error {
+	_, err := q.exec(ctx, q.deleteFromBlacklistStmt, deleteFromBlacklist, arg.RestrictedType, arg.RestrictedValue)
+	return err
+}
+
+const getBlacklist = `-- name: GetBlacklist :many
+SELECT restricted_type, restricted_value
+FROM blacklist
+ORDER BY restricted_value ASC
+    LIMIT $1 OFFSET $2
+`
+
+type GetBlacklistParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetBlacklist(ctx context.Context, arg GetBlacklistParams) ([]Blacklist, error) {
+	rows, err := q.query(ctx, q.getBlacklistStmt, getBlacklist, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Blacklist
+	for rows.Next() {
+		var i Blacklist
+		if err := rows.Scan(&i.RestrictedType, &i.RestrictedValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getBlacklistByRestrictedValue = `-- name: GetBlacklistByRestrictedValue :many
+SELECT restricted_type, restricted_value
+FROM blacklist
+WHERE restricted_value LIKE CONCAT('%', $1::text, '%')
+ORDER BY restricted_value ASC
+    LIMIT $3::INT OFFSET $2::INT
+`
+
+type GetBlacklistByRestrictedValueParams struct {
+	Query     string `json:"query"`
+	OffsetVal int32  `json:"offset_val"`
+	LimitVal  int32  `json:"limit_val"`
+}
+
+func (q *Queries) GetBlacklistByRestrictedValue(ctx context.Context, arg GetBlacklistByRestrictedValueParams) ([]Blacklist, error) {
+	rows, err := q.query(ctx, q.getBlacklistByRestrictedValueStmt, getBlacklistByRestrictedValue, arg.Query, arg.OffsetVal, arg.LimitVal)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Blacklist
+	for rows.Next() {
+		var i Blacklist
+		if err := rows.Scan(&i.RestrictedType, &i.RestrictedValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isEmailBlacklisted = `-- name: IsEmailBlacklisted :one
 SELECT count(*) > 0 FROM blacklist
 WHERE (restricted_type = 'email_domain'

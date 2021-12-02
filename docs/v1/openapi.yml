@@ -580,7 +580,7 @@ paths:
 
       responses:
         "200":
-          description: Returns shows list with pagination.
+          description: Returns whitelist with pagination.
           content:
             application/json:
               schema:
@@ -641,6 +641,114 @@ paths:
                   type: string
                   example: "email"
                 allowed_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /auth/blacklist:
+    get:
+      tags:
+        - "Blacklist"
+      summary: Get blacklist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+        - name: restricted_value
+          in: query
+          description: restricted value will be filtered by this parameter.
+          required: false
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Returns blacklist with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    restricted_type:
+                      type: string
+                      example: "email"
+                    restricted_value:
+                      type: string
+                      example: "qwe@gmail.com"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - "Blacklist"
+      summary: Used for add restricted type and value to blacklist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                restricted_type:
+                  type: string
+                  example: "email"
+                restricted_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - "Blacklist"
+      summary: Used for delete restricted type and value to blacklist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                restricted_type:
+                  type: string
+                  example: "email"
+                restricted_value:
                   type: string
                   example: "qwe@gmail.com"
       responses:

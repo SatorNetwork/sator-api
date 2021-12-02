@@ -97,11 +97,11 @@ func main() {
 		done := make(chan bool)
 		defer close(done)
 
-		ticker := time.NewTicker(sanitizerInterval)
-		defer ticker.Stop()
-
 		g.Add(func() error {
 			log.Println("Start user emails sanitizer")
+
+			ticker := time.NewTicker(sanitizerInterval)
+			defer ticker.Stop()
 			for {
 				select {
 				case <-done:
@@ -120,11 +120,19 @@ func main() {
 		done := make(chan bool)
 		defer close(done)
 
-		ticker := time.NewTicker(rewardsInterval)
-		defer ticker.Stop()
-
 		g.Add(func() error {
 			log.Println("Start rewards scam determining")
+
+			if err := blockUsersWithFrequentTransactions(
+				ctx, db, repo, rewardsEarnPeriod,
+				rewardsWithdrawPeriod, rewardsMinOperations,
+				rewardsCheckForPeriod,
+			); err != nil {
+				log.Printf("[ERROR] blockUsersWithFrequentTransactions: %v", err)
+			}
+
+			ticker := time.NewTicker(rewardsInterval)
+			defer ticker.Stop()
 
 			for {
 				select {
@@ -158,6 +166,11 @@ func main() {
 }
 
 func sanitizeUserEmails(ctx context.Context, repo *repository.Queries) {
+	log.Println("Start: sanitizeUserEmails")
+	defer func() {
+		log.Println("Finish: sanitizeUserEmails")
+	}()
+
 	for {
 		users, err := repo.GetNotSanitizedUsersListDesc(ctx, repository.GetNotSanitizedUsersListDescParams{
 			Limit:  10,
@@ -278,10 +291,18 @@ OFFSET $2;
 }
 
 func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries, earnPeriod, withdrawPeriod string, minOperations int, checkForPeriod time.Duration) error {
+	log.Println("Start: blockUsersWithFrequentTransactions")
+
 	var (
-		limit  int32 = 10
-		offset int32 = 0
+		limit   int32 = 10
+		offset  int32 = 0
+		counter       = 0
 	)
+
+	defer func() {
+		log.Printf("Finish: blockUsersWithFrequentTransactions: blocked %d users", counter)
+	}()
+
 	for {
 		userIDs, err := getRewardedUserIDs(ctx, db, limit, offset, minOperations, checkForPeriod)
 		if err != nil {
@@ -308,6 +329,7 @@ func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *r
 						log.Printf("could not block user with id=%s: %v", userID, err)
 					}
 					log.Printf("blocked user with id=%s by reason: frequent rewards earning", id)
+					counter++
 					continue
 				}
 			}
@@ -328,6 +350,7 @@ func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *r
 						log.Printf("could not block user with id=%s: %v", userID, err)
 					}
 					log.Printf("blocked user with id=%s by reason: frequent rewards withdrawn", id)
+					counter++
 					continue
 				}
 			}

@@ -13,6 +13,7 @@ var (
 	ErrUserIsDisabled        = errors.New("your profile was disabled. Please contact support for details")
 	ErrRestrictedEmailDomain = errors.New("please use real email address, or contact administrator")
 	ErrInvalidEmailFormat    = errors.New("email addrss must be a valid email address")
+	ErrEmptyDeviceID         = errors.New("the current version of the application is outdated please update to the latest version")
 
 	// ErrBadRouting is returned when an expected path variable is missing.
 	// It always indicates programmer error.
