@@ -292,14 +292,17 @@ OFFSET $2;
 
 func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries, earnPeriod, withdrawPeriod string, minOperations int, checkForPeriod time.Duration) error {
 	log.Println("Start: blockUsersWithFrequentTransactions")
-	defer func() {
-		log.Println("Finish: blockUsersWithFrequentTransactions")
-	}()
 
 	var (
-		limit  int32 = 10
-		offset int32 = 0
+		limit   int32 = 10
+		offset  int32 = 0
+		counter       = 0
 	)
+
+	defer func() {
+		log.Printf("Finish: blockUsersWithFrequentTransactions: blocked %d users", counter)
+	}()
+
 	for {
 		userIDs, err := getRewardedUserIDs(ctx, db, limit, offset, minOperations, checkForPeriod)
 		if err != nil {
@@ -326,6 +329,7 @@ func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *r
 						log.Printf("could not block user with id=%s: %v", userID, err)
 					}
 					log.Printf("blocked user with id=%s by reason: frequent rewards earning", id)
+					counter++
 					continue
 				}
 			}
@@ -346,6 +350,7 @@ func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *r
 						log.Printf("could not block user with id=%s: %v", userID, err)
 					}
 					log.Printf("blocked user with id=%s by reason: frequent rewards withdrawn", id)
+					counter++
 					continue
 				}
 			}
