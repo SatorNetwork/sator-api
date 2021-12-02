@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq" // init pg driver
 
 	dbx "github.com/SatorNetwork/sator-api/internal/db"
@@ -99,46 +100,29 @@ func main() {
 				case <-done:
 					return nil
 				case <-ticker.C:
-					for {
-						users, err := repo.GetNotSanitizedUsersListDesc(ctx, repository.GetNotSanitizedUsersListDescParams{
-							Limit:  10,
-							Offset: 0,
-						})
-						if err != nil && dbx.IsNotFoundError(err) {
-							break
-						}
+					sanitizeUserEmails(ctx, repo)
+				}
+			}
+		}, func(err error) {
+			done <- true
+		})
+	}
 
-						for _, user := range users {
-							if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
-								// Sanitize email address
-								sanitizedEmail, err := utils.SanitizeEmail(user.Email)
-								if err != nil {
-									log.Printf("could not clean email: %s: %v", user.Email, err)
+	// Rewards scam
+	{
+		done := make(chan bool)
+		defer close(done)
 
-									if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
-										ID:          user.ID,
-										Disabled:    true,
-										BlockReason: sql.NullString{String: "invalid email address", Valid: true},
-									}); err != nil {
-										log.Printf("could not block user with id=%s: %v", user.ID, err)
-									}
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
 
-									if !errors.Is(err, utils.ErrInvalidIcanSuffix) {
-										sanitizedEmail = "n/a"
-									}
-								}
-
-								if err := repo.UpdateUserSanitizedEmail(ctx, repository.UpdateUserSanitizedEmailParams{
-									ID:             user.ID,
-									SanitizedEmail: sanitizedEmail,
-								}); err != nil {
-									log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
-								}
-
-								log.Printf("Sanitized user with id=%s and email=%s", user.ID, user.Email)
-							}
-						}
-					}
+		g.Add(func() error {
+			for {
+				select {
+				case <-done:
+					return nil
+				case <-ticker.C:
+					blockUsersWithFrequentTransactions(ctx, db, repo)
 				}
 			}
 		}, func(err error) {
@@ -155,5 +139,164 @@ func main() {
 
 	if err := g.Run(); err != nil {
 		log.Println("terminated with error:", err)
+	}
+}
+
+func sanitizeUserEmails(ctx context.Context, repo *repository.Queries) {
+	for {
+		users, err := repo.GetNotSanitizedUsersListDesc(ctx, repository.GetNotSanitizedUsersListDescParams{
+			Limit:  10,
+			Offset: 0,
+		})
+		if err != nil && dbx.IsNotFoundError(err) {
+			break
+		}
+
+		for _, user := range users {
+			if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
+				// Sanitize email address
+				sanitizedEmail, err := utils.SanitizeEmail(user.Email)
+				if err != nil {
+					log.Printf("could not clean email: %s: %v", user.Email, err)
+
+					if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+						ID:          user.ID,
+						Disabled:    true,
+						BlockReason: sql.NullString{String: "invalid email address", Valid: true},
+					}); err != nil {
+						log.Printf("could not block user with id=%s: %v", user.ID, err)
+					}
+
+					if !errors.Is(err, utils.ErrInvalidIcanSuffix) {
+						sanitizedEmail = "n/a"
+					}
+				}
+
+				if err := repo.UpdateUserSanitizedEmail(ctx, repository.UpdateUserSanitizedEmailParams{
+					ID:             user.ID,
+					SanitizedEmail: sanitizedEmail,
+				}); err != nil {
+					log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
+				}
+
+				log.Printf("Sanitized user with id=%s and email=%s", user.ID, user.Email)
+			}
+		}
+	}
+}
+
+func determineScamTransactions(ctx context.Context, db *sql.DB, uid string, trType int, period string) (bool, error) {
+	query := `
+SELECT
+	COUNT(*) > 0 AS scam
+FROM (
+	SELECT
+		user_id,
+		(created_at - lag(created_at, 1) OVER (ORDER BY created_at)) AS diff
+	FROM
+		rewards
+	WHERE
+		user_id = $1
+		AND transaction_type = $2 
+    ORDER BY created_at DESC
+) AS rewards_tx
+WHERE
+	diff < $3;
+	`
+
+	row := db.QueryRowContext(ctx, query, uid, trType, period)
+	var result bool
+	err := row.Scan(&result)
+
+	return result, err
+}
+
+func getRewardedUserIDs(ctx context.Context, db *sql.DB) ([]string, error) {
+	query := `
+SELECT DISTINCT
+	user_id
+FROM
+	rewards
+WHERE
+	user_id NOT IN(
+		SELECT
+			id FROM users
+		WHERE
+			disabled = TRUE)
+LIMIT 100;
+	`
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []string
+	for rows.Next() {
+		var row string
+		if err := rows.Scan(&row); err != nil {
+			return nil, err
+		}
+		items = append(items, row)
+	}
+
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries) {
+	for {
+		userIDs, err := getRewardedUserIDs(ctx, db)
+		if err != nil {
+			break
+		}
+
+		for _, id := range userIDs {
+			// Earning
+			{
+				isScam, err := determineScamTransactions(ctx, db, id, 1, "00:05")
+				if err != nil {
+					continue
+				}
+				if isScam {
+					userID := uuid.MustParse(id)
+					if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+						ID:          userID,
+						Disabled:    true,
+						BlockReason: sql.NullString{String: "frequent rewards earning", Valid: true},
+					}); err != nil {
+						log.Printf("could not block user with id=%s: %v", userID, err)
+					}
+					log.Printf("blocked user with id=%s by reason: frequent rewards earning", id)
+					continue
+				}
+			}
+
+			// Withdrawing
+			{
+				isScam, err := determineScamTransactions(ctx, db, id, 2, "01:00")
+				if err != nil {
+					continue
+				}
+				if isScam {
+					userID := uuid.MustParse(id)
+					if err := repo.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+						ID:          userID,
+						Disabled:    true,
+						BlockReason: sql.NullString{String: "frequent rewards withdrawn", Valid: true},
+					}); err != nil {
+						log.Printf("could not block user with id=%s: %v", userID, err)
+					}
+					log.Printf("blocked user with id=%s by reason: frequent rewards withdrawn", id)
+					continue
+				}
+			}
+		}
 	}
 }

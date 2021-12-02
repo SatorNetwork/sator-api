@@ -49,3 +49,4 @@ SELECT *
 FROM rewards
 WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
     LIMIT 1;
+
