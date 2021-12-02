@@ -97,11 +97,11 @@ func main() {
 		done := make(chan bool)
 		defer close(done)
 
-		ticker := time.NewTicker(sanitizerInterval)
-		defer ticker.Stop()
-
 		g.Add(func() error {
 			log.Println("Start user emails sanitizer")
+
+			ticker := time.NewTicker(sanitizerInterval)
+			defer ticker.Stop()
 			for {
 				select {
 				case <-done:
@@ -120,11 +120,19 @@ func main() {
 		done := make(chan bool)
 		defer close(done)
 
-		ticker := time.NewTicker(rewardsInterval)
-		defer ticker.Stop()
-
 		g.Add(func() error {
 			log.Println("Start rewards scam determining")
+
+			if err := blockUsersWithFrequentTransactions(
+				ctx, db, repo, rewardsEarnPeriod,
+				rewardsWithdrawPeriod, rewardsMinOperations,
+				rewardsCheckForPeriod,
+			); err != nil {
+				log.Printf("[ERROR] blockUsersWithFrequentTransactions: %v", err)
+			}
+
+			ticker := time.NewTicker(rewardsInterval)
+			defer ticker.Stop()
 
 			for {
 				select {
@@ -158,6 +166,11 @@ func main() {
 }
 
 func sanitizeUserEmails(ctx context.Context, repo *repository.Queries) {
+	log.Println("Start: sanitizeUserEmails")
+	defer func() {
+		log.Println("Finish: sanitizeUserEmails")
+	}()
+
 	for {
 		users, err := repo.GetNotSanitizedUsersListDesc(ctx, repository.GetNotSanitizedUsersListDescParams{
 			Limit:  10,
@@ -278,6 +291,11 @@ OFFSET $2;
 }
 
 func blockUsersWithFrequentTransactions(ctx context.Context, db *sql.DB, repo *repository.Queries, earnPeriod, withdrawPeriod string, minOperations int, checkForPeriod time.Duration) error {
+	log.Println("Start: blockUsersWithFrequentTransactions")
+	defer func() {
+		log.Println("Finish: blockUsersWithFrequentTransactions")
+	}()
+
 	var (
 		limit  int32 = 10
 		offset int32 = 0
