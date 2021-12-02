@@ -146,15 +146,15 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		return Token{}, fmt.Errorf("could not log in: %w", err)
 	}
 
-	if deviceID != "" {
-		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
-			UserID:   user.ID,
-			DeviceID: deviceID,
-		}); err != nil {
-			log.Printf("could not link device to user: %v", err)
-		}
-	} else {
-		log.Printf("[SCAM] Login: user with email=%s has no device id", user.Email)
+	if deviceID == "" {
+		return Token{}, ErrEmptyDeviceID
+	}
+
+	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+		UserID:   user.ID,
+		DeviceID: deviceID,
+	}); err != nil {
+		log.Printf("could not link device to user: %v", err)
 	}
 
 	if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
@@ -180,6 +180,14 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 	}
 
 	if !strings.Contains(email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.Email); yes {
+			return Token{}, ErrUserIsDisabled
+		}
+		if user.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.SanitizedEmail.String); yes {
+				return Token{}, ErrUserIsDisabled
+			}
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
 			return Token{}, ErrUserIsDisabled
 		}
@@ -208,15 +216,15 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 
 // RefreshToken returns new jwt string.
 func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error) {
-	if deviceID != "" {
-		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
-			UserID:   uid,
-			DeviceID: deviceID,
-		}); err != nil {
-			log.Printf("could not link device to user: %v", err)
-		}
-	} else {
-		log.Printf("[SCAM] RefreshToken: user with id=%s has no device id", uid.String())
+	if deviceID == "" {
+		return Token{}, ErrEmptyDeviceID
+	}
+
+	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+		UserID:   uid,
+		DeviceID: deviceID,
+	}); err != nil {
+		log.Printf("could not link device to user: %v", err)
 	}
 
 	u, err := s.ur.GetUserByID(ctx, uid)
@@ -245,6 +253,14 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 	}
 
 	if !strings.HasSuffix(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return Token{}, ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return Token{}, ErrUserIsDisabled
+			}
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 			return Token{}, ErrUserIsDisabled
 		}
@@ -277,6 +293,16 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 	}
 
 	if !strings.Contains(email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrRestrictedEmailDomain.Error()},
+			})
+		}
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, sanitizedEmail); yes {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrRestrictedEmailDomain.Error()},
+			})
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
 			return Token{}, validator.NewValidationError(url.Values{
 				"email": []string{ErrRestrictedEmailDomain.Error()},
@@ -326,15 +352,15 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
-	if deviceID != "" {
-		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
-			UserID:   u.ID,
-			DeviceID: deviceID,
-		}); err != nil {
-			log.Printf("could not link device to user: %v", err)
-		}
-	} else {
-		log.Printf("[SCAM] SignUp: user with email=%s has no device id", u.Email)
+	if deviceID == "" {
+		return Token{}, ErrEmptyDeviceID
+	}
+
+	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+		UserID:   u.ID,
+		DeviceID: deviceID,
+	}); err != nil {
+		log.Printf("could not link device to user: %v", err)
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -417,6 +443,14 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	}
 
 	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return ErrUserIsDisabled
+			}
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 			return ErrUserIsDisabled
 		}
@@ -578,6 +612,14 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 	}
 
 	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return ErrUserIsDisabled
+			}
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 			return ErrUserIsDisabled
 		}
@@ -662,6 +704,14 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 	}
 
 	if !strings.Contains(sanitizedEmail, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return ErrUserIsDisabled
+			}
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
 			return ErrUserIsDisabled
 		}
@@ -793,6 +843,14 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 	}
 
 	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return false, ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return false, ErrUserIsDisabled
+			}
+		}
 		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 			return false, ErrUserIsDisabled
 		}
