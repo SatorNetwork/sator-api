@@ -29,6 +29,7 @@ type (
 		jwt                   jwtInteractor
 		mail                  mailer
 		ic                    invitationsClient
+		kyc                   kycClient
 		otpLen                int
 		masterCode            string
 		blacklistEmailDomains []string
@@ -103,6 +104,11 @@ type (
 		IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error)
 	}
 
+	kycClient interface {
+		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
+		GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+	}
+
 	// JWTs
 	Token struct {
 		AccessToken  string
@@ -111,7 +117,7 @@ type (
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, kyc kycClient, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -124,8 +130,11 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 	if ic == nil {
 		log.Fatalln("invitations client is not set")
 	}
+	if kyc == nil {
+		log.Fatalln("kyc client is not set")
+	}
 
-	s := &Service{jwt: ji, ur: ur, ic: ic, ws: ws, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ic: ic, kyc: kyc, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -1126,4 +1135,14 @@ func (s *Service) DeleteFromBlacklist(ctx context.Context, restrictedType, restr
 	}
 
 	return nil
+}
+
+// GetAccessTokenByUserID returns access token for web or mobile SDKs by user id.
+func (s *Service) GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
+	token, err := s.kyc.GetSDKAccessTokenByUserID(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("could not get access token: %w", err)
+	}
+
+	return token, nil
 }

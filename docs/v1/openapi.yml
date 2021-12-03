@@ -761,6 +761,28 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /auth/kyc/access_token:
+    get:
+      tags:
+        - "KYC"
+      summary: Returns access token for web or mobile SDKs by user id.
+      security:
+        - bearerAuth: []
+
+      responses:
+        "200":
+          description: Returns access token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    example: "token"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /profile:
     get:
       tags:

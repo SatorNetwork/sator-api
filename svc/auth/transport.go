@@ -214,6 +214,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/kyc/access_token", httptransport.NewServer(
+		e.GetAccessTokenByUserID,
+		decodeGetAccessTokenByUserID,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -401,4 +408,8 @@ func decodeEditBlacklist(_ context.Context, r *http.Request) (interface{}, error
 	}
 
 	return req, nil
+}
+
+func decodeGetAccessTokenByUserID(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	return nil, nil
 }

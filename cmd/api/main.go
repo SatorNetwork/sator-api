@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
+
 	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
@@ -148,6 +150,12 @@ var (
 	// Min amounts
 	minAmountToTransfer = env.GetFloat("MIN_AMOUNT_TO_TRANSFER", 0)
 	minAmountToClaim    = env.GetFloat("MIN_AMOUNT_TO_CLAIM", 0)
+
+	// KYC
+	appToken  = env.MustString("KYC_APP_TOKEN")
+	appSecret = env.MustString("KYC_APP_SECRET")
+	baseURL   = env.MustString("KYC_APP_BASE_URL")
+	ttl       = env.GetInt("KYC_APP_TTL", 1200)
 )
 
 var circulatingSupply float64 = 0
@@ -311,22 +319,28 @@ func main() {
 		logger,
 	))
 
-	// Auth service
 	{
-		r.Mount("/auth", auth.MakeHTTPHandler(
-			auth.MakeEndpoints(auth.NewService(
-				jwtInteractor,
-				authRepository,
-				walletSvcClient,
-				invitationsClient,
-				auth.WithMasterOTPCode(masterOTPHash),
-				auth.WithCustomOTPLength(otpLength),
-				auth.WithMailService(mailer),
-			), jwtMdw),
-			logger,
-		))
-	}
+		// KYC
+		kycService := sumsub.New(appToken, appSecret, baseURL, ttl)
+		kycClient := sumsub.NewClient(kycService)
 
+		// Auth service
+		{
+			r.Mount("/auth", auth.MakeHTTPHandler(
+				auth.MakeEndpoints(auth.NewService(
+					jwtInteractor,
+					authRepository,
+					walletSvcClient,
+					invitationsClient,
+					kycClient,
+					auth.WithMasterOTPCode(masterOTPHash),
+					auth.WithCustomOTPLength(otpLength),
+					auth.WithMailService(mailer),
+				), jwtMdw),
+				logger,
+			))
+		}
+	}
 	// Profile service
 	profileRepository, err := profileRepo.Prepare(ctx, db)
 	if err != nil {
