@@ -105,7 +105,6 @@ type (
 	}
 
 	kycClient interface {
-		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
 		GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
 	}
 
