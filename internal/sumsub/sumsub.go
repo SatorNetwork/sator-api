@@ -2,6 +2,7 @@ package sumsub
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -21,19 +22,21 @@ type Service struct {
 	appToken  string
 	appSecret string
 	baseURL   string
+	ttl       int
 }
 
 // New creates new sumsub facade
-func New(appToken, appSecret, baseURL string) *Service {
+func New(appToken, appSecret, baseURL string, ttl int) *Service {
 	return &Service{
 		appToken:  appToken,
 		appSecret: appSecret,
 		baseURL:   baseURL,
+		ttl:       ttl,
 	}
 }
 
 // GetSDKAccessToken returns access token for web or mobile SDKs
-func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction string, ttl int) (string, error) {
+func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction string) (string, error) {
 	path := "/resources/accessTokens"
 
 	params := url.Values{}
@@ -47,10 +50,7 @@ func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction 
 		params.Add("externalActionId", externalAction)
 	}
 
-	if ttl <= 0 {
-		ttl = 900
-	}
-	params.Add("ttlInSecs", fmt.Sprint(ttl))
+	params.Add("ttlInSecs", fmt.Sprint(s.ttl))
 
 	type responseSDKAccessToken struct {
 		Token  string `json:"token"`
@@ -71,14 +71,14 @@ func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction 
 	return resp.Token, nil
 }
 
-// GetSDKAccessToken returns access token for web or mobile SDKs by applicant id
-func (s *Service) GetSDKAccessTokenByApplicantID(applicantID string, ttl int) (string, error) {
-	return s.GetSDKAccessToken(applicantID, "", "", ttl)
+// GetSDKAccessTokenByApplicantID returns access token for web or mobile SDKs by applicant id
+func (s *Service) GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error) {
+	return s.GetSDKAccessToken(applicantID, "", "")
 }
 
-// GetSDKAccessToken returns access token for web or mobile SDKs by user id
-func (s *Service) GetSDKAccessTokenByUserID(userID string, ttl int) (string, error) {
-	return s.GetSDKAccessToken("", userID, "", ttl)
+// GetSDKAccessTokenByUserID returns access token for web or mobile SDKs by user id
+func (s *Service) GetSDKAccessTokenByUserID(ctx context.Context, userID string) (string, error) {
+	return s.GetSDKAccessToken("", userID, "")
 }
 
 // Get returns sumsub response for applicant

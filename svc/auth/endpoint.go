@@ -52,6 +52,8 @@ type (
 		AddToBlacklist      endpoint.Endpoint
 		DeleteFromBlacklist endpoint.Endpoint
 		GetBlacklist        endpoint.Endpoint
+
+		GetAccessTokenByUserID endpoint.Endpoint
 	}
 
 	authService interface {
@@ -87,6 +89,8 @@ type (
 		DeleteFromBlacklist(ctx context.Context, restrictedType, restrictedValue string) error
 		GetBlacklist(ctx context.Context, limit, offset int32) ([]Blacklist, error)
 		SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error)
+
+		GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
 	}
 
 	// AccessToken struct
@@ -221,6 +225,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		GetBlacklist:        jwtMdw(MakeGetBlacklistEndpoint(as, validateFunc)),
 		AddToBlacklist:      jwtMdw(MakeAddToBlacklistEndpoint(as, validateFunc)),
 		DeleteFromBlacklist: jwtMdw(MakeDeleteFromBlacklistEndpoint(as, validateFunc)),
+
+		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
 	}
 
 	if len(m) > 0 {
@@ -255,6 +261,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.AddToBlacklist = mdw(e.AddToBlacklist)
 			e.DeleteFromBlacklist = mdw(e.DeleteFromBlacklist)
 			e.GetBlacklist = mdw(e.GetBlacklist)
+
+			e.GetAccessTokenByUserID = mdw(e.GetAccessTokenByUserID)
 		}
 	}
 
@@ -792,6 +800,23 @@ func MakeGetBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			if err != nil {
 				return nil, err
 			}
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetAccessTokenByUserIDEndpoint ...
+func MakeGetAccessTokenByUserIDEndpoint(s authService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		resp, err := s.GetAccessTokenByUserID(ctx, uid)
+		if err != nil {
+			return nil, err
 		}
 
 		return resp, nil
