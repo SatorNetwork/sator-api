@@ -54,6 +54,7 @@ func (c *Client) CheckPrivateKey(addr string, pk []byte) error {
 }
 
 func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
+	// Check if the given account is already ATA or not
 	recipientAddr := recipientPK.ToBase58()
 	resp, err := c.solana.GetAccountInfo(ctx, recipientAddr, client.GetAccountInfoConfig{
 		Encoding: client.GetAccountInfoConfigEncodingBase64,
@@ -66,11 +67,24 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 		return recipientPK, nil
 	}
 
+	// Getting of the recipient ATA
 	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPK, assetPK)
 	if err != nil {
 		return common.PublicKey{}, err
 	}
-	return recipientAta, nil
+	// Check if the ATA already created
+	ataInfo, err := c.solana.GetAccountInfo(ctx, recipientAta.ToBase58(), client.GetAccountInfoConfig{
+		Encoding: client.GetAccountInfoConfigEncodingBase64,
+	})
+	if err != nil {
+		return common.PublicKey{}, err
+	}
+	if ataInfo.Owner == common.TokenProgramID.ToBase58() {
+		// given recipient public key is already an SPL token account
+		return recipientAta, nil
+	}
+
+	return common.PublicKey{}, ErrATANotCreated
 }
 
 // RequestAirdrop working only in test and dev environment

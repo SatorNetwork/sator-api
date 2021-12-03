@@ -38,6 +38,8 @@ type (
 		walletTransactionsURL   string // url template to get SOL & SAO wallet types transactions list
 		rewardsWalletDetailsURL string // url template to get rewards wallet type details
 		rewardsTransactionsURL  string // url template to get rewards wallet type transactions list
+
+		minAmountToTransfer float64 // minimum amount to transfer request
 	}
 
 	// ServiceOption function
@@ -64,26 +66,17 @@ type (
 
 	solanaClient interface {
 		GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
-		GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
 		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
 		NewAccount() types.Account
-		RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 		AccountFromPrivateKeyBytes(pk []byte) types.Account
-		InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
-		CreateAccountWithATA(ctx context.Context, assetAddr string, feePayer, issuer, initAcc types.Account) (string, error)
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
-		GetTransactions(ctx context.Context, publicKey string) ([]solana.ConfirmedTransactionResponse, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]solana.ConfirmedTransactionResponse, error)
 	}
 
 	ethereumClient interface {
 		CreateAccount() (ethereum.Wallet, error)
 	}
-
-	// rewardsService interface {
-	// 	GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
-	// }
 
 	// PreparedTransaction ...
 	PreparedTransaction struct {
@@ -122,6 +115,8 @@ func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, opt ...
 		walletTransactionsURL:   "wallets/%s/transactions",
 		rewardsWalletDetailsURL: "rewards/wallet/%s",
 		rewardsTransactionsURL:  "rewards/wallet/%s/transactions",
+
+		minAmountToTransfer: 0,
 	}
 
 	for _, o := range opt {
@@ -287,19 +282,6 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 // CreateWallet creates wallet for user with specified id.
 func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 	acc := s.sc.NewAccount()
-
-	txHash, err := s.sc.CreateAccountWithATA(
-		ctx,
-		s.satorAssetSolanaAddr,
-		s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
-		s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
-		acc,
-	)
-	if err != nil {
-		return fmt.Errorf("could not init token holder account: %w", err)
-	}
-	log.Printf("init token holder account transaction: %s", txHash)
-
 	sacc, err := s.wr.AddSolanaAccount(ctx, repository.AddSolanaAccountParams{
 		AccountType: GeneralAccount.String(),
 		PublicKey:   acc.PublicKey.ToBase58(),
@@ -462,6 +444,28 @@ func (s *Service) getListTransactionsByWalletID(ctx context.Context, userID, wal
 
 // CreateTransfer crates transaction from one account to another.
 func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipientPK, asset string, amount float64) (tx PreparedTransferTransaction, err error) {
+	w, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return PreparedTransferTransaction{}, fmt.Errorf("could not find wallet: %w", err)
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return PreparedTransferTransaction{}, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return PreparedTransferTransaction{}, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
+	if err != nil {
+		return PreparedTransferTransaction{}, fmt.Errorf("could not get wallet balance")
+	}
+
+	if bal < s.minAmountToTransfer {
+		return PreparedTransferTransaction{}, fmt.Errorf("%w: %.2f", ErrNotEnoughBalance, s.minAmountToTransfer)
+	}
+
 	var toEncode struct {
 		Amount        float64
 		Asset         string

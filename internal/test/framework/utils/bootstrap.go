@@ -107,7 +107,7 @@ func issueTokensToTokenHolder(ctx context.Context, t *testing.T) {
 	require.NoError(t, err)
 
 	BackoffRetry(t, func() error {
-		_, err := solanaClient.CreateAccountWithATA(ctx, asset.PublicKey.ToBase58(), feePayer, tokenHolder, tokenHolder)
+		_, err := solanaClient.CreateAccountWithATA(ctx, asset.PublicKey.ToBase58(), tokenHolder.PublicKey.ToBase58(), feePayer)
 		return err
 	})
 

@@ -16,6 +16,9 @@ func NewS3Client(opt Options) *s3.S3 {
 		DisableSSL:       aws.Bool(opt.DisableSSL),
 		S3ForcePathStyle: aws.Bool(opt.ForcePathStyle),
 	}
-	newSession := session.New(s3Config)
+	newSession, err := session.NewSession(s3Config)
+	if err != nil {
+		println(err)
+	}
 	return s3.New(newSession)
 }

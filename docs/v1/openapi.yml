@@ -108,6 +108,9 @@ components:
               access_token:
                 type: string
                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+              refresh_token:
+                type: string
+                example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
     DefaultError:
       description: Default error view.
       content:
@@ -225,7 +228,7 @@ paths:
               properties:
                 email:
                   type: string
-                  example: "john.doe@mail.dev"
+                  example: "john.doe@gmail.com"
                 password:
                   type: string
                   example: "qwerty12345"
@@ -541,6 +544,244 @@ paths:
           $ref: "#/components/responses/DefaultError"
         "422":
           $ref: "#/components/responses/ValidationError"
+
+  /auth/whitelist:
+    get:
+      tags:
+        - "Whitelist"
+      summary: Get whitelist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+        - name: allowed_value
+          in: query
+          description: allowed value will be filtered by this parameter.
+          required: false
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Returns whitelist with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    allowed_type:
+                      type: string
+                      example: "email"
+                    allowed_value:
+                      type: string
+                      example: "qwe@gmail.com"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - "Whitelist"
+      summary: Used for add allowed type and value to whitelist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                allowed_type:
+                  type: string
+                  example: "email"
+                allowed_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - "Whitelist"
+      summary: Used for delete allowed type and value to whitelist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                allowed_type:
+                  type: string
+                  example: "email"
+                allowed_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /auth/blacklist:
+    get:
+      tags:
+        - "Blacklist"
+      summary: Get blacklist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+        - name: restricted_value
+          in: query
+          description: restricted value will be filtered by this parameter.
+          required: false
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Returns blacklist with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    restricted_type:
+                      type: string
+                      example: "email"
+                    restricted_value:
+                      type: string
+                      example: "qwe@gmail.com"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - "Blacklist"
+      summary: Used for add restricted type and value to blacklist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                restricted_type:
+                  type: string
+                  example: "email"
+                restricted_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - "Blacklist"
+      summary: Used for delete restricted type and value to blacklist.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                restricted_type:
+                  type: string
+                  example: "email"
+                restricted_value:
+                  type: string
+                  example: "qwe@gmail.com"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /auth/kyc/access_token:
+    get:
+      tags:
+        - "KYC"
+      summary: Returns access token for web or mobile SDKs by user id.
+      security:
+        - bearerAuth: []
+
+      responses:
+        "200":
+          description: Returns access token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    example: "token"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
 
   /profile:
     get:
@@ -2118,6 +2359,33 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
+
+  /shows/reviews/{review_id}:
+    delete:
+      tags:
+        - "Shows"
+        - "Episodes"
+        - "Reviews"
+      summary: Used to delete episode review by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: review_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
 
   /shows/{show_id}/seasons:
     post:

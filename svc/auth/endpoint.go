@@ -7,6 +7,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/SatorNetwork/sator-api/internal/deviceid"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
+
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
@@ -40,13 +44,23 @@ type (
 		DestroyAccount        endpoint.Endpoint
 		IsVerified            endpoint.Endpoint
 		ResendOTP             endpoint.Endpoint
+
+		AddToWhitelist      endpoint.Endpoint
+		DeleteFromWhitelist endpoint.Endpoint
+		GetWhitelist        endpoint.Endpoint
+
+		AddToBlacklist      endpoint.Endpoint
+		DeleteFromBlacklist endpoint.Endpoint
+		GetBlacklist        endpoint.Endpoint
+
+		GetAccessTokenByUserID endpoint.Endpoint
 	}
 
 	authService interface {
-		Login(ctx context.Context, email, password string) (string, error)
+		Login(ctx context.Context, email, password, deviceID string) (Token, error)
 		Logout(ctx context.Context, tid string) error
-		SignUp(ctx context.Context, email, password, username string) (string, error)
-		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error)
+		SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error)
+		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error)
 
 		ForgotPassword(ctx context.Context, email string) error
 		ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error)
@@ -65,11 +79,24 @@ type (
 		DestroyAccount(ctx context.Context, uid uuid.UUID, otp string) error
 		IsVerified(ctx context.Context, userID uuid.UUID) (bool, error)
 		ResendOTP(ctx context.Context, userID uuid.UUID) error
+
+		AddToWhitelist(ctx context.Context, allowedType, allowedValue string) error
+		DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error
+		GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error)
+		SearchInWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error)
+
+		AddToBlacklist(ctx context.Context, restrictedType, restrictedValue string) error
+		DeleteFromBlacklist(ctx context.Context, restrictedType, restrictedValue string) error
+		GetBlacklist(ctx context.Context, limit, offset int32) ([]Blacklist, error)
+		SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error)
+
+		GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
 	}
 
 	// AccessToken struct
 	AccessToken struct {
-		Token string `json:"access_token"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	// LoginRequest struct
@@ -137,6 +164,30 @@ type (
 	UpdateUsernameRequest struct {
 		Username string `json:"username" validate:"required"`
 	}
+
+	// WhitelistRequest struct
+	WhitelistRequest struct {
+		AllowedType  string `json:"allowed_type,omitempty" validate:"required,oneof=email email_domain"`
+		AllowedValue string `json:"allowed_value,omitempty" validate:"required"`
+	}
+
+	// GetWhitelistRequest struct
+	GetWhitelistRequest struct {
+		AllowedValue string `json:"allowed_value,omitempty"`
+		utils.PaginationRequest
+	}
+
+	// BlacklistRequest struct
+	BlacklistRequest struct {
+		RestrictedType  string `json:"restricted_type,omitempty" validate:"required,oneof=email email_domain"`
+		RestrictedValue string `json:"restricted_value,omitempty" validate:"required"`
+	}
+
+	// GetBlacklistRequest struct
+	GetBlacklistRequest struct {
+		RestrictedValue string `json:"restricted_value,omitempty"`
+		utils.PaginationRequest
+	}
 )
 
 // MakeEndpoints ...
@@ -166,6 +217,16 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		RequestDestroyAccount: jwtMdw(MakeRequestDestroyAccount(as, validateFunc)),
 		VerifyDestroyCode:     jwtMdw(MakeVerifyDestroyEndpoint(as, validateFunc)),
 		DestroyAccount:        jwtMdw(MakeDestroyAccountEndpoint(as, validateFunc)),
+
+		GetWhitelist:        jwtMdw(MakeGetWhitelistEndpoint(as, validateFunc)),
+		AddToWhitelist:      jwtMdw(MakeAddToWhitelistEndpoint(as, validateFunc)),
+		DeleteFromWhitelist: jwtMdw(MakeDeleteFromWhitelistEndpoint(as, validateFunc)),
+
+		GetBlacklist:        jwtMdw(MakeGetBlacklistEndpoint(as, validateFunc)),
+		AddToBlacklist:      jwtMdw(MakeAddToBlacklistEndpoint(as, validateFunc)),
+		DeleteFromBlacklist: jwtMdw(MakeDeleteFromBlacklistEndpoint(as, validateFunc)),
+
+		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
 	}
 
 	if len(m) > 0 {
@@ -192,6 +253,16 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.RequestDestroyAccount = mdw(e.RequestDestroyAccount)
 			e.VerifyDestroyCode = mdw(e.VerifyDestroyCode)
 			e.DestroyAccount = mdw(e.DestroyAccount)
+
+			e.AddToWhitelist = mdw(e.AddToWhitelist)
+			e.DeleteFromWhitelist = mdw(e.DeleteFromWhitelist)
+			e.GetWhitelist = mdw(e.GetWhitelist)
+
+			e.AddToBlacklist = mdw(e.AddToBlacklist)
+			e.DeleteFromBlacklist = mdw(e.DeleteFromBlacklist)
+			e.GetBlacklist = mdw(e.GetBlacklist)
+
+			e.GetAccessTokenByUserID = mdw(e.GetAccessTokenByUserID)
 		}
 	}
 
@@ -217,6 +288,7 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 			ctx,
 			strings.ToLower(strings.TrimSpace(req.Email)),
 			strings.TrimSpace(req.Password),
+			deviceid.FromContext(ctx),
 		)
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
@@ -228,7 +300,7 @@ func MakeLoginEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoin
 			return nil, err
 		}
 
-		return AccessToken{Token: token}, nil
+		return AccessToken(token), nil
 	}
 }
 
@@ -259,12 +331,13 @@ func MakeSignUpEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoi
 			strings.ToLower(strings.TrimSpace(req.Email)),
 			strings.TrimSpace(req.Password),
 			strings.TrimSpace(req.Username),
+			deviceid.FromContext(ctx),
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		return AccessToken{Token: token}, nil
+		return AccessToken(token), nil
 	}
 }
 
@@ -286,17 +359,12 @@ func MakeRefreshTokenEndpoint(s authService, v validator.ValidateFunc) endpoint.
 			return nil, fmt.Errorf("could not get role: %w", err)
 		}
 
-		tid, err := jwt.TokenIDFromContext(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not get user id: %w", err)
-		}
-
-		token, err := s.RefreshToken(ctx, uid, username, role, tid.String())
+		token, err := s.RefreshToken(ctx, uid, username, role, deviceid.FromContext(ctx))
 		if err != nil {
 			return nil, err
 		}
 
-		return AccessToken{Token: token}, nil
+		return AccessToken(token), nil
 	}
 }
 
@@ -589,5 +657,168 @@ func MakeResendOTPEndpoint(s authService) endpoint.Endpoint {
 		}
 
 		return nil, nil
+	}
+}
+
+// MakeAddToWhitelistEndpoint ...
+func MakeAddToWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(WhitelistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.AddToWhitelist(ctx, req.AllowedType, req.AllowedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDeleteFromWhitelistEndpoint ...
+func MakeDeleteFromWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(WhitelistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.DeleteFromWhitelist(ctx, req.AllowedType, req.AllowedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetWhitelistEndpoint ...
+func MakeGetWhitelistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetWhitelistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		var resp []Whitelist
+		var err error
+
+		if req.AllowedValue == "" {
+			resp, err = s.GetWhitelist(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			resp, err = s.SearchInWhitelist(ctx, req.Limit(), req.Offset(), req.AllowedValue)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeAddToBlacklistEndpoint ...
+func MakeAddToBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(BlacklistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.AddToBlacklist(ctx, req.RestrictedType, req.RestrictedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDeleteFromBlacklistEndpoint ...
+func MakeDeleteFromBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(BlacklistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		err := s.DeleteFromBlacklist(ctx, req.RestrictedType, req.RestrictedValue)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetBlacklistEndpoint ...
+func MakeGetBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetBlacklistRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		var resp []Blacklist
+		var err error
+
+		if req.RestrictedValue == "" {
+			resp, err = s.GetBlacklist(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			resp, err = s.SearchInBlacklist(ctx, req.Limit(), req.Offset(), req.RestrictedValue)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetAccessTokenByUserIDEndpoint ...
+func MakeGetAccessTokenByUserIDEndpoint(s authService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		resp, err := s.GetAccessTokenByUserID(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

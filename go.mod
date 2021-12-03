@@ -27,6 +27,7 @@ require (
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/lib/pq v1.10.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
+	github.com/mcnijman/go-emailaddress v1.1.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.9.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
@@ -41,6 +42,7 @@ require (
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
+	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
 	golang.org/x/sys v0.0.0-20211109184856-51b60fd695b3 // indirect
 	syreclabs.com/go/faker v1.2.3
 )

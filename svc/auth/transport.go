@@ -7,11 +7,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/SatorNetwork/sator-api/internal/deviceid"
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
+
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+)
+
+// Predefined request query keys
+const (
+	allowedValue    = "allowed_value"
+	restrictedValue = "restricted_value"
 )
 
 type (
@@ -27,7 +36,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(log)),
 		httptransport.ServerErrorEncoder(httpencoder.EncodeError(log, codeAndMessageFrom)),
-		httptransport.ServerBefore(jwtkit.HTTPToContext()),
+		httptransport.ServerBefore(jwtkit.HTTPToContext(), deviceid.ToContext()),
 	}
 
 	r.Get("/", httptransport.NewServer(
@@ -159,6 +168,55 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Post("/update-username", httptransport.NewServer(
 		e.UpdateUsername,
 		decodeUpdateUsernameRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/whitelist", httptransport.NewServer(
+		e.GetWhitelist,
+		decodeGetWhitelist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/whitelist", httptransport.NewServer(
+		e.AddToWhitelist,
+		decodeEditWhitelist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/whitelist", httptransport.NewServer(
+		e.DeleteFromWhitelist,
+		decodeEditWhitelist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/blacklist", httptransport.NewServer(
+		e.GetBlacklist,
+		decodeGetBlacklist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/blacklist", httptransport.NewServer(
+		e.AddToBlacklist,
+		decodeEditBlacklist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/blacklist", httptransport.NewServer(
+		e.DeleteFromBlacklist,
+		decodeEditBlacklist,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/kyc/access_token", httptransport.NewServer(
+		e.GetAccessTokenByUserID,
+		decodeGetAccessTokenByUserID,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -312,4 +370,46 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 func encodeTokenResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set(httpencoder.ContentTypeHeader, httpencoder.ContentType)
 	return json.NewEncoder(w).Encode(response)
+}
+
+func decodeGetWhitelist(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetWhitelistRequest{
+		AllowedValue: r.URL.Query().Get(allowedValue),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
+	}, nil
+}
+
+func decodeEditWhitelist(_ context.Context, r *http.Request) (interface{}, error) {
+	var req WhitelistRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeGetBlacklist(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetBlacklistRequest{
+		RestrictedValue: r.URL.Query().Get(restrictedValue),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
+	}, nil
+}
+
+func decodeEditBlacklist(_ context.Context, r *http.Request) (interface{}, error) {
+	var req BlacklistRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeGetAccessTokenByUserID(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	return nil, nil
 }

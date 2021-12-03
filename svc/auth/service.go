@@ -12,6 +12,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
 
@@ -28,9 +29,20 @@ type (
 		jwt                   jwtInteractor
 		mail                  mailer
 		ic                    invitationsClient
+		kyc                   kycClient
 		otpLen                int
 		masterCode            string
 		blacklistEmailDomains []string
+	}
+
+	Whitelist struct {
+		AllowedType  string `json:"allowed_type"`
+		AllowedValue string `json:"allowed_value"`
+	}
+
+	Blacklist struct {
+		RestrictedType  string `json:"restricted_type"`
+		RestrictedValue string `json:"restricted_value"`
 	}
 
 	// ServiceOption function
@@ -38,13 +50,14 @@ type (
 	ServiceOption func(*Service)
 
 	jwtInteractor interface {
-		NewWithUserData(userID uuid.UUID, username, role string) (uuid.UUID, string, error)
+		NewWithRefreshToken(userID uuid.UUID, username, role string) (access, refresh string, err error)
 	}
 
 	userRepository interface {
 		// user
 		CreateUser(ctx context.Context, arg repository.CreateUserParams) (repository.User, error)
 		GetUserByEmail(ctx context.Context, email string) (repository.User, error)
+		GetUserBySanitizedEmail(ctx context.Context, email string) (repository.User, error)
 		GetUserByUsername(ctx context.Context, username string) (repository.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (repository.User, error)
 		UpdateUserEmail(ctx context.Context, arg repository.UpdateUserEmailParams) error
@@ -61,6 +74,19 @@ type (
 
 		// Blacklist
 		IsEmailBlacklisted(ctx context.Context, email string) (bool, error)
+		AddToBlacklist(ctx context.Context, arg repository.AddToBlacklistParams) (repository.Blacklist, error)
+		DeleteFromBlacklist(ctx context.Context, arg repository.DeleteFromBlacklistParams) error
+		GetBlacklist(ctx context.Context, arg repository.GetBlacklistParams) ([]repository.Blacklist, error)
+		GetBlacklistByRestrictedValue(ctx context.Context, arg repository.GetBlacklistByRestrictedValueParams) ([]repository.Blacklist, error)
+
+		// Whitelist
+		IsEmailWhitelisted(ctx context.Context, email string) (bool, error)
+		AddToWhitelist(ctx context.Context, arg repository.AddToWhitelistParams) (repository.Whitelist, error)
+		DeleteFromWhitelist(ctx context.Context, arg repository.DeleteFromWhitelistParams) error
+		GetWhitelist(ctx context.Context, arg repository.GetWhitelistParams) ([]repository.Whitelist, error)
+		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
+
+		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
 	}
 
 	mailer interface {
@@ -77,10 +103,21 @@ type (
 		AcceptInvitation(ctx context.Context, inviteeID uuid.UUID, inviteeEmail string) error
 		IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error)
 	}
+
+	kycClient interface {
+		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
+		GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+	}
+
+	// JWTs
+	Token struct {
+		AccessToken  string
+		RefreshToken string
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, kyc kycClient, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -93,8 +130,11 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 	if ic == nil {
 		log.Fatalln("invitations client is not set")
 	}
+	if kyc == nil {
+		log.Fatalln("kyc client is not set")
+	}
 
-	s := &Service{jwt: ji, ur: ur, ic: ic, ws: ws, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ic: ic, kyc: kyc, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -105,33 +145,76 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 }
 
 // Login by email and password, returns token.
-func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+func (s *Service) Login(ctx context.Context, email, password, deviceID string) (Token, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
 	user, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return "", ErrInvalidCredentials
+			return Token{}, ErrInvalidCredentials
 		}
-		return "", fmt.Errorf("could not log in: %w", err)
+		return Token{}, fmt.Errorf("could not log in: %w", err)
+	}
+
+	if deviceID == "" {
+		return Token{}, ErrEmptyDeviceID
+	}
+
+	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+		UserID:   user.ID,
+		DeviceID: deviceID,
+	}); err != nil {
+		log.Printf("could not link device to user: %v", err)
+	}
+
+	if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(user.Email)
+		if err != nil {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrInvalidEmailFormat.Error()},
+			})
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             user.ID,
+			Email:          user.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
+		}
 	}
 
 	if user.Disabled {
-		return "", ErrUserIsDisabled
+		return Token{}, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
-		return "", ErrUserIsDisabled
+	if !strings.Contains(email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.Email); yes {
+			return Token{}, ErrUserIsDisabled
+		}
+		if user.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.SanitizedEmail.String); yes {
+				return Token{}, ErrUserIsDisabled
+			}
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
+			return Token{}, ErrUserIsDisabled
+		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
-		return "", ErrInvalidCredentials
+		return Token{}, ErrInvalidCredentials
 	}
 
-	_, token, err := s.jwt.NewWithUserData(user.ID, user.Username, user.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(user.ID, user.Username, user.Role)
 	if err != nil {
-		return "", fmt.Errorf("could not generate new access token: %w", err)
+		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
 
-	return token, nil
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // Logout revokes JWT token.
@@ -141,72 +224,152 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 }
 
 // RefreshToken returns new jwt string.
-func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, tid string) (string, error) {
+func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error) {
+	if deviceID == "" {
+		return Token{}, ErrEmptyDeviceID
+	}
+
+	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+		UserID:   uid,
+		DeviceID: deviceID,
+	}); err != nil {
+		log.Printf("could not link device to user: %v", err)
+	}
+
 	u, err := s.ur.GetUserByID(ctx, uid)
 	if err != nil {
-		return "", fmt.Errorf("could not refresh access token: %w", err)
+		return Token{}, fmt.Errorf("could not refresh access token: %w", err)
+	}
+
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return Token{}, ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
 	}
 
 	if u.Disabled {
-		return "", ErrUserIsDisabled
+		return Token{}, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-		return "", ErrUserIsDisabled
+	if !strings.HasSuffix(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return Token{}, ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return Token{}, ErrUserIsDisabled
+			}
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return Token{}, ErrUserIsDisabled
+		}
 	}
 
 	// TODO: add JWT id into the revoked tokens list
-	_, token, err := s.jwt.NewWithUserData(uid, u.Username, role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role)
 	if err != nil {
-		return "", fmt.Errorf("could not refresh access token: %w", err)
+		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
 
-	return token, nil
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // SignUp registers account with email, password and username.
-func (s *Service) SignUp(ctx context.Context, email, password, username string) (string, error) {
+func (s *Service) SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error) {
 	var otpHash []byte
-	// Make email address case-insensitive
-	email = strings.ToLower(email)
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
-		return "", validator.NewValidationError(url.Values{
-			"email": []string{ErrRestrictedEmailDomain.Error()},
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Sanitize email address
+	sanitizedEmail, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return Token{}, validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
 		})
+	}
+
+	if !strings.Contains(email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrRestrictedEmailDomain.Error()},
+			})
+		}
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, sanitizedEmail); yes {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrRestrictedEmailDomain.Error()},
+			})
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
+			return Token{}, validator.NewValidationError(url.Values{
+				"email": []string{ErrRestrictedEmailDomain.Error()},
+			})
+		}
 	}
 
 	// Check if the passed email address is not taken yet
 	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
-		return "", validator.NewValidationError(url.Values{
+		return Token{}, validator.NewValidationError(url.Values{
 			"email": []string{"email is already taken"},
 		})
 	} else if !db.IsNotFoundError(err) {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
+	}
+
+	if _, err := s.ur.GetUserBySanitizedEmail(ctx, sanitizedEmail); err == nil {
+		return Token{}, validator.NewValidationError(url.Values{
+			"email": []string{"email is already taken"},
+		})
+	} else if !db.IsNotFoundError(err) {
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	// Check if the passed username is not taken yet
 	if _, err := s.ur.GetUserByUsername(ctx, username); err == nil {
-		return "", validator.NewValidationError(url.Values{
+		return Token{}, validator.NewValidationError(url.Values{
 			"username": []string{"username is already taken"},
 		})
 	} else if !db.IsNotFoundError(err) {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	passwdHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
 	u, err := s.ur.CreateUser(ctx, repository.CreateUserParams{
-		Email:    email,
-		Password: passwdHash,
-		Username: username,
-		Role:     rbac.RoleUser.String(),
+		Email:          email,
+		SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		Password:       passwdHash,
+		Username:       username,
+		Role:           rbac.RoleUser.String(),
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not create a new account: %w", err)
+		return Token{}, fmt.Errorf("could not create a new account: %w", err)
+	}
+
+	if deviceID == "" {
+		return Token{}, ErrEmptyDeviceID
+	}
+
+	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+		UserID:   u.ID,
+		DeviceID: deviceID,
+	}); err != nil {
+		log.Printf("could not link device to user: %v", err)
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -215,7 +378,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 	} else {
 		otpHash, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.MinCost)
 		if err != nil {
-			return "", fmt.Errorf("could not create a new account: %w", err)
+			return Token{}, fmt.Errorf("could not create a new account: %w", err)
 		}
 	}
 
@@ -225,12 +388,12 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		Email:            email,
 		VerificationCode: otpHash,
 	}); err != nil {
-		return "", fmt.Errorf("could not generate verification code: %w", err)
+		return Token{}, fmt.Errorf("could not generate verification code: %w", err)
 	}
 
 	if s.mail != nil {
 		if err := s.mail.SendVerificationCode(ctx, email, otp); err != nil {
-			return "", fmt.Errorf("could not send verification code: %w", err)
+			return Token{}, fmt.Errorf("could not send verification code: %w", err)
 		}
 	} else {
 		// log data for debug mode
@@ -238,9 +401,9 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	_, token, err := s.jwt.NewWithUserData(u.ID, u.Username, u.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role)
 	if err != nil {
-		return "", fmt.Errorf("could not generate new access token: %w", err)
+		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
 
 	if isInvited, _ := s.ic.IsEmailInvited(ctx, email); isInvited {
@@ -249,12 +412,16 @@ func (s *Service) SignUp(ctx context.Context, email, password, username string) 
 		}
 	}
 
-	return token, nil
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // ForgotPassword requests password reset with email.
 func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	var otpHash []byte
+	email = strings.ToLower(strings.TrimSpace(email))
 
 	u, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -264,12 +431,38 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 		return fmt.Errorf("could not get user: %w", err)
 	}
 
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
+	}
+
 	if u.Disabled {
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-		return ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return ErrUserIsDisabled
+			}
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return ErrUserIsDisabled
+		}
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -307,6 +500,8 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 // ValidateResetPasswordCode validates reset password code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp string) (uuid.UUID, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyResetPassword,
 		Email:       email,
@@ -330,6 +525,8 @@ func (s *Service) ValidateResetPasswordCode(ctx context.Context, email, otp stri
 
 // ResetPassword changing password.
 func (s *Service) ResetPassword(ctx context.Context, email, password, otp string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	userID, err := s.ValidateResetPasswordCode(ctx, email, otp)
 	if err != nil {
 		return fmt.Errorf("could not reset password: %w", err)
@@ -398,6 +595,23 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		}
 		return fmt.Errorf("could not get user: %w", err)
 	}
+
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
+	}
+
 	if u.VerifiedAt.Valid {
 		return ErrEmailAlreadyVerified
 	}
@@ -406,8 +620,18 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-		return ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return ErrUserIsDisabled
+			}
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return ErrUserIsDisabled
+		}
 	}
 
 	uv, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
@@ -450,6 +674,15 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 // RequestChangeEmail requests change email for authorized user. Checks if email already exists in db, creates user verification and sends code to new email.
 func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, email string) error {
 	var otpHash []byte
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Sanitize email address
+	sanitizedEmail, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
 
 	u, err := s.ur.GetUserByID(ctx, userID)
 	if err != nil {
@@ -459,15 +692,41 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 		return fmt.Errorf("could not get user: %w", err)
 	}
 
+	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
+		// Sanitize email address
+		sanitizedEmail, err := utils.SanitizeEmail(u.Email)
+		if err != nil {
+			return ErrInvalidEmailFormat
+		}
+
+		if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
+			ID:             u.ID,
+			Email:          u.Email,
+			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		}); err != nil {
+			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
+		}
+	}
+
 	if u.Disabled {
 		return ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-		return ErrUserIsDisabled
+	if !strings.Contains(sanitizedEmail, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return ErrUserIsDisabled
+			}
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
+			return ErrUserIsDisabled
+		}
 	}
 
-	if _, err := s.ur.GetUserByEmail(ctx, email); err == nil {
+	if _, err := s.ur.GetUserBySanitizedEmail(ctx, sanitizedEmail); err == nil {
 		return fmt.Errorf("could not update email: %w", ErrEmailAlreadyTaken)
 	}
 
@@ -506,6 +765,8 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 // ValidateChangeEmailCode validates change email code,
 // it's needed to implement the reset password flow on the client.
 func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	v, err := s.ur.GetUserVerificationByEmail(ctx, repository.GetUserVerificationByEmailParams{
 		RequestType: repository.VerifyChangeEmail,
 		Email:       email,
@@ -526,13 +787,24 @@ func (s *Service) ValidateChangeEmailCode(ctx context.Context, userID uuid.UUID,
 
 // UpdateEmail updates user's email to provided new one in case of correct otp provided.
 func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Sanitize email address
+	sanitizedEmail, err := utils.SanitizeEmail(email)
+	if err != nil {
+		return validator.NewValidationError(url.Values{
+			"email": []string{ErrInvalidEmailFormat.Error()},
+		})
+	}
+
 	if err := s.ValidateChangeEmailCode(ctx, userID, email, otp); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
 	}
 
 	if err := s.ur.UpdateUserEmail(ctx, repository.UpdateUserEmailParams{
-		ID:    userID,
-		Email: email,
+		ID:             userID,
+		Email:          email,
+		SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
 	}); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
 	}
@@ -579,8 +851,18 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 		return false, ErrUserIsDisabled
 	}
 
-	if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-		return false, ErrUserIsDisabled
+	if !strings.Contains(u.Email, "@sator.io") {
+		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+			return false, ErrUserIsDisabled
+		}
+		if u.SanitizedEmail.Valid {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+				return false, ErrUserIsDisabled
+			}
+		}
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+			return false, ErrUserIsDisabled
+		}
 	}
 
 	return u.VerifiedAt.Valid, nil
@@ -713,4 +995,154 @@ func (s *Service) DestroyAccount(ctx context.Context, uid uuid.UUID, otp string)
 	}
 
 	return nil
+}
+
+// AddToWhitelist used for add allowed type and value to whitelist.
+func (s *Service) AddToWhitelist(ctx context.Context, allowedType, allowedValue string) error {
+	allowedValue = strings.ToLower(strings.TrimSpace(allowedValue))
+	if _, err := s.ur.AddToWhitelist(ctx, repository.AddToWhitelistParams{
+		AllowedType:  allowedType,
+		AllowedValue: allowedValue,
+	}); err != nil {
+		return fmt.Errorf("could not add llowed type and value to whitelist: %w", err)
+	}
+
+	return nil
+}
+
+// GetWhitelist returns whitelist with pagination.
+func (s *Service) GetWhitelist(ctx context.Context, limit, offset int32) ([]Whitelist, error) {
+	whitelist, err := s.ur.GetWhitelist(ctx, repository.GetWhitelistParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get whitelist: %w", err)
+	}
+
+	result := make([]Whitelist, 0, len(whitelist))
+	for _, w := range whitelist {
+		result = append(result, Whitelist{
+			AllowedType:  w.AllowedType,
+			AllowedValue: w.AllowedValue,
+		})
+	}
+
+	return result, nil
+}
+
+// SearchInWhitelist returns whitelist with pagination.
+func (s *Service) SearchInWhitelist(ctx context.Context, limit, offset int32, query string) ([]Whitelist, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
+	whitelist, err := s.ur.GetWhitelistByAllowedValue(ctx, repository.GetWhitelistByAllowedValueParams{
+		Query:     query,
+		OffsetVal: offset,
+		LimitVal:  limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get whitelist by query %v: %w", query, err)
+	}
+
+	result := make([]Whitelist, 0, len(whitelist))
+	for _, w := range whitelist {
+		result = append(result, Whitelist{
+			AllowedType:  w.AllowedType,
+			AllowedValue: w.AllowedValue,
+		})
+	}
+
+	return result, nil
+}
+
+// DeleteFromWhitelist used for delete allowed type and value from whitelist.
+func (s *Service) DeleteFromWhitelist(ctx context.Context, allowedType, allowedValue string) error {
+	allowedValue = strings.ToLower(strings.TrimSpace(allowedValue))
+	if err := s.ur.DeleteFromWhitelist(ctx, repository.DeleteFromWhitelistParams{
+		AllowedType:  allowedType,
+		AllowedValue: allowedValue,
+	}); err != nil {
+		return fmt.Errorf("could not delete record from whitelist: %w", err)
+	}
+
+	return nil
+}
+
+// AddToBlacklist used for add restricted type and value to blacklist.
+func (s *Service) AddToBlacklist(ctx context.Context, restrictedType, restrictedValue string) error {
+	restrictedValue = strings.ToLower(strings.TrimSpace(restrictedValue))
+	if _, err := s.ur.AddToBlacklist(ctx, repository.AddToBlacklistParams{
+		RestrictedType:  restrictedType,
+		RestrictedValue: restrictedValue,
+	}); err != nil {
+		return fmt.Errorf("could not add llowed type and value to blacklist: %w", err)
+	}
+
+	return nil
+}
+
+// GetBlacklist returns blacklist with pagination.
+func (s *Service) GetBlacklist(ctx context.Context, limit, offset int32) ([]Blacklist, error) {
+	blacklist, err := s.ur.GetBlacklist(ctx, repository.GetBlacklistParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get blacklist: %w", err)
+	}
+
+	result := make([]Blacklist, 0, len(blacklist))
+	for _, b := range blacklist {
+		result = append(result, Blacklist{
+			RestrictedType:  b.RestrictedType,
+			RestrictedValue: b.RestrictedValue,
+		})
+	}
+
+	return result, nil
+}
+
+// SearchInBlacklist returns blacklist with pagination.
+func (s *Service) SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
+	blacklist, err := s.ur.GetBlacklistByRestrictedValue(ctx, repository.GetBlacklistByRestrictedValueParams{
+		Query:     query,
+		OffsetVal: offset,
+		LimitVal:  limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get blacklist by query %v: %w", query, err)
+	}
+
+	result := make([]Blacklist, 0, len(blacklist))
+	for _, w := range blacklist {
+		result = append(result, Blacklist{
+			RestrictedType:  w.RestrictedType,
+			RestrictedValue: w.RestrictedValue,
+		})
+	}
+
+	return result, nil
+}
+
+// DeleteFromBlacklist used for delete restricted type and value from blacklist.
+func (s *Service) DeleteFromBlacklist(ctx context.Context, restrictedType, restrictedValue string) error {
+	restrictedValue = strings.ToLower(strings.TrimSpace(restrictedValue))
+	if err := s.ur.DeleteFromBlacklist(ctx, repository.DeleteFromBlacklistParams{
+		RestrictedType:  restrictedType,
+		RestrictedValue: restrictedValue,
+	}); err != nil {
+		return fmt.Errorf("could not delete record from blacklist: %w", err)
+	}
+
+	return nil
+}
+
+// GetAccessTokenByUserID returns access token for web or mobile SDKs by user id.
+func (s *Service) GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
+	token, err := s.kyc.GetSDKAccessTokenByUserID(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("could not get access token: %w", err)
+	}
+
+	return token, nil
 }

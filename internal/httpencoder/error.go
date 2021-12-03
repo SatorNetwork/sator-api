@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	jwti "github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/auth/jwt"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -58,6 +59,10 @@ func CodeAndMessageFrom(err error) (int, interface{}) {
 		errors.Is(err, jwt.ErrTokenNotActive) ||
 		errors.Is(err, jwt.ErrUnexpectedSigningMethod) {
 		return http.StatusUnauthorized, err.Error()
+	}
+
+	if errors.Is(err, jwti.ErrInvalidJWTSubject) {
+		return http.StatusForbidden, err.Error()
 	}
 
 	if errors.Is(err, sql.ErrNoRows) {

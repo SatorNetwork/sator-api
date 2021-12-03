@@ -40,6 +40,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteEpisodeByIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEpisodeByID: %w", err)
 	}
+	if q.deleteReviewStmt, err = db.PrepareContext(ctx, deleteReview); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteReview: %w", err)
+	}
 	if q.deleteSeasonByIDStmt, err = db.PrepareContext(ctx, deleteSeasonByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteSeasonByID: %w", err)
 	}
@@ -133,6 +136,11 @@ func (q *Queries) Close() error {
 	if q.deleteEpisodeByIDStmt != nil {
 		if cerr := q.deleteEpisodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteEpisodeByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteReviewStmt != nil {
+		if cerr := q.deleteReviewStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteReviewStmt: %w", cerr)
 		}
 	}
 	if q.deleteSeasonByIDStmt != nil {
@@ -280,6 +288,7 @@ type Queries struct {
 	addShowStmt                               *sql.Stmt
 	countUserClapsStmt                        *sql.Stmt
 	deleteEpisodeByIDStmt                     *sql.Stmt
+	deleteReviewStmt                          *sql.Stmt
 	deleteSeasonByIDStmt                      *sql.Stmt
 	deleteShowByIDStmt                        *sql.Stmt
 	didUserRateEpisodeStmt                    *sql.Stmt
@@ -312,6 +321,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addShowStmt:              q.addShowStmt,
 		countUserClapsStmt:       q.countUserClapsStmt,
 		deleteEpisodeByIDStmt:    q.deleteEpisodeByIDStmt,
+		deleteReviewStmt:         q.deleteReviewStmt,
 		deleteSeasonByIDStmt:     q.deleteSeasonByIDStmt,
 		deleteShowByIDStmt:       q.deleteShowByIDStmt,
 		didUserRateEpisodeStmt:   q.didUserRateEpisodeStmt,

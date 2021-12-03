@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultEmail1    = "john.doe@mail.dev"
+	defaultEmail1    = "john.doe@sator.io"
 	defaultPassword1 = "qwerty12345"
 )
 
@@ -50,7 +50,7 @@ type VerifyAccountRequest struct {
 func RandomSignUpRequest() *SignUpRequest {
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Uint64()
-	email := fmt.Sprintf("john.doe%v@mail.dev", n)
+	email := fmt.Sprintf("john.doe%v@sator.io", n)
 	username := fmt.Sprintf("johndoe%v", n)
 	return &SignUpRequest{
 		Email:    email,
@@ -60,7 +60,7 @@ func RandomSignUpRequest() *SignUpRequest {
 }
 
 func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
-	url := fmt.Sprintf("http://localhost:8080/auth/login")
+	url := "http://localhost:8080/auth/login"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal create transfer request")
@@ -91,7 +91,7 @@ func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
 }
 
 func (a *AuthClient) SignUp(req *SignUpRequest) (*SignUpResponse, error) {
-	url := fmt.Sprintf("http://localhost:8080/auth/signup")
+	url := "http://localhost:8080/auth/signup"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal create transfer request")
@@ -122,7 +122,7 @@ func (a *AuthClient) SignUp(req *SignUpRequest) (*SignUpResponse, error) {
 }
 
 func (a *AuthClient) VerifyAcount(accessToken string, req *VerifyAccountRequest) error {
-	url := fmt.Sprintf("http://localhost:8080/auth/verify-account")
+	url := "http://localhost:8080/auth/verify-account"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return errors.Wrap(err, "can't marshal create transfer request")
