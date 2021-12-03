@@ -38,6 +38,9 @@ run-local: ## Run api via `go run`
 	SOLANA_TOKEN_HOLDER_ADDR=uFhu3UDp2ymFYKRwPf1jrvfhDj1R7eiWjDnkdVQJhGQ \
 	SOLANA_TOKEN_HOLDER_PRIVATE_KEY=I52q0J0qsUY2NLTSScSKre1lH6XZRu69FGS0pa3xypsNYtRHIr9ICfw0SXUd1Vcr0sf3tqQuG3whne/UvJfBNQ== \
 	MASTER_OTP_HASH='$$2a$$04$$JEj1CnjccUr237U8lOWMVOUPcm4xG/a3SHcJM00uNQKAx.ujaP5Pa' \
+	KYC_APP_TOKEN=XXXXXXXXXX \
+	KYC_APP_SECRET=XXXXXXXXXX \
+	KYC_APP_BASE_URL=XXXXXXXXXX \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go &
 migrate-local: ## Run all migrations on local environment
 	@rm -Rvf migrations/*.sql && \

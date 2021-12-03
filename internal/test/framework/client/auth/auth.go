@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
 )
 
 const (
@@ -101,6 +103,7 @@ func (a *AuthClient) SignUp(req *SignUpRequest) (*SignUpResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")
 	}
+	httpReq.Header.Set("Device-ID", uuid.New().String())
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't make http request")
