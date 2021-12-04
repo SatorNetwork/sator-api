@@ -20,14 +20,6 @@ const (
 	delayBetweenQuestions = 100 * time.Millisecond
 )
 
-type quizEngine interface {
-	Init() error
-	GetQuestions() []challenge.Question
-	CheckAndTrackAnswer(questionID, answerID, userID uuid.UUID, answeredAt time.Time) (bool, int, bool, error)
-	GetPrizePoolDistribution() map[uuid.UUID]float64
-	RegisterQuestionSendingEvent(questionNum int)
-}
-
 type questionWrapper struct {
 	question    challenge.Question
 	questionNum int
@@ -49,13 +41,18 @@ type defaultRoom struct {
 	statusIsUpdatedChan chan struct{}
 	st                  *status_transactor.StatusTransactor
 
-	quizEngine quizEngine
+	quizEngine quiz_engine.QuizEngine
 
 	done chan struct{}
 }
 
-func New(challengeID string, challenges quiz_v2_challenge.ChallengesService) *defaultRoom {
+func New(challengeID string, challenges quiz_v2_challenge.ChallengesService) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
+
+	quizEngine, err := quiz_engine.New(challengeID, challenges)
+	if err != nil {
+		return nil, err
+	}
 
 	return &defaultRoom{
 		challengeID:    challengeID,
@@ -68,10 +65,10 @@ func New(challengeID string, challenges quiz_v2_challenge.ChallengesService) *de
 		statusIsUpdatedChan: statusIsUpdatedChan,
 		st:                  status_transactor.New(statusIsUpdatedChan),
 
-		quizEngine: quiz_engine.New(challengeID, challenges),
+		quizEngine: quizEngine,
 
 		done: make(chan struct{}),
-	}
+	}, nil
 }
 
 func (r *defaultRoom) ChallengeID() string {
@@ -87,10 +84,6 @@ func (r *defaultRoom) IsFull() bool {
 }
 
 func (r *defaultRoom) Start() {
-	if err := r.quizEngine.Init(); err != nil {
-		log.Printf("can't init room: %v\n", err)
-	}
-
 LOOP:
 	for {
 		select {
@@ -146,16 +139,21 @@ LOOP:
 				log.Printf("can't parse answer's UID(%v): %v\n", answer.message.AnswerID, err)
 				break
 			}
-			ok, segmentNum, isFastestAnswer, err := r.quizEngine.CheckAndTrackAnswer(questionID, answerID, userID, answer.receivedAt)
+			ok, err := r.quizEngine.CheckAndRegisterAnswer(questionID, answerID, userID, answer.receivedAt)
 			if err != nil {
 				log.Printf("can't check answer, question UID(%v), answer's UID(%v): %v\n", questionID, answerID, err)
+				break
+			}
+			cell, err := r.quizEngine.GetAnswer(userID, questionID)
+			if err != nil {
+				log.Println(err)
 				break
 			}
 
 			payload := message.AnswerReplyMessage{
 				Success:         ok,
-				SegmentNum:      segmentNum,
-				IsFastestAnswer: isFastestAnswer,
+				SegmentNum:      cell.FindSegmentNum(),
+				IsFastestAnswer: cell.IsFirstCorrectAnswer(),
 			}
 			msg := message.NewAnswerReplyMessage(&payload)
 
@@ -169,7 +167,9 @@ LOOP:
 
 		case q := <-r.questionChan:
 			r.sendQuestionMessage(q)
-			r.quizEngine.RegisterQuestionSendingEvent(q.questionNum)
+			if err := r.quizEngine.RegisterQuestionSendingEvent(q.questionNum); err != nil {
+				log.Println(err)
+			}
 
 		case <-r.done:
 			break LOOP
