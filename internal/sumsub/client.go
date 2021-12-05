@@ -12,8 +12,8 @@ type (
 	}
 
 	service interface {
+		GetSDKAccessTokenByUserID(ctx context.Context, userID, levelName string) (string, error)
 		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
-		GetSDKAccessTokenByUserID(ctx context.Context, userID string) (string, error)
 		GetByExternalUserID(ctx context.Context, externalUserID uuid.UUID) (*Response, error)
 	}
 )
@@ -35,7 +35,7 @@ func (c *Client) GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID
 
 // GetSDKAccessTokenByUserID ...
 func (c *Client) GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
-	token, err := c.s.GetSDKAccessTokenByUserID(ctx, userID.String())
+	token, err := c.s.GetSDKAccessTokenByUserID(ctx, userID.String(), BasicKYCLevel)
 	if err != nil {
 		return "", err
 	}

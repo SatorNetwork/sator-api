@@ -92,7 +92,7 @@ type (
 		SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error)
 
 		GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
-		VerificationCallback(ctx context.Context, userID uuid.UUID) (string, error)
+		VerificationCallback(ctx context.Context, userID uuid.UUID) error
 	}
 
 	// AccessToken struct
@@ -234,7 +234,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		DeleteFromBlacklist: jwtMdw(MakeDeleteFromBlacklistEndpoint(as, validateFunc)),
 
 		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
-		VerificationCallback:   jwtMdw(MakeVerificationCallbackEndpoint(as)),
+		VerificationCallback:   MakeVerificationCallbackEndpoint(as),
 	}
 
 	if len(m) > 0 {
@@ -840,11 +840,11 @@ func MakeVerificationCallbackEndpoint(s authService) endpoint.Endpoint {
 			return nil, fmt.Errorf("%w external user id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.VerificationCallback(ctx, externalUserID)
+		err = s.VerificationCallback(ctx, externalUserID)
 		if err != nil {
 			return nil, err
 		}
 
-		return resp, nil
+		return true, nil
 	}
 }
