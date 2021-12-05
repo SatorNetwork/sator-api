@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"log"
 	"time"
 
 	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
@@ -34,7 +35,11 @@ LOOP:
 	for {
 		select {
 		case newPlayer := <-e.newPlayersChan:
-			room := e.getOrCreateRoom(newPlayer.ChallengeID())
+			room, err := e.getOrCreateRoom(newPlayer.ChallengeID())
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 
 			room.AddPlayer(newPlayer)
 			// wait for some time until user will be properly registered in room
@@ -58,14 +63,17 @@ func (e *Engine) AddPlayer(p player.Player) {
 	e.newPlayersChan <- p
 }
 
-func (e *Engine) getOrCreateRoom(challengeID string) room.Room {
+func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
 	if _, ok := e.challengeIDToRoom[challengeID]; !ok {
-		room := default_room.New(challengeID, e.challenges)
+		room, err := default_room.New(challengeID, e.challenges)
+		if err != nil {
+			return nil, err
+		}
 		e.challengeIDToRoom[challengeID] = room
 		go room.Start()
 	}
 
-	return e.challengeIDToRoom[challengeID]
+	return e.challengeIDToRoom[challengeID], nil
 }
 
 func (e *Engine) deleteRoom(challengeID string) {
