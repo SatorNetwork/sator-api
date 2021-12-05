@@ -29,6 +29,10 @@ func New(
 	}
 }
 
+func Empty() Cell {
+	return new(cell)
+}
+
 type cell struct {
 	isCorrect            bool
 	isFirstCorrectAnswer bool

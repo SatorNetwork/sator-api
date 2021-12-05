@@ -14,6 +14,10 @@ type ResultTable interface {
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
 	GetPrizePoolDistribution() map[uuid.UUID]float64
+
+	calcWinnersMap() map[uuid.UUID]uint32
+	calcPTSMap() map[uuid.UUID]uint32
+	getWinnerIDs() []uuid.UUID
 }
 
 type user struct {
@@ -29,16 +33,16 @@ type Config struct {
 }
 
 type resultTable struct {
-	table              map[uuid.UUID][]cell.Cell
-	questionSentAt     []time.Time
+	table          map[uuid.UUID][]cell.Cell
+	questionSentAt []time.Time
 
 	cfg *Config
 }
 
 func New(cfg *Config) ResultTable {
 	return &resultTable{
-		table:              make(map[uuid.UUID][]cell.Cell),
-		questionSentAt:     make([]time.Time, cfg.QuestionNum),
+		table:          make(map[uuid.UUID][]cell.Cell),
+		questionSentAt: make([]time.Time, cfg.QuestionNum),
 
 		cfg: cfg,
 	}
@@ -77,7 +81,6 @@ func (rt *resultTable) isFirstCorrectAnswer(qNum int) bool {
 	return true
 }
 
-
 func (rt *resultTable) GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error) {
 	return rt.getCell(userID, qNum)
 }
@@ -113,8 +116,8 @@ func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
 func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
 	ptsMap := make(map[uuid.UUID]uint32, 0)
 	for userID, row := range rt.table {
-		for _, answerStat := range row {
-			ptsMap[userID] += answerStat.PTS()
+		for _, cell := range row {
+			ptsMap[userID] += cell.PTS()
 		}
 	}
 
@@ -146,7 +149,7 @@ func (rt *resultTable) getUsersSortedByPTS() []*user {
 	}
 
 	sort.Slice(ptsSlice, func(i, j int) bool {
-		return ptsSlice[i].pts < ptsSlice[j].pts
+		return ptsSlice[i].pts > ptsSlice[j].pts
 	})
 
 	return ptsSlice
@@ -183,6 +186,9 @@ func (rt *resultTable) setCell(userID uuid.UUID, qNum int, cell cell.Cell) error
 func (rt *resultTable) createRowIfNecessary(userID uuid.UUID) {
 	if _, ok := rt.table[userID]; !ok {
 		rt.table[userID] = make([]cell.Cell, rt.cfg.QuestionNum)
+		for idx := range rt.table[userID] {
+			rt.setCell(userID, idx, cell.Empty())
+		}
 	}
 }
 
