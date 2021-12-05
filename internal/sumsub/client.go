@@ -14,6 +14,7 @@ type (
 	service interface {
 		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
 		GetSDKAccessTokenByUserID(ctx context.Context, userID string) (string, error)
+		GetByExternalUserID(ctx context.Context, externalUserID uuid.UUID) (*Response, error)
 	}
 )
 
@@ -40,4 +41,14 @@ func (c *Client) GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID
 	}
 
 	return token, nil
+}
+
+// GetByExternalUserID ...
+func (c *Client) GetByExternalUserID(ctx context.Context, userID uuid.UUID) (*Response, error) {
+	resp, err := c.s.GetByExternalUserID(ctx, userID)
+	if err != nil {
+		return &Response{}, err
+	}
+
+	return resp, nil
 }

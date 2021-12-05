@@ -105,7 +105,7 @@ func (s *Service) Get(applicantID string) (*Response, error) {
 }
 
 // GetByExternalUserID returns sumsub response for applicant by externalUserID
-func (s *Service) GetByExternalUserID(externalUserID uuid.UUID) (*Response, error) {
+func (s *Service) GetByExternalUserID(ctx context.Context, externalUserID uuid.UUID) (*Response, error) {
 	path := "/resources/applicants/-;externalUserId=" + externalUserID.String()
 
 	type responseStruct struct {

@@ -54,6 +54,7 @@ type (
 		GetBlacklist        endpoint.Endpoint
 
 		GetAccessTokenByUserID endpoint.Endpoint
+		VerificationCallback   endpoint.Endpoint
 	}
 
 	authService interface {
@@ -91,6 +92,7 @@ type (
 		SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error)
 
 		GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+		VerificationCallback(ctx context.Context, userID uuid.UUID) (string, error)
 	}
 
 	// AccessToken struct
@@ -188,6 +190,11 @@ type (
 		RestrictedValue string `json:"restricted_value,omitempty"`
 		utils.PaginationRequest
 	}
+
+	// VerificationCallbackRequest struct
+	VerificationCallbackRequest struct {
+		ExternalUserId string `json:"externalUserId"`
+	}
 )
 
 // MakeEndpoints ...
@@ -227,6 +234,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		DeleteFromBlacklist: jwtMdw(MakeDeleteFromBlacklistEndpoint(as, validateFunc)),
 
 		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
+		VerificationCallback:   jwtMdw(MakeVerificationCallbackEndpoint(as)),
 	}
 
 	if len(m) > 0 {
@@ -263,6 +271,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.GetBlacklist = mdw(e.GetBlacklist)
 
 			e.GetAccessTokenByUserID = mdw(e.GetAccessTokenByUserID)
+			e.VerificationCallback = mdw(e.VerificationCallback)
 		}
 	}
 
@@ -815,6 +824,23 @@ func MakeGetAccessTokenByUserIDEndpoint(s authService) endpoint.Endpoint {
 		}
 
 		resp, err := s.GetAccessTokenByUserID(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeVerificationCallbackEndpoint ...
+func MakeVerificationCallbackEndpoint(s authService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		externalUserID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w external user id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.VerificationCallback(ctx, externalUserID)
 		if err != nil {
 			return nil, err
 		}

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/utils"
@@ -87,6 +89,8 @@ type (
 		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
 
 		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
+
+		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
 	}
 
 	mailer interface {
@@ -107,6 +111,7 @@ type (
 	kycClient interface {
 		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
 		GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+		GetByExternalUserID(ctx context.Context, userID uuid.UUID) (*sumsub.Response, error)
 	}
 
 	// JWTs
@@ -1087,4 +1092,22 @@ func (s *Service) GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) 
 	}
 
 	return token, nil
+}
+
+// VerificationCallBack endpoint for kyc service webhook. And used for store user status.
+func (s *Service) VerificationCallBack(ctx context.Context, userID uuid.UUID) error {
+	resp, err := s.kyc.GetByExternalUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not get access token: %w", err)
+	}
+
+	err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+		KycStatus: resp.Review.ReviewStatus,
+		ID:        userID,
+	})
+	if err != nil {
+		return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+	}
+
+	return nil
 }

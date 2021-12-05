@@ -221,6 +221,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/kyc/verification", httptransport.NewServer(
+		e.VerificationCallback,
+		decodeVerificationCallBack,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -412,4 +419,13 @@ func decodeEditBlacklist(_ context.Context, r *http.Request) (interface{}, error
 
 func decodeGetAccessTokenByUserID(ctx context.Context, _ *http.Request) (request interface{}, err error) {
 	return nil, nil
+}
+
+func decodeVerificationCallBack(_ context.Context, r *http.Request) (interface{}, error) {
+	var req VerificationCallbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req.ExternalUserId, nil
 }
