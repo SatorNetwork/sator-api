@@ -602,7 +602,7 @@ paths:
         - "Whitelist"
       summary: Used for add allowed type and value to whitelist.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -629,7 +629,7 @@ paths:
         - "Whitelist"
       summary: Used for delete allowed type and value to whitelist.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -710,7 +710,7 @@ paths:
         - "Blacklist"
       summary: Used for add restricted type and value to blacklist.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -737,7 +737,7 @@ paths:
         - "Blacklist"
       summary: Used for delete restricted type and value to blacklist.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -2368,7 +2368,7 @@ paths:
         - "Reviews"
       summary: Used to delete episode review by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: review_id
           in: path
@@ -2385,7 +2385,6 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "404":
           $ref: "#/components/responses/DefaultError"
-
 
   /shows/{show_id}/seasons:
     post:
