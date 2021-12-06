@@ -17,5 +17,10 @@ services:
     ports:
       - 8899:8899
 
+  nats:
+    image: nats:latest
+    ports:
+      - 4222:4222
+
 volumes:
   database_data:
