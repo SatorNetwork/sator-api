@@ -1,23 +1,19 @@
-package quiz_v2
+package two_players
 
 import "github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 
 var (
 	defaultUser1ExpectedMessages = []*message.Message{
 		{
-			MessageType: message.PlayerIsJoinedMessageType,
-			PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-				//Username: signUpRequest.Username,
-			},
+			MessageType:           message.PlayerIsJoinedMessageType,
+			PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{},
 		},
 	}
 
 	defaultUser2ExpectedMessages = []*message.Message{
 		{
-			MessageType: message.PlayerIsJoinedMessageType,
-			PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-				//Username: signUpRequest2.Username,
-			},
+			MessageType:           message.PlayerIsJoinedMessageType,
+			PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{},
 		},
 		{
 			MessageType: message.CountdownMessageType,

@@ -1,4 +1,4 @@
-package quiz_v2
+package two_players
 
 import (
 	"context"

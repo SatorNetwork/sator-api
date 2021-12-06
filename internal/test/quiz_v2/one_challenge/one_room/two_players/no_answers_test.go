@@ -1,4 +1,4 @@
-package quiz_v2
+package two_players
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 )
 
-func TestWrongAnswers(t *testing.T) {
+func TestNoAnswers(t *testing.T) {
 	err := utils.BootstrapIfNeeded(context.Background(), t)
 	require.NoError(t, err)
 
@@ -51,6 +51,16 @@ func TestWrongAnswers(t *testing.T) {
 			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
 			func(msg *message.Message) {
 				msg.PlayerIsJoinedMessage.Username = signUpRequest.Username
+			}).
+		Messages()
+	user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
+		FilterOut(
+			message_container.PFuncMessageType(message.AnswerReplyMessageType),
+		).
+		Modify(
+			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+			func(msg *message.Message) {
+				msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
 			}).
 		Messages()
 
@@ -95,7 +105,7 @@ func TestWrongAnswers(t *testing.T) {
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
-		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithWrongAnswerCallback)
+		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.NoAnswerCallback)
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
@@ -103,18 +113,6 @@ func TestWrongAnswers(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
-			Modify(
-				message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
-				}).
-			Modify(
-				message_container.PFuncMessageType(message.AnswerReplyMessageType),
-				func(msg *message.Message) {
-					msg.AnswerReplyMessage.Success = false
-				}).
-			Messages()
 		messageVerifier := message_verifier.New(user2ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
@@ -133,6 +131,7 @@ func TestWrongAnswers(t *testing.T) {
 					msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
 				}).
 			Messages()
+
 		user1ExpectedMessages = append(user1ExpectedMessages, user2ExpectedMessages...)
 		user1MessageVerifier.SetExpectedMessages(user1ExpectedMessages)
 
