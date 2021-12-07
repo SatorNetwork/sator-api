@@ -24,10 +24,12 @@ import (
 
 // Predefined KYC statuses.
 const (
-	KYCProviderStatusGreen = "GREEN"
-	KYCProviderStatusRed   = "RED"
-	KYCProviderStatusFinal = "FINAL"
-	KYCProviderStatusRetry = "RETRY"
+	KYCProviderStatusGreen   = "GREEN"
+	KYCProviderStatusRed     = "RED"
+	KYCProviderStatusFinal   = "FINAL"
+	KYCProviderStatusRetry   = "RETRY"
+	KYCProviderStatusPending = "pending"
+	KYCProviderStatusInit    = "init"
 
 	KYCStatusApproved   = "approved"
 	KYCStatusRejected   = "rejected"
@@ -1169,6 +1171,16 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 	resp, err := s.kyc.GetByExternalUserID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("could not get external user by id: %w", err)
+	}
+
+	if resp.Review.ReviewStatus == KYCProviderStatusPending || resp.Review.ReviewStatus == KYCProviderStatusInit {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: KYCStatusInProgress,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
 	}
 
 	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusGreen {
