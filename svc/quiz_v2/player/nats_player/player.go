@@ -2,6 +2,7 @@ package nats_player
 
 import (
 	"encoding/json"
+	"github.com/pkg/errors"
 	"log"
 
 	"github.com/nats-io/nats.go"
@@ -28,10 +29,10 @@ type natsPlayer struct {
 	nc *nats.Conn
 }
 
-func NewNatsPlayer(userID, challengeID, username, sendMessageSubj, recvMessageSubj string) (player.Player, error) {
-	nc, err := nats.Connect(nats.DefaultURL)
+func NewNatsPlayer(userID, challengeID, username, natsURL, sendMessageSubj, recvMessageSubj string) (player.Player, error) {
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "can't connect to nats server, url is %v", natsURL)
 	}
 
 	return &natsPlayer{
