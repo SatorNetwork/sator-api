@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
@@ -16,14 +15,17 @@ import (
 
 type (
 	Service struct {
-		engine     *engine.Engine
+		engine *engine.Engine
+
+		natsURL    string
 		challenges quiz_v2_challenge.ChallengesService
 	}
 )
 
-func NewService(challenges quiz_v2_challenge.ChallengesService) *Service {
+func NewService(natsURL string, challenges quiz_v2_challenge.ChallengesService) *Service {
 	s := &Service{
 		engine:     engine.New(challenges),
+		natsURL:    natsURL,
 		challenges: challenges,
 	}
 
@@ -51,7 +53,8 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, errors.New("no more attempts left")
 	}
 
-	baseQuizURL := nats.DefaultURL
+	//baseQuizURL := nats.DefaultURL
+	baseQuizURL := s.natsURL
 	prefix := uid.String()
 	recvMessageSubj := fmt.Sprintf("%v/%v", prefix, "recv")
 	sendMessageSubj := fmt.Sprintf("%v/%v", prefix, "send")

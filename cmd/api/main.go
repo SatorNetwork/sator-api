@@ -157,6 +157,9 @@ var (
 	appSecret = env.MustString("KYC_APP_SECRET")
 	baseURL   = env.MustString("KYC_APP_BASE_URL")
 	ttl       = env.GetInt("KYC_APP_TTL", 1200)
+
+	// NATS
+	natsURL = env.MustString("NATS_URL")
 )
 
 var circulatingSupply float64 = 0
@@ -509,7 +512,7 @@ func main() {
 	}
 
 	{
-		quizV2Svc := quiz_v2.NewService(challengeSvcClient)
+		quizV2Svc := quiz_v2.NewService(natsURL, challengeSvcClient)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
 			logger,
