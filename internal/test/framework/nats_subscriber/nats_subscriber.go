@@ -2,6 +2,7 @@ package nats_subscriber
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/nats-io/nats.go"
@@ -27,6 +28,8 @@ type natsSubscriber struct {
 
 	questionMessageCallback messageCallback
 
+	debugMode bool
+
 	t *testing.T
 }
 
@@ -50,9 +53,19 @@ func (s *natsSubscriber) SetQuestionMessageCallback(cb messageCallback) {
 	s.questionMessageCallback = cb
 }
 
+func (s *natsSubscriber) IsDebugModeEnabled() bool {
+	return s.debugMode
+}
+
+func (s *natsSubscriber) EnableDebugMode() {
+	s.debugMode = true
+}
+
 func (s *natsSubscriber) Start() error {
 	subscription, err := s.nc.Subscribe(s.recvMessageSubj, func(m *nats.Msg) {
-		//fmt.Printf("Received a message: %s\n", string(m.Data))
+		if s.debugMode {
+			fmt.Printf("Received a message: %s\n", string(m.Data))
+		}
 
 		var msg message.Message
 		err := json.Unmarshal(m.Data, &msg)

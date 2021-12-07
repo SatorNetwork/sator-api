@@ -1,6 +1,8 @@
 package nats_subscriber
 
 import (
+	"fmt"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
@@ -23,6 +25,10 @@ func ReplyWithCorrectAnswerCallback(s *natsSubscriber, msg *message.Message) {
 	respMsg := message.NewAnswerMessage(&payload)
 	err := s.SendMessage(respMsg)
 	require.NoError(s.t, err)
+
+	if s.IsDebugModeEnabled() {
+		fmt.Printf("Send a message: %v\n", respMsg)
+	}
 }
 
 func ReplyWithWrongAnswerCallback(s *natsSubscriber, msg *message.Message) {

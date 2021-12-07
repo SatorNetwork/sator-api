@@ -1,7 +1,6 @@
 package message_verifier
 
 import (
-	"fmt"
 	"sort"
 	"testing"
 
@@ -40,7 +39,7 @@ LOOP:
 	for {
 		select {
 		case msg := <-v.recvMessageChan:
-			fmt.Printf("MESSAGE: %v\n", msg)
+			//fmt.Printf("MESSAGE: %v\n", msg)
 			v.receivedMessages = append(v.receivedMessages, msg)
 
 		case <-v.done:
