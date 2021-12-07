@@ -22,6 +22,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Predefined KYC statuses.
+const (
+	KYCProviderStatusGreen = "GREEN"
+	KYCProviderStatusRed   = "RED"
+	KYCProviderStatusFinal = "FINAL"
+	KYCProviderStatusRetry = "RETRY"
+
+	KYCStatusApproved   = "approved"
+	KYCStatusRejected   = "rejected"
+	KYCStatusInProgress = "in_progress"
+	KYCStatusRetry      = "retry"
+)
+
 type (
 	// Service struct
 	Service struct {
@@ -66,6 +79,8 @@ type (
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
 		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
 		DestroyUser(ctx context.Context, id uuid.UUID) error
+		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
+		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 
 		// email verification
 		CreateUserVerification(ctx context.Context, arg repository.CreateUserVerificationParams) error
@@ -88,8 +103,6 @@ type (
 		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
 
 		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
-
-		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
 	}
 
 	mailer interface {
@@ -1158,12 +1171,46 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		return fmt.Errorf("could not get external user by id: %w", err)
 	}
 
-	err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
-		KycStatus: resp.Review.ReviewStatus,
-		ID:        userID,
-	})
-	if err != nil {
-		return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusGreen {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: KYCStatusApproved,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == KYCProviderStatusFinal {
+		err := s.ur.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+			ID:       userID,
+			Disabled: true,
+			BlockReason: sql.NullString{
+				String: sumsub.KYCRejectLabelsMap()(resp.Review.ReviewResult.RejectLabels),
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("could not block user: %v: %w", userID, err)
+		}
+
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: KYCStatusRejected,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == KYCProviderStatusRetry {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: KYCStatusRetry,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
 	}
 
 	return nil

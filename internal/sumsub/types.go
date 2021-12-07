@@ -125,3 +125,37 @@ type (
 		CreatedAt                 string       `json:"createdAt"`
 	}
 )
+
+func KYCRejectLabelsMap() func([]string) string {
+	innerMap := map[string]string{
+		"FORGERY":                         "Forgery attempt has been made. ",
+		"DOCUMENT_TEMPLATE":               "Documents supplied are templates, downloaded from internet. ",
+		"SPAM":                            "An applicant has been created by mistake or is just a spam user (irrelevant images were supplied). ",
+		"NOT_DOCUMENT":                    "Documents supplied are not relevant for the verification procedure. ",
+		"SELFIE_MISMATCH":                 "A user photo (profile image) does not match a photo on the provided documents. ",
+		"FOREIGNER":                       "When a client does not accept applicants from a different country or e.g. without a residence permit. ",
+		"DUPLICATE":                       "This applicant was already created for this client, and duplicates are not allowed by the regulations. ",
+		"WRONG_USER_REGION":               "When applicants from certain regions/countries are not allowed to be registered. ",
+		"BLACKLIST":                       "User is blacklisted. ",
+		"REGULATIONS_VIOLATIONS":          "Regulations violations. ",
+		"INCONSISTENT_PROFILE":            "Data or documents of different persons were uploaded to one applicant. ",
+		"AGE_REQUIREMENT_MISMATCH":        "Age requirement is not met (e.g. cannot rent a car to a person below 25yo). ",
+		"EXPERIENCE_REQUIREMENT_MISMATCH": "Not enough experience (e.g. driving experience is not enough). ",
+		"CRIMINAL":                        "The user is involved in illegal actions. ",
+		"COMPROMISED_PERSONS":             "The user does not correspond to Compromised Person Politics. ",
+		"PEP":                             "The user belongs to the PEP category. ",
+		"ADVERSE_MEDIA":                   "The user was found in the adverse media. ",
+		"FRAUDULENT_PATTERNS":             "Fraudulent behavior was detected. ",
+		"SANCTIONS":                       "The user was found on sanction lists. ",
+		"FRAUDULENT_LIVENESS":             "There was an attempt to bypass liveness check. ",
+	}
+
+	return func(key []string) string {
+		var resp string
+		for _, k := range key {
+			resp += innerMap[k]
+		}
+
+		return resp
+	}
+}
