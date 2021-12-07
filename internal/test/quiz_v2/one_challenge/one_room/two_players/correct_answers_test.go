@@ -73,6 +73,7 @@ func TestCorrectAnswers(t *testing.T) {
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.EnableDebugMode()
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {

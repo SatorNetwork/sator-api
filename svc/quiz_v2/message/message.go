@@ -35,13 +35,13 @@ func (m MessageType) String() string {
 }
 
 type Message struct {
-	MessageType           MessageType            `json:"message_type,omitempty"`
+	MessageType           MessageType            `json:"message_type"`
 	PlayerIsJoinedMessage *PlayerIsJoinedMessage `json:"player_is_joined_message,omitempty"`
 	CountdownMessage      *CountdownMessage      `json:"countdown_message,omitempty"`
 	QuestionMessage       *QuestionMessage       `json:"question_message,omitempty"`
 	AnswerMessage         *AnswerMessage         `json:"answer_message,omitempty"`
 	AnswerReplyMessage    *AnswerReplyMessage    `json:"answer_reply_message,omitempty"`
-	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message"`
+	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message,omitempty"`
 }
 
 func (m *Message) String() string {
@@ -62,7 +62,7 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) *Message {
 }
 
 type CountdownMessage struct {
-	SecondsLeft int
+	SecondsLeft int `json:"seconds_left"`
 }
 
 func NewCountdownMessage(payload *CountdownMessage) *Message {

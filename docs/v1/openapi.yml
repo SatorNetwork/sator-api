@@ -3062,6 +3062,47 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /quiz_v2/{challenge_id}/play:
+    get:
+      tags:
+        - "QuizV2"
+      summary: Get quiz connection URL with access token.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns quiz connection URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  base_quiz_url:
+                    type: string
+                    example: "nats://127.0.0.1:4222"
+                  recv_message_subj:
+                    type: string
+                    example: "a4642d43-a391-412c-9279-671192da408d/recv"
+                  send_message_subj:
+                    type: string
+                    example: "a4642d43-a391-412c-9279-671192da408d/send"
+                  user_id:
+                    type: string
+                    example: "a4642d43-a391-412c-9279-671192da408d"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /rewards/claim:
     get:
       tags:

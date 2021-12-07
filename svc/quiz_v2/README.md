@@ -32,7 +32,7 @@
 {
   "message_type": 1,
   "countdown_message": {
-    "SecondsLeft": 3
+    "seconds_left": 3
   }
 }
 ```
