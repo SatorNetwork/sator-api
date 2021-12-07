@@ -2,10 +2,10 @@ package quiz_v2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
@@ -53,15 +53,13 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, errors.New("no more attempts left")
 	}
 
-	//baseQuizURL := nats.DefaultURL
-	baseQuizURL := s.natsURL
 	prefix := uid.String()
 	recvMessageSubj := fmt.Sprintf("%v/%v", prefix, "recv")
 	sendMessageSubj := fmt.Sprintf("%v/%v", prefix, "send")
 
-	player, err := nats_player.NewNatsPlayer(uid.String(), challengeID.String(), username, recvMessageSubj, sendMessageSubj)
+	player, err := nats_player.NewNatsPlayer(uid.String(), challengeID.String(), username, s.natsURL, recvMessageSubj, sendMessageSubj)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't create nats player")
 	}
 	if err := player.Start(); err != nil {
 		return nil, err
@@ -69,7 +67,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	s.engine.AddPlayer(player)
 
 	return &GetQuizLinkResponse{
-		BaseQuizURL:     baseQuizURL,
+		BaseQuizURL:     s.natsURL,
 		RecvMessageSubj: recvMessageSubj,
 		SendMessageSubj: sendMessageSubj,
 		UserID:          uid.String(),
