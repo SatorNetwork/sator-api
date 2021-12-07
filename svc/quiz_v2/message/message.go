@@ -62,7 +62,7 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) *Message {
 }
 
 type CountdownMessage struct {
-	SecondsLeft int
+	SecondsLeft int `json:"seconds_left"`
 }
 
 func NewCountdownMessage(payload *CountdownMessage) *Message {
