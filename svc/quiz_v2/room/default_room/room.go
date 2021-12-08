@@ -74,6 +74,7 @@ func (r *defaultRoom) ChallengeID() string {
 }
 
 func (r *defaultRoom) AddPlayer(p player.Player) {
+	r.players[p.ID()] = p
 	r.newPlayersChan <- p
 }
 
@@ -92,7 +93,6 @@ LOOP:
 			// accumulate messages on our side until nats connection will set up by user?
 			time.Sleep(time.Second)
 
-			r.players[p.ID()] = p
 			r.sendPlayerIsJoinedMessage(p)
 			go r.watchPlayerMessages(p)
 
