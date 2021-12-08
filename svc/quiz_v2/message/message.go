@@ -79,7 +79,11 @@ func (m *Message) isConsistent() bool {
 	case QuestionMessageType:
 		return m.QuestionMessage != nil
 	case AnswerMessageType:
-		return m.AnswerMessage != nil
+		ok := m.AnswerMessage != nil &&
+			m.AnswerMessage.UserID != "" &&
+			m.AnswerMessage.QuestionID != "" &&
+			m.AnswerMessage.AnswerID != ""
+		return ok
 	case AnswerReplyMessageType:
 		return m.AnswerReplyMessage != nil
 	case WinnersTableMessageType:
