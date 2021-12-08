@@ -16,8 +16,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// Predefined KYC statuses.
 const (
 	BasicKYCLevel = "basic-kyc-level"
+
+	KYCProviderStatusGreen   = "GREEN"
+	KYCProviderStatusRed     = "RED"
+	KYCProviderStatusFinal   = "FINAL"
+	KYCProviderStatusRetry   = "RETRY"
+	KYCProviderStatusPending = "pending"
+	KYCProviderStatusInit    = "init"
+
+	KYCStatusApproved   = "approved"
+	KYCStatusRejected   = "rejected"
+	KYCStatusInProgress = "in_progress"
+	KYCStatusRetry      = "retry"
 )
 
 // Service is a sumsub facade

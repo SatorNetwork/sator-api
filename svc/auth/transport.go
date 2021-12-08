@@ -221,7 +221,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/kyc/verification", httptransport.NewServer(
+	r.Post("/kyc/callback", httptransport.NewServer(
 		e.VerificationCallback,
 		decodeVerificationCallBack,
 		httpencoder.EncodeResponse,

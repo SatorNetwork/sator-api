@@ -114,5 +114,6 @@ WHERE id = @id;
 
 -- name: UpdateKYCStatus :exec
 UPDATE users
-SET kyc_status = @kyc_status::text
+SET kyc_status = @kyc_status::text,
+    kyc_approved = @kyc_approved::bool
 WHERE id = @id;

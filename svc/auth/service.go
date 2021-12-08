@@ -22,21 +22,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Predefined KYC statuses.
-const (
-	KYCProviderStatusGreen   = "GREEN"
-	KYCProviderStatusRed     = "RED"
-	KYCProviderStatusFinal   = "FINAL"
-	KYCProviderStatusRetry   = "RETRY"
-	KYCProviderStatusPending = "pending"
-	KYCProviderStatusInit    = "init"
-
-	KYCStatusApproved   = "approved"
-	KYCStatusRejected   = "rejected"
-	KYCStatusInProgress = "in_progress"
-	KYCStatusRetry      = "retry"
-)
-
 type (
 	// Service struct
 	Service struct {
@@ -1173,9 +1158,9 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		return fmt.Errorf("could not get external user by id: %w", err)
 	}
 
-	if resp.Review.ReviewStatus == KYCProviderStatusPending || resp.Review.ReviewStatus == KYCProviderStatusInit {
+	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusPending || resp.Review.ReviewStatus == sumsub.KYCProviderStatusInit {
 		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
-			KycStatus: KYCStatusInProgress,
+			KycStatus: sumsub.KYCStatusInProgress,
 			ID:        userID,
 		})
 		if err != nil {
@@ -1183,17 +1168,18 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		}
 	}
 
-	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusGreen {
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusGreen {
 		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
-			KycStatus: KYCStatusApproved,
-			ID:        userID,
+			KycStatus:   sumsub.KYCStatusApproved,
+			ID:          userID,
+			KycApproved: true,
 		})
 		if err != nil {
 			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
 		}
 	}
 
-	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == KYCProviderStatusFinal {
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusFinal {
 		err := s.ur.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
 			ID:       userID,
 			Disabled: true,
@@ -1207,7 +1193,7 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		}
 
 		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
-			KycStatus: KYCStatusRejected,
+			KycStatus: sumsub.KYCStatusRejected,
 			ID:        userID,
 		})
 		if err != nil {
@@ -1215,9 +1201,9 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		}
 	}
 
-	if resp.Review.ReviewResult.ReviewAnswer == KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == KYCProviderStatusRetry {
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusRetry {
 		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
-			KycStatus: KYCStatusRetry,
+			KycStatus: sumsub.KYCStatusRetry,
 			ID:        userID,
 		})
 		if err != nil {
