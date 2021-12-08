@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	defaultChanBuffSize   = 10
-	delayBetweenQuestions = 100 * time.Millisecond
+	defaultChanBuffSize = 10
 )
 
 type questionWrapper struct {
@@ -224,6 +223,7 @@ LOOP:
 }
 
 func (r *defaultRoom) runQuestions() {
+	challenge := r.quizEngine.GetChallenge()
 	questions := r.quizEngine.GetQuestions()
 
 	// first question should be sent without ticker delay
@@ -232,6 +232,7 @@ func (r *defaultRoom) runQuestions() {
 		questionNum: 0,
 	}
 
+	delayBetweenQuestions := time.Duration(challenge.TimePerQuestionSec) * time.Second
 	ticker := time.NewTicker(delayBetweenQuestions)
 	defer ticker.Stop()
 LOOP:
