@@ -12,7 +12,7 @@ var (
 	ErrMissedUserID          = errors.New("missed user id")
 	ErrUserIsDisabled        = errors.New("your profile was disabled. Please contact support for details")
 	ErrRestrictedEmailDomain = errors.New("please use real email address, or contact administrator")
-	ErrInvalidEmailFormat    = errors.New("email address must be a valid email address")
+	ErrInvalidEmailFormat    = errors.New("email must be a valid email address")
 	ErrEmptyDeviceID         = errors.New("the current version of the application is outdated please update to the latest version")
 	ErrInvalidParameter      = errors.New("invalid parameter")
 
