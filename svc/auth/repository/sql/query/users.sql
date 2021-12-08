@@ -111,3 +111,8 @@ LIMIT $1 OFFSET $2;
 UPDATE users
 SET sanitized_email = @sanitized_email::text
 WHERE id = @id;
+
+-- name: UpdateKYCStatus :exec
+UPDATE users
+SET kyc_status = @kyc_status::text
+WHERE id = @id;

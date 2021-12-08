@@ -43,7 +43,7 @@ func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, username, password, role, sanitized_email)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 `
 
 type CreateUserParams struct {
@@ -76,6 +76,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.BlockReason,
 		&i.SanitizedEmail,
 		&i.EmailHash,
+		&i.KycStatus,
 	)
 	return i, err
 }
@@ -105,7 +106,7 @@ func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
 }
 
 const getNotSanitizedUsersListDesc = `-- name: GetNotSanitizedUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 WHERE (sanitized_email IS NULL OR sanitized_email = '')
 ORDER BY created_at DESC
@@ -139,6 +140,7 @@ func (q *Queries) GetNotSanitizedUsersListDesc(ctx context.Context, arg GetNotSa
 			&i.BlockReason,
 			&i.SanitizedEmail,
 			&i.EmailHash,
+			&i.KycStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +156,7 @@ func (q *Queries) GetNotSanitizedUsersListDesc(ctx context.Context, arg GetNotSa
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -176,12 +178,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.BlockReason,
 		&i.SanitizedEmail,
 		&i.EmailHash,
+		&i.KycStatus,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 WHERE id = $1
 LIMIT 1
@@ -203,12 +206,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.BlockReason,
 		&i.SanitizedEmail,
 		&i.EmailHash,
+		&i.KycStatus,
 	)
 	return i, err
 }
 
 const getUserBySanitizedEmail = `-- name: GetUserBySanitizedEmail :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 WHERE sanitized_email = $1::text
 LIMIT 1
@@ -230,12 +234,13 @@ func (q *Queries) GetUserBySanitizedEmail(ctx context.Context, email string) (Us
 		&i.BlockReason,
 		&i.SanitizedEmail,
 		&i.EmailHash,
+		&i.KycStatus,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 WHERE username = $1
 LIMIT 1
@@ -257,12 +262,13 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.BlockReason,
 		&i.SanitizedEmail,
 		&i.EmailHash,
+		&i.KycStatus,
 	)
 	return i, err
 }
 
 const getUsersListDesc = `-- name: GetUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -295,6 +301,7 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 			&i.BlockReason,
 			&i.SanitizedEmail,
 			&i.EmailHash,
+			&i.KycStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -310,7 +317,7 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 }
 
 const getVerifiedUsersListDesc = `-- name: GetVerifiedUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
 WHERE verified_at IS NOT NULL
 ORDER BY created_at DESC
@@ -344,6 +351,7 @@ func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedU
 			&i.BlockReason,
 			&i.SanitizedEmail,
 			&i.EmailHash,
+			&i.KycStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -370,6 +378,22 @@ func (q *Queries) IsUserDisabled(ctx context.Context, id uuid.UUID) (bool, error
 	var disabled bool
 	err := row.Scan(&disabled)
 	return disabled, err
+}
+
+const updateKYCStatus = `-- name: UpdateKYCStatus :exec
+UPDATE users
+SET kyc_status = $1::text
+WHERE id = $2
+`
+
+type UpdateKYCStatusParams struct {
+	KycStatus string    `json:"kyc_status"`
+	ID        uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateKYCStatus(ctx context.Context, arg UpdateKYCStatusParams) error {
+	_, err := q.exec(ctx, q.updateKYCStatusStmt, updateKYCStatus, arg.KycStatus, arg.ID)
+	return err
 }
 
 const updateUserEmail = `-- name: UpdateUserEmail :exec

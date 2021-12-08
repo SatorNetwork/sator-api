@@ -56,6 +56,7 @@ type (
 		GetAccessTokenByUserID endpoint.Endpoint
 
 		GetUserStatus endpoint.Endpoint
+		VerificationCallback   endpoint.Endpoint
 	}
 
 	authService interface {
@@ -95,6 +96,7 @@ type (
 		GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
 
 		GetUserStatus(ctx context.Context, email string) (UserStatus, error)
+		VerificationCallback(ctx context.Context, userID uuid.UUID) error
 	}
 
 	// AccessToken struct
@@ -193,6 +195,11 @@ type (
 		utils.PaginationRequest
 	}
 
+	// VerificationCallbackRequest struct
+	VerificationCallbackRequest struct {
+		ExternalUserId string `json:"externalUserId"`
+	}
+
 	// GetUserStatusRequest struct
 	GetUserStatusRequest struct {
 		Email string `json:"email" validate:"required,email"`
@@ -238,6 +245,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
 
 		GetUserStatus: jwtMdw(MakeGetUserStatusEndpoint(as, validateFunc)),
+		VerificationCallback:   MakeVerificationCallbackEndpoint(as),
 	}
 
 	if len(m) > 0 {
@@ -274,6 +282,7 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 			e.GetBlacklist = mdw(e.GetBlacklist)
 
 			e.GetAccessTokenByUserID = mdw(e.GetAccessTokenByUserID)
+			e.VerificationCallback = mdw(e.VerificationCallback)
 		}
 	}
 
@@ -855,5 +864,22 @@ func MakeGetUserStatusEndpoint(s authService, v validator.ValidateFunc) endpoint
 		}
 
 		return res, nil
+	}
+}
+
+// MakeVerificationCallbackEndpoint ...
+func MakeVerificationCallbackEndpoint(s authService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		externalUserID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w external user id: %v", ErrInvalidParameter, err)
+		}
+
+		err = s.VerificationCallback(ctx, externalUserID)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }

@@ -16,8 +16,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// Predefined KYC statuses.
 const (
 	BasicKYCLevel = "basic-kyc-level"
+
+	KYCProviderStatusGreen   = "GREEN"
+	KYCProviderStatusRed     = "RED"
+	KYCProviderStatusFinal   = "FINAL"
+	KYCProviderStatusRetry   = "RETRY"
+	KYCProviderStatusPending = "pending"
+	KYCProviderStatusInit    = "init"
+
+	KYCStatusApproved   = "approved"
+	KYCStatusRejected   = "rejected"
+	KYCStatusInProgress = "in_progress"
+	KYCStatusRetry      = "retry"
 )
 
 // Service is a sumsub facade
@@ -112,7 +125,7 @@ func (s *Service) Get(applicantID string) (*Response, error) {
 }
 
 // GetByExternalUserID returns sumsub response for applicant by externalUserID
-func (s *Service) GetByExternalUserID(externalUserID uuid.UUID) (*Response, error) {
+func (s *Service) GetByExternalUserID(ctx context.Context, externalUserID uuid.UUID) (*Response, error) {
 	path := "/resources/applicants/-;externalUserId=" + externalUserID.String()
 
 	type responseStruct struct {

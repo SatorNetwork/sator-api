@@ -228,6 +228,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/kyc/callback", httptransport.NewServer(
+		e.VerificationCallback,
+		decodeVerificationCallBack,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -428,4 +435,13 @@ func decodeGetUserStatusRequest(_ context.Context, r *http.Request) (request int
 	}
 
 	return req, nil
+}
+
+func decodeVerificationCallBack(_ context.Context, r *http.Request) (interface{}, error) {
+	var req VerificationCallbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req.ExternalUserId, nil
 }

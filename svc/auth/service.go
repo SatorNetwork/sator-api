@@ -12,6 +12,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -73,6 +74,8 @@ type (
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
 		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
 		DestroyUser(ctx context.Context, id uuid.UUID) error
+		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
+		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 
 		// email verification
 		CreateUserVerification(ctx context.Context, arg repository.CreateUserVerificationParams) error
@@ -114,7 +117,9 @@ type (
 	}
 
 	kycClient interface {
+		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
 		GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+		GetByExternalUserID(ctx context.Context, userID uuid.UUID) (*sumsub.Response, error)
 	}
 
 	// JWTs
@@ -1197,4 +1202,66 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 		BlockReason: reason,
 		IsFinal:     isFinal,
 	}, nil
+}
+
+// VerificationCallback endpoint for kyc service webhook. And used for store user status.
+func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) error {
+	resp, err := s.kyc.GetByExternalUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not get external user by id: %w", err)
+	}
+
+	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusPending || resp.Review.ReviewStatus == sumsub.KYCProviderStatusInit {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusInProgress,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusGreen {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusApproved,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusFinal {
+		err := s.ur.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+			ID:       userID,
+			Disabled: true,
+			BlockReason: sql.NullString{
+				String: sumsub.KYCRejectLabelsMap()(resp.Review.ReviewResult.RejectLabels),
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("could not block user: %v: %w", userID, err)
+		}
+
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusRejected,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusRetry {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusRetry,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	return nil
 }
