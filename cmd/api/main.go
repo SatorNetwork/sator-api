@@ -44,6 +44,7 @@ import (
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
 	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -156,6 +157,9 @@ var (
 	appSecret = env.MustString("KYC_APP_SECRET")
 	baseURL   = env.MustString("KYC_APP_BASE_URL")
 	ttl       = env.GetInt("KYC_APP_TTL", 1200)
+
+	// NATS
+	natsURL = env.MustString("NATS_URL")
 )
 
 var circulatingSupply float64 = 0
@@ -505,6 +509,17 @@ func main() {
 		}, func(err error) {
 			log.Fatalf("quiz service: %v", err)
 		})
+	}
+
+	{
+		quizV2Svc := quiz_v2.NewService(natsURL, challengeSvcClient)
+		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
+			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
+			logger,
+		))
+
+		go quizV2Svc.StartEngine()
+		// TODO(evg): gracefully shutdown the engine
 	}
 
 	{

@@ -54,6 +54,8 @@ type (
 		GetBlacklist        endpoint.Endpoint
 
 		GetAccessTokenByUserID endpoint.Endpoint
+
+		GetUserStatus endpoint.Endpoint
 		VerificationCallback   endpoint.Endpoint
 	}
 
@@ -92,6 +94,8 @@ type (
 		SearchInBlacklist(ctx context.Context, limit, offset int32, query string) ([]Blacklist, error)
 
 		GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+
+		GetUserStatus(ctx context.Context, email string) (UserStatus, error)
 		VerificationCallback(ctx context.Context, userID uuid.UUID) error
 	}
 
@@ -195,6 +199,11 @@ type (
 	VerificationCallbackRequest struct {
 		ExternalUserId string `json:"externalUserId"`
 	}
+
+	// GetUserStatusRequest struct
+	GetUserStatusRequest struct {
+		Email string `json:"email" validate:"required,email"`
+	}
 )
 
 // MakeEndpoints ...
@@ -234,6 +243,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 		DeleteFromBlacklist: jwtMdw(MakeDeleteFromBlacklistEndpoint(as, validateFunc)),
 
 		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
+
+		GetUserStatus: jwtMdw(MakeGetUserStatusEndpoint(as, validateFunc)),
 		VerificationCallback:   MakeVerificationCallbackEndpoint(as),
 	}
 
@@ -829,6 +840,30 @@ func MakeGetAccessTokenByUserIDEndpoint(s authService) endpoint.Endpoint {
 		}
 
 		return resp, nil
+	}
+}
+
+// MakeGetUserStatusEndpoint ...
+func MakeGetUserStatusEndpoint(s authService, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleModerator); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetUserStatusRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		// normalize email address
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+		res, err := s.GetUserStatus(ctx, req.Email)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 

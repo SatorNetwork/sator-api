@@ -58,3 +58,9 @@ FROM challenges
 WHERE episode_id = $1
 ORDER BY created_at DESC
     LIMIT 1;
+-- name: GetChallengeByTitle :one
+SELECT *
+FROM challenges
+WHERE title = $1
+ORDER BY created_at DESC
+    LIMIT 1;

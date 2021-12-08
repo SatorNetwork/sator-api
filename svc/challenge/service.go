@@ -111,6 +111,21 @@ type (
 		ReceivedRewardStr  string     `json:"received_reward_str"`
 	}
 
+	RawChallenge struct {
+		ID                 uuid.UUID  `json:"id"`
+		ShowID             uuid.UUID  `json:"show_id"`
+		Title              string     `json:"title"`
+		Description        string     `json:"description"`
+		PrizePool          string     `json:"prize_pool"`
+		PrizePoolAmount    float64    `json:"prize_pool_amount"`
+		PlayersToStart     int32      `json:"players_to_start"`
+		TimePerQuestion    string     `json:"time_per_question"`
+		TimePerQuestionSec int32      `json:"time_per_question_sec"`
+		EpisodeID          *uuid.UUID `json:"episode_id"`
+		Kind               int32      `json:"kind"`
+		UserMaxAttempts    int32      `json:"user_max_attempts"`
+	}
+
 	// Question struct
 	Question struct {
 		ID             uuid.UUID      `json:"id"`
@@ -213,6 +228,15 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 	}
 
 	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward), nil
+}
+
+func (s *Service) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (RawChallenge, error) {
+	challenge, err := s.cr.GetChallengeByID(ctx, challengeID)
+	if err != nil {
+		return RawChallenge{}, fmt.Errorf("could not get challenge by challengeID=%s: %w", challengeID, err)
+	}
+
+	return castToRawChallenge(challenge), nil
 }
 
 // GetChallengeByID ...
@@ -421,6 +445,28 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 	}
 
 	return ch
+}
+
+func castToRawChallenge(c repository.Challenge) RawChallenge {
+	rawChallenge := RawChallenge{
+		ID:                 c.ID,
+		ShowID:             c.ShowID,
+		Title:              c.Title,
+		Description:        c.Description.String,
+		PrizePool:          fmt.Sprintf("%.2f SAO", c.PrizePool),
+		PrizePoolAmount:    c.PrizePool,
+		PlayersToStart:     c.PlayersToStart,
+		TimePerQuestion:    fmt.Sprintf("%d sec", c.TimePerQuestion.Int32),
+		TimePerQuestionSec: c.TimePerQuestion.Int32,
+		Kind:               c.Kind,
+		UserMaxAttempts:    c.UserMaxAttempts,
+	}
+
+	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
+		rawChallenge.EpisodeID = &c.EpisodeID.UUID
+	}
+
+	return rawChallenge
 }
 
 // AddChallenge ..

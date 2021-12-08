@@ -46,6 +46,14 @@ type (
 		RestrictedValue string `json:"restricted_value"`
 	}
 
+	UserStatus struct {
+		Email       string `json:"email"`
+		Username    string `json:"username"`
+		IsDisabled  bool   `json:"is_disabled"`
+		BlockReason string `json:"block_reason,omitempty"`
+		IsFinal     bool   `json:"is_final"`
+	}
+
 	// ServiceOption function
 	// interface to extend service via options
 	ServiceOption func(*Service)
@@ -90,6 +98,7 @@ type (
 		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
 
 		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
+		DoesUserHaveMoreThanOneAccount(ctx context.Context, userID uuid.UUID) (bool, error)
 	}
 
 	mailer interface {
@@ -1149,6 +1158,50 @@ func (s *Service) GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) 
 	}
 
 	return token, nil
+}
+
+// GetUserStatus returns user status by user email.
+func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, error) {
+	u, err := s.ur.GetUserByEmail(ctx, email)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return UserStatus{}, fmt.Errorf("could not found user with email %s", email)
+		}
+		return UserStatus{}, err
+	}
+
+	var (
+		reason  string
+		isFinal bool
+	)
+
+	if u.Disabled {
+		if strings.Contains(u.BlockReason.String, "multiple accounts") {
+			reason = "User has multiple accounts"
+			isFinal = true
+		} else if strings.Contains(u.BlockReason.String, "invalid email") {
+			reason = "Invalid email address"
+			isFinal = false
+		} else if strings.Contains(u.BlockReason.String, "frequent rewards") {
+			reason = "Suspicion of fraud"
+			isFinal = false
+		}
+
+		if !isFinal {
+			if yes, _ := s.ur.DoesUserHaveMoreThanOneAccount(ctx, u.ID); yes {
+				reason = fmt.Sprintf("%s. Also, the user has multiple accounts", reason)
+				isFinal = true
+			}
+		}
+	}
+
+	return UserStatus{
+		Email:       u.Email,
+		Username:    u.Username,
+		IsDisabled:  u.Disabled,
+		BlockReason: reason,
+		IsFinal:     isFinal,
+	}, nil
 }
 
 // VerificationCallback endpoint for kyc service webhook. And used for store user status.

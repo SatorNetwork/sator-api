@@ -61,6 +61,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.destroyUserStmt, err = db.PrepareContext(ctx, destroyUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DestroyUser: %w", err)
 	}
+	if q.doesUserHaveMoreThanOneAccountStmt, err = db.PrepareContext(ctx, doesUserHaveMoreThanOneAccount); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserHaveMoreThanOneAccount: %w", err)
+	}
 	if q.getBlacklistStmt, err = db.PrepareContext(ctx, getBlacklist); err != nil {
 		return nil, fmt.Errorf("error preparing query GetBlacklist: %w", err)
 	}
@@ -204,6 +207,11 @@ func (q *Queries) Close() error {
 	if q.destroyUserStmt != nil {
 		if cerr := q.destroyUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing destroyUserStmt: %w", cerr)
+		}
+	}
+	if q.doesUserHaveMoreThanOneAccountStmt != nil {
+		if cerr := q.doesUserHaveMoreThanOneAccountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserHaveMoreThanOneAccountStmt: %w", cerr)
 		}
 	}
 	if q.getBlacklistStmt != nil {
@@ -383,6 +391,7 @@ type Queries struct {
 	deleteUserVerificationsByEmailStmt  *sql.Stmt
 	deleteUserVerificationsByUserIDStmt *sql.Stmt
 	destroyUserStmt                     *sql.Stmt
+	doesUserHaveMoreThanOneAccountStmt  *sql.Stmt
 	getBlacklistStmt                    *sql.Stmt
 	getBlacklistByRestrictedValueStmt   *sql.Stmt
 	getNotSanitizedUsersListDescStmt    *sql.Stmt
@@ -427,6 +436,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteUserVerificationsByEmailStmt:  q.deleteUserVerificationsByEmailStmt,
 		deleteUserVerificationsByUserIDStmt: q.deleteUserVerificationsByUserIDStmt,
 		destroyUserStmt:                     q.destroyUserStmt,
+		doesUserHaveMoreThanOneAccountStmt:  q.doesUserHaveMoreThanOneAccountStmt,
 		getBlacklistStmt:                    q.getBlacklistStmt,
 		getBlacklistByRestrictedValueStmt:   q.getBlacklistByRestrictedValueStmt,
 		getNotSanitizedUsersListDescStmt:    q.getNotSanitizedUsersListDescStmt,
