@@ -49,27 +49,77 @@ func (m *Message) String() string {
 	return string(data)
 }
 
+func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
+	if err := m.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return m.AnswerMessage, nil
+}
+
+// MustGetAnswerMessage may return potentially inconsistent message. It's better to use GetAnswerMessage.
+func (m *Message) MustGetAnswerMessage() *AnswerMessage {
+	return m.AnswerMessage
+}
+
+func (m *Message) CheckConsistency() error {
+	if !m.isConsistent() {
+		return NewErrInconsistentMessage(m)
+	}
+
+	return nil
+}
+
+func (m *Message) isConsistent() bool {
+	switch m.MessageType {
+	case PlayerIsJoinedMessageType:
+		return m.PlayerIsJoinedMessage != nil
+	case CountdownMessageType:
+		return m.CountdownMessage != nil
+	case QuestionMessageType:
+		return m.QuestionMessage != nil
+	case AnswerMessageType:
+		return m.AnswerMessage != nil
+	case AnswerReplyMessageType:
+		return m.AnswerReplyMessage != nil
+	case WinnersTableMessageType:
+		return m.WinnersTableMessage != nil
+	default:
+		return false
+	}
+}
+
 type PlayerIsJoinedMessage struct {
 	PlayerID string `json:"player_id"`
 	Username string `json:"username"`
 }
 
-func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) *Message {
-	return &Message{
+func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) {
+	msg := &Message{
 		MessageType:           PlayerIsJoinedMessageType,
 		PlayerIsJoinedMessage: payload,
 	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 type CountdownMessage struct {
 	SecondsLeft int `json:"seconds_left"`
 }
 
-func NewCountdownMessage(payload *CountdownMessage) *Message {
-	return &Message{
+func NewCountdownMessage(payload *CountdownMessage) (*Message, error) {
+	msg := &Message{
 		MessageType:      CountdownMessageType,
 		CountdownMessage: payload,
 	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 type QuestionMessage struct {
@@ -85,11 +135,16 @@ type AnswerOption struct {
 	AnswerText string `json:"answer_text"`
 }
 
-func NewQuestionMessage(payload *QuestionMessage) *Message {
-	return &Message{
+func NewQuestionMessage(payload *QuestionMessage) (*Message, error) {
+	msg := &Message{
 		MessageType:     QuestionMessageType,
 		QuestionMessage: payload,
 	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 type AnswerMessage struct {
@@ -99,11 +154,16 @@ type AnswerMessage struct {
 	AnswerID   string `json:"answer_id"`
 }
 
-func NewAnswerMessage(payload *AnswerMessage) *Message {
-	return &Message{
+func NewAnswerMessage(payload *AnswerMessage) (*Message, error) {
+	msg := &Message{
 		MessageType:   AnswerMessageType,
 		AnswerMessage: payload,
 	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 type AnswerReplyMessage struct {
@@ -112,20 +172,30 @@ type AnswerReplyMessage struct {
 	IsFastestAnswer bool `json:"is_fastest_answer"`
 }
 
-func NewAnswerReplyMessage(payload *AnswerReplyMessage) *Message {
-	return &Message{
+func NewAnswerReplyMessage(payload *AnswerReplyMessage) (*Message, error) {
+	msg := &Message{
 		MessageType:        AnswerReplyMessageType,
 		AnswerReplyMessage: payload,
 	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 type WinnersTableMessage struct {
 	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
 }
 
-func NewWinnersTableMessage(payload *WinnersTableMessage) *Message {
-	return &Message{
+func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {
+	msg := &Message{
 		MessageType:         WinnersTableMessageType,
 		WinnersTableMessage: payload,
 	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }

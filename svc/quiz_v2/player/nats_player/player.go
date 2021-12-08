@@ -66,6 +66,12 @@ func (p *natsPlayer) Start() error {
 		var msg message.Message
 		if err := json.Unmarshal(m.Data, &msg); err != nil {
 			log.Printf("can't unmarshal nats message: %v\n", err)
+			return
+		}
+
+		if err := msg.CheckConsistency(); err != nil {
+			log.Println(err)
+			return
 		}
 
 		p.recvMessageChan <- &msg

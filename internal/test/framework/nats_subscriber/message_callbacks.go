@@ -22,8 +22,9 @@ func ReplyWithCorrectAnswerCallback(s *natsSubscriber, msg *message.Message) {
 		QuestionID: msg.QuestionMessage.QuestionID,
 		AnswerID:   findCorrectAnswerID(defaultAnswerMap, msg),
 	}
-	respMsg := message.NewAnswerMessage(&payload)
-	err := s.SendMessage(respMsg)
+	respMsg, err := message.NewAnswerMessage(&payload)
+	require.NoError(s.t, err)
+	err = s.SendMessage(respMsg)
 	require.NoError(s.t, err)
 
 	if s.IsDebugModeEnabled() {
@@ -37,8 +38,9 @@ func ReplyWithWrongAnswerCallback(s *natsSubscriber, msg *message.Message) {
 		QuestionID: msg.QuestionMessage.QuestionID,
 		AnswerID:   findWrongAnswerID(defaultAnswerMap, msg),
 	}
-	respMsg := message.NewAnswerMessage(&payload)
-	err := s.SendMessage(respMsg)
+	respMsg, err := message.NewAnswerMessage(&payload)
+	require.NoError(s.t, err)
+	err = s.SendMessage(respMsg)
 	require.NoError(s.t, err)
 }
 
