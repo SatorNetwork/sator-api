@@ -158,6 +158,6 @@ func KYCRejectLabelsMap() func([]string) string {
 			resp = append(resp, innerMap[k])
 		}
 
-		return strings.Join(resp, "")
+		return strings.Join(resp, " ")
 	}
 }
