@@ -378,6 +378,15 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusBadRequest, err.Error()
 	}
 
+	if errors.Is(err, ErrKYCInProgress) ||
+		errors.Is(err, ErrUserIsDisabled) {
+		return http.StatusForbidden, err.Error()
+	}
+
+	if errors.Is(err, ErrKYCNeeded) {
+		return http.StatusProxyAuthRequired, err.Error()
+	}
+
 	return httpencoder.CodeAndMessageFrom(err)
 }
 

@@ -70,6 +70,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getBlacklistByRestrictedValueStmt, err = db.PrepareContext(ctx, getBlacklistByRestrictedValue); err != nil {
 		return nil, fmt.Errorf("error preparing query GetBlacklistByRestrictedValue: %w", err)
 	}
+	if q.getKYCStatusStmt, err = db.PrepareContext(ctx, getKYCStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query GetKYCStatus: %w", err)
+	}
 	if q.getNotSanitizedUsersListDescStmt, err = db.PrepareContext(ctx, getNotSanitizedUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNotSanitizedUsersListDesc: %w", err)
 	}
@@ -222,6 +225,11 @@ func (q *Queries) Close() error {
 	if q.getBlacklistByRestrictedValueStmt != nil {
 		if cerr := q.getBlacklistByRestrictedValueStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getBlacklistByRestrictedValueStmt: %w", cerr)
+		}
+	}
+	if q.getKYCStatusStmt != nil {
+		if cerr := q.getKYCStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getKYCStatusStmt: %w", cerr)
 		}
 	}
 	if q.getNotSanitizedUsersListDescStmt != nil {
@@ -394,6 +402,7 @@ type Queries struct {
 	doesUserHaveMoreThanOneAccountStmt  *sql.Stmt
 	getBlacklistStmt                    *sql.Stmt
 	getBlacklistByRestrictedValueStmt   *sql.Stmt
+	getKYCStatusStmt                    *sql.Stmt
 	getNotSanitizedUsersListDescStmt    *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
@@ -439,6 +448,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		doesUserHaveMoreThanOneAccountStmt:  q.doesUserHaveMoreThanOneAccountStmt,
 		getBlacklistStmt:                    q.getBlacklistStmt,
 		getBlacklistByRestrictedValueStmt:   q.getBlacklistByRestrictedValueStmt,
+		getKYCStatusStmt:                    q.getKYCStatusStmt,
 		getNotSanitizedUsersListDescStmt:    q.getNotSanitizedUsersListDescStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,

@@ -74,8 +74,6 @@ type (
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
 		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
 		DestroyUser(ctx context.Context, id uuid.UUID) error
-		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
-		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 
 		// email verification
 		CreateUserVerification(ctx context.Context, arg repository.CreateUserVerificationParams) error
@@ -99,6 +97,11 @@ type (
 
 		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
 		DoesUserHaveMoreThanOneAccount(ctx context.Context, userID uuid.UUID) (bool, error)
+
+		// KYC
+		GetKYCStatus(ctx context.Context, id uuid.UUID) (sql.NullString, error)
+		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
+		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 	}
 
 	mailer interface {
@@ -1264,4 +1267,22 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 	}
 
 	return nil
+}
+
+// TODO: REmove it!!!!
+// For a type to be a KYCStatus object, it must just have a GetKYCStatus method that returns user kyc status.
+type KYCStatus func(uuid uuid.UUID) (string, error)
+
+//type KYCStatus interface {
+//	GetKYCStatus(uuid uuid.UUID) (string, error)
+//}
+
+// GetKYCStatus used get user KYC status.
+func (s *Service) GetKYCStatus(ctx context.Context, userID uuid.UUID) (string, error) {
+	resp, err := s.ur.GetKYCStatus(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("could not get user kyc status by id: %w", err)
+	}
+
+	return resp.String, nil
 }

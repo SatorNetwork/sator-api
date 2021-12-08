@@ -15,6 +15,8 @@ var (
 	ErrInvalidEmailFormat    = errors.New("email must be a valid email address")
 	ErrEmptyDeviceID         = errors.New("the current version of the application is outdated please update to the latest version")
 	ErrInvalidParameter      = errors.New("invalid parameter")
+	ErrKYCNeeded             = errors.New("KYC needed")
+	ErrKYCInProgress         = errors.New("verification still in progress")
 
 	// ErrBadRouting is returned when an expected path variable is missing.
 	// It always indicates programmer error.

@@ -105,6 +105,20 @@ func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
 	return err
 }
 
+const getKYCStatus = `-- name: GetKYCStatus :one
+SELECT kyc_status
+FROM users
+WHERE id = $1
+    LIMIT 1
+`
+
+func (q *Queries) GetKYCStatus(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+	row := q.queryRow(ctx, q.getKYCStatusStmt, getKYCStatus, id)
+	var kyc_status sql.NullString
+	err := row.Scan(&kyc_status)
+	return kyc_status, err
+}
+
 const getNotSanitizedUsersListDesc = `-- name: GetNotSanitizedUsersListDesc :many
 SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users
