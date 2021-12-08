@@ -221,6 +221,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/user-status", httptransport.NewServer(
+		e.GetUserStatus,
+		decodeGetUserStatusRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -412,4 +419,13 @@ func decodeEditBlacklist(_ context.Context, r *http.Request) (interface{}, error
 
 func decodeGetAccessTokenByUserID(ctx context.Context, _ *http.Request) (request interface{}, err error) {
 	return nil, nil
+}
+
+func decodeGetUserStatusRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req GetUserStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
 }

@@ -30,6 +30,22 @@ func (q *Queries) BlockUsersOnTheSameDevice(ctx context.Context, excludeDeviceID
 	return err
 }
 
+const doesUserHaveMoreThanOneAccount = `-- name: DoesUserHaveMoreThanOneAccount :one
+SELECT count(t2.device_id) > 1 FROM users_devices AS t2
+WHERE t2.device_id IN (
+    SELECT t.device_id 
+    FROM users_devices AS t
+    WHERE t.user_id = $1
+) GROUP BY t2.device_id
+`
+
+func (q *Queries) DoesUserHaveMoreThanOneAccount(ctx context.Context, userID uuid.UUID) (bool, error) {
+	row := q.queryRow(ctx, q.doesUserHaveMoreThanOneAccountStmt, doesUserHaveMoreThanOneAccount, userID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getUserIDsOnTheSameDevice = `-- name: GetUserIDsOnTheSameDevice :many
 SELECT user_id FROM users_devices
 WHERE device_id IN (
