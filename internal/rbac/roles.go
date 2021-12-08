@@ -7,6 +7,7 @@ const (
 
 	RoleAdmin          Role = "admin"
 	RoleContentManager Role = "content_manager"
+	RoleModerator      Role = "moderator"
 	RoleGuest          Role = "guest"
 	RoleShowRunner     Role = "show_runner"
 	RoleUser           Role = "user"

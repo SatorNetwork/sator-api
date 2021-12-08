@@ -26,3 +26,11 @@ WHERE id IN (
 ) 
 AND email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
 AND disabled = FALSE;
+
+-- name: DoesUserHaveMoreThanOneAccount :one
+SELECT count(t2.device_id) > 1 FROM users_devices AS t2
+WHERE t2.device_id IN (
+    SELECT t.device_id 
+    FROM users_devices AS t
+    WHERE t.user_id = @user_id
+) GROUP BY t2.device_id;
