@@ -81,7 +81,7 @@
 }
 ```
 
-**winners_table**
+**answer_reply**
 ```json
 {
   "message_type": 4,
