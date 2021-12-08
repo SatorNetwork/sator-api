@@ -155,7 +155,11 @@ LOOP:
 				SegmentNum:      cell.FindSegmentNum(),
 				IsFastestAnswer: cell.IsFirstCorrectAnswer(),
 			}
-			msg := message.NewAnswerReplyMessage(&payload)
+			msg, err := message.NewAnswerReplyMessage(&payload)
+			if err != nil {
+				log.Println(err)
+				break
+			}
 
 			if err := r.players[answer.message.UserID].SendMessage(msg); err != nil {
 				log.Printf("can't send message to player with %v uid: %v\n", answer.message.UserID, err)
@@ -189,7 +193,7 @@ LOOP:
 		select {
 		case msg := <-p.GetMessageStream():
 			r.answersChan <- &answerWrapper{
-				message:    msg.AnswerMessage,
+				message:    msg.MustGetAnswerMessage(),
 				receivedAt: time.Now(),
 			}
 		case <-r.done:
@@ -265,7 +269,12 @@ func (r *defaultRoom) sendWinnersTable() {
 	payload := message.WinnersTableMessage{
 		PrizePoolDistribution: usernameIDToPrize,
 	}
-	msg := message.NewWinnersTableMessage(&payload)
+	msg, err := message.NewWinnersTableMessage(&payload)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	r.sendMessageToRoom(msg)
 
 	r.st.SetStatus(status_transactor.WinnersTableAreSent)
@@ -276,7 +285,11 @@ func (r *defaultRoom) sendPlayerIsJoinedMessage(p player.Player) {
 		PlayerID: p.ID(),
 		Username: p.Username(),
 	}
-	msg := message.NewPlayerIsJoinedMessage(&payload)
+	msg, err := message.NewPlayerIsJoinedMessage(&payload)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	r.sendMessageToRoom(msg)
 }
 
@@ -284,7 +297,11 @@ func (r *defaultRoom) sendCountdownMessage(secondsLeft int) {
 	payload := message.CountdownMessage{
 		SecondsLeft: secondsLeft,
 	}
-	msg := message.NewCountdownMessage(&payload)
+	msg, err := message.NewCountdownMessage(&payload)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	r.sendMessageToRoom(msg)
 }
 
@@ -304,7 +321,11 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 		QuestionNumber: q.questionNum,
 		AnswerOptions:  answerOptions,
 	}
-	msg := message.NewQuestionMessage(&payload)
+	msg, err := message.NewQuestionMessage(&payload)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	r.sendMessageToRoom(msg)
 }
 
