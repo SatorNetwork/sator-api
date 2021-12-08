@@ -15,6 +15,7 @@ import (
 const defaultWinnersNum = 2
 
 type QuizEngine interface {
+	GetChallenge() *challenge.RawChallenge
 	GetQuestions() []challenge.Question
 	CheckAndRegisterAnswer(questionID, answerID, userID uuid.UUID, answeredAt time.Time) (bool, error)
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
@@ -45,6 +46,10 @@ func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) 
 		questionContainer: qc,
 		resultTable:       rt,
 	}, nil
+}
+
+func (e *quizEngine) GetChallenge() *challenge.RawChallenge {
+	return e.questionContainer.GetChallenge()
 }
 
 func (e *quizEngine) GetQuestions() []challenge.Question {
