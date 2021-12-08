@@ -16,7 +16,6 @@ import (
 
 const (
 	defaultChanBuffSize   = 10
-	defaultPlayersNum     = 2
 	delayBetweenQuestions = 100 * time.Millisecond
 )
 
@@ -80,7 +79,9 @@ func (r *defaultRoom) AddPlayer(p player.Player) {
 }
 
 func (r *defaultRoom) IsFull() bool {
-	return len(r.players) >= defaultPlayersNum
+	challenge := r.quizEngine.GetChallenge()
+
+	return len(r.players) >= int(challenge.PlayersToStart)
 }
 
 func (r *defaultRoom) Start() {
