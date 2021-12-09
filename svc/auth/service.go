@@ -52,6 +52,7 @@ type (
 		IsDisabled  bool   `json:"is_disabled"`
 		BlockReason string `json:"block_reason,omitempty"`
 		IsFinal     bool   `json:"is_final"`
+		KYCStatus   string `json:"kyc_status,omitempty"`
 	}
 
 	// ServiceOption function
@@ -1171,8 +1172,9 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 	}
 
 	var (
-		reason  string
-		isFinal bool
+		kycStatus string
+		reason    string
+		isFinal   bool
 	)
 
 	if u.Disabled {
@@ -1193,6 +1195,23 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 				isFinal = true
 			}
 		}
+	} else {
+		if u.KycStatus.Valid {
+			switch u.KycStatus.String {
+			case sumsub.KYCStatusNotVerified:
+				kycStatus = "Not verified"
+			case sumsub.KYCStatusRetry:
+				kycStatus = "Invalid documents or bad quality of selfie/docs. The user should upload valid documents or/and retake a selfie."
+			case sumsub.KYCStatusApproved:
+				kycStatus = "Verified"
+			case sumsub.KYCStatusRejected:
+				kycStatus = "The user was rejected. It's the final decision and cannot be changed."
+			case sumsub.KYCStatusInProgress:
+				kycStatus = "Verification has not been completed yet."
+			default:
+				kycStatus = "N/A"
+			}
+		}
 	}
 
 	return UserStatus{
@@ -1201,6 +1220,7 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 		IsDisabled:  u.Disabled,
 		BlockReason: reason,
 		IsFinal:     isFinal,
+		KYCStatus:   kycStatus,
 	}, nil
 }
 

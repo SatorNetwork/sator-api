@@ -821,6 +821,9 @@ paths:
                   is_final:
                     type: boolean
                     example: true
+                  kyc_status:
+                    type: string
+                    example: "Not verified"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 

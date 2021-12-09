@@ -27,10 +27,11 @@ const (
 	KYCProviderStatusPending = "pending"
 	KYCProviderStatusInit    = "init"
 
-	KYCStatusApproved   = "approved"
-	KYCStatusRejected   = "rejected"
-	KYCStatusInProgress = "in_progress"
-	KYCStatusRetry      = "retry"
+	KYCStatusApproved    = "approved"
+	KYCStatusRejected    = "rejected"
+	KYCStatusInProgress  = "in_progress"
+	KYCStatusRetry       = "retry"
+	KYCStatusNotVerified = "verification_needed"
 )
 
 // Service is a sumsub facade
