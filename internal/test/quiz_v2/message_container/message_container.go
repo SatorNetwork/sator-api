@@ -4,7 +4,7 @@ import "github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 import "github.com/mohae/deepcopy"
 
 type (
-	predicateFunc func(msg *message.Message) bool
+	predicateFunc func(idx int, msg *message.Message) bool
 	modifierFunc  func(msg *message.Message)
 )
 
@@ -20,13 +20,17 @@ func New(messages []*message.Message) *messageContainer {
 	}
 }
 
+func (mc *messageContainer) Copy() *messageContainer {
+	return New(mc.Messages())
+}
+
 func (mc *messageContainer) Messages() []*message.Message {
 	return mc.messages
 }
 
 func (mc *messageContainer) Modify(p predicateFunc, m modifierFunc) *messageContainer {
-	for _, msg := range mc.messages {
-		if p(msg) {
+	for idx, msg := range mc.messages {
+		if p(idx, msg) {
 			m(msg)
 		}
 	}
@@ -36,8 +40,8 @@ func (mc *messageContainer) Modify(p predicateFunc, m modifierFunc) *messageCont
 
 func (mc *messageContainer) FilterOut(p predicateFunc) *messageContainer {
 	filtered := make([]*message.Message, 0)
-	for _, msg := range mc.messages {
-		if p(msg) {
+	for idx, msg := range mc.messages {
+		if p(idx, msg) {
 			continue
 		}
 
@@ -49,7 +53,13 @@ func (mc *messageContainer) FilterOut(p predicateFunc) *messageContainer {
 }
 
 func PFuncMessageType(messageType message.MessageType) predicateFunc {
-	return func(msg *message.Message) bool {
+	return func(idx int, msg *message.Message) bool {
 		return msg.MessageType == messageType
+	}
+}
+
+func PFuncIndex(pidx int) predicateFunc {
+	return func(idx int, msg *message.Message) bool {
+		return pidx == idx
 	}
 }

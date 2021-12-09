@@ -34,8 +34,11 @@ func New(notifyChan chan struct{}) *StatusTransactor {
 }
 
 func (st *StatusTransactor) SetStatus(newStatus Status) {
-	st.status = newStatus
+	if st.status == newStatus {
+		return
+	}
 
+	st.status = newStatus
 	if st.status != RoomIsClosed {
 		st.notifyChan <- struct{}{}
 	}
