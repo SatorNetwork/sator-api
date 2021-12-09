@@ -790,6 +790,13 @@ paths:
       summary: Returns user status information.
       security:
         - bearerAuth: []
+      parameters:
+        - name: email
+          in: query
+          description: User email
+          required: true
+          schema:
+            type: string
 
       responses:
         "200":

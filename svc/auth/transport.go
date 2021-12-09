@@ -429,12 +429,9 @@ func decodeGetAccessTokenByUserID(ctx context.Context, _ *http.Request) (request
 }
 
 func decodeGetUserStatusRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req GetUserStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, fmt.Errorf("could not decode request body: %w", err)
-	}
-
-	return req, nil
+	return GetUserStatusRequest{
+		Email: r.URL.Query().Get("email"),
+	}, nil
 }
 
 func decodeVerificationCallBack(_ context.Context, r *http.Request) (interface{}, error) {
