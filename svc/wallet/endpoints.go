@@ -60,14 +60,14 @@ type (
 	}
 )
 
-func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
+func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
 		GetWallets:                    MakeGetWalletsEndpoint(s),
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
-		CreateTransfer:                MakeCreateTransferRequestEndpoint(s, validateFunc),
+		CreateTransfer:                kycMdw(MakeCreateTransferRequestEndpoint(s, validateFunc)),
 		ConfirmTransfer:               MakeConfirmTransferRequestEndpoint(s, validateFunc),
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),

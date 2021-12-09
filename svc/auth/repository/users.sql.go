@@ -106,15 +106,15 @@ func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
 }
 
 const getKYCStatus = `-- name: GetKYCStatus :one
-SELECT kyc_status
+SELECT kyc_status::text
 FROM users
 WHERE id = $1
     LIMIT 1
 `
 
-func (q *Queries) GetKYCStatus(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+func (q *Queries) GetKYCStatus(ctx context.Context, id uuid.UUID) (string, error) {
 	row := q.queryRow(ctx, q.getKYCStatusStmt, getKYCStatus, id)
-	var kyc_status sql.NullString
+	var kyc_status string
 	err := row.Scan(&kyc_status)
 	return kyc_status, err
 }

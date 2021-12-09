@@ -118,7 +118,7 @@ SET kyc_status = @kyc_status::text
 WHERE id = @id;
 
 -- name: GetKYCStatus :one
-SELECT kyc_status
+SELECT kyc_status::text
 FROM users
 WHERE id = $1
     LIMIT 1;
