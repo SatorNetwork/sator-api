@@ -25,7 +25,7 @@ func TestCorrectAnswers(t *testing.T) {
 	require.NoError(t, err)
 
 	playersNum := 4
-	playersInRoom := 2
+	//playersInRoom := 2
 	signUpRequests := make([]*auth.SignUpRequest, playersNum)
 	signUpResponses := make([]*auth.SignUpResponse, playersNum)
 	for i := 0; i < playersNum; i++ {
@@ -98,9 +98,9 @@ func TestCorrectAnswers(t *testing.T) {
 		defer messageVerifiers[i].Close()
 
 		// Wait until room will be closed
-		if (i+1)%playersInRoom == 0 {
-			time.Sleep(2 * time.Second)
-		}
+		//if (i+1)%playersInRoom == 0 {
+		//	time.Sleep(2 * time.Second)
+		//}
 	}
 
 	time.Sleep(time.Second * 10)
