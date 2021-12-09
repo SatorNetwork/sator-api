@@ -17,6 +17,7 @@ const (
 	QuestionAreSentStatus
 	WinnersTableAreSent
 	RoomIsFinished
+	RoomIsClosed
 )
 
 type StatusTransactor struct {
@@ -35,7 +36,9 @@ func New(notifyChan chan struct{}) *StatusTransactor {
 func (st *StatusTransactor) SetStatus(newStatus Status) {
 	st.status = newStatus
 
-	st.notifyChan <- struct{}{}
+	if st.status != RoomIsClosed {
+		st.notifyChan <- struct{}{}
+	}
 }
 
 func (st *StatusTransactor) GetStatus() Status {
