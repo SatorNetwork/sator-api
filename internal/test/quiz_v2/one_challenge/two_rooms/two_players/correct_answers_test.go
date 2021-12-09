@@ -25,6 +25,7 @@ func TestCorrectAnswers(t *testing.T) {
 	require.NoError(t, err)
 
 	playersNum := 4
+	//playersInRoom := 2
 	signUpRequests := make([]*auth.SignUpRequest, playersNum)
 	signUpResponses := make([]*auth.SignUpResponse, playersNum)
 	for i := 0; i < playersNum; i++ {
@@ -41,37 +42,37 @@ func TestCorrectAnswers(t *testing.T) {
 	}
 
 	userExpectedMessages := make([][]*message.Message, playersNum)
-	userExpectedMessages[0] = message_container.New(defaultUser1ExpectedMessages).
-		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-			func(msg *message.Message) {
-				msg.PlayerIsJoinedMessage.Username = signUpRequests[0].Username
-			}).
-		Messages()
-	userExpectedMessages[1] = message_container.New(defaultUser2ExpectedMessages).
-		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-			func(msg *message.Message) {
-				msg.PlayerIsJoinedMessage.Username = signUpRequests[1].Username
-			}).
-		Messages()
-	userExpectedMessages[0] = append(userExpectedMessages[0], userExpectedMessages[1]...)
+	{
+		mc := message_container.New(defaultUserExpectedMessages).
+			Modify(
+				message_container.PFuncIndex(0),
+				func(msg *message.Message) {
+					msg.PlayerIsJoinedMessage.Username = signUpRequests[0].Username
+				}).
+			Modify(
+				message_container.PFuncIndex(1),
+				func(msg *message.Message) {
+					msg.PlayerIsJoinedMessage.Username = signUpRequests[1].Username
+				})
+		userExpectedMessages[0] = mc.Copy().Messages()
+		userExpectedMessages[1] = mc.Copy().Messages()
+	}
 
-	userExpectedMessages[2] = message_container.New(defaultUser1ExpectedMessages).
-		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-			func(msg *message.Message) {
-				msg.PlayerIsJoinedMessage.Username = signUpRequests[2].Username
-			}).
-		Messages()
-	userExpectedMessages[3] = message_container.New(defaultUser2ExpectedMessages).
-		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-			func(msg *message.Message) {
-				msg.PlayerIsJoinedMessage.Username = signUpRequests[3].Username
-			}).
-		Messages()
-	userExpectedMessages[2] = append(userExpectedMessages[2], userExpectedMessages[3]...)
+	{
+		mc := message_container.New(defaultUserExpectedMessages).
+			Modify(
+				message_container.PFuncIndex(0),
+				func(msg *message.Message) {
+					msg.PlayerIsJoinedMessage.Username = signUpRequests[2].Username
+				}).
+			Modify(
+				message_container.PFuncIndex(1),
+				func(msg *message.Message) {
+					msg.PlayerIsJoinedMessage.Username = signUpRequests[3].Username
+				})
+		userExpectedMessages[2] = mc.Copy().Messages()
+		userExpectedMessages[3] = mc.Copy().Messages()
+	}
 
 	messageVerifiers := make([]*message_verifier.MessageVerifier, playersNum)
 	for i := 0; i < playersNum; i++ {
@@ -96,14 +97,25 @@ func TestCorrectAnswers(t *testing.T) {
 		go messageVerifiers[i].Start()
 		defer messageVerifiers[i].Close()
 
-		// TODO(evg): investigate and eliminate this
-		time.Sleep(5 * time.Second)
+		// Wait until room will be closed
+		//if (i+1)%playersInRoom == 0 {
+		//	time.Sleep(2 * time.Second)
+		//}
 	}
 
 	time.Sleep(time.Second * 10)
 
-	for _, mv := range messageVerifiers {
-		err := mv.Verify()
-		require.NoError(t, err)
-	}
+	//for _, mv := range messageVerifiers {
+	//	err := mv.Verify()
+	//	require.NoError(t, err)
+	//}
+
+	err = messageVerifiers[0].Verify()
+	require.NoError(t, err)
+	err = messageVerifiers[1].Verify()
+	require.NoError(t, err)
+	err = messageVerifiers[2].Verify()
+	require.NoError(t, err)
+	err = messageVerifiers[3].Verify()
+	require.NoError(t, err)
 }

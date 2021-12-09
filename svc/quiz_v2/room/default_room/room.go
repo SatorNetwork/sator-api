@@ -74,6 +74,7 @@ func (r *defaultRoom) ChallengeID() string {
 }
 
 func (r *defaultRoom) AddPlayer(p player.Player) {
+	r.players[p.ID()] = p
 	r.newPlayersChan <- p
 }
 
@@ -92,7 +93,6 @@ LOOP:
 			// accumulate messages on our side until nats connection will set up by user?
 			time.Sleep(time.Second)
 
-			r.players[p.ID()] = p
 			r.sendPlayerIsJoinedMessage(p)
 			go r.watchPlayerMessages(p)
 
@@ -184,6 +184,12 @@ LOOP:
 }
 
 func (r *defaultRoom) Close() {
+	// If room is already closed then return from function. We don't want to accidentally close `done` channel two or more times.
+	if r.st.GetStatus() == status_transactor.RoomIsClosed {
+		return
+	}
+	r.st.SetStatus(status_transactor.RoomIsClosed)
+
 	close(r.done)
 }
 

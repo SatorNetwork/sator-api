@@ -2,7 +2,6 @@ package engine
 
 import (
 	"log"
-	"time"
 
 	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
@@ -42,9 +41,6 @@ LOOP:
 			}
 
 			room.AddPlayer(newPlayer)
-			// wait for some time until user will be properly registered in room
-			// TODO(evg): need smth better; add SyncAddPlayer API?
-			time.Sleep(time.Second)
 			if room.IsFull() {
 				e.deleteRoom(room.ChallengeID())
 			}
