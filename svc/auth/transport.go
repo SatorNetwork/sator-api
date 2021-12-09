@@ -221,7 +221,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/user-status", httptransport.NewServer(
+	r.Get("/user-status", httptransport.NewServer(
 		e.GetUserStatus,
 		decodeGetUserStatusRequest,
 		httpencoder.EncodeResponse,
