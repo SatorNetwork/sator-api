@@ -1,12 +1,6 @@
 package status_transactor
 
-//type status uint8
-//
-//const (
-//	gatheringPlayersStatus = iota
-//	countdownStatus
-//	sendingQuestionStatus
-//)
+import "log"
 
 type Status uint8
 
@@ -19,6 +13,30 @@ const (
 	RoomIsFinished
 	RoomIsClosed
 )
+
+var allowedTransitionsMap = map[Status][]Status{
+	GatheringPlayersStatus:  {RoomIsFullStatus},
+	RoomIsFullStatus:        {CountdownFinishedStatus},
+	CountdownFinishedStatus: {QuestionAreSentStatus},
+	QuestionAreSentStatus:   {WinnersTableAreSent},
+	WinnersTableAreSent:     {RoomIsFinished},
+	RoomIsFinished:          {RoomIsClosed},
+	RoomIsClosed:            {},
+}
+
+func isTransitionAllowed(from, to Status) bool {
+	allowedTransitions, ok := allowedTransitionsMap[from]
+	if !ok {
+		return false
+	}
+	for _, allowedTransition := range allowedTransitions {
+		if to == allowedTransition {
+			return true
+		}
+	}
+
+	return false
+}
 
 type StatusTransactor struct {
 	status Status
@@ -35,6 +53,11 @@ func New(notifyChan chan struct{}) *StatusTransactor {
 
 func (st *StatusTransactor) SetStatus(newStatus Status) {
 	if st.status == newStatus {
+		return
+	}
+
+	if !isTransitionAllowed(st.status, newStatus) {
+		log.Printf("transition from %v to %v isn't allowed\n", st.status, newStatus)
 		return
 	}
 
