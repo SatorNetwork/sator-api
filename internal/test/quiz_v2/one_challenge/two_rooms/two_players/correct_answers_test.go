@@ -97,9 +97,9 @@ func TestCorrectAnswers(t *testing.T) {
 		go messageVerifiers[i].Start()
 		defer messageVerifiers[i].Close()
 
-		// TODO(evg): investigate and eliminate this
+		// Wait until room will be closed
 		if (i+1)%playersInRoom == 0 {
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}
 
