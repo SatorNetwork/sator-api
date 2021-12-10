@@ -50,9 +50,10 @@ func TestCorrectAnswers(t *testing.T) {
 					msg.PlayerIsJoinedMessage.Username = signUpRequests[i].Username
 				})
 		}
-		userExpectedMessages[0] = mc.Copy().Messages()
-		userExpectedMessages[1] = mc.Copy().Messages()
-		userExpectedMessages[2] = mc.Copy().Messages()
+
+		for i := 0; i < playersNum; i++ {
+			userExpectedMessages[i] = mc.Copy().Messages()
+		}
 	}
 
 	messageVerifiers := make([]*message_verifier.MessageVerifier, playersNum)
@@ -67,9 +68,6 @@ func TestCorrectAnswers(t *testing.T) {
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
-		if i == 2 {
-			natsSubscriber.EnableDebugMode()
-		}
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
