@@ -23,7 +23,7 @@ func KYCStatusMdw(keyFunc kycStatus) endpoint.Middleware {
 
 			s, err := keyFunc(ctx, uid)
 			if err != nil {
-				return nil, fmt.Errorf("could not get user id: %w", err)
+				return nil, fmt.Errorf("could not check user kyc status: %w", err)
 			}
 
 			switch s {
