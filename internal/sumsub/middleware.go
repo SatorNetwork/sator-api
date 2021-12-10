@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/svc/auth"
 )
 
 // For a type to be a KYCStatus object, it must just have a GetKYCStatus method that returns user kyc status.
@@ -31,13 +30,13 @@ func KYCStatusMdw(keyFunc kycStatus) endpoint.Middleware {
 			case KYCStatusApproved:
 				return next(ctx, request)
 			case KYCStatusRejected:
-				return nil, auth.ErrUserIsDisabled
+				return nil, ErrKYCUserIsDisabled
 			case KYCStatusInProgress:
-				return nil, auth.ErrKYCInProgress
+				return nil, ErrKYCInProgress
 			case KYCStatusRetry:
-				return nil, auth.ErrKYCNeeded
+				return nil, ErrKYCNeeded
 			default:
-				return nil, auth.ErrKYCNeeded
+				return nil, ErrKYCNeeded
 			}
 		}
 	}

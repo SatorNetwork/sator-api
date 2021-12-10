@@ -68,7 +68,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
 		CreateTransfer:                kycMdw(MakeCreateTransferRequestEndpoint(s, validateFunc)),
-		ConfirmTransfer:               MakeConfirmTransferRequestEndpoint(s, validateFunc),
+		ConfirmTransfer:               kycMdw(MakeConfirmTransferRequestEndpoint(s, validateFunc)),
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
 	}
