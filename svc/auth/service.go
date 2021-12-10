@@ -1267,3 +1267,14 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 
 	return nil
 }
+
+func (s *Service) UpdateKYCStatus(ctx context.Context, uid uuid.UUID) error {
+	if err := s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+		KycStatus: sumsub.KYCStatusApproved,
+		ID:        uid,
+	}); err != nil {
+		return fmt.Errorf("could not update kyc status for user: %v: %w", uid, err)
+	}
+
+	return nil
+}
