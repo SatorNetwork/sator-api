@@ -136,6 +136,7 @@ func TestSPLTokenPayment(t *testing.T) {
 	c := client.NewClient()
 
 	signUpRequest := auth.RandomSignUpRequest()
+	email := signUpRequest.Email
 	signUpResp, err := c.Auth.SignUp(signUpRequest)
 	require.NoError(t, err)
 	require.NotNil(t, signUpResp)
@@ -193,7 +194,7 @@ func TestSPLTokenPayment(t *testing.T) {
 		require.Error(t, err)
 	}
 
-	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), signUpRequest.Email, sumsub.KYCStatusApproved)
+	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), email, sumsub.KYCStatusApproved)
 	require.NoError(t, err)
 
 	{
