@@ -1,7 +1,10 @@
 package message_container
 
-import "github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
-import "github.com/mohae/deepcopy"
+import (
+	"github.com/mohae/deepcopy"
+
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
+)
 
 type (
 	predicateFunc func(idx int, msg *message.Message) bool

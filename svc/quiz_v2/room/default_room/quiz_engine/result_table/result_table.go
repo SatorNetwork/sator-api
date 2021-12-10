@@ -2,6 +2,7 @@ package result_table
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +35,7 @@ type Config struct {
 
 type resultTable struct {
 	table          map[uuid.UUID][]cell.Cell
+	tableMutex     *sync.Mutex
 	questionSentAt []time.Time
 
 	cfg *Config
@@ -42,6 +44,7 @@ type resultTable struct {
 func New(cfg *Config) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
+		tableMutex:     &sync.Mutex{},
 		questionSentAt: make([]time.Time, cfg.QuestionNum),
 
 		cfg: cfg,
@@ -53,6 +56,9 @@ func (rt *resultTable) RegisterQuestionSendingEvent(questionNum int) error {
 }
 
 func (rt *resultTable) RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error {
+	rt.tableMutex.Lock()
+	defer rt.tableMutex.Unlock()
+
 	rt.createRowIfNecessary(userID)
 
 	qSentAt, err := rt.getQuestionSentAt(qNum)
@@ -82,10 +88,16 @@ func (rt *resultTable) isFirstCorrectAnswer(qNum int) bool {
 }
 
 func (rt *resultTable) GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error) {
+	rt.tableMutex.Lock()
+	defer rt.tableMutex.Unlock()
+
 	return rt.getCell(userID, qNum)
 }
 
 func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
+	rt.tableMutex.Lock()
+	defer rt.tableMutex.Unlock()
+
 	winnersMap := rt.calcWinnersMap()
 
 	var totalPTS uint32

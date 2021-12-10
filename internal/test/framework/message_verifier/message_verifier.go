@@ -68,6 +68,32 @@ func (v *MessageVerifier) Verify() error {
 	return nil
 }
 
+func (v *MessageVerifier) NonStrictVerify() error {
+	//if len(v.expectedMessages) != len(v.receivedMessages) {
+	//	return errors.Errorf("expected %v messages, got: %v", len(v.expectedMessages), len(v.receivedMessages))
+	//}
+
+	emap := make(map[message.MessageType]int, 0)
+	rmap := make(map[message.MessageType]int, 0)
+	for _, emsg := range v.expectedMessages {
+		if emsg.MessageType == message.PlayerIsJoinedMessageType {
+			continue
+		}
+		emap[emsg.MessageType]++
+	}
+	for _, rmsg := range v.receivedMessages {
+		if rmsg.MessageType == message.PlayerIsJoinedMessageType {
+			continue
+		}
+		rmap[rmsg.MessageType]++
+	}
+	require.Equal(v.t, emap, rmap)
+
+	// TODO(evg): enhance non-strict-verification?
+
+	return nil
+}
+
 func (v *MessageVerifier) compareMessages(emsg, rmsg *message.Message) {
 	require.Equal(v.t, emsg.MessageType, rmsg.MessageType)
 
