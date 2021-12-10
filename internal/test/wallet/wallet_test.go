@@ -190,7 +190,7 @@ func TestSPLTokenPayment(t *testing.T) {
 
 	{
 		_, err := c.Wallet.CreateTransfer(signUpResp.AccessToken, &createTransferRequest)
-		require.ErrorAs(t, err, sumsub.ErrKYCNeeded)
+		require.ErrorIs(t, err, sumsub.ErrKYCNeeded)
 	}
 
 	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), signUpRequest.Email, sumsub.KYCStatusApproved)
