@@ -58,6 +58,31 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		}
 	}
 
+	{
+		defaultChallengeCopy := deepcopy.Copy(defaultChallenge).(challengeRepo.AddChallengeParams)
+		defaultChallengeCopy.Title = "custom2"
+		defaultChallengeCopy.PlayersToStart = 10
+		challenge, err := db.challengeRepository.AddChallenge(ctx, defaultChallengeCopy)
+		if err != nil {
+			return errors.Wrapf(err, "can't add %v challenge", defaultChallengeCopy.Title)
+		}
+
+		questionsWithOptions := getDefaultQuestionsWithOptions(challenge.ID)[:1]
+		for _, q := range questionsWithOptions {
+			addQuestionResp, err := db.challengeRepository.AddQuestion(ctx, q.question)
+			if err != nil {
+				return errors.Wrap(err, "can't add question")
+			}
+
+			for _, option := range q.options {
+				option.QuestionID = addQuestionResp.ID
+				if _, err := db.challengeRepository.AddQuestionOption(ctx, option); err != nil {
+					return errors.Wrap(err, "can't add question option")
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
