@@ -81,6 +81,9 @@ func TestCorrectAnswers(t *testing.T) {
 		messageVerifiers[i] = message_verifier.New(userExpectedMessages[i], natsSubscriber.GetMessageChan(), t)
 		go messageVerifiers[i].Start()
 		defer messageVerifiers[i].Close()
+
+		// TODO(evg): investigate and remove
+		time.Sleep(time.Second * 2)
 	}
 
 	time.Sleep(time.Second * 20)
