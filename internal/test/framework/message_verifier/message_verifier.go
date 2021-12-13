@@ -2,6 +2,7 @@ package message_verifier
 
 import (
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -11,9 +12,10 @@ import (
 )
 
 type MessageVerifier struct {
-	expectedMessages []*message.Message
-	recvMessageChan  <-chan *message.Message
-	receivedMessages []*message.Message
+	expectedMessages      []*message.Message
+	recvMessageChan       <-chan *message.Message
+	receivedMessages      []*message.Message
+	receivedMessagesMutex *sync.Mutex
 
 	t    *testing.T
 	done chan struct{}
@@ -21,9 +23,10 @@ type MessageVerifier struct {
 
 func New(expectedMessages []*message.Message, recvMessageChan <-chan *message.Message, t *testing.T) *MessageVerifier {
 	return &MessageVerifier{
-		expectedMessages: expectedMessages,
-		recvMessageChan:  recvMessageChan,
-		receivedMessages: make([]*message.Message, 0),
+		expectedMessages:      expectedMessages,
+		recvMessageChan:       recvMessageChan,
+		receivedMessages:      make([]*message.Message, 0),
+		receivedMessagesMutex: &sync.Mutex{},
 
 		t:    t,
 		done: make(chan struct{}),
@@ -40,7 +43,9 @@ LOOP:
 		select {
 		case msg := <-v.recvMessageChan:
 			//fmt.Printf("MESSAGE: %v\n", msg)
+			v.receivedMessagesMutex.Lock()
 			v.receivedMessages = append(v.receivedMessages, msg)
+			v.receivedMessagesMutex.Unlock()
 
 		case <-v.done:
 			break LOOP
@@ -53,6 +58,9 @@ func (v *MessageVerifier) Close() {
 }
 
 func (v *MessageVerifier) Verify() error {
+	v.receivedMessagesMutex.Lock()
+	defer v.receivedMessagesMutex.Unlock()
+
 	if len(v.expectedMessages) != len(v.receivedMessages) {
 		return errors.Errorf("expected %v messages, got: %v", len(v.expectedMessages), len(v.receivedMessages))
 	}
@@ -69,6 +77,9 @@ func (v *MessageVerifier) Verify() error {
 }
 
 func (v *MessageVerifier) NonStrictVerify() error {
+	v.receivedMessagesMutex.Lock()
+	defer v.receivedMessagesMutex.Unlock()
+
 	//if len(v.expectedMessages) != len(v.receivedMessages) {
 	//	return errors.Errorf("expected %v messages, got: %v", len(v.expectedMessages), len(v.receivedMessages))
 	//}
