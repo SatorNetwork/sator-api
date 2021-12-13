@@ -42,7 +42,7 @@ run-local: ## Run api via `go run`
 	KYC_APP_SECRET=XXXXXXXXXX \
 	KYC_APP_BASE_URL=XXXXXXXXXX \
 	NATS_URL=nats://127.0.0.1:4222 \
-	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" cmd/api/main.go &
+	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" -race cmd/api/main.go &
 migrate-local: ## Run all migrations on local environment
 	@rm -Rvf migrations/*.sql && \
 	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \
