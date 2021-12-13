@@ -246,6 +246,9 @@ func main() {
 		log.Fatalf("failed to init eth client: %v", err)
 	}
 
+	// KYC middleware
+	kycMdw := sumsub.KYCStatusMdw(authRepository.GetKYCStatus)
+
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
@@ -282,7 +285,7 @@ func main() {
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
-			wallet.MakeEndpoints(walletService, jwtMdw),
+			wallet.MakeEndpoints(walletService, kycMdw, jwtMdw),
 			logger,
 		))
 	}
@@ -304,7 +307,7 @@ func main() {
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
-		rewards.MakeEndpoints(rewardService, jwtMdw),
+		rewards.MakeEndpoints(rewardService, kycMdw, jwtMdw),
 		logger,
 	))
 
@@ -345,6 +348,7 @@ func main() {
 			))
 		}
 	}
+
 	// Profile service
 	profileRepository, err := profileRepo.Prepare(ctx, db)
 	if err != nil {

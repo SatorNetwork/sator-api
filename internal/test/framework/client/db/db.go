@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/internal/test/framework/client/db/auth"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/db/challenge"
 )
 
@@ -13,6 +14,7 @@ type DB struct {
 	dbClient *sql.DB
 
 	challengeDB *challenge.DB
+	authDB      *auth.DB
 }
 
 func New() (*DB, error) {
@@ -23,6 +25,11 @@ func New() (*DB, error) {
 		return nil, errors.Wrap(err, "init db connection error")
 	}
 
+	authDB, err := auth.New(dbClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create auth db")
+	}
+
 	challengeDB, err := challenge.New(dbClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create challenge db")
@@ -31,6 +38,7 @@ func New() (*DB, error) {
 	return &DB{
 		dbClient:    dbClient,
 		challengeDB: challengeDB,
+		authDB:      authDB,
 	}, nil
 }
 
@@ -44,4 +52,8 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 
 func (db *DB) ChallengeDB() *challenge.DB {
 	return db.challengeDB
+}
+
+func (db *DB) AuthDB() *auth.DB {
+	return db.authDB
 }

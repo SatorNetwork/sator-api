@@ -103,7 +103,7 @@ func TestCorrectAnswers(t *testing.T) {
 		//}
 	}
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 15)
 
 	//for _, mv := range messageVerifiers {
 	//	err := mv.Verify()

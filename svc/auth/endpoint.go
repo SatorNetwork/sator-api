@@ -55,8 +55,8 @@ type (
 
 		GetAccessTokenByUserID endpoint.Endpoint
 
-		GetUserStatus endpoint.Endpoint
-		VerificationCallback   endpoint.Endpoint
+		GetUserStatus        endpoint.Endpoint
+		VerificationCallback endpoint.Endpoint
 	}
 
 	authService interface {
@@ -244,8 +244,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 
 		GetAccessTokenByUserID: jwtMdw(MakeGetAccessTokenByUserIDEndpoint(as)),
 
-		GetUserStatus: jwtMdw(MakeGetUserStatusEndpoint(as, validateFunc)),
-		VerificationCallback:   MakeVerificationCallbackEndpoint(as),
+		GetUserStatus:        jwtMdw(MakeGetUserStatusEndpoint(as, validateFunc)),
+		VerificationCallback: MakeVerificationCallbackEndpoint(as),
 	}
 
 	if len(m) > 0 {

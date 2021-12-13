@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	jwti "github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/go-kit/kit/auth/jwt"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -61,8 +62,13 @@ func CodeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusUnauthorized, err.Error()
 	}
 
-	if errors.Is(err, jwti.ErrInvalidJWTSubject) {
+	if errors.Is(err, jwti.ErrInvalidJWTSubject) || errors.Is(err, sumsub.ErrKYCInProgress) ||
+		errors.Is(err, sumsub.ErrKYCUserIsDisabled) {
 		return http.StatusForbidden, err.Error()
+	}
+
+	if errors.Is(err, sumsub.ErrKYCNeeded) {
+		return http.StatusProxyAuthRequired, err.Error()
 	}
 
 	if errors.Is(err, sql.ErrNoRows) {

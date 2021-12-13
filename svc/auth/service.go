@@ -75,8 +75,6 @@ type (
 		UpdateUserPassword(ctx context.Context, arg repository.UpdateUserPasswordParams) error
 		UpdateUserVerifiedAt(ctx context.Context, arg repository.UpdateUserVerifiedAtParams) error
 		DestroyUser(ctx context.Context, id uuid.UUID) error
-		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
-		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 
 		// email verification
 		CreateUserVerification(ctx context.Context, arg repository.CreateUserVerificationParams) error
@@ -100,6 +98,10 @@ type (
 
 		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
 		DoesUserHaveMoreThanOneAccount(ctx context.Context, userID uuid.UUID) (bool, error)
+
+		// KYC
+		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
+		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 	}
 
 	mailer interface {
@@ -1281,6 +1283,17 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		if err != nil {
 			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
 		}
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateKYCStatus(ctx context.Context, uid uuid.UUID) error {
+	if err := s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+		KycStatus: sumsub.KYCStatusApproved,
+		ID:        uid,
+	}); err != nil {
+		return fmt.Errorf("could not update kyc status for user: %v: %w", uid, err)
 	}
 
 	return nil
