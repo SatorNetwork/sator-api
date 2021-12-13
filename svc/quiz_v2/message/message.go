@@ -1,9 +1,5 @@
 package message
 
-import (
-	"encoding/json"
-)
-
 type MessageType uint8
 
 const (
@@ -42,11 +38,6 @@ type Message struct {
 	AnswerMessage         *AnswerMessage         `json:"answer_message,omitempty"`
 	AnswerReplyMessage    *AnswerReplyMessage    `json:"answer_reply_message,omitempty"`
 	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message,omitempty"`
-}
-
-func (m *Message) String() string {
-	data, _ := json.Marshal(m)
-	return string(data)
 }
 
 func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
