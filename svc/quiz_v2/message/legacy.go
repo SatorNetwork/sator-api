@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/json"
+
 	"github.com/pkg/errors"
 )
 
