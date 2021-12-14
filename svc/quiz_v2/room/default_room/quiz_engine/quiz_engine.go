@@ -24,6 +24,7 @@ type QuizEngine interface {
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
 	RegisterQuestionSendingEvent(questionNum int) error
 	GetPrizePoolDistribution() map[uuid.UUID]float64
+	GetWinners() []*result_table.Winner
 }
 
 type quizEngine struct {
@@ -103,4 +104,8 @@ func (e *quizEngine) RegisterQuestionSendingEvent(questionNum int) error {
 
 func (e *quizEngine) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 	return e.resultTable.GetPrizePoolDistribution()
+}
+
+func (e *quizEngine) GetWinners() []*result_table.Winner {
+	return e.resultTable.GetWinners()
 }

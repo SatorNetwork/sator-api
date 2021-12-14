@@ -229,6 +229,8 @@ LOOP:
 }
 
 func (r *defaultRoom) sendWinnersTable() {
+	challenge := r.quizEngine.GetChallenge()
+
 	userIDToPrize := r.quizEngine.GetPrizePoolDistribution()
 	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
 	for userID, prize := range userIDToPrize {
@@ -236,7 +238,23 @@ func (r *defaultRoom) sendWinnersTable() {
 		usernameIDToPrize[username] = prize
 	}
 
+	winners := r.quizEngine.GetWinners()
+	msgWinners := make([]*message.Winner, 0, len(winners))
+	for _, w := range winners {
+		username := r.players[w.UserID].Username()
+
+		msgWinners = append(msgWinners, &message.Winner{
+			UserID:   w.UserID,
+			Username: username,
+			Prize:    w.Prize,
+		})
+	}
+
 	payload := message.WinnersTableMessage{
+		ChallengeID:           r.ChallengeID(),
+		PrizePool:             challenge.PrizePool,
+		ShowTransactionURL:    "TODO",
+		Winners:               msgWinners,
 		PrizePoolDistribution: usernameIDToPrize,
 	}
 	msg, err := message.NewWinnersTableMessage(&payload)
