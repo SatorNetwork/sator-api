@@ -75,10 +75,3 @@ ORDER BY created_at DESC
 -- name: DeleteReview :exec
 DELETE FROM ratings
 WHERE id = @id;
-
--- name: ReviewByUserID :one
-SELECT * FROM ratings
-WHERE user_id = $1
-  AND episode_id = $2
-  AND title IS NOT NULL
-  AND review IS NOT NULL;
