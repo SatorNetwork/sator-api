@@ -67,8 +67,8 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 		GetWallets:                    MakeGetWalletsEndpoint(s),
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
-		CreateTransfer:                kycMdw(MakeCreateTransferRequestEndpoint(s, validateFunc)),
-		ConfirmTransfer:               kycMdw(MakeConfirmTransferRequestEndpoint(s, validateFunc)),
+		CreateTransfer:                MakeCreateTransferRequestEndpoint(s, validateFunc),
+		ConfirmTransfer:               MakeConfirmTransferRequestEndpoint(s, validateFunc),
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
 	}
@@ -80,8 +80,14 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.GetWalletByID = mdw(e.GetWalletByID)
 			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
 			e.CreateTransfer = mdw(e.CreateTransfer)
+			e.ConfirmTransfer = mdw(e.ConfirmTransfer)
+			e.SetStake = mdw(e.SetStake)
+			e.GetStake = mdw(e.GetStake)
 		}
 	}
+
+	e.CreateTransfer = kycMdw(e.CreateTransfer)
+	e.ConfirmTransfer = kycMdw(e.ConfirmTransfer)
 
 	return e
 }

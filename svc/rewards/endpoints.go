@@ -39,7 +39,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		ClaimRewards:     kycMdw(MakeClaimRewardsEndpoint(s)),
+		ClaimRewards:     MakeClaimRewardsEndpoint(s),
 		GetRewardsWallet: MakeGetRewardsWalletEndpoint(s),
 		GetTransactions:  MakeGetTransactionsEndpoint(s, validateFunc),
 	}
@@ -52,6 +52,8 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.GetTransactions = mdw(e.GetTransactions)
 		}
 	}
+
+	e.ClaimRewards = kycMdw(e.ClaimRewards)
 
 	return e
 }
