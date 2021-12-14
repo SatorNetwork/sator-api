@@ -1,9 +1,5 @@
 package message
 
-import (
-	"encoding/json"
-)
-
 type MessageType uint8
 
 const (
@@ -42,11 +38,6 @@ type Message struct {
 	AnswerMessage         *AnswerMessage         `json:"answer_message,omitempty"`
 	AnswerReplyMessage    *AnswerReplyMessage    `json:"answer_reply_message,omitempty"`
 	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message,omitempty"`
-}
-
-func (m *Message) String() string {
-	data, _ := json.Marshal(m)
-	return string(data)
 }
 
 func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
@@ -94,7 +85,7 @@ func (m *Message) isConsistent() bool {
 }
 
 type PlayerIsJoinedMessage struct {
-	PlayerID string `json:"player_id"`
+	PlayerID string `json:"user_id"`
 	Username string `json:"username"`
 }
 
@@ -111,7 +102,7 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) 
 }
 
 type CountdownMessage struct {
-	SecondsLeft int `json:"seconds_left"`
+	SecondsLeft int `json:"countdown"`
 }
 
 func NewCountdownMessage(payload *CountdownMessage) (*Message, error) {
