@@ -16,11 +16,15 @@ const defaultWinnersNum = 2
 
 type QuizEngine interface {
 	GetChallenge() *challenge.RawChallenge
+	GetNumberOfQuestions() int
 	GetQuestions() []challenge.Question
+	GetQuestionNumByID(questionID uuid.UUID) (int, error)
+	GetCorrectAnswerID(questionID uuid.UUID) (uuid.UUID, error)
 	CheckAndRegisterAnswer(questionID, answerID, userID uuid.UUID, answeredAt time.Time) (bool, error)
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
 	RegisterQuestionSendingEvent(questionNum int) error
 	GetPrizePoolDistribution() map[uuid.UUID]float64
+	GetWinners() []*result_table.Winner
 }
 
 type quizEngine struct {
@@ -52,8 +56,20 @@ func (e *quizEngine) GetChallenge() *challenge.RawChallenge {
 	return e.questionContainer.GetChallenge()
 }
 
+func (e *quizEngine) GetNumberOfQuestions() int {
+	return e.questionContainer.GetNumberOfQuestions()
+}
+
 func (e *quizEngine) GetQuestions() []challenge.Question {
 	return e.questionContainer.GetQuestions()
+}
+
+func (e *quizEngine) GetQuestionNumByID(questionID uuid.UUID) (int, error) {
+	return e.questionContainer.GetQuestionNumByID(questionID)
+}
+
+func (e *quizEngine) GetCorrectAnswerID(questionID uuid.UUID) (uuid.UUID, error) {
+	return e.questionContainer.GetCorrectAnswerID(questionID)
 }
 
 func (e *quizEngine) CheckAndRegisterAnswer(questionID, answerID, userID uuid.UUID, answeredAt time.Time) (bool, error) {
@@ -88,4 +104,8 @@ func (e *quizEngine) RegisterQuestionSendingEvent(questionNum int) error {
 
 func (e *quizEngine) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 	return e.resultTable.GetPrizePoolDistribution()
+}
+
+func (e *quizEngine) GetWinners() []*result_table.Winner {
+	return e.resultTable.GetWinners()
 }

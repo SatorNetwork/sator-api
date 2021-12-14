@@ -1,6 +1,7 @@
 package default_room
 
 import (
+	"github.com/pkg/errors"
 	"log"
 	"time"
 
@@ -124,45 +125,8 @@ LOOP:
 			}
 
 		case answer := <-r.answersChan:
-			userID, err := uuid.Parse(answer.message.UserID)
-			if err != nil {
-				log.Printf("can't parse user's UID(%v): %v\n", answer.message.UserID, err)
-				break
-			}
-			questionID, err := uuid.Parse(answer.message.QuestionID)
-			if err != nil {
-				log.Printf("can't parse question's UID(%v): %v\n", answer.message.QuestionID, err)
-				break
-			}
-			answerID, err := uuid.Parse(answer.message.AnswerID)
-			if err != nil {
-				log.Printf("can't parse answer's UID(%v): %v\n", answer.message.AnswerID, err)
-				break
-			}
-			ok, err := r.quizEngine.CheckAndRegisterAnswer(questionID, answerID, userID, answer.receivedAt)
-			if err != nil {
-				log.Printf("can't check answer, question UID(%v), answer's UID(%v): %v\n", questionID, answerID, err)
-				break
-			}
-			cell, err := r.quizEngine.GetAnswer(userID, questionID)
-			if err != nil {
-				log.Println(err)
-				break
-			}
-
-			payload := message.AnswerReplyMessage{
-				Success:         ok,
-				SegmentNum:      cell.FindSegmentNum(),
-				IsFastestAnswer: cell.IsFirstCorrectAnswer(),
-			}
-			msg, err := message.NewAnswerReplyMessage(&payload)
-			if err != nil {
-				log.Println(err)
-				break
-			}
-
-			if err := r.players[answer.message.UserID].SendMessage(msg); err != nil {
-				log.Printf("can't send message to player with %v uid: %v\n", answer.message.UserID, err)
+			if err := r.processAnswerMessage(answer); err != nil {
+				log.Printf("can't process answer message: %v\n", err)
 				break
 			}
 
@@ -265,6 +229,8 @@ LOOP:
 }
 
 func (r *defaultRoom) sendWinnersTable() {
+	challenge := r.quizEngine.GetChallenge()
+
 	userIDToPrize := r.quizEngine.GetPrizePoolDistribution()
 	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
 	for userID, prize := range userIDToPrize {
@@ -272,7 +238,23 @@ func (r *defaultRoom) sendWinnersTable() {
 		usernameIDToPrize[username] = prize
 	}
 
+	winners := r.quizEngine.GetWinners()
+	msgWinners := make([]*message.Winner, 0, len(winners))
+	for _, w := range winners {
+		username := r.players[w.UserID].Username()
+
+		msgWinners = append(msgWinners, &message.Winner{
+			UserID:   w.UserID,
+			Username: username,
+			Prize:    w.Prize,
+		})
+	}
+
 	payload := message.WinnersTableMessage{
+		ChallengeID:           r.ChallengeID(),
+		PrizePool:             challenge.PrizePool,
+		ShowTransactionURL:    "TODO",
+		Winners:               msgWinners,
 		PrizePoolDistribution: usernameIDToPrize,
 	}
 	msg, err := message.NewWinnersTableMessage(&payload)
@@ -341,4 +323,59 @@ func (r *defaultRoom) sendMessageToRoom(message *message.Message) {
 			log.Printf("can't send message to player with %v uid: %v\n", p.ID(), err)
 		}
 	}
+}
+
+func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
+	userID, err := uuid.Parse(answer.message.UserID)
+	if err != nil {
+		return errors.Wrapf(err, "can't parse user's UID(%v)", answer.message.UserID)
+	}
+	questionID, err := uuid.Parse(answer.message.QuestionID)
+	if err != nil {
+		return errors.Wrapf(err, "can't parse question's UID(%v)", answer.message.QuestionID)
+	}
+	answerID, err := uuid.Parse(answer.message.AnswerID)
+	if err != nil {
+		return errors.Wrapf(err, "can't parse answer's UID(%v)", answer.message.AnswerID)
+	}
+
+	ok, err := r.quizEngine.CheckAndRegisterAnswer(questionID, answerID, userID, answer.receivedAt)
+	if err != nil {
+		return errors.Wrapf(err, "can't check answer, question UID(%v), answer's UID(%v)", questionID, answerID)
+	}
+	cell, err := r.quizEngine.GetAnswer(userID, questionID)
+	if err != nil {
+		return err
+	}
+
+	answerID, err = r.quizEngine.GetCorrectAnswerID(questionID)
+	if err != nil {
+		return err
+	}
+	questionNum, err := r.quizEngine.GetQuestionNumByID(questionID)
+	if err != nil {
+		return err
+	}
+	questionsLeft := r.quizEngine.GetNumberOfQuestions() - questionNum - 1
+
+	payload := message.AnswerReplyMessage{
+		QuestionID:      questionID.String(),
+		Success:         ok,
+		Rate:            cell.Rate(),
+		CorrectAnswerID: answerID.String(),
+		QuestionsLeft:   questionsLeft,
+		AdditionalPTS:   cell.AdditionalPTS(),
+		SegmentNum:      cell.FindSegmentNum(),
+		IsFastestAnswer: cell.IsFirstCorrectAnswer(),
+	}
+	msg, err := message.NewAnswerReplyMessage(&payload)
+	if err != nil {
+		return err
+	}
+
+	if err := r.players[answer.message.UserID].SendMessage(msg); err != nil {
+		return errors.Wrapf(err, "can't send message to player with %v uid", answer.message.UserID)
+	}
+
+	return nil
 }
