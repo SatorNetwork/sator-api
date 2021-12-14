@@ -16,6 +16,7 @@ type QuestionContainer interface {
 	GetQuestions() []challenge.Question
 	GetQuestionByID(questionID uuid.UUID) (challenge.Question, error)
 	GetQuestionNumByID(questionID uuid.UUID) (int, error)
+	GetCorrectAnswerID(questionID uuid.UUID) (uuid.UUID, error)
 	CheckAnswer(questionID, answerID uuid.UUID) (bool, error)
 }
 
@@ -97,6 +98,21 @@ func (e *questionContainer) GetQuestionNumByID(questionID uuid.UUID) (int, error
 	}
 
 	return int(question.Order) - 1, nil
+}
+
+func (e *questionContainer) GetCorrectAnswerID(questionID uuid.UUID) (uuid.UUID, error) {
+	question, err := e.GetQuestionByID(questionID)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	for _, answer := range question.AnswerOptions {
+		if answer.IsCorrect {
+			return answer.ID, nil
+		}
+	}
+
+	return uuid.UUID{}, errors.Errorf("correct answer not found")
 }
 
 func (e *questionContainer) CheckAnswer(questionID, answerID uuid.UUID) (bool, error) {

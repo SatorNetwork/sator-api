@@ -4,13 +4,20 @@ import (
 	"time"
 )
 
-const segmentsNum = 4
+const (
+	segmentsNum              = 4
+	extraPtsForFastestAnswer = 2
+)
 
 type Cell interface {
 	PTS() uint32
 	IsCorrect() bool
 	IsFirstCorrectAnswer() bool
 	FindSegmentNum() int
+
+	// Backward-compatibility methods
+	Rate() int
+	AdditionalPTS() int
 }
 
 func New(
@@ -76,10 +83,22 @@ func (c *cell) FindSegmentNum() int {
 	return segmentNum
 }
 
+func (c *cell) Rate() int {
+	return segmentsNum - c.FindSegmentNum()
+}
+
+func (c *cell) AdditionalPTS() int {
+	if c.isFirstCorrectAnswer {
+		return extraPtsForFastestAnswer
+	}
+
+	return 0
+}
+
 func (c *cell) extraPts() uint32 {
 	pts := c.extraPtsForSegment()
 	if c.isFirstCorrectAnswer {
-		pts += 2
+		pts += extraPtsForFastestAnswer
 	}
 
 	return pts
