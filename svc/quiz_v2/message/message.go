@@ -162,9 +162,14 @@ func NewAnswerMessage(payload *AnswerMessage) (*Message, error) {
 }
 
 type AnswerReplyMessage struct {
-	Success         bool `json:"success"`
-	SegmentNum      int  `json:"segment_num"`
-	IsFastestAnswer bool `json:"is_fastest_answer"`
+	QuestionID      string `json:"question_id"`
+	Success         bool   `json:"result"`
+	Rate            int    `json:"rate"`
+	CorrectAnswerID string `json:"correct_answer_id"`
+	QuestionsLeft   int    `json:"questions_left"`
+	AdditionalPTS   int    `json:"additional_pts"`
+	SegmentNum      int    `json:"segment_num"`
+	IsFastestAnswer bool   `json:"is_fastest_answer"`
 }
 
 func NewAnswerReplyMessage(payload *AnswerReplyMessage) (*Message, error) {
