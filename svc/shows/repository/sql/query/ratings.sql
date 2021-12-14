@@ -15,7 +15,9 @@ INSERT INTO ratings (
     @episode_id,
     @user_id,
     @rating
-);
+) ON CONFLICT (episode_id, user_id) DO
+UPDATE SET
+    rating = EXCLUDED.rating;
 
 -- name: ReviewEpisode :exec
 INSERT INTO ratings (
@@ -73,3 +75,10 @@ ORDER BY created_at DESC
 -- name: DeleteReview :exec
 DELETE FROM ratings
 WHERE id = @id;
+
+-- name: ReviewByUserID :one
+SELECT * FROM ratings
+WHERE user_id = $1
+  AND episode_id = $2
+  AND title IS NOT NULL
+  AND review IS NOT NULL;

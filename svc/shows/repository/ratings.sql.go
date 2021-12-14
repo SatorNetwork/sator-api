@@ -91,7 +91,9 @@ INSERT INTO ratings (
     $1,
     $2,
     $3
-)
+) ON CONFLICT (episode_id, user_id) DO
+UPDATE SET
+    rating = EXCLUDED.rating
 `
 
 type RateEpisodeParams struct {
@@ -103,6 +105,35 @@ type RateEpisodeParams struct {
 func (q *Queries) RateEpisode(ctx context.Context, arg RateEpisodeParams) error {
 	_, err := q.exec(ctx, q.rateEpisodeStmt, rateEpisode, arg.EpisodeID, arg.UserID, arg.Rating)
 	return err
+}
+
+const reviewByUserID = `-- name: ReviewByUserID :one
+SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
+WHERE user_id = $1
+  AND episode_id = $2
+  AND title IS NOT NULL
+  AND review IS NOT NULL
+`
+
+type ReviewByUserIDParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	EpisodeID uuid.UUID `json:"episode_id"`
+}
+
+func (q *Queries) ReviewByUserID(ctx context.Context, arg ReviewByUserIDParams) (Rating, error) {
+	row := q.queryRow(ctx, q.reviewByUserIDStmt, reviewByUserID, arg.UserID, arg.EpisodeID)
+	var i Rating
+	err := row.Scan(
+		&i.EpisodeID,
+		&i.UserID,
+		&i.Rating,
+		&i.CreatedAt,
+		&i.ID,
+		&i.Title,
+		&i.Review,
+		&i.Username,
+	)
+	return i, err
 }
 
 const reviewEpisode = `-- name: ReviewEpisode :exec

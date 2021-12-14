@@ -115,6 +115,7 @@ type (
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
+		ReviewByUserID(ctx context.Context, arg repository.ReviewByUserIDParams) (repository.Rating, error)
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -716,11 +717,15 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 
 // ReviewEpisode ...
 func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
-	if reviewed, _ := s.sr.DidUserReviewEpisode(ctx, repository.DidUserReviewEpisodeParams{
-		UserID:    userID,
-		EpisodeID: episodeID,
-	}); reviewed {
-		return ErrAlreadyReviewed
+	if review == "" {
+		rev, err := s.sr.ReviewByUserID(ctx, repository.ReviewByUserIDParams{
+			UserID:    userID,
+			EpisodeID: episodeID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not get review for episode with episodeID=%s: %w", episodeID, err)
+		}
+		review = rev.Review.String
 	}
 
 	if err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
@@ -731,9 +736,6 @@ func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID
 		Title:     sql.NullString{String: title, Valid: true},
 		Review:    sql.NullString{String: review, Valid: true},
 	}); err != nil {
-		if db.IsDuplicateError(err) {
-			return ErrAlreadyReviewed
-		}
 		return fmt.Errorf("could not review episode with episodeID=%s: %w", episodeID, err)
 	}
 
