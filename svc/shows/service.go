@@ -716,13 +716,6 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 
 // ReviewEpisode ...
 func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
-	if reviewed, _ := s.sr.DidUserReviewEpisode(ctx, repository.DidUserReviewEpisodeParams{
-		UserID:    userID,
-		EpisodeID: episodeID,
-	}); reviewed {
-		return ErrAlreadyReviewed
-	}
-
 	if err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
 		EpisodeID: episodeID,
 		UserID:    userID,
@@ -731,9 +724,6 @@ func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID
 		Title:     sql.NullString{String: title, Valid: true},
 		Review:    sql.NullString{String: review, Valid: true},
 	}); err != nil {
-		if db.IsDuplicateError(err) {
-			return ErrAlreadyReviewed
-		}
 		return fmt.Errorf("could not review episode with episodeID=%s: %w", episodeID, err)
 	}
 
