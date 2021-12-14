@@ -249,12 +249,12 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	userIDToPrize := r.quizEngine.GetPrizePoolDistribution()
 	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
+	
 	r.playersMutex.Lock()
 	for userID, prize := range userIDToPrize {
 		username := r.players[userID.String()].Username()
 		usernameIDToPrize[username] = prize
 	}
-	r.playersMutex.Unlock()
 
 	winners := r.quizEngine.GetWinners()
 	msgWinners := make([]*message.Winner, 0, len(winners))
@@ -267,6 +267,7 @@ func (r *defaultRoom) sendWinnersTable() {
 			Prize:    w.Prize,
 		})
 	}
+	r.playersMutex.Unlock()
 
 	payload := message.WinnersTableMessage{
 		ChallengeID:           r.ChallengeID(),
