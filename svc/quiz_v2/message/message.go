@@ -85,7 +85,7 @@ func (m *Message) isConsistent() bool {
 }
 
 type PlayerIsJoinedMessage struct {
-	PlayerID string `json:"player_id"`
+	PlayerID string `json:"user_id"`
 	Username string `json:"username"`
 }
 
@@ -102,7 +102,7 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) 
 }
 
 type CountdownMessage struct {
-	SecondsLeft int `json:"seconds_left"`
+	SecondsLeft int `json:"countdown"`
 }
 
 func NewCountdownMessage(payload *CountdownMessage) (*Message, error) {
