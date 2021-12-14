@@ -67,16 +67,20 @@ func (s *natsSubscriber) Start() error {
 			fmt.Printf("Received a message: %s\n", string(m.Data))
 		}
 
-		var msg message.Message
-		err := json.Unmarshal(m.Data, &msg)
+		msg := new(message.Message)
+		err := msg.UnmarshalJSON(m.Data)
 		require.NoError(s.t, err)
 
-		s.recvMessageChan <- &msg
+		//if s.debugMode {
+		//	fmt.Printf("Received a message: %+v\n", msg)
+		//}
+
+		s.recvMessageChan <- msg
 
 		switch msg.MessageType {
 		case message.QuestionMessageType:
 			if s.questionMessageCallback != nil {
-				s.questionMessageCallback(s, &msg)
+				s.questionMessageCallback(s, msg)
 			}
 		}
 	})

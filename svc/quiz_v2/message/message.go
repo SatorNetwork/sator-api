@@ -1,9 +1,5 @@
 package message
 
-import (
-	"encoding/json"
-)
-
 type MessageType uint8
 
 const (
@@ -42,11 +38,6 @@ type Message struct {
 	AnswerMessage         *AnswerMessage         `json:"answer_message,omitempty"`
 	AnswerReplyMessage    *AnswerReplyMessage    `json:"answer_reply_message,omitempty"`
 	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message,omitempty"`
-}
-
-func (m *Message) String() string {
-	data, _ := json.Marshal(m)
-	return string(data)
 }
 
 func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
@@ -94,7 +85,7 @@ func (m *Message) isConsistent() bool {
 }
 
 type PlayerIsJoinedMessage struct {
-	PlayerID string `json:"player_id"`
+	PlayerID string `json:"user_id"`
 	Username string `json:"username"`
 }
 
@@ -111,7 +102,7 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) 
 }
 
 type CountdownMessage struct {
-	SecondsLeft int `json:"seconds_left"`
+	SecondsLeft int `json:"countdown"`
 }
 
 func NewCountdownMessage(payload *CountdownMessage) (*Message, error) {
@@ -171,9 +162,14 @@ func NewAnswerMessage(payload *AnswerMessage) (*Message, error) {
 }
 
 type AnswerReplyMessage struct {
-	Success         bool `json:"success"`
-	SegmentNum      int  `json:"segment_num"`
-	IsFastestAnswer bool `json:"is_fastest_answer"`
+	QuestionID      string `json:"question_id"`
+	Success         bool   `json:"result"`
+	Rate            int    `json:"rate"`
+	CorrectAnswerID string `json:"correct_answer_id"`
+	QuestionsLeft   int    `json:"questions_left"`
+	AdditionalPTS   int    `json:"additional_pts"`
+	SegmentNum      int    `json:"segment_num"`
+	IsFastestAnswer bool   `json:"is_fastest_answer"`
 }
 
 func NewAnswerReplyMessage(payload *AnswerReplyMessage) (*Message, error) {
@@ -189,7 +185,17 @@ func NewAnswerReplyMessage(payload *AnswerReplyMessage) (*Message, error) {
 }
 
 type WinnersTableMessage struct {
+	ChallengeID           string             `json:"challenge_id"`
+	PrizePool             string             `json:"prize_pool"`
+	ShowTransactionURL    string             `json:"show_transaction_url"`
+	Winners               []*Winner          `json:"winners"`
 	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
+}
+
+type Winner struct {
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	Prize    string `json:"prize"`
 }
 
 func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {

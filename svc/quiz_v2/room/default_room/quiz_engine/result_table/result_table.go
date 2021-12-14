@@ -1,6 +1,7 @@
 package result_table
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ type ResultTable interface {
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
 	GetPrizePoolDistribution() map[uuid.UUID]float64
+	GetWinners() []*Winner
 
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
@@ -24,6 +26,11 @@ type ResultTable interface {
 type user struct {
 	id  uuid.UUID
 	pts uint32
+}
+
+type Winner struct {
+	UserID string
+	Prize  string
 }
 
 type Config struct {
@@ -111,6 +118,20 @@ func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 	}
 
 	return distribution
+}
+
+func (rt *resultTable) GetWinners() []*Winner {
+	userIDToPrize := rt.GetPrizePoolDistribution()
+
+	winners := make([]*Winner, 0, len(userIDToPrize))
+	for userID, prize := range userIDToPrize {
+		winners = append(winners, &Winner{
+			UserID: userID.String(),
+			Prize:  fmt.Sprintf("%v", prize),
+		})
+	}
+
+	return winners
 }
 
 func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
