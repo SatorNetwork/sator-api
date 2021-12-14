@@ -7,6 +7,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/profile"
+
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
@@ -21,6 +23,8 @@ type (
 	Service struct {
 		sr  showsRepository
 		chc challengesClient
+		pc  profileClient
+		ac  authClient
 	}
 
 	// Show struct
@@ -70,15 +74,16 @@ type (
 
 	// Review ...
 	Review struct {
-		ID        string `json:"id"`
-		UserID    string `json:"user_id"`
-		Username  string `json:"username"`
-		Rating    int    `json:"rating"`
-		Title     string `json:"title"`
-		Review    string `json:"review"`
-		Likes     int64  `json:"likes"`
-		Unlikes   int64  `json:"unlikes"`
-		CreatedAt string `json:"created_at"`
+		ID         string `json:"id"`
+		UserID     string `json:"user_id"`
+		Username   string `json:"username"`
+		UserAvatar string `json:"user_avatar"`
+		Rating     int    `json:"rating"`
+		Title      string `json:"title"`
+		Review     string `json:"review"`
+		Likes      int64  `json:"likes"`
+		Unlikes    int64  `json:"unlikes"`
+		CreatedAt  string `json:"created_at"`
 	}
 
 	showsRepository interface {
@@ -129,19 +134,33 @@ type (
 		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]uuid.UUID, error)
 	}
+
+	profileClient interface {
+		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (*profile.Profile, error)
+	}
+
+	authClient interface {
+		GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error)
+	}
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
 	if chc == nil {
 		log.Fatalln("challenges client is not set")
 	}
+	if pc == nil {
+		log.Fatalln("profile client is not set")
+	}
+	if ac == nil {
+		log.Fatalln("auth client is not set")
+	}
 
-	return &Service{sr: sr, chc: chc}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac}
 }
 
 // GetShows returns shows.
@@ -743,7 +762,30 @@ func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit
 		return nil, err
 	}
 
-	return castReviewsList(reviews), nil
+	result := make([]Review, 0, len(reviews))
+
+	for _, r := range reviews {
+		id, err := s.pc.GetProfileByUserID(ctx, r.UserID, "")
+		if err != nil {
+			log.Println("could not get profile by user id")
+		}
+		un, err := s.ac.GetUsernameByID(ctx, r.UserID)
+		if err != nil {
+			log.Println("could not get profile by user id")
+		}
+		result = append(result, Review{
+			ID:         r.ID.String(),
+			UserID:     r.UserID.String(),
+			Username:   un,
+			UserAvatar: id.Avatar,
+			Rating:     int(r.Rating),
+			Title:      r.Title.String,
+			Review:     r.Review.String,
+			CreatedAt:  r.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return result, nil
 }
 
 func castReviewsList(source []repository.Rating) []Review {
