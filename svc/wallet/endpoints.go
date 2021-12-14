@@ -80,6 +80,9 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.GetWalletByID = mdw(e.GetWalletByID)
 			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
 			e.CreateTransfer = mdw(e.CreateTransfer)
+			e.ConfirmTransfer = mdw(e.ConfirmTransfer)
+			e.SetStake = mdw(e.SetStake)
+			e.GetStake = mdw(e.GetStake)
 		}
 	}
 
