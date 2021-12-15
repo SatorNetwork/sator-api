@@ -29,6 +29,7 @@ const (
 
 	KYCStatusApproved    = "approved"
 	KYCStatusRejected    = "rejected"
+	KYCStatusInit        = "init"
 	KYCStatusInProgress  = "in_progress"
 	KYCStatusRetry       = "retry"
 	KYCStatusNotVerified = "verification_needed"

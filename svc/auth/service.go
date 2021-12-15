@@ -1233,7 +1233,17 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		return fmt.Errorf("could not get external user by id: %w", err)
 	}
 
-	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusPending || resp.Review.ReviewStatus == sumsub.KYCProviderStatusInit {
+	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusInit {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusInit,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusPending {
 		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
 			KycStatus: sumsub.KYCStatusInProgress,
 			ID:        userID,

@@ -35,6 +35,8 @@ func KYCStatusMdw(keyFunc kycStatus) endpoint.Middleware {
 				return nil, ErrKYCInProgress
 			case KYCStatusRetry:
 				return nil, ErrKYCNeeded
+			case KYCStatusInit:
+				return nil, ErrKYCNeeded
 			default:
 				return nil, ErrKYCNeeded
 			}
