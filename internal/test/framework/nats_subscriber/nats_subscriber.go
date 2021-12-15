@@ -3,10 +3,11 @@ package nats_subscriber
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/stretchr/testify/require"
 
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 )
