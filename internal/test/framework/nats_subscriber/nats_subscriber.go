@@ -3,10 +3,10 @@ package nats_subscriber
 import (
 	"encoding/json"
 	"fmt"
-	"testing"
-
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 )
@@ -29,6 +29,7 @@ type natsSubscriber struct {
 	questionMessageCallback messageCallback
 
 	debugMode bool
+	done      chan struct{}
 
 	t *testing.T
 }
@@ -45,6 +46,7 @@ func New(userID, sendMessageSubj, recvMessageSubj string, t *testing.T) (*natsSu
 		sendMessageSubj: sendMessageSubj,
 		recvMessageSubj: recvMessageSubj,
 		recvMessageChan: make(chan *message.Message, defaultChanBuffSize),
+		done:            make(chan struct{}),
 		t:               t,
 	}, nil
 }
@@ -89,10 +91,34 @@ func (s *natsSubscriber) Start() error {
 	}
 	s.recvMessageSubscription = subscription
 
+	go s.startEventProcessor()
+
 	return nil
 }
 
+// NOTE: should be run as a goroutine
+func (s *natsSubscriber) startEventProcessor() {
+	ticker := time.NewTicker(time.Second)
+LOOP:
+	for {
+		select {
+		case <-ticker.C:
+			payload := message.PlayerIsActiveMessage{}
+			respMsg, err := message.NewPlayerIsActiveMessage(&payload)
+			require.NoError(s.t, err)
+			err = s.SendMessage(respMsg)
+			require.NoError(s.t, err)
+
+		case <-s.done:
+			ticker.Stop()
+			break LOOP
+		}
+	}
+}
+
 func (s *natsSubscriber) Close() error {
+	close(s.done)
+
 	return s.recvMessageSubscription.Unsubscribe()
 }
 
