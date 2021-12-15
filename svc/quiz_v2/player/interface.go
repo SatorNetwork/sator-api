@@ -13,4 +13,10 @@ type Player interface {
 	SendMessage(msg *message.Message) error
 	GetMessageStream() <-chan *message.Message
 	Close() error
+	ConnectionNotifier
+}
+
+type ConnectionNotifier interface {
+	ConnectChan() <-chan struct{}
+	DisconnectChan() <-chan struct{}
 }

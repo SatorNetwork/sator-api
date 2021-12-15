@@ -94,6 +94,7 @@ func (r *defaultRoom) IsFull() bool {
 	return len(r.players) >= int(challenge.PlayersToStart)
 }
 
+// NOTE: should be run as a goroutine
 func (r *defaultRoom) Start() {
 LOOP:
 	for {
@@ -186,6 +187,13 @@ func (r *defaultRoom) getPlayerByID(id string) player.Player {
 	return r.players[id]
 }
 
+func (r *defaultRoom) removePlayerByID(id string) {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	delete(r.players, id)
+}
+
 func (r *defaultRoom) watchPlayerMessages(p player.Player) {
 LOOP:
 	for {
@@ -195,6 +203,18 @@ LOOP:
 				message:    msg.MustGetAnswerMessage(),
 				receivedAt: time.Now(),
 			}
+
+		case <-p.ConnectChan():
+			// TODO(evg): handle userIsConnected event
+
+		case <-p.DisconnectChan():
+			r.removePlayerByID(p.ID())
+			if err := p.Close(); err != nil {
+				log.Printf("can't close player: %v\n", err)
+			}
+			r.sendPlayerIsDisconnectedMessage(p)
+			break LOOP
+
 		case <-r.done:
 			break LOOP
 		}
@@ -306,6 +326,19 @@ func (r *defaultRoom) sendPlayerIsJoinedMessage(p player.Player) {
 		Username: p.Username(),
 	}
 	msg, err := message.NewPlayerIsJoinedMessage(&payload)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	r.sendMessageToRoom(msg)
+}
+
+func (r *defaultRoom) sendPlayerIsDisconnectedMessage(p player.Player) {
+	payload := message.PlayerIsDisconnectedMessage{
+		PlayerID: p.ID(),
+		Username: p.Username(),
+	}
+	msg, err := message.NewPlayerIsDisconnectedMessage(&payload)
 	if err != nil {
 		log.Println(err)
 		return
