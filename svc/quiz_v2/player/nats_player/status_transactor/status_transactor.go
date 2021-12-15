@@ -3,7 +3,8 @@ package status_transactor
 type Status uint8
 
 const (
-	PlayerDisconnectedStatus Status = iota
+	UndefinedStatus Status = iota
+	PlayerDisconnectedStatus
 	PlayerConnectedStatus
 )
 
@@ -15,7 +16,7 @@ type StatusTransactor struct {
 
 func New(notifyChan chan struct{}) *StatusTransactor {
 	return &StatusTransactor{
-		status:     PlayerDisconnectedStatus,
+		status:     UndefinedStatus,
 		notifyChan: notifyChan,
 	}
 }
