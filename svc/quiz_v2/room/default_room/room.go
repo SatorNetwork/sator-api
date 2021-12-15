@@ -130,6 +130,8 @@ LOOP:
 					// wait for some time to drain all messages from channels before closing the room
 					time.Sleep(time.Second)
 					r.Close()
+
+					r.closePlayers()
 				}()
 			}
 
@@ -164,6 +166,17 @@ func (r *defaultRoom) Close() {
 	r.st.SetStatus(status_transactor.RoomIsClosed)
 
 	close(r.done)
+}
+
+func (r *defaultRoom) closePlayers() {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	for _, p := range r.players {
+		if err := p.Close(); err != nil {
+			log.Printf("can't close player: %v\n", err)
+		}
+	}
 }
 
 func (r *defaultRoom) getPlayerByID(id string) player.Player {
@@ -249,7 +262,7 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	userIDToPrize := r.quizEngine.GetPrizePoolDistribution()
 	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
-	
+
 	r.playersMutex.Lock()
 	for userID, prize := range userIDToPrize {
 		username := r.players[userID.String()].Username()
