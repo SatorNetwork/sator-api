@@ -67,7 +67,7 @@ func CodeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusForbidden, err.Error()
 	}
 
-	if errors.Is(err, sumsub.ErrKYCNeeded) {
+	if errors.Is(err, sumsub.ErrKYCNeeded) || errors.Is(err, sumsub.ErrKYCRequiredDocs) {
 		return http.StatusProxyAuthRequired, err.Error()
 	}
 
