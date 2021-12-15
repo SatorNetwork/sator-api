@@ -208,12 +208,14 @@ LOOP:
 			// TODO(evg): handle userIsConnected event
 
 		case <-p.DisconnectChan():
-			r.removePlayerByID(p.ID())
-			if err := p.Close(); err != nil {
-				log.Printf("can't close player: %v\n", err)
+			if r.st.GetStatus() == status_transactor.GatheringPlayersStatus {
+				r.removePlayerByID(p.ID())
+				if err := p.Close(); err != nil {
+					log.Printf("can't close player: %v\n", err)
+				}
+				r.sendPlayerIsDisconnectedMessage(p)
+				break LOOP
 			}
-			r.sendPlayerIsDisconnectedMessage(p)
-			break LOOP
 
 		case <-r.done:
 			break LOOP
