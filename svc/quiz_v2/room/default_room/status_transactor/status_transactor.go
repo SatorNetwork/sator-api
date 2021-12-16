@@ -1,6 +1,9 @@
 package status_transactor
 
-import "log"
+import (
+	"log"
+	"sync"
+)
 
 type Status uint8
 
@@ -39,19 +42,24 @@ func isTransitionAllowed(from, to Status) bool {
 }
 
 type StatusTransactor struct {
-	status Status
+	status      Status
+	statusMutex *sync.Mutex
 
 	notifyChan chan struct{}
 }
 
 func New(notifyChan chan struct{}) *StatusTransactor {
 	return &StatusTransactor{
-		status:     GatheringPlayersStatus,
-		notifyChan: notifyChan,
+		status:      GatheringPlayersStatus,
+		statusMutex: &sync.Mutex{},
+		notifyChan:  notifyChan,
 	}
 }
 
 func (st *StatusTransactor) SetStatus(newStatus Status) {
+	st.statusMutex.Lock()
+	defer st.statusMutex.Unlock()
+
 	if st.status == newStatus {
 		return
 	}
@@ -68,5 +76,8 @@ func (st *StatusTransactor) SetStatus(newStatus Status) {
 }
 
 func (st *StatusTransactor) GetStatus() Status {
+	st.statusMutex.Lock()
+	defer st.statusMutex.Unlock()
+
 	return st.status
 }
