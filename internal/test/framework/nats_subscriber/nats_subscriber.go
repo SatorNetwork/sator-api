@@ -18,6 +18,14 @@ const (
 
 type messageCallback func(s *natsSubscriber, msg *message.Message)
 
+type KeepaliveCfg struct {
+	Disabled bool
+}
+
+var defaultKeepaliveCfg = &KeepaliveCfg{
+	Disabled: false,
+}
+
 type natsSubscriber struct {
 	nc              *nats.Conn
 	userID          string
@@ -29,8 +37,9 @@ type natsSubscriber struct {
 
 	questionMessageCallback messageCallback
 
-	debugMode bool
-	done      chan struct{}
+	debugMode    bool
+	keepaliveCfg *KeepaliveCfg
+	done         chan struct{}
 
 	t *testing.T
 }
@@ -47,6 +56,7 @@ func New(userID, sendMessageSubj, recvMessageSubj string, t *testing.T) (*natsSu
 		sendMessageSubj: sendMessageSubj,
 		recvMessageSubj: recvMessageSubj,
 		recvMessageChan: make(chan *message.Message, defaultChanBuffSize),
+		keepaliveCfg:    defaultKeepaliveCfg,
 		done:            make(chan struct{}),
 		t:               t,
 	}, nil
@@ -62,6 +72,10 @@ func (s *natsSubscriber) IsDebugModeEnabled() bool {
 
 func (s *natsSubscriber) EnableDebugMode() {
 	s.debugMode = true
+}
+
+func (s *natsSubscriber) SetKeepaliveCfg(keepaliveCfg *KeepaliveCfg) {
+	s.keepaliveCfg = keepaliveCfg
 }
 
 func (s *natsSubscriber) Start() error {
@@ -104,6 +118,10 @@ LOOP:
 	for {
 		select {
 		case <-ticker.C:
+			if s.keepaliveCfg.Disabled {
+				continue
+			}
+
 			payload := message.PlayerIsActiveMessage{}
 			respMsg, err := message.NewPlayerIsActiveMessage(&payload)
 			require.NoError(s.t, err)
