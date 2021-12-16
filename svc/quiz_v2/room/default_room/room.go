@@ -3,6 +3,7 @@ package default_room
 import (
 	"github.com/pkg/errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +33,7 @@ type answerWrapper struct {
 type defaultRoom struct {
 	challengeID    string
 	players        map[string]player.Player
+	playersMutex   *sync.Mutex
 	newPlayersChan chan player.Player
 	countdownChan  chan int
 	questionChan   chan *questionWrapper
@@ -56,6 +58,7 @@ func New(challengeID string, challenges quiz_v2_challenge.ChallengesService) (*d
 	return &defaultRoom{
 		challengeID:    challengeID,
 		players:        make(map[string]player.Player, defaultChanBuffSize),
+		playersMutex:   &sync.Mutex{},
 		newPlayersChan: make(chan player.Player, defaultChanBuffSize),
 		countdownChan:  make(chan int, defaultChanBuffSize),
 		questionChan:   make(chan *questionWrapper, defaultChanBuffSize),
@@ -75,12 +78,18 @@ func (r *defaultRoom) ChallengeID() string {
 }
 
 func (r *defaultRoom) AddPlayer(p player.Player) {
+	r.playersMutex.Lock()
 	r.players[p.ID()] = p
+	r.playersMutex.Unlock()
+
 	r.newPlayersChan <- p
 }
 
 func (r *defaultRoom) IsFull() bool {
 	challenge := r.quizEngine.GetChallenge()
+
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
 
 	return len(r.players) >= int(challenge.PlayersToStart)
 }
@@ -155,6 +164,13 @@ func (r *defaultRoom) Close() {
 	r.st.SetStatus(status_transactor.RoomIsClosed)
 
 	close(r.done)
+}
+
+func (r *defaultRoom) getPlayerByID(id string) player.Player {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	return r.players[id]
 }
 
 func (r *defaultRoom) watchPlayerMessages(p player.Player) {
@@ -233,6 +249,8 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	userIDToPrize := r.quizEngine.GetPrizePoolDistribution()
 	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
+	
+	r.playersMutex.Lock()
 	for userID, prize := range userIDToPrize {
 		username := r.players[userID.String()].Username()
 		usernameIDToPrize[username] = prize
@@ -249,6 +267,7 @@ func (r *defaultRoom) sendWinnersTable() {
 			Prize:    w.Prize,
 		})
 	}
+	r.playersMutex.Unlock()
 
 	payload := message.WinnersTableMessage{
 		ChallengeID:           r.ChallengeID(),
@@ -318,6 +337,9 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 }
 
 func (r *defaultRoom) sendMessageToRoom(message *message.Message) {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
 	for _, p := range r.players {
 		if err := p.SendMessage(message); err != nil {
 			log.Printf("can't send message to player with %v uid: %v\n", p.ID(), err)
@@ -373,7 +395,8 @@ func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
 		return err
 	}
 
-	if err := r.players[answer.message.UserID].SendMessage(msg); err != nil {
+	p := r.getPlayerByID(answer.message.UserID)
+	if err := p.SendMessage(msg); err != nil {
 		return errors.Wrapf(err, "can't send message to player with %v uid", answer.message.UserID)
 	}
 
