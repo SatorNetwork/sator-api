@@ -3,6 +3,7 @@ package nats_player
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -29,11 +30,12 @@ type natsPlayer struct {
 	// It will be set during Start method
 	recvMessageSubscription *nats.Subscription
 
-	statusIsUpdatedChan chan struct{}
-	st                  *status_transactor.StatusTransactor
-	lastUserIsActiveMsg time.Time
-	connectChan         chan struct{}
-	disconnectChan      chan struct{}
+	statusIsUpdatedChan      chan struct{}
+	st                       *status_transactor.StatusTransactor
+	lastUserIsActiveMsg      time.Time
+	lastUserIsActiveMsgMutex *sync.Mutex
+	connectChan              chan struct{}
+	disconnectChan           chan struct{}
 
 	done chan struct{}
 
@@ -58,10 +60,11 @@ func NewNatsPlayer(userID, challengeID, username, natsURL, sendMessageSubj, recv
 
 		recvMessageChan: make(chan *message.Message, defaultChanBuffSize),
 
-		statusIsUpdatedChan: statusIsUpdatedChan,
-		st:                  status_transactor.New(statusIsUpdatedChan),
-		connectChan:         make(chan struct{}, defaultChanBuffSize),
-		disconnectChan:      make(chan struct{}, defaultChanBuffSize),
+		statusIsUpdatedChan:      statusIsUpdatedChan,
+		st:                       status_transactor.New(statusIsUpdatedChan),
+		lastUserIsActiveMsgMutex: &sync.Mutex{},
+		connectChan:              make(chan struct{}, defaultChanBuffSize),
+		disconnectChan:           make(chan struct{}, defaultChanBuffSize),
 
 		done: make(chan struct{}),
 
@@ -95,7 +98,10 @@ func (p *natsPlayer) Start() error {
 		}
 
 		if msg.MessageType == message.PlayerIsActiveMessageType {
+			p.lastUserIsActiveMsgMutex.Lock()
 			p.lastUserIsActiveMsg = time.Now()
+			p.lastUserIsActiveMsgMutex.Unlock()
+
 			p.st.SetStatus(status_transactor.PlayerConnectedStatus)
 			return
 		}
@@ -162,6 +168,9 @@ func (p *natsPlayer) GetMessageStream() <-chan *message.Message {
 }
 
 func (p *natsPlayer) checkIfDisconnected() bool {
+	p.lastUserIsActiveMsgMutex.Lock()
+	defer p.lastUserIsActiveMsgMutex.Unlock()
+
 	return time.Now().Sub(p.lastUserIsActiveMsg).Nanoseconds() > disconnectTimeout.Nanoseconds()
 }
 
