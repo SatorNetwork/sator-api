@@ -1,5 +1,7 @@
 package message
 
+import "github.com/pkg/errors"
+
 type MessageType uint8
 
 const (
@@ -12,6 +14,29 @@ const (
 	PlayerIsActiveMessageType
 	PlayerIsDisconnectedMessageType
 )
+
+func NewMessageTypeFromString(messageType string) (MessageType, error) {
+	switch messageType {
+	case "player_is_joined_message_type":
+		return PlayerIsJoinedMessageType, nil
+	case "countdown_message_type":
+		return CountdownMessageType, nil
+	case "question_message_type":
+		return QuestionMessageType, nil
+	case "answer_message_type":
+		return AnswerMessageType, nil
+	case "answer_reply_message_type":
+		return AnswerReplyMessageType, nil
+	case "winners_table_message_type":
+		return WinnersTableMessageType, nil
+	case "player_is_active_message_type":
+		return PlayerIsActiveMessageType, nil
+	case "player_is_disconnected_message_type":
+		return PlayerIsDisconnectedMessageType, nil
+	default:
+		return 0, errors.Errorf("unknown message type: %v", messageType)
+	}
+}
 
 func (m MessageType) String() string {
 	switch m {
