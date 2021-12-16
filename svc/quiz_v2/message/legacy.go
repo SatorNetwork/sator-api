@@ -7,7 +7,7 @@ import (
 )
 
 type LegacyMessage struct {
-	MessageType MessageType     `json:"type"`
+	MessageType string          `json:"type"`
 	Payload     json.RawMessage `json:"payload"`
 }
 
@@ -45,10 +45,10 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(&struct {
-		MessageType MessageType `json:"type"`
+		MessageType string      `json:"type"`
 		Payload     interface{} `json:"payload"`
 	}{
-		MessageType: m.MessageType,
+		MessageType: m.MessageType.String(),
 		Payload:     payload,
 	})
 }
@@ -58,9 +58,13 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &legacyMsg); err != nil {
 		return err
 	}
-	m.MessageType = legacyMsg.MessageType
+	var err error
+	m.MessageType, err = NewMessageTypeFromString(legacyMsg.MessageType)
+	if err != nil {
+		return errors.Wrap(err, "can't create new message type from string")
+	}
 
-	switch legacyMsg.MessageType {
+	switch m.MessageType {
 	case PlayerIsJoinedMessageType:
 		if err := json.Unmarshal(legacyMsg.Payload, &m.PlayerIsJoinedMessage); err != nil {
 			return err

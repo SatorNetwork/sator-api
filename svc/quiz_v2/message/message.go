@@ -1,5 +1,7 @@
 package message
 
+import "github.com/pkg/errors"
+
 type MessageType uint8
 
 const (
@@ -13,24 +15,47 @@ const (
 	PlayerIsDisconnectedMessageType
 )
 
+func NewMessageTypeFromString(messageType string) (MessageType, error) {
+	switch messageType {
+	case "player_is_joined":
+		return PlayerIsJoinedMessageType, nil
+	case "countdown":
+		return CountdownMessageType, nil
+	case "question":
+		return QuestionMessageType, nil
+	case "answer":
+		return AnswerMessageType, nil
+	case "answer_reply":
+		return AnswerReplyMessageType, nil
+	case "winners_table":
+		return WinnersTableMessageType, nil
+	case "player_is_active":
+		return PlayerIsActiveMessageType, nil
+	case "player_is_disconnected":
+		return PlayerIsDisconnectedMessageType, nil
+	default:
+		return 0, errors.Errorf("unknown message type: %v", messageType)
+	}
+}
+
 func (m MessageType) String() string {
 	switch m {
 	case PlayerIsJoinedMessageType:
-		return "player_is_joined_message_type"
+		return "player_is_joined"
 	case CountdownMessageType:
-		return "countdown_message_type"
+		return "countdown"
 	case QuestionMessageType:
-		return "question_message_type"
+		return "question"
 	case AnswerMessageType:
-		return "answer_message_type"
+		return "answer"
 	case AnswerReplyMessageType:
-		return "answer_reply_message_type"
+		return "answer_reply"
 	case WinnersTableMessageType:
-		return "winners_table_message_type"
+		return "winners_table"
 	case PlayerIsActiveMessageType:
-		return "player_is_active_message_type"
+		return "player_is_active"
 	case PlayerIsDisconnectedMessageType:
-		return "player_is_disconnected_message_type"
+		return "player_is_disconnected"
 	default:
 		return "<unknown message type>"
 	}

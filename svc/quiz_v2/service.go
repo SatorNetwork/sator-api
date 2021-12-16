@@ -17,14 +17,16 @@ type (
 		engine *engine.Engine
 
 		natsURL    string
+		natsWSURL  string
 		challenges quiz_v2_challenge.ChallengesService
 	}
 )
 
-func NewService(natsURL string, challenges quiz_v2_challenge.ChallengesService) *Service {
+func NewService(natsURL, natsWSURL string, challenges quiz_v2_challenge.ChallengesService) *Service {
 	s := &Service{
 		engine:     engine.New(challenges),
 		natsURL:    natsURL,
+		natsWSURL:  natsWSURL,
 		challenges: challenges,
 	}
 
@@ -67,6 +69,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 
 	return &GetQuizLinkResponse{
 		BaseQuizURL:     s.natsURL,
+		BaseQuizWSURL:   s.natsWSURL,
 		RecvMessageSubj: recvMessageSubj,
 		SendMessageSubj: sendMessageSubj,
 		UserID:          uid.String(),
