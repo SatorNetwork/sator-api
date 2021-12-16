@@ -19,6 +19,7 @@ type (
 	}
 
 	GetQuizLinkResponse struct {
+		BaseQuizWSURL   string `json:"base_quiz_ws_url"`
 		BaseQuizURL     string `json:"base_quiz_url"`
 		RecvMessageSubj string `json:"recv_message_subj"`
 		SendMessageSubj string `json:"send_message_subj"`
