@@ -9,6 +9,8 @@ const (
 	AnswerMessageType
 	AnswerReplyMessageType
 	WinnersTableMessageType
+	PlayerIsActiveMessageType
+	PlayerIsDisconnectedMessageType
 )
 
 func (m MessageType) String() string {
@@ -25,19 +27,25 @@ func (m MessageType) String() string {
 		return "answer_reply_message_type"
 	case WinnersTableMessageType:
 		return "winners_table_message_type"
+	case PlayerIsActiveMessageType:
+		return "player_is_active_message_type"
+	case PlayerIsDisconnectedMessageType:
+		return "player_is_disconnected_message_type"
 	default:
 		return "<unknown message type>"
 	}
 }
 
 type Message struct {
-	MessageType           MessageType            `json:"message_type"`
-	PlayerIsJoinedMessage *PlayerIsJoinedMessage `json:"player_is_joined_message,omitempty"`
-	CountdownMessage      *CountdownMessage      `json:"countdown_message,omitempty"`
-	QuestionMessage       *QuestionMessage       `json:"question_message,omitempty"`
-	AnswerMessage         *AnswerMessage         `json:"answer_message,omitempty"`
-	AnswerReplyMessage    *AnswerReplyMessage    `json:"answer_reply_message,omitempty"`
-	WinnersTableMessage   *WinnersTableMessage   `json:"winners_table_message,omitempty"`
+	MessageType                 MessageType                  `json:"message_type"`
+	PlayerIsJoinedMessage       *PlayerIsJoinedMessage       `json:"player_is_joined_message,omitempty"`
+	CountdownMessage            *CountdownMessage            `json:"countdown_message,omitempty"`
+	QuestionMessage             *QuestionMessage             `json:"question_message,omitempty"`
+	AnswerMessage               *AnswerMessage               `json:"answer_message,omitempty"`
+	AnswerReplyMessage          *AnswerReplyMessage          `json:"answer_reply_message,omitempty"`
+	WinnersTableMessage         *WinnersTableMessage         `json:"winners_table_message,omitempty"`
+	PlayerIsActiveMessage       *PlayerIsActiveMessage       `json:"player_is_active_message,omitempty"`
+	PlayerIsDisconnectedMessage *PlayerIsDisconnectedMessage `json:"player_is_disconnected_message,omitempty"`
 }
 
 func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
@@ -79,6 +87,10 @@ func (m *Message) isConsistent() bool {
 		return m.AnswerReplyMessage != nil
 	case WinnersTableMessageType:
 		return m.WinnersTableMessage != nil
+	case PlayerIsActiveMessageType:
+		return m.PlayerIsActiveMessage != nil
+	case PlayerIsDisconnectedMessageType:
+		return m.PlayerIsDisconnectedMessage != nil
 	default:
 		return false
 	}
@@ -202,6 +214,37 @@ func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:         WinnersTableMessageType,
 		WinnersTableMessage: payload,
+	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
+}
+
+type PlayerIsActiveMessage struct{}
+
+func NewPlayerIsActiveMessage(payload *PlayerIsActiveMessage) (*Message, error) {
+	msg := &Message{
+		MessageType:           PlayerIsActiveMessageType,
+		PlayerIsActiveMessage: payload,
+	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
+}
+
+type PlayerIsDisconnectedMessage struct {
+	PlayerID string `json:"user_id"`
+	Username string `json:"username"`
+}
+
+func NewPlayerIsDisconnectedMessage(payload *PlayerIsDisconnectedMessage) (*Message, error) {
+	msg := &Message{
+		MessageType:                 PlayerIsDisconnectedMessageType,
+		PlayerIsDisconnectedMessage: payload,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err

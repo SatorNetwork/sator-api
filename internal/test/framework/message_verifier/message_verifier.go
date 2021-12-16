@@ -121,6 +121,10 @@ func (v *MessageVerifier) compareMessages(emsg, rmsg *message.Message) {
 		v.compareAnswerReplyMessages(emsg, rmsg)
 	case message.WinnersTableMessageType:
 		v.compareWinnersTableMessages(emsg, rmsg)
+	case message.PlayerIsActiveMessageType:
+	case message.PlayerIsDisconnectedMessageType:
+		v.comparePlayerIsDisconnectedMessages(emsg, rmsg)
+
 	default:
 		v.t.Fatalf("<unknown message type>")
 	}
@@ -172,4 +176,10 @@ func (v *MessageVerifier) compareWinnersTableMessages(emsg, rmsg *message.Messag
 	// TODO(evg): high to predict who will get extra points for fastest answer due to concurrency
 	// (but it affects prize pool distribution) so skipping this checking for now
 	// require.Equal(v.t, emsg.WinnersTableMessage.PrizePoolDistribution, rmsg.WinnersTableMessage.PrizePoolDistribution)
+}
+
+func (v *MessageVerifier) comparePlayerIsDisconnectedMessages(emsg, rmsg *message.Message) {
+	require.NotNil(v.t, emsg.PlayerIsDisconnectedMessage)
+	require.NotNil(v.t, rmsg.PlayerIsDisconnectedMessage)
+	require.Equal(v.t, emsg.PlayerIsDisconnectedMessage.Username, rmsg.PlayerIsDisconnectedMessage.Username)
 }

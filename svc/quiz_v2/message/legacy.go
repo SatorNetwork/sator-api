@@ -29,6 +29,10 @@ func (m *Message) getPayload() (interface{}, error) {
 		return m.AnswerReplyMessage, nil
 	case WinnersTableMessageType:
 		return m.WinnersTableMessage, nil
+	case PlayerIsActiveMessageType:
+		return m.PlayerIsActiveMessage, nil
+	case PlayerIsDisconnectedMessageType:
+		return m.PlayerIsDisconnectedMessage, nil
 	default:
 		return nil, NewErrInconsistentMessage(m)
 	}
@@ -79,6 +83,14 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 		}
 	case WinnersTableMessageType:
 		if err := json.Unmarshal(legacyMsg.Payload, &m.WinnersTableMessage); err != nil {
+			return err
+		}
+	case PlayerIsActiveMessageType:
+		if err := json.Unmarshal(legacyMsg.Payload, &m.PlayerIsActiveMessage); err != nil {
+			return err
+		}
+	case PlayerIsDisconnectedMessageType:
+		if err := json.Unmarshal(legacyMsg.Payload, &m.PlayerIsDisconnectedMessage); err != nil {
 			return err
 		}
 	default:

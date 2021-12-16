@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
@@ -17,6 +18,14 @@ const (
 
 type messageCallback func(s *natsSubscriber, msg *message.Message)
 
+type KeepaliveCfg struct {
+	Disabled bool
+}
+
+var defaultKeepaliveCfg = &KeepaliveCfg{
+	Disabled: false,
+}
+
 type natsSubscriber struct {
 	nc              *nats.Conn
 	userID          string
@@ -28,7 +37,9 @@ type natsSubscriber struct {
 
 	questionMessageCallback messageCallback
 
-	debugMode bool
+	debugMode    bool
+	keepaliveCfg *KeepaliveCfg
+	done         chan struct{}
 
 	t *testing.T
 }
@@ -45,6 +56,8 @@ func New(userID, sendMessageSubj, recvMessageSubj string, t *testing.T) (*natsSu
 		sendMessageSubj: sendMessageSubj,
 		recvMessageSubj: recvMessageSubj,
 		recvMessageChan: make(chan *message.Message, defaultChanBuffSize),
+		keepaliveCfg:    defaultKeepaliveCfg,
+		done:            make(chan struct{}),
 		t:               t,
 	}, nil
 }
@@ -59,6 +72,10 @@ func (s *natsSubscriber) IsDebugModeEnabled() bool {
 
 func (s *natsSubscriber) EnableDebugMode() {
 	s.debugMode = true
+}
+
+func (s *natsSubscriber) SetKeepaliveCfg(keepaliveCfg *KeepaliveCfg) {
+	s.keepaliveCfg = keepaliveCfg
 }
 
 func (s *natsSubscriber) Start() error {
@@ -89,10 +106,38 @@ func (s *natsSubscriber) Start() error {
 	}
 	s.recvMessageSubscription = subscription
 
+	go s.startEventProcessor()
+
 	return nil
 }
 
+// NOTE: should be run as a goroutine
+func (s *natsSubscriber) startEventProcessor() {
+	ticker := time.NewTicker(time.Second)
+LOOP:
+	for {
+		select {
+		case <-ticker.C:
+			if s.keepaliveCfg.Disabled {
+				continue
+			}
+
+			payload := message.PlayerIsActiveMessage{}
+			respMsg, err := message.NewPlayerIsActiveMessage(&payload)
+			require.NoError(s.t, err)
+			err = s.SendMessage(respMsg)
+			require.NoError(s.t, err)
+
+		case <-s.done:
+			ticker.Stop()
+			break LOOP
+		}
+	}
+}
+
 func (s *natsSubscriber) Close() error {
+	close(s.done)
+
 	return s.recvMessageSubscription.Unsubscribe()
 }
 
