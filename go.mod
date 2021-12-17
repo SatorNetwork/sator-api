@@ -38,7 +38,6 @@ require (
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
 	github.com/stretchr/testify v1.7.0
 	github.com/thedevsaddam/govalidator v1.9.10
-	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c
 	github.com/zeebo/errs v1.2.2
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect
