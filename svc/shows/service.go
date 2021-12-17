@@ -762,48 +762,37 @@ func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit
 		return nil, err
 	}
 
-	result := make([]Review, 0, len(reviews))
-
-	for _, r := range reviews {
-		id, err := s.pc.GetProfileByUserID(ctx, r.UserID, "")
-		if err != nil {
-			log.Println("could not get profile by user id")
-		}
-		un, err := s.ac.GetUsernameByID(ctx, r.UserID)
-		if err != nil {
-			log.Println("could not get profile by user id")
-		}
-		result = append(result, Review{
-			ID:         r.ID.String(),
-			UserID:     r.UserID.String(),
-			Username:   un,
-			UserAvatar: id.Avatar,
-			Rating:     int(r.Rating),
-			Title:      r.Title.String,
-			Review:     r.Review.String,
-			CreatedAt:  r.CreatedAt.Format(time.RFC3339),
-		})
-	}
-
-	return result, nil
+	return s.castReviewsList(ctx, reviews), nil
 }
 
-func castReviewsList(source []repository.Rating) []Review {
+func (s *Service) castReviewsList(ctx context.Context, source []repository.Rating) []Review {
 	result := make([]Review, 0, len(source))
-
 	for _, r := range source {
-		result = append(result, Review{
-			ID:        r.ID.String(),
-			UserID:    r.UserID.String(),
-			Username:  r.Username.String,
-			Rating:    int(r.Rating),
-			Title:     r.Title.String,
-			Review:    r.Review.String,
-			CreatedAt: r.CreatedAt.Format(time.RFC3339),
-		})
+		result = append(result, s.castReview(ctx, r))
 	}
 
 	return result
+}
+
+func (s *Service) castReview(ctx context.Context, source repository.Rating) Review {
+	profile, err := s.pc.GetProfileByUserID(ctx, source.UserID, "")
+	if err != nil {
+		log.Printf("could not get profile by user id: %v", err)
+	}
+	username, err := s.ac.GetUsernameByID(ctx, source.UserID)
+	if err != nil {
+		log.Printf("could not get username by user id: %v", err)
+	}
+	return Review{
+		ID:         source.ID.String(),
+		UserID:     source.UserID.String(),
+		Username:   username,
+		UserAvatar: profile.Avatar,
+		Rating:     int(source.Rating),
+		Title:      source.Title.String,
+		Review:     source.Review.String,
+		CreatedAt:  source.CreatedAt.Format(time.RFC3339),
+	}
 }
 
 // DeleteReviewByID ..
@@ -850,7 +839,7 @@ func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, 
 		return nil, err
 	}
 
-	return castReviewsList(reviews), nil
+	return s.castReviewsList(ctx, reviews), nil
 }
 
 // GetActivatedUserEpisodes returns list activated episodes by user id.

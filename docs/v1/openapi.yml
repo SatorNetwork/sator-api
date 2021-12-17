@@ -2009,6 +2009,9 @@ paths:
                     username:
                       type: string
                       example: "johnDoe"
+                    user_avatar:
+                      type: string
+                      example: "https://some.url/avatar.png"
                     rating:
                       type: integer
                       example: 7
@@ -2375,6 +2378,9 @@ paths:
                     username:
                       type: string
                       example: "johnDoe"
+                    user_avatar:
+                      type: string
+                      example: "https://some.url/avatar.png"
                     rating:
                       type: integer
                       example: 7
