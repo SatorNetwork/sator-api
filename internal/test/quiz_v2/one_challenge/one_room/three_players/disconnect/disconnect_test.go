@@ -100,14 +100,7 @@ func TestUserIsDisconnected(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		user2ExpectedMessages := []*message.Message{
-			{
-				MessageType: message.PlayerIsJoinedMessageType,
-				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequests[1].Username,
-				},
-			},
-		}
+		user2ExpectedMessages := []*message.Message{}
 		messageVerifier := message_verifier.New(user2ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()

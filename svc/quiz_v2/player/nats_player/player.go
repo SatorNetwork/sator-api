@@ -24,9 +24,11 @@ type natsPlayer struct {
 	username    string
 	challengeID string
 
-	sendMessageSubj string
-	recvMessageSubj string
-	recvMessageChan chan *message.Message
+	sendMessageSubj           string
+	outgoingMessagesBuffer    []*message.Message
+	outgoingMessagesBufferMtx *sync.Mutex
+	recvMessageSubj           string
+	recvMessageChan           chan *message.Message
 	// It will be set during Start method
 	recvMessageSubscription *nats.Subscription
 
@@ -55,10 +57,11 @@ func NewNatsPlayer(userID, challengeID, username, natsURL, sendMessageSubj, recv
 		username:    username,
 		challengeID: challengeID,
 
-		sendMessageSubj: sendMessageSubj,
-		recvMessageSubj: recvMessageSubj,
-
-		recvMessageChan: make(chan *message.Message, defaultChanBuffSize),
+		sendMessageSubj:           sendMessageSubj,
+		outgoingMessagesBuffer:    make([]*message.Message, 0),
+		outgoingMessagesBufferMtx: &sync.Mutex{},
+		recvMessageSubj:           recvMessageSubj,
+		recvMessageChan:           make(chan *message.Message, defaultChanBuffSize),
 
 		statusIsUpdatedChan:      statusIsUpdatedChan,
 		st:                       status_transactor.New(statusIsUpdatedChan),
@@ -134,6 +137,7 @@ LOOP:
 			case status_transactor.PlayerDisconnectedStatus:
 				p.disconnectChan <- struct{}{}
 			case status_transactor.PlayerConnectedStatus:
+				p.flushOutgoingBuffer()
 				p.connectChan <- struct{}{}
 			}
 
@@ -156,11 +160,31 @@ func (p *natsPlayer) SendMessage(msg *message.Message) error {
 		return err
 	}
 
+	if p.st.GetStatus() == status_transactor.UndefinedStatus {
+		p.outgoingMessagesBufferMtx.Lock()
+		p.outgoingMessagesBuffer = append(p.outgoingMessagesBuffer, msg)
+		p.outgoingMessagesBufferMtx.Unlock()
+		return nil
+	}
+
 	if err := p.nc.Publish(p.sendMessageSubj, data); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (p *natsPlayer) flushOutgoingBuffer() {
+	p.outgoingMessagesBufferMtx.Lock()
+	defer p.outgoingMessagesBufferMtx.Unlock()
+
+	for _, msg := range p.outgoingMessagesBuffer {
+		if err := p.SendMessage(msg); err != nil {
+			log.Printf("can't send message: %v\n", err)
+		}
+	}
+
+	p.outgoingMessagesBuffer = make([]*message.Message, 0)
 }
 
 func (p *natsPlayer) GetMessageStream() <-chan *message.Message {

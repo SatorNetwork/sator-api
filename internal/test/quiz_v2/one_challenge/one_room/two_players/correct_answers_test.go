@@ -46,16 +46,14 @@ func TestCorrectAnswers(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	user1ExpectedMessages := message_container.New(defaultUser1ExpectedMessages).
+	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
 		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+			message_container.PFuncIndex(0),
 			func(msg *message.Message) {
 				msg.PlayerIsJoinedMessage.Username = signUpRequest.Username
 			}).
-		Messages()
-	user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
 		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+			message_container.PFuncIndex(1),
 			func(msg *message.Message) {
 				msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
 			}).
@@ -81,6 +79,14 @@ func TestCorrectAnswers(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
+		user1ExpectedMessages := []*message.Message{
+			{
+				MessageType: message.PlayerIsJoinedMessageType,
+				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
+					Username: signUpRequest.Username,
+				},
+			},
+		}
 		messageVerifier := message_verifier.New(user1ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
@@ -111,7 +117,7 @@ func TestCorrectAnswers(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		messageVerifier := message_verifier.New(user2ExpectedMessages, natsSubscriber.GetMessageChan(), t)
+		messageVerifier := message_verifier.New(userExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
@@ -122,8 +128,7 @@ func TestCorrectAnswers(t *testing.T) {
 	}
 
 	{
-		user1ExpectedMessages = append(user1ExpectedMessages, user2ExpectedMessages...)
-		user1MessageVerifier.SetExpectedMessages(user1ExpectedMessages)
+		user1MessageVerifier.SetExpectedMessages(userExpectedMessages)
 
 		err = user1MessageVerifier.Verify()
 		require.NoError(t, err)

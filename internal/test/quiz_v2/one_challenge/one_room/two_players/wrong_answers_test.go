@@ -46,11 +46,16 @@ func TestWrongAnswers(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	user1ExpectedMessages := message_container.New(defaultUser1ExpectedMessages).
+	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
 		Modify(
-			message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
+			message_container.PFuncIndex(0),
 			func(msg *message.Message) {
 				msg.PlayerIsJoinedMessage.Username = signUpRequest.Username
+			}).
+		Modify(
+			message_container.PFuncIndex(1),
+			func(msg *message.Message) {
+				msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
 			}).
 		Messages()
 
@@ -72,6 +77,15 @@ func TestWrongAnswers(t *testing.T) {
 			err := natsSubscriber.Close()
 			require.NoError(t, err)
 		}()
+
+		user1ExpectedMessages := []*message.Message{
+			{
+				MessageType: message.PlayerIsJoinedMessageType,
+				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
+					Username: signUpRequest.Username,
+				},
+			},
+		}
 
 		messageVerifier := message_verifier.New(user1ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
@@ -103,18 +117,14 @@ func TestWrongAnswers(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
-			Modify(
-				message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
-				}).
+		user2ExpectedMessages := message_container.New(userExpectedMessages).
 			Modify(
 				message_container.PFuncMessageType(message.AnswerReplyMessageType),
 				func(msg *message.Message) {
 					msg.AnswerReplyMessage.Success = false
 				}).
 			Messages()
+
 		messageVerifier := message_verifier.New(user2ExpectedMessages, natsSubscriber.GetMessageChan(), t)
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
@@ -126,15 +136,7 @@ func TestWrongAnswers(t *testing.T) {
 	}
 
 	{
-		user2ExpectedMessages := message_container.New(defaultUser2ExpectedMessages).
-			Modify(
-				message_container.PFuncMessageType(message.PlayerIsJoinedMessageType),
-				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
-				}).
-			Messages()
-		user1ExpectedMessages = append(user1ExpectedMessages, user2ExpectedMessages...)
-		user1MessageVerifier.SetExpectedMessages(user1ExpectedMessages)
+		user1MessageVerifier.SetExpectedMessages(userExpectedMessages)
 
 		err = user1MessageVerifier.Verify()
 		require.NoError(t, err)
