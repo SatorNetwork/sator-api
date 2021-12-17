@@ -329,7 +329,7 @@ func (r *defaultRoom) sendWinnersTable() {
 func (r *defaultRoom) sendMessagesForNewPlayers(p player.Player) {
 	for _, msg := range r.messagesForNewPlayers {
 		if err := p.SendMessage(msg); err != nil {
-			log.Fatalf("can't send message: %v\n", err)
+			log.Printf("can't send message: %v\n", err)
 		}
 	}
 }
