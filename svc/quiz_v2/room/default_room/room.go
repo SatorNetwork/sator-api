@@ -31,13 +31,14 @@ type answerWrapper struct {
 }
 
 type defaultRoom struct {
-	challengeID    string
-	players        map[string]player.Player
-	playersMutex   *sync.Mutex
-	newPlayersChan chan player.Player
-	countdownChan  chan int
-	questionChan   chan *questionWrapper
-	answersChan    chan *answerWrapper
+	challengeID           string
+	players               map[string]player.Player
+	playersMutex          *sync.Mutex
+	newPlayersChan        chan player.Player
+	countdownChan         chan int
+	questionChan          chan *questionWrapper
+	answersChan           chan *answerWrapper
+	messagesForNewPlayers []*message.Message
 
 	statusIsUpdatedChan chan struct{}
 	st                  *status_transactor.StatusTransactor
@@ -56,13 +57,14 @@ func New(challengeID string, challenges quiz_v2_challenge.ChallengesService) (*d
 	}
 
 	return &defaultRoom{
-		challengeID:    challengeID,
-		players:        make(map[string]player.Player, defaultChanBuffSize),
-		playersMutex:   &sync.Mutex{},
-		newPlayersChan: make(chan player.Player, defaultChanBuffSize),
-		countdownChan:  make(chan int, defaultChanBuffSize),
-		questionChan:   make(chan *questionWrapper, defaultChanBuffSize),
-		answersChan:    make(chan *answerWrapper, defaultChanBuffSize),
+		challengeID:           challengeID,
+		players:               make(map[string]player.Player, defaultChanBuffSize),
+		playersMutex:          &sync.Mutex{},
+		newPlayersChan:        make(chan player.Player, defaultChanBuffSize),
+		countdownChan:         make(chan int, defaultChanBuffSize),
+		questionChan:          make(chan *questionWrapper, defaultChanBuffSize),
+		answersChan:           make(chan *answerWrapper, defaultChanBuffSize),
+		messagesForNewPlayers: make([]*message.Message, 0),
 
 		statusIsUpdatedChan: statusIsUpdatedChan,
 		st:                  status_transactor.New(statusIsUpdatedChan),
@@ -100,11 +102,9 @@ LOOP:
 	for {
 		select {
 		case p := <-r.newPlayersChan:
-			// TODO(evg): we need proper mechanism to wait until user starts to listen messages
-			// accumulate messages on our side until nats connection will set up by user?
-			time.Sleep(time.Second)
-
+			r.sendMessagesForNewPlayers(p)
 			r.sendPlayerIsJoinedMessage(p)
+
 			go r.watchPlayerMessages(p)
 
 			if r.IsFull() {
@@ -322,6 +322,14 @@ func (r *defaultRoom) sendWinnersTable() {
 	r.st.SetStatus(status_transactor.WinnersTableAreSent)
 }
 
+func (r *defaultRoom) sendMessagesForNewPlayers(p player.Player) {
+	for _, msg := range r.messagesForNewPlayers {
+		if err := p.SendMessage(msg); err != nil {
+			log.Printf("can't send message: %v\n", err)
+		}
+	}
+}
+
 func (r *defaultRoom) sendPlayerIsJoinedMessage(p player.Player) {
 	payload := message.PlayerIsJoinedMessage{
 		PlayerID: p.ID(),
@@ -332,6 +340,7 @@ func (r *defaultRoom) sendPlayerIsJoinedMessage(p player.Player) {
 		log.Println(err)
 		return
 	}
+	r.messagesForNewPlayers = append(r.messagesForNewPlayers, msg)
 	r.sendMessageToRoom(msg)
 }
 
