@@ -130,6 +130,11 @@ type (
 		AccessToken  string
 		RefreshToken string
 	}
+
+	User struct {
+		ID       uuid.UUID `json:"id"`
+		Username string    `json:"username"`
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
@@ -1307,4 +1312,13 @@ func (s *Service) UpdateKYCStatus(ctx context.Context, uid uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (s *Service) GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error) {
+	user, err := s.ur.GetUserByID(ctx, uid)
+	if err != nil {
+		return "", fmt.Errorf("could not get user by id: %v: %w", uid, err)
+	}
+
+	return user.Username, nil
 }

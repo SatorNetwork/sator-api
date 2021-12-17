@@ -26,6 +26,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
+	authClient "github.com/SatorNetwork/sator-api/svc/auth/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
@@ -236,6 +237,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("authRepo error: %v", err)
 	}
+	var authClient *authClient.Client
 
 	// Init JWT parser middleware
 	// not depends on transport
@@ -431,7 +433,7 @@ func main() {
 
 		// Shows service
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
+			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient), jwtMdw),
 			logger,
 		))
 	}
