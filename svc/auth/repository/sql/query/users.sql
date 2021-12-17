@@ -122,3 +122,8 @@ SELECT kyc_status::text
 FROM users
 WHERE id = $1
     LIMIT 1;
+
+-- name: GetUsernameByID :one
+SELECT username 
+FROM users
+WHERE id = @id;

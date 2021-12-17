@@ -281,6 +281,19 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 	return i, err
 }
 
+const getUsernameByID = `-- name: GetUsernameByID :one
+SELECT username 
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUsernameByID(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.queryRow(ctx, q.getUsernameByIDStmt, getUsernameByID, id)
+	var username string
+	err := row.Scan(&username)
+	return username, err
+}
+
 const getUsersListDesc = `-- name: GetUsersListDesc :many
 SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status
 FROM users

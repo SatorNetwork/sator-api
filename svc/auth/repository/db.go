@@ -97,6 +97,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserVerificationByUserIDStmt, err = db.PrepareContext(ctx, getUserVerificationByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserVerificationByUserID: %w", err)
 	}
+	if q.getUsernameByIDStmt, err = db.PrepareContext(ctx, getUsernameByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUsernameByID: %w", err)
+	}
 	if q.getUsersListDescStmt, err = db.PrepareContext(ctx, getUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUsersListDesc: %w", err)
 	}
@@ -272,6 +275,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserVerificationByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.getUsernameByIDStmt != nil {
+		if cerr := q.getUsernameByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUsernameByIDStmt: %w", cerr)
+		}
+	}
 	if q.getUsersListDescStmt != nil {
 		if cerr := q.getUsersListDescStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUsersListDescStmt: %w", cerr)
@@ -411,6 +419,7 @@ type Queries struct {
 	getUserIDsOnTheSameDeviceStmt       *sql.Stmt
 	getUserVerificationByEmailStmt      *sql.Stmt
 	getUserVerificationByUserIDStmt     *sql.Stmt
+	getUsernameByIDStmt                 *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
 	getVerifiedUsersListDescStmt        *sql.Stmt
 	getWhitelistStmt                    *sql.Stmt
@@ -457,6 +466,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserIDsOnTheSameDeviceStmt:       q.getUserIDsOnTheSameDeviceStmt,
 		getUserVerificationByEmailStmt:      q.getUserVerificationByEmailStmt,
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
+		getUsernameByIDStmt:                 q.getUsernameByIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
 		getWhitelistStmt:                    q.getWhitelistStmt,

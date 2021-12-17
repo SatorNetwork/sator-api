@@ -26,7 +26,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
-	authClient "github.com/SatorNetwork/sator-api/svc/auth/client"
+	authc "github.com/SatorNetwork/sator-api/svc/auth/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
@@ -237,7 +237,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("authRepo error: %v", err)
 	}
-	var authClient *authClient.Client
+	authClient := authc.New(authRepository)
 
 	// Init JWT parser middleware
 	// not depends on transport
