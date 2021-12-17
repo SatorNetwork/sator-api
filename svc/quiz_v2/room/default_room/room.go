@@ -102,10 +102,6 @@ LOOP:
 	for {
 		select {
 		case p := <-r.newPlayersChan:
-			// TODO(evg): we need proper mechanism to wait until user starts to listen messages
-			// accumulate messages on our side until nats connection will set up by user?
-			//time.Sleep(time.Second)
-
 			r.sendMessagesForNewPlayers(p)
 			r.sendPlayerIsJoinedMessage(p)
 
