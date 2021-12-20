@@ -171,6 +171,19 @@ func (q *Queries) GetNotSanitizedUsersListDesc(ctx context.Context, arg GetNotSa
 	return items, nil
 }
 
+const getPublicKey = `-- name: GetPublicKey :one
+SELECT public_key
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetPublicKey(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+	row := q.queryRow(ctx, q.getPublicKeyStmt, getPublicKey, id)
+	var public_key sql.NullString
+	err := row.Scan(&public_key)
+	return public_key, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
 FROM users

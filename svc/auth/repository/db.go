@@ -76,6 +76,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getNotSanitizedUsersListDescStmt, err = db.PrepareContext(ctx, getNotSanitizedUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNotSanitizedUsersListDesc: %w", err)
 	}
+	if q.getPublicKeyStmt, err = db.PrepareContext(ctx, getPublicKey); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPublicKey: %w", err)
+	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
 	}
@@ -241,6 +244,11 @@ func (q *Queries) Close() error {
 	if q.getNotSanitizedUsersListDescStmt != nil {
 		if cerr := q.getNotSanitizedUsersListDescStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getNotSanitizedUsersListDescStmt: %w", cerr)
+		}
+	}
+	if q.getPublicKeyStmt != nil {
+		if cerr := q.getPublicKeyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPublicKeyStmt: %w", cerr)
 		}
 	}
 	if q.getUserByEmailStmt != nil {
@@ -420,6 +428,7 @@ type Queries struct {
 	getBlacklistByRestrictedValueStmt   *sql.Stmt
 	getKYCStatusStmt                    *sql.Stmt
 	getNotSanitizedUsersListDescStmt    *sql.Stmt
+	getPublicKeyStmt                    *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
 	getUserBySanitizedEmailStmt         *sql.Stmt
@@ -468,6 +477,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getBlacklistByRestrictedValueStmt:   q.getBlacklistByRestrictedValueStmt,
 		getKYCStatusStmt:                    q.getKYCStatusStmt,
 		getNotSanitizedUsersListDescStmt:    q.getNotSanitizedUsersListDescStmt,
+		getPublicKeyStmt:                    q.getPublicKeyStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
 		getUserBySanitizedEmailStmt:         q.getUserBySanitizedEmailStmt,

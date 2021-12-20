@@ -106,6 +106,7 @@ type (
 		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 
 		UpdatePublicKey(ctx context.Context, arg repository.UpdatePublicKeyParams) error
+		GetPublicKey(ctx context.Context, id uuid.UUID) (sql.NullString, error)
 	}
 
 	mailer interface {
@@ -1351,4 +1352,17 @@ func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publi
 	// TODO(evg): check that caller is an owner of the private key?
 
 	return nil
+}
+
+func (s *Service) GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error) {
+	encodedPublicKey, err := s.ur.GetPublicKey(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("can't get public key by user's uid(%v): %v\n", userID, err)
+	}
+	if !encodedPublicKey.Valid {
+		return nil, ErrPublicKeyIsNotRegistered
+	}
+	publicKey := internal_rsa.BytesToPublicKey([]byte(encodedPublicKey.String))
+
+	return publicKey, nil
 }
