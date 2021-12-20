@@ -237,7 +237,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("authRepo error: %v", err)
 	}
-	authClient := authc.New(authRepository)
 
 	// Init JWT parser middleware
 	// not depends on transport
@@ -329,27 +328,32 @@ func main() {
 		logger,
 	))
 
+	var authClient *authc.Client
 	{
 		// KYC
 		kycService := sumsub.New(appToken, appSecret, baseURL, ttl)
 		kycClient := sumsub.NewClient(kycService)
 
+		authService := auth.NewService(
+			jwtInteractor,
+			authRepository,
+			walletSvcClient,
+			invitationsClient,
+			kycClient,
+			auth.WithMasterOTPCode(masterOTPHash),
+			auth.WithCustomOTPLength(otpLength),
+			auth.WithMailService(mailer),
+		)
+
 		// Auth service
 		{
 			r.Mount("/auth", auth.MakeHTTPHandler(
-				auth.MakeEndpoints(auth.NewService(
-					jwtInteractor,
-					authRepository,
-					walletSvcClient,
-					invitationsClient,
-					kycClient,
-					auth.WithMasterOTPCode(masterOTPHash),
-					auth.WithCustomOTPLength(otpLength),
-					auth.WithMailService(mailer),
-				), jwtMdw),
+				auth.MakeEndpoints(authService, jwtMdw),
 				logger,
 			))
 		}
+
+		authClient = authc.New(authService)
 	}
 
 	// Profile service
@@ -519,7 +523,7 @@ func main() {
 	}
 
 	{
-		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient)
+		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, authClient)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
 			logger,

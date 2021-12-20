@@ -2,6 +2,7 @@ package quiz_v2
 
 import (
 	"context"
+	"crypto/rsa"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -20,15 +21,21 @@ type (
 		natsURL    string
 		natsWSURL  string
 		challenges quiz_v2_challenge.ChallengesService
+		ac         authClient
+	}
+
+	authClient interface {
+		GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error)
 	}
 )
 
-func NewService(natsURL, natsWSURL string, challenges quiz_v2_challenge.ChallengesService) *Service {
+func NewService(natsURL, natsWSURL string, challenges quiz_v2_challenge.ChallengesService, ac authClient) *Service {
 	s := &Service{
 		engine:     engine.New(challenges),
 		natsURL:    natsURL,
 		natsWSURL:  natsWSURL,
 		challenges: challenges,
+		ac:         ac,
 	}
 
 	return s
@@ -59,7 +66,20 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	recvMessageSubj := fmt.Sprintf("%v/%v", prefix, "recv")
 	sendMessageSubj := fmt.Sprintf("%v/%v", prefix, "send")
 
-	player, err := nats_player.NewNatsPlayer(uid.String(), challengeID.String(), username, s.natsURL, recvMessageSubj, sendMessageSubj)
+	publicKey, err := s.ac.GetPublicKey(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	player, err := nats_player.NewNatsPlayer(
+		uid.String(),
+		challengeID.String(),
+		username,
+		s.natsURL,
+		recvMessageSubj,
+		sendMessageSubj,
+		publicKey,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create nats player")
 	}

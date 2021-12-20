@@ -1,7 +1,9 @@
 package nats_player
 
 import (
+	"crypto/rsa"
 	"encoding/json"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/rsa"
 	"log"
 	"sync"
 	"time"
@@ -39,12 +41,22 @@ type natsPlayer struct {
 	connectChan              chan struct{}
 	disconnectChan           chan struct{}
 
+	playerPublicKey *rsa.PublicKey
+
 	done chan struct{}
 
 	nc *nats.Conn
 }
 
-func NewNatsPlayer(userID, challengeID, username, natsURL, sendMessageSubj, recvMessageSubj string) (player.Player, error) {
+func NewNatsPlayer(
+	userID string,
+	challengeID string,
+	username string,
+	natsURL string,
+	sendMessageSubj string,
+	recvMessageSubj string,
+	playerPublicKey *rsa.PublicKey,
+) (player.Player, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
 	nc, err := nats.Connect(natsURL)
@@ -68,6 +80,8 @@ func NewNatsPlayer(userID, challengeID, username, natsURL, sendMessageSubj, recv
 		lastUserIsActiveMsgMutex: &sync.Mutex{},
 		connectChan:              make(chan struct{}, defaultChanBuffSize),
 		disconnectChan:           make(chan struct{}, defaultChanBuffSize),
+
+		playerPublicKey: playerPublicKey,
 
 		done: make(chan struct{}),
 
@@ -155,11 +169,6 @@ func (p *natsPlayer) Close() error {
 }
 
 func (p *natsPlayer) SendMessage(msg *message.Message) error {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
 	if p.st.GetStatus() == status_transactor.UndefinedStatus {
 		p.outgoingMessagesBufferMtx.Lock()
 		p.outgoingMessagesBuffer = append(p.outgoingMessagesBuffer, msg)
@@ -167,7 +176,17 @@ func (p *natsPlayer) SendMessage(msg *message.Message) error {
 		return nil
 	}
 
-	if err := p.nc.Publish(p.sendMessageSubj, data); err != nil {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	encryptedData, err := internal_rsa.EncryptWithPublicKey(data, p.playerPublicKey)
+	if err != nil {
+		return errors.Wrapf(err, "can't encrypt message with player's public key")
+	}
+
+	if err := p.nc.Publish(p.sendMessageSubj, encryptedData); err != nil {
 		return err
 	}
 
