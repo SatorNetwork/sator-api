@@ -1339,16 +1339,18 @@ func (s *Service) GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, e
 }
 
 func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publicKey *rsa.PublicKey) error {
-	publicKeyBytes := internal_rsa.PublicKeyToBytes(publicKey)
+	publicKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
+	if err != nil {
+		return fmt.Errorf("can't serialize public key to bytes: %v\n", err)
+	}
 
-	err := s.ur.UpdatePublicKey(ctx, repository.UpdatePublicKeyParams{
+	err = s.ur.UpdatePublicKey(ctx, repository.UpdatePublicKeyParams{
 		PublicKey: string(publicKeyBytes),
 		ID:        userID,
 	})
 	if err != nil {
 		return fmt.Errorf("can't update public key: %v\n", err)
 	}
-
 	// TODO(evg): check that caller is an owner of the private key?
 
 	return nil
@@ -1362,7 +1364,10 @@ func (s *Service) GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.Publ
 	if !encodedPublicKey.Valid {
 		return nil, ErrPublicKeyIsNotRegistered
 	}
-	publicKey := internal_rsa.BytesToPublicKey([]byte(encodedPublicKey.String))
+	publicKey, err := internal_rsa.BytesToPublicKey([]byte(encodedPublicKey.String))
+	if err != nil {
+		return nil, fmt.Errorf("can't deserialize bytes to public key: %v\n", err)
+	}
 
 	return publicKey, nil
 }
