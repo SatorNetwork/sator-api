@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rsa"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/rsa"
 	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
@@ -102,6 +104,8 @@ type (
 		// KYC
 		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
 		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
+
+		UpdatePublicKey(ctx context.Context, arg repository.UpdatePublicKeyParams) error
 	}
 
 	mailer interface {
@@ -1331,4 +1335,20 @@ func (s *Service) GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, e
 	}
 
 	return user.Username, nil
+}
+
+func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publicKey *rsa.PublicKey) error {
+	publicKeyBytes := internal_rsa.PublicKeyToBytes(publicKey)
+
+	err := s.ur.UpdatePublicKey(ctx, repository.UpdatePublicKeyParams{
+		PublicKey: string(publicKeyBytes),
+		ID:        userID,
+	})
+	if err != nil {
+		return fmt.Errorf("can't update public key: %v\n", err)
+	}
+
+	// TODO(evg): check that caller is an owner of the private key?
+
+	return nil
 }
