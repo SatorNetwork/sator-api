@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"fmt"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/rsa"
 	"net/url"
 	"strings"
 
@@ -57,6 +59,8 @@ type (
 
 		GetUserStatus        endpoint.Endpoint
 		VerificationCallback endpoint.Endpoint
+
+		RegisterPublicKey endpoint.Endpoint
 	}
 
 	authService interface {
@@ -97,7 +101,11 @@ type (
 
 		GetUserStatus(ctx context.Context, email string) (UserStatus, error)
 		VerificationCallback(ctx context.Context, userID uuid.UUID) error
+
+		RegisterPublicKey(ctx context.Context, userID uuid.UUID, publicKey *rsa.PublicKey) error
 	}
+
+	Empty struct{}
 
 	// AccessToken struct
 	AccessToken struct {
@@ -204,6 +212,10 @@ type (
 	GetUserStatusRequest struct {
 		Email string `json:"email" validate:"required,email"`
 	}
+
+	RegisterPublicKeyRequest struct {
+		PublicKey string `json:"public_key"`
+	}
 )
 
 // MakeEndpoints ...
@@ -246,6 +258,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 
 		GetUserStatus:        jwtMdw(MakeGetUserStatusEndpoint(as, validateFunc)),
 		VerificationCallback: MakeVerificationCallbackEndpoint(as),
+
+		RegisterPublicKey: jwtMdw(MakeRegisterPublicKeyEndpoint(as)),
 	}
 
 	if len(m) > 0 {
@@ -283,6 +297,8 @@ func MakeEndpoints(as authService, jwtMdw endpoint.Middleware, m ...endpoint.Mid
 
 			e.GetAccessTokenByUserID = mdw(e.GetAccessTokenByUserID)
 			e.VerificationCallback = mdw(e.VerificationCallback)
+
+			e.RegisterPublicKey = mdw(e.RegisterPublicKey)
 		}
 	}
 
@@ -881,5 +897,28 @@ func MakeVerificationCallbackEndpoint(s authService) endpoint.Endpoint {
 		}
 
 		return true, nil
+	}
+}
+
+func MakeRegisterPublicKeyEndpoint(s authService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		req, ok := request.(RegisterPublicKeyRequest)
+		if !ok {
+			return nil, fmt.Errorf("expected %T type, got %T", RegisterPublicKeyRequest{}, req)
+		}
+		publicKey, err := internal_rsa.BytesToPublicKey([]byte(req.PublicKey))
+		if err != nil {
+			return nil, err
+		}
+		if err := s.RegisterPublicKey(ctx, uid, publicKey); err != nil {
+			return nil, err
+		}
+
+		return new(Empty), nil
 	}
 }
