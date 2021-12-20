@@ -1259,6 +1259,16 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 	}
 
 	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusGreen {
+		if resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusRetry {
+			err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+				KycStatus: sumsub.KYCStatusRetry,
+				ID:        userID,
+			})
+			if err != nil {
+				return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+			}
+		}
+
 		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
 			KycStatus: sumsub.KYCStatusApproved,
 			ID:        userID,
