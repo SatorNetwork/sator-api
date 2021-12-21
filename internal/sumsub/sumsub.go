@@ -2,6 +2,7 @@ package sumsub
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,10 +11,28 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+)
+
+// Predefined KYC statuses.
+const (
+	BasicKYCLevel = "basic-kyc-level"
+
+	KYCProviderStatusGreen   = "GREEN"
+	KYCProviderStatusRed     = "RED"
+	KYCProviderStatusFinal   = "FINAL"
+	KYCProviderStatusRetry   = "RETRY"
+	KYCProviderStatusPending = "pending"
+	KYCProviderStatusInit    = "init"
+
+	KYCStatusApproved    = "approved"
+	KYCStatusRejected    = "rejected"
+	KYCStatusInit        = "init"
+	KYCStatusInProgress  = "in_progress"
+	KYCStatusRetry       = "retry"
+	KYCStatusNotVerified = "verification_needed"
 )
 
 // Service is a sumsub facade
@@ -21,19 +40,21 @@ type Service struct {
 	appToken  string
 	appSecret string
 	baseURL   string
+	ttl       int
 }
 
 // New creates new sumsub facade
-func New(appToken, appSecret, baseURL string) *Service {
+func New(appToken, appSecret, baseURL string, ttl int) *Service {
 	return &Service{
 		appToken:  appToken,
 		appSecret: appSecret,
 		baseURL:   baseURL,
+		ttl:       ttl,
 	}
 }
 
 // GetSDKAccessToken returns access token for web or mobile SDKs
-func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction string, ttl int) (string, error) {
+func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction, levelName string) (string, error) {
 	path := "/resources/accessTokens"
 
 	params := url.Values{}
@@ -47,10 +68,11 @@ func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction 
 		params.Add("externalActionId", externalAction)
 	}
 
-	if ttl <= 0 {
-		ttl = 900
+	if levelName != "" {
+		params.Add("levelName", levelName)
 	}
-	params.Add("ttlInSecs", fmt.Sprint(ttl))
+
+	params.Add("ttlInSecs", fmt.Sprint(s.ttl))
 
 	type responseSDKAccessToken struct {
 		Token  string `json:"token"`
@@ -71,14 +93,14 @@ func (s *Service) GetSDKAccessToken(applicantID, externalUserID, externalAction 
 	return resp.Token, nil
 }
 
-// GetSDKAccessToken returns access token for web or mobile SDKs by applicant id
-func (s *Service) GetSDKAccessTokenByApplicantID(applicantID string, ttl int) (string, error) {
-	return s.GetSDKAccessToken(applicantID, "", "", ttl)
+// GetSDKAccessTokenByApplicantID returns access token for web or mobile SDKs by applicant id
+func (s *Service) GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error) {
+	return s.GetSDKAccessToken(applicantID, "", "", BasicKYCLevel)
 }
 
-// GetSDKAccessToken returns access token for web or mobile SDKs by user id
-func (s *Service) GetSDKAccessTokenByUserID(userID string, ttl int) (string, error) {
-	return s.GetSDKAccessToken("", userID, "", ttl)
+// GetSDKAccessTokenByUserID returns access token for web or mobile SDKs by user id
+func (s *Service) GetSDKAccessTokenByUserID(ctx context.Context, userID, levelName string) (string, error) {
+	return s.GetSDKAccessToken("", userID, "", levelName)
 }
 
 // Get returns sumsub response for applicant
@@ -105,7 +127,7 @@ func (s *Service) Get(applicantID string) (*Response, error) {
 }
 
 // GetByExternalUserID returns sumsub response for applicant by externalUserID
-func (s *Service) GetByExternalUserID(externalUserID uuid.UUID) (*Response, error) {
+func (s *Service) GetByExternalUserID(ctx context.Context, externalUserID uuid.UUID) (*Response, error) {
 	path := "/resources/applicants/-;externalUserId=" + externalUserID.String()
 
 	type responseStruct struct {
@@ -263,58 +285,58 @@ func (s *Service) TestStatus(applicantID string, body map[string]interface{}) er
 	return s.jsonRequest(http.MethodPost, path, doc, nil)
 }
 
-func (s *Service) getApprovedDocuments(applicantID, reviewID string) (map[string][]byte, error) {
-	data, err := s.GetRequiredDocumentStatus(applicantID)
-	if err != nil {
-		return nil, err
-	}
+// func (s *Service) getApprovedDocuments(applicantID, reviewID string) (map[string][]byte, error) {
+// 	data, err := s.GetRequiredDocumentStatus(applicantID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	documentList := map[string][]byte{}
-	for key, value := range data {
-		if value.ReviewResult.ReviewAnswer != "GREEN" {
-			continue
-		}
-		documents := value.ImageReviewResults
+// 	documentList := map[string][]byte{}
+// 	for key, value := range data {
+// 		if value.ReviewResult.ReviewAnswer != "GREEN" {
+// 			continue
+// 		}
+// 		documents := value.ImageReviewResults
 
-		for docID, imageReview := range documents {
-			if imageReview.ReviewAnswer != "GREEN" {
-				continue
-			}
+// 		for docID, imageReview := range documents {
+// 			if imageReview.ReviewAnswer != "GREEN" {
+// 				continue
+// 			}
 
-			review, format, err := s.getReviewResult(reviewID, docID)
-			if err != nil {
-				return nil, err
-			}
-			documentList[key+format] = review
-		}
-	}
-	return documentList, nil
-}
+// 			review, format, err := s.getReviewResult(reviewID, docID)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			documentList[key+format] = review
+// 		}
+// 	}
+// 	return documentList, nil
+// }
 
-func (s Service) getReviewResult(reviewID, docID string) ([]byte, string, error) {
-	pathID := "/resources/inspections/" + reviewID + "/resources/" + docID
-	methodID := "GET"
-	timestampID := fmt.Sprint(time.Now().UTC().Unix())
+// func (s Service) getReviewResult(reviewID, docID string) ([]byte, string, error) {
+// 	pathID := "/resources/inspections/" + reviewID + "/resources/" + docID
+// 	methodID := "GET"
+// 	timestampID := fmt.Sprint(time.Now().UTC().Unix())
 
-	resp, err := s.sendRequest(timestampID, methodID, pathID, "application/json", nil)
-	if err != nil {
-		return nil, "", err
-	}
-	defer resp.Body.Close()
+// 	resp, err := s.sendRequest(timestampID, methodID, pathID, "application/json", nil)
+// 	if err != nil {
+// 		return nil, "", err
+// 	}
+// 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		errCode, _ := ioutil.ReadAll(resp.Body)
-		return nil, "", fmt.Errorf("can't get kyc document image, error code=%v", errCode)
-	}
+// 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+// 		errCode, _ := ioutil.ReadAll(resp.Body)
+// 		return nil, "", fmt.Errorf("can't get kyc document image, error code=%v", errCode)
+// 	}
 
-	contentType := strings.Split(resp.Header.Get("Content-Type"), "/")
-	format := ""
-	if len(contentType) > 0 {
-		format = "." + contentType[len(contentType)-1]
-	}
-	res, err := ioutil.ReadAll(resp.Body)
-	return res, format, err
-}
+// 	contentType := strings.Split(resp.Header.Get("Content-Type"), "/")
+// 	format := ""
+// 	if len(contentType) > 0 {
+// 		format = "." + contentType[len(contentType)-1]
+// 	}
+// 	res, err := ioutil.ReadAll(resp.Body)
+// 	return res, format, err
+// }
 
 func sumSubApplicantFromMap(data map[string]interface{}) Applicant {
 	result := Applicant{}

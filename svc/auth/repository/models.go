@@ -27,6 +27,7 @@ type User struct {
 	BlockReason    sql.NullString `json:"block_reason"`
 	SanitizedEmail sql.NullString `json:"sanitized_email"`
 	EmailHash      sql.NullString `json:"email_hash"`
+	KycStatus      sql.NullString `json:"kyc_status"`
 }
 
 type UserVerification struct {

@@ -61,11 +61,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.destroyUserStmt, err = db.PrepareContext(ctx, destroyUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DestroyUser: %w", err)
 	}
+	if q.doesUserHaveMoreThanOneAccountStmt, err = db.PrepareContext(ctx, doesUserHaveMoreThanOneAccount); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserHaveMoreThanOneAccount: %w", err)
+	}
 	if q.getBlacklistStmt, err = db.PrepareContext(ctx, getBlacklist); err != nil {
 		return nil, fmt.Errorf("error preparing query GetBlacklist: %w", err)
 	}
 	if q.getBlacklistByRestrictedValueStmt, err = db.PrepareContext(ctx, getBlacklistByRestrictedValue); err != nil {
 		return nil, fmt.Errorf("error preparing query GetBlacklistByRestrictedValue: %w", err)
+	}
+	if q.getKYCStatusStmt, err = db.PrepareContext(ctx, getKYCStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query GetKYCStatus: %w", err)
 	}
 	if q.getNotSanitizedUsersListDescStmt, err = db.PrepareContext(ctx, getNotSanitizedUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNotSanitizedUsersListDesc: %w", err)
@@ -91,6 +97,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserVerificationByUserIDStmt, err = db.PrepareContext(ctx, getUserVerificationByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserVerificationByUserID: %w", err)
 	}
+	if q.getUsernameByIDStmt, err = db.PrepareContext(ctx, getUsernameByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUsernameByID: %w", err)
+	}
 	if q.getUsersListDescStmt, err = db.PrepareContext(ctx, getUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUsersListDesc: %w", err)
 	}
@@ -114,6 +123,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.linkDeviceToUserStmt, err = db.PrepareContext(ctx, linkDeviceToUser); err != nil {
 		return nil, fmt.Errorf("error preparing query LinkDeviceToUser: %w", err)
+	}
+	if q.updateKYCStatusStmt, err = db.PrepareContext(ctx, updateKYCStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateKYCStatus: %w", err)
 	}
 	if q.updateUserEmailStmt, err = db.PrepareContext(ctx, updateUserEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserEmail: %w", err)
@@ -203,6 +215,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing destroyUserStmt: %w", cerr)
 		}
 	}
+	if q.doesUserHaveMoreThanOneAccountStmt != nil {
+		if cerr := q.doesUserHaveMoreThanOneAccountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserHaveMoreThanOneAccountStmt: %w", cerr)
+		}
+	}
 	if q.getBlacklistStmt != nil {
 		if cerr := q.getBlacklistStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getBlacklistStmt: %w", cerr)
@@ -211,6 +228,11 @@ func (q *Queries) Close() error {
 	if q.getBlacklistByRestrictedValueStmt != nil {
 		if cerr := q.getBlacklistByRestrictedValueStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getBlacklistByRestrictedValueStmt: %w", cerr)
+		}
+	}
+	if q.getKYCStatusStmt != nil {
+		if cerr := q.getKYCStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getKYCStatusStmt: %w", cerr)
 		}
 	}
 	if q.getNotSanitizedUsersListDescStmt != nil {
@@ -253,6 +275,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserVerificationByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.getUsernameByIDStmt != nil {
+		if cerr := q.getUsernameByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUsernameByIDStmt: %w", cerr)
+		}
+	}
 	if q.getUsersListDescStmt != nil {
 		if cerr := q.getUsersListDescStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUsersListDescStmt: %w", cerr)
@@ -291,6 +318,11 @@ func (q *Queries) Close() error {
 	if q.linkDeviceToUserStmt != nil {
 		if cerr := q.linkDeviceToUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing linkDeviceToUserStmt: %w", cerr)
+		}
+	}
+	if q.updateKYCStatusStmt != nil {
+		if cerr := q.updateKYCStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateKYCStatusStmt: %w", cerr)
 		}
 	}
 	if q.updateUserEmailStmt != nil {
@@ -375,8 +407,10 @@ type Queries struct {
 	deleteUserVerificationsByEmailStmt  *sql.Stmt
 	deleteUserVerificationsByUserIDStmt *sql.Stmt
 	destroyUserStmt                     *sql.Stmt
+	doesUserHaveMoreThanOneAccountStmt  *sql.Stmt
 	getBlacklistStmt                    *sql.Stmt
 	getBlacklistByRestrictedValueStmt   *sql.Stmt
+	getKYCStatusStmt                    *sql.Stmt
 	getNotSanitizedUsersListDescStmt    *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
@@ -385,6 +419,7 @@ type Queries struct {
 	getUserIDsOnTheSameDeviceStmt       *sql.Stmt
 	getUserVerificationByEmailStmt      *sql.Stmt
 	getUserVerificationByUserIDStmt     *sql.Stmt
+	getUsernameByIDStmt                 *sql.Stmt
 	getUsersListDescStmt                *sql.Stmt
 	getVerifiedUsersListDescStmt        *sql.Stmt
 	getWhitelistStmt                    *sql.Stmt
@@ -393,6 +428,7 @@ type Queries struct {
 	isEmailWhitelistedStmt              *sql.Stmt
 	isUserDisabledStmt                  *sql.Stmt
 	linkDeviceToUserStmt                *sql.Stmt
+	updateKYCStatusStmt                 *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserSanitizedEmailStmt        *sql.Stmt
@@ -418,8 +454,10 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteUserVerificationsByEmailStmt:  q.deleteUserVerificationsByEmailStmt,
 		deleteUserVerificationsByUserIDStmt: q.deleteUserVerificationsByUserIDStmt,
 		destroyUserStmt:                     q.destroyUserStmt,
+		doesUserHaveMoreThanOneAccountStmt:  q.doesUserHaveMoreThanOneAccountStmt,
 		getBlacklistStmt:                    q.getBlacklistStmt,
 		getBlacklistByRestrictedValueStmt:   q.getBlacklistByRestrictedValueStmt,
+		getKYCStatusStmt:                    q.getKYCStatusStmt,
 		getNotSanitizedUsersListDescStmt:    q.getNotSanitizedUsersListDescStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
@@ -428,6 +466,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserIDsOnTheSameDeviceStmt:       q.getUserIDsOnTheSameDeviceStmt,
 		getUserVerificationByEmailStmt:      q.getUserVerificationByEmailStmt,
 		getUserVerificationByUserIDStmt:     q.getUserVerificationByUserIDStmt,
+		getUsernameByIDStmt:                 q.getUsernameByIDStmt,
 		getUsersListDescStmt:                q.getUsersListDescStmt,
 		getVerifiedUsersListDescStmt:        q.getVerifiedUsersListDescStmt,
 		getWhitelistStmt:                    q.getWhitelistStmt,
@@ -436,6 +475,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		isEmailWhitelistedStmt:              q.isEmailWhitelistedStmt,
 		isUserDisabledStmt:                  q.isUserDisabledStmt,
 		linkDeviceToUserStmt:                q.linkDeviceToUserStmt,
+		updateKYCStatusStmt:                 q.updateKYCStatusStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserSanitizedEmailStmt:        q.updateUserSanitizedEmailStmt,

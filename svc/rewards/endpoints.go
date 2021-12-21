@@ -35,11 +35,11 @@ type (
 	}
 )
 
-func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
+func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		ClaimRewards:     MakeClaimRewardsEndpoint(s),
+		ClaimRewards:     kycMdw(MakeClaimRewardsEndpoint(s)),
 		GetRewardsWallet: MakeGetRewardsWalletEndpoint(s),
 		GetTransactions:  MakeGetTransactionsEndpoint(s, validateFunc),
 	}

@@ -2,13 +2,12 @@ name: Go
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [quiz-v2, refactor-quiz-engine-v2]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:

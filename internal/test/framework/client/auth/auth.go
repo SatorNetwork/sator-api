@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
 )
 
 const (
@@ -19,7 +22,7 @@ const (
 
 type AuthClient struct{}
 
-func NewAuthClient() *AuthClient {
+func New() *AuthClient {
 	return new(AuthClient)
 }
 
@@ -58,11 +61,6 @@ func RandomSignUpRequest() *SignUpRequest {
 	}
 }
 
-// TODO(evg): avoid code duplication
-func IsStatusCodeSuccess(code int) bool {
-	return code >= http.StatusOK && code < 300
-}
-
 func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
 	url := "http://localhost:8080/auth/login"
 	body, err := json.Marshal(req)
@@ -82,7 +80,7 @@ func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -105,6 +103,7 @@ func (a *AuthClient) SignUp(req *SignUpRequest) (*SignUpResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")
 	}
+	httpReq.Header.Set("Device-ID", uuid.New().String())
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't make http request")
@@ -113,7 +112,7 @@ func (a *AuthClient) SignUp(req *SignUpRequest) (*SignUpResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
@@ -145,7 +144,7 @@ func (a *AuthClient) VerifyAcount(accessToken string, req *VerifyAccountRequest)
 	if err != nil {
 		return errors.Wrap(err, "can't read response body")
 	}
-	if !IsStatusCodeSuccess(httpResp.StatusCode) {
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 

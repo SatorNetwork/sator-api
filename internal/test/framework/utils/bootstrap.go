@@ -11,6 +11,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/accounts"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
 )
 
 var bootstrapLock = &sync.Mutex{}
@@ -27,7 +28,16 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 		return nil
 	}
 
-	return Bootstrap(ctx, t)
+	if err := Bootstrap(ctx, t); err != nil {
+		return err
+	}
+
+	c := client.NewClient()
+	if err := c.DB.Bootstrap(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func CheckIfBootstrapNeeded(ctx context.Context) (bool, error) {

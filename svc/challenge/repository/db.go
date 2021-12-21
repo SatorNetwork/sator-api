@@ -85,6 +85,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getChallengeByIDStmt, err = db.PrepareContext(ctx, getChallengeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallengeByID: %w", err)
 	}
+	if q.getChallengeByTitleStmt, err = db.PrepareContext(ctx, getChallengeByTitle); err != nil {
+		return nil, fmt.Errorf("error preparing query GetChallengeByTitle: %w", err)
+	}
 	if q.getChallengeReceivedRewardAmountStmt, err = db.PrepareContext(ctx, getChallengeReceivedRewardAmount); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallengeReceivedRewardAmount: %w", err)
 	}
@@ -243,6 +246,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getChallengeByIDStmt: %w", cerr)
 		}
 	}
+	if q.getChallengeByTitleStmt != nil {
+		if cerr := q.getChallengeByTitleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getChallengeByTitleStmt: %w", cerr)
+		}
+	}
 	if q.getChallengeReceivedRewardAmountStmt != nil {
 		if cerr := q.getChallengeReceivedRewardAmountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getChallengeReceivedRewardAmountStmt: %w", cerr)
@@ -383,6 +391,7 @@ type Queries struct {
 	getAskedQuestionsByEpisodeIDStmt             *sql.Stmt
 	getChallengeByEpisodeIDStmt                  *sql.Stmt
 	getChallengeByIDStmt                         *sql.Stmt
+	getChallengeByTitleStmt                      *sql.Stmt
 	getChallengeReceivedRewardAmountStmt         *sql.Stmt
 	getChallengeReceivedRewardAmountByUserIDStmt *sql.Stmt
 	getChallengesStmt                            *sql.Stmt
@@ -426,6 +435,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAskedQuestionsByEpisodeIDStmt:             q.getAskedQuestionsByEpisodeIDStmt,
 		getChallengeByEpisodeIDStmt:                  q.getChallengeByEpisodeIDStmt,
 		getChallengeByIDStmt:                         q.getChallengeByIDStmt,
+		getChallengeByTitleStmt:                      q.getChallengeByTitleStmt,
 		getChallengeReceivedRewardAmountStmt:         q.getChallengeReceivedRewardAmountStmt,
 		getChallengeReceivedRewardAmountByUserIDStmt: q.getChallengeReceivedRewardAmountByUserIDStmt,
 		getChallengesStmt:                            q.getChallengesStmt,

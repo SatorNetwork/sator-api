@@ -34,11 +34,11 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 		// 		recipientPublicKey,
 		// 		common.PublicKeyFromString(assetAddr),
 		// 	))
-		res, err := c.CreateAccountWithATA(ctx, assetAddr, recipientPublicKey.ToBase58(), feePayer)
+		_, err := c.CreateAccountWithATA(ctx, assetAddr, recipientPublicKey.ToBase58(), feePayer)
 		if err != nil {
-			return "", fmt.Errorf("CreateAccountWithATA: %w", err)
+			// return "", fmt.Errorf("CreateAccountWithATA: %w", err)
+			log.Printf("CreateAccountWithATA: %v", err)
 		}
-		log.Printf("CreateAccountWithATA: %s", res)
 	}
 
 	instructions = append(instructions, tokenprog.TransferChecked(
@@ -82,11 +82,11 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 		// 		common.PublicKeyFromString(assetAddr),
 		// 	))
 
-		res, err := c.CreateAccountWithATA(ctx, assetAddr, recipientPublicKey.ToBase58(), feePayer)
+		_, err := c.CreateAccountWithATA(ctx, assetAddr, recipientPublicKey.ToBase58(), feePayer)
 		if err != nil {
-			return "", fmt.Errorf("CreateAccountWithATA: %w", err)
+			// return "", fmt.Errorf("CreateAccountWithATA: %w", err)
+			log.Printf("CreateAccountWithATA: %v", err)
 		}
-		log.Printf("CreateAccountWithATA: %s", res)
 	}
 
 	instructions = append(instructions, tokenprog.TransferChecked(

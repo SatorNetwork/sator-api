@@ -15,7 +15,9 @@ INSERT INTO ratings (
     @episode_id,
     @user_id,
     @rating
-);
+) ON CONFLICT (episode_id, user_id) DO
+UPDATE SET
+    rating = EXCLUDED.rating;
 
 -- name: ReviewEpisode :exec
 INSERT INTO ratings (

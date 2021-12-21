@@ -463,7 +463,7 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	}
 
 	if bal < s.minAmountToTransfer {
-		return PreparedTransferTransaction{}, fmt.Errorf("%w: %.2f", ErrNotEnoughBalance, s.minAmountToTransfer)
+		return PreparedTransferTransaction{}, fmt.Errorf("%w: %.2f", ErrMinimalAmountToSend, s.minAmountToTransfer)
 	}
 
 	var toEncode struct {
@@ -517,12 +517,21 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64) error {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
-		return fmt.Errorf("could not get wallet: %w", err)
+		return fmt.Errorf("could not get solana account: %w", err)
 	}
 
 	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
 	if err != nil {
 		return fmt.Errorf("could not get solana account: %w", err)
+	}
+
+	balance, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, solanaAcc.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not get current balance: %w", err)
+	}
+
+	if balance < amount {
+		return ErrNotEnoughBalance
 	}
 
 	for i := 0; i < 5; i++ {
@@ -539,7 +548,7 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			} else {
 				return fmt.Errorf("transaction: %w", err)
 			}
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 5)
 		} else {
 			log.Printf("successful transaction: %s", tx)
 			break

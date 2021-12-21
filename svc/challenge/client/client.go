@@ -16,6 +16,7 @@ type (
 
 	service interface {
 		GetByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge.Challenge, error)
+		GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.RawChallenge, error)
 		GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error)
@@ -49,6 +50,10 @@ func (c *Client) GetListByShowID(ctx context.Context, showID, userID uuid.UUID, 
 // GetChallengeByID returns Challenge struct
 func (c *Client) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge.Challenge, error) {
 	return c.s.GetByID(ctx, challengeID, userID)
+}
+
+func (c *Client) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.RawChallenge, error) {
+	return c.s.GetRawChallengeByID(ctx, challengeID)
 }
 
 // GetQuestionsByChallengeID returns questions list filtered by challenge id

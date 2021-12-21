@@ -91,7 +91,9 @@ INSERT INTO ratings (
     $1,
     $2,
     $3
-)
+) ON CONFLICT (episode_id, user_id) DO
+UPDATE SET
+    rating = EXCLUDED.rating
 `
 
 type RateEpisodeParams struct {

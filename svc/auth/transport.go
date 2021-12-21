@@ -214,6 +214,27 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/kyc/access_token", httptransport.NewServer(
+		e.GetAccessTokenByUserID,
+		decodeGetAccessTokenByUserID,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/user-status", httptransport.NewServer(
+		e.GetUserStatus,
+		decodeGetUserStatusRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/kyc/callback", httptransport.NewServer(
+		e.VerificationCallback,
+		decodeVerificationCallBack,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -401,4 +422,23 @@ func decodeEditBlacklist(_ context.Context, r *http.Request) (interface{}, error
 	}
 
 	return req, nil
+}
+
+func decodeGetAccessTokenByUserID(ctx context.Context, _ *http.Request) (request interface{}, err error) {
+	return nil, nil
+}
+
+func decodeGetUserStatusRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	return GetUserStatusRequest{
+		Email: r.URL.Query().Get("email"),
+	}, nil
+}
+
+func decodeVerificationCallBack(_ context.Context, r *http.Request) (interface{}, error) {
+	var req VerificationCallbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req.ExternalUserId, nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -29,6 +30,7 @@ type (
 		jwt                   jwtInteractor
 		mail                  mailer
 		ic                    invitationsClient
+		kyc                   kycClient
 		otpLen                int
 		masterCode            string
 		blacklistEmailDomains []string
@@ -42,6 +44,15 @@ type (
 	Blacklist struct {
 		RestrictedType  string `json:"restricted_type"`
 		RestrictedValue string `json:"restricted_value"`
+	}
+
+	UserStatus struct {
+		Email       string `json:"email"`
+		Username    string `json:"username"`
+		IsDisabled  bool   `json:"is_disabled"`
+		BlockReason string `json:"block_reason,omitempty"`
+		IsFinal     bool   `json:"is_final"`
+		KYCStatus   string `json:"kyc_status,omitempty"`
 	}
 
 	// ServiceOption function
@@ -86,6 +97,11 @@ type (
 		GetWhitelistByAllowedValue(ctx context.Context, arg repository.GetWhitelistByAllowedValueParams) ([]repository.Whitelist, error)
 
 		LinkDeviceToUser(ctx context.Context, arg repository.LinkDeviceToUserParams) error
+		DoesUserHaveMoreThanOneAccount(ctx context.Context, userID uuid.UUID) (bool, error)
+
+		// KYC
+		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
+		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
 	}
 
 	mailer interface {
@@ -103,15 +119,26 @@ type (
 		IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error)
 	}
 
+	kycClient interface {
+		GetSDKAccessTokenByApplicantID(ctx context.Context, applicantID string) (string, error)
+		GetSDKAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error)
+		GetByExternalUserID(ctx context.Context, userID uuid.UUID) (*sumsub.Response, error)
+	}
+
 	// JWTs
 	Token struct {
 		AccessToken  string
 		RefreshToken string
 	}
+
+	User struct {
+		ID       uuid.UUID `json:"id"`
+		Username string    `json:"username"`
+	}
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, kyc kycClient, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -124,8 +151,11 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 	if ic == nil {
 		log.Fatalln("invitations client is not set")
 	}
+	if kyc == nil {
+		log.Fatalln("kyc client is not set")
+	}
 
-	s := &Service{jwt: ji, ur: ur, ic: ic, ws: ws, otpLen: 5}
+	s := &Service{jwt: ji, ur: ur, ic: ic, kyc: kyc, ws: ws, otpLen: 5}
 
 	// Set up options.
 	for _, o := range opt {
@@ -1126,4 +1156,181 @@ func (s *Service) DeleteFromBlacklist(ctx context.Context, restrictedType, restr
 	}
 
 	return nil
+}
+
+// GetAccessTokenByUserID returns access token for web or mobile SDKs by user id.
+func (s *Service) GetAccessTokenByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
+	token, err := s.kyc.GetSDKAccessTokenByUserID(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("could not get access token: %w", err)
+	}
+
+	return token, nil
+}
+
+// GetUserStatus returns user status by user email.
+func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, error) {
+	u, err := s.ur.GetUserByEmail(ctx, email)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return UserStatus{}, fmt.Errorf("could not found user with email %s", email)
+		}
+		return UserStatus{}, err
+	}
+
+	var (
+		kycStatus string
+		reason    string
+		isFinal   bool
+	)
+
+	if u.Disabled {
+		if strings.Contains(u.BlockReason.String, "multiple accounts") {
+			reason = "User has multiple accounts"
+			isFinal = true
+		} else if strings.Contains(u.BlockReason.String, "invalid email") {
+			reason = "Invalid email address"
+			isFinal = false
+		} else if strings.Contains(u.BlockReason.String, "frequent rewards") {
+			reason = "Suspicion of fraud"
+			isFinal = false
+		}
+
+		if !isFinal {
+			if yes, _ := s.ur.DoesUserHaveMoreThanOneAccount(ctx, u.ID); yes {
+				reason = fmt.Sprintf("%s. Also, the user has multiple accounts", reason)
+				isFinal = true
+			}
+		}
+	} else {
+		if u.KycStatus.Valid {
+			switch u.KycStatus.String {
+			case sumsub.KYCStatusNotVerified:
+				kycStatus = "Not verified"
+			case sumsub.KYCStatusRetry:
+				kycStatus = "Invalid documents or bad quality of selfie/docs. The user should upload valid documents or/and retake a selfie."
+			case sumsub.KYCStatusApproved:
+				kycStatus = "Verified"
+			case sumsub.KYCStatusRejected:
+				kycStatus = "The user was rejected. It's the final decision and cannot be changed."
+			case sumsub.KYCStatusInProgress:
+				kycStatus = "Verification has not been completed yet."
+			default:
+				kycStatus = "N/A"
+			}
+		}
+	}
+
+	return UserStatus{
+		Email:       u.Email,
+		Username:    u.Username,
+		IsDisabled:  u.Disabled,
+		BlockReason: reason,
+		IsFinal:     isFinal,
+		KYCStatus:   kycStatus,
+	}, nil
+}
+
+// VerificationCallback endpoint for kyc service webhook. And used for store user status.
+func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) error {
+	resp, err := s.kyc.GetByExternalUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not get external user by id: %w", err)
+	}
+
+	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusInit {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusInit,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+
+		return nil
+	}
+
+	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusPending {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusInProgress,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusGreen {
+		if resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusRetry {
+			err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+				KycStatus: sumsub.KYCStatusRetry,
+				ID:        userID,
+			})
+			if err != nil {
+				return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+			}
+		}
+
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusApproved,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusFinal {
+		err := s.ur.UpdateUserStatus(ctx, repository.UpdateUserStatusParams{
+			ID:       userID,
+			Disabled: true,
+			BlockReason: sql.NullString{
+				String: sumsub.KYCRejectLabelsMap()(resp.Review.ReviewResult.RejectLabels),
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("could not block user: %v: %w", userID, err)
+		}
+
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusRejected,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	if resp.Review.ReviewResult.ReviewAnswer == sumsub.KYCProviderStatusRed && resp.Review.ReviewResult.ReviewRejectType == sumsub.KYCProviderStatusRetry {
+		err = s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+			KycStatus: sumsub.KYCStatusRetry,
+			ID:        userID,
+		})
+		if err != nil {
+			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateKYCStatus(ctx context.Context, uid uuid.UUID) error {
+	if err := s.ur.UpdateKYCStatus(ctx, repository.UpdateKYCStatusParams{
+		KycStatus: sumsub.KYCStatusApproved,
+		ID:        uid,
+	}); err != nil {
+		return fmt.Errorf("could not update kyc status for user: %v: %w", uid, err)
+	}
+
+	return nil
+}
+
+func (s *Service) GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error) {
+	user, err := s.ur.GetUserByID(ctx, uid)
+	if err != nil {
+		return "", fmt.Errorf("could not get user by id: %v: %w", uid, err)
+	}
+
+	return user.Username, nil
 }

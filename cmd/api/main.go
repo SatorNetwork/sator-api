@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
+
 	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
@@ -24,6 +26,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
 	"github.com/SatorNetwork/sator-api/svc/auth"
+	authc "github.com/SatorNetwork/sator-api/svc/auth/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/balance"
 	"github.com/SatorNetwork/sator-api/svc/challenge"
@@ -42,6 +45,7 @@ import (
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
 	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -148,6 +152,17 @@ var (
 	// Min amounts
 	minAmountToTransfer = env.GetFloat("MIN_AMOUNT_TO_TRANSFER", 0)
 	minAmountToClaim    = env.GetFloat("MIN_AMOUNT_TO_CLAIM", 0)
+
+	// KYC
+	kycAppToken   = env.MustString("KYC_APP_TOKEN")
+	kycAppSecret  = env.MustString("KYC_APP_SECRET")
+	kycAppBaseURL = env.MustString("KYC_APP_BASE_URL")
+	kycAppTTL     = env.GetInt("KYC_APP_TTL", 1200)
+	kycSkip       = env.GetBool("KYC_SKIP", false)
+
+	// NATS
+	natsURL   = env.MustString("NATS_URL")
+	natsWSURL = env.MustString("NATS_WS_URL")
 )
 
 var circulatingSupply float64 = 0
@@ -223,6 +238,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("authRepo error: %v", err)
 	}
+	authClient := authc.New(authRepository)
 
 	// Init JWT parser middleware
 	// not depends on transport
@@ -233,6 +249,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to init eth client: %v", err)
 	}
+
+	// KYC middleware
+	kycMdw := sumsub.KYCStatusMdw(authRepository.GetKYCStatus, func() bool {
+		return kycSkip
+	})
 
 	var walletSvcClient *walletClient.Client
 	// Wallet service
@@ -270,7 +291,7 @@ func main() {
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
-			wallet.MakeEndpoints(walletService, jwtMdw),
+			wallet.MakeEndpoints(walletService, kycMdw, jwtMdw),
 			logger,
 		))
 	}
@@ -292,7 +313,7 @@ func main() {
 	)
 	rewardsSvcClient = rewardsClient.New(rewardService)
 	r.Mount("/rewards", rewards.MakeHTTPHandler(
-		rewards.MakeEndpoints(rewardService, jwtMdw),
+		rewards.MakeEndpoints(rewardService, kycMdw, jwtMdw),
 		logger,
 	))
 
@@ -311,20 +332,27 @@ func main() {
 		logger,
 	))
 
-	// Auth service
 	{
-		r.Mount("/auth", auth.MakeHTTPHandler(
-			auth.MakeEndpoints(auth.NewService(
-				jwtInteractor,
-				authRepository,
-				walletSvcClient,
-				invitationsClient,
-				auth.WithMasterOTPCode(masterOTPHash),
-				auth.WithCustomOTPLength(otpLength),
-				auth.WithMailService(mailer),
-			), jwtMdw),
-			logger,
-		))
+		// KYC
+		kycService := sumsub.New(kycAppToken, kycAppSecret, kycAppBaseURL, kycAppTTL)
+		kycClient := sumsub.NewClient(kycService)
+
+		// Auth service
+		{
+			r.Mount("/auth", auth.MakeHTTPHandler(
+				auth.MakeEndpoints(auth.NewService(
+					jwtInteractor,
+					authRepository,
+					walletSvcClient,
+					invitationsClient,
+					kycClient,
+					auth.WithMasterOTPCode(masterOTPHash),
+					auth.WithCustomOTPLength(otpLength),
+					auth.WithMailService(mailer),
+				), jwtMdw),
+				logger,
+			))
+		}
 	}
 
 	// Profile service
@@ -408,7 +436,7 @@ func main() {
 
 		// Shows service
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient), jwtMdw),
+			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient), jwtMdw),
 			logger,
 		))
 	}
@@ -491,6 +519,17 @@ func main() {
 		}, func(err error) {
 			log.Fatalf("quiz service: %v", err)
 		})
+	}
+
+	{
+		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient)
+		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
+			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
+			logger,
+		))
+
+		go quizV2Svc.StartEngine()
+		// TODO(evg): gracefully shutdown the engine
 	}
 
 	{

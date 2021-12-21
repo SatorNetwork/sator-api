@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/wallet"
@@ -135,6 +136,7 @@ func TestSPLTokenPayment(t *testing.T) {
 	c := client.NewClient()
 
 	signUpRequest := auth.RandomSignUpRequest()
+	email := signUpRequest.Email
 	signUpResp, err := c.Auth.SignUp(signUpRequest)
 	require.NoError(t, err)
 	require.NotNil(t, signUpResp)
@@ -186,16 +188,28 @@ func TestSPLTokenPayment(t *testing.T) {
 		Amount:           0.001,
 		Asset:            "",
 	}
-	resp, err := c.Wallet.CreateTransfer(signUpResp.AccessToken, &createTransferRequest)
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.True(t, isCreateTransferResponseValid(resp))
-	confirmTransferRequest := wallet_svc.ConfirmTransferRequest{
-		SenderWalletID:  satorWallet.Id,
-		TransactionHash: resp.TxHash,
+
+	{
+		_, err := c.Wallet.CreateTransfer(signUpResp.AccessToken, &createTransferRequest)
+		require.Error(t, err)
 	}
-	err = c.Wallet.ConfirmTransfer(signUpResp.AccessToken, &confirmTransferRequest)
+
+	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), email, sumsub.KYCStatusApproved)
 	require.NoError(t, err)
+
+	{
+		resp, err := c.Wallet.CreateTransfer(signUpResp.AccessToken, &createTransferRequest)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.True(t, isCreateTransferResponseValid(resp))
+
+		confirmTransferRequest := wallet_svc.ConfirmTransferRequest{
+			SenderWalletID:  satorWallet.Id,
+			TransactionHash: resp.TxHash,
+		}
+		err = c.Wallet.ConfirmTransfer(signUpResp.AccessToken, &confirmTransferRequest)
+		require.NoError(t, err)
+	}
 
 	utils.BackoffRetry(t, func() error {
 		satorTokenBalance, err := c.Wallet.GetSatorTokenBalance(signUpResp2.AccessToken)
