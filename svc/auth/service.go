@@ -1246,6 +1246,8 @@ func (s *Service) VerificationCallback(ctx context.Context, userID uuid.UUID) er
 		if err != nil {
 			return fmt.Errorf("could not update kyc status for user: %v: %w", userID, err)
 		}
+
+		return nil
 	}
 
 	if resp.Review.ReviewStatus == sumsub.KYCProviderStatusPending {
