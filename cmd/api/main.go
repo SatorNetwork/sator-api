@@ -158,7 +158,7 @@ var (
 	kycAppSecret  = env.MustString("KYC_APP_SECRET")
 	kycAppBaseURL = env.MustString("KYC_APP_BASE_URL")
 	kycAppTTL     = env.GetInt("KYC_APP_TTL", 1200)
-	kycSkip       = env.GetBool("KYC_SKIP", true)
+	kycSkip       = env.GetBool("KYC_SKIP", false)
 
 	// NATS
 	natsURL   = env.MustString("NATS_URL")
