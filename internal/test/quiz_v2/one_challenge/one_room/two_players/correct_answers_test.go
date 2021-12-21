@@ -2,6 +2,9 @@ package two_players
 
 import (
 	"context"
+	"crypto/rsa"
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"testing"
 	"time"
 
@@ -35,6 +38,20 @@ func TestCorrectAnswers(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	var privateKey1 *rsa.PrivateKey
+	{
+		privateKey, publicKey, err := internal_rsa.GenerateKeyPair(4096)
+		require.NoError(t, err)
+		publcKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
+		require.NoError(t, err)
+		err = c.Auth.RegisterPublicKey(signUpResp.AccessToken, &auth.RegisterPublicKeyRequest{
+			PublicKey: string(publcKeyBytes),
+		})
+		require.NoError(t, err)
+
+		privateKey1 = privateKey
+	}
+
 	signUpRequest2 := auth.RandomSignUpRequest()
 	signUpResp2, err := c.Auth.SignUp(signUpRequest2)
 	require.NoError(t, err)
@@ -45,6 +62,20 @@ func TestCorrectAnswers(t *testing.T) {
 		OTP: "12345",
 	})
 	require.NoError(t, err)
+
+	var privateKey2 *rsa.PrivateKey
+	{
+		privateKey, publicKey, err := internal_rsa.GenerateKeyPair(4096)
+		require.NoError(t, err)
+		publcKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
+		require.NoError(t, err)
+		err = c.Auth.RegisterPublicKey(signUpResp2.AccessToken, &auth.RegisterPublicKeyRequest{
+			PublicKey: string(publcKeyBytes),
+		})
+		require.NoError(t, err)
+
+		privateKey2 = privateKey
+	}
 
 	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
 		Modify(
@@ -71,6 +102,7 @@ func TestCorrectAnswers(t *testing.T) {
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(privateKey1))
 		natsSubscriber.EnableDebugMode()
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
@@ -110,6 +142,7 @@ func TestCorrectAnswers(t *testing.T) {
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(privateKey2))
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {

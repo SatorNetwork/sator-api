@@ -3,7 +3,7 @@ package nats_player
 import (
 	"crypto/rsa"
 	"encoding/json"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/rsa"
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
 	"log"
 	"sync"
 	"time"
@@ -41,7 +41,7 @@ type natsPlayer struct {
 	connectChan              chan struct{}
 	disconnectChan           chan struct{}
 
-	playerPublicKey *rsa.PublicKey
+	encryptor *envelope.Encryptor
 
 	done chan struct{}
 
@@ -81,7 +81,7 @@ func NewNatsPlayer(
 		connectChan:              make(chan struct{}, defaultChanBuffSize),
 		disconnectChan:           make(chan struct{}, defaultChanBuffSize),
 
-		playerPublicKey: playerPublicKey,
+		encryptor: envelope.NewEncryptor(playerPublicKey),
 
 		done: make(chan struct{}),
 
@@ -176,21 +176,32 @@ func (p *natsPlayer) SendMessage(msg *message.Message) error {
 		return nil
 	}
 
-	data, err := json.Marshal(msg)
+	data, err := p.encodeAndEncrypt(msg)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "can't encode & encrypt message")
 	}
-
-	encryptedData, err := internal_rsa.EncryptWithPublicKey(data, p.playerPublicKey)
-	if err != nil {
-		return errors.Wrapf(err, "can't encrypt message with player's public key")
-	}
-
-	if err := p.nc.Publish(p.sendMessageSubj, encryptedData); err != nil {
+	if err := p.nc.Publish(p.sendMessageSubj, data); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (p *natsPlayer) encodeAndEncrypt(msg *message.Message) ([]byte, error) {
+	messageData, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := p.encryptor.Encrypt(messageData)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't encrypt message with player's public key")
+	}
+	envelopeData, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, err
+	}
+
+	return envelopeData, nil
 }
 
 func (p *natsPlayer) flushOutgoingBuffer() {

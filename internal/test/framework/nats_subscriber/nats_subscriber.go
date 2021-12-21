@@ -3,6 +3,8 @@ package nats_subscriber
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	"github.com/pkg/errors"
 	"testing"
 	"time"
 
@@ -36,10 +38,12 @@ type natsSubscriber struct {
 	recvMessageSubscription *nats.Subscription
 
 	questionMessageCallback messageCallback
+	debugMode               bool
+	keepaliveCfg            *KeepaliveCfg
 
-	debugMode    bool
-	keepaliveCfg *KeepaliveCfg
-	done         chan struct{}
+	decryptor *envelope.Decryptor
+
+	done chan struct{}
 
 	t *testing.T
 }
@@ -78,19 +82,15 @@ func (s *natsSubscriber) SetKeepaliveCfg(keepaliveCfg *KeepaliveCfg) {
 	s.keepaliveCfg = keepaliveCfg
 }
 
+// TODO: move to constructor
+func (s *natsSubscriber) SetDecryptor(decryptor *envelope.Decryptor) {
+	s.decryptor = decryptor
+}
+
 func (s *natsSubscriber) Start() error {
 	subscription, err := s.nc.Subscribe(s.recvMessageSubj, func(m *nats.Msg) {
-		if s.debugMode {
-			fmt.Printf("Received a message: %s\n", string(m.Data))
-		}
-
-		msg := new(message.Message)
-		err := msg.UnmarshalJSON(m.Data)
+		msg, err := s.decodeAndDecrypt(m.Data)
 		require.NoError(s.t, err)
-
-		//if s.debugMode {
-		//	fmt.Printf("Received a message: %+v\n", msg)
-		//}
 
 		s.recvMessageChan <- msg
 
@@ -109,6 +109,33 @@ func (s *natsSubscriber) Start() error {
 	go s.startEventProcessor()
 
 	return nil
+}
+
+func (s *natsSubscriber) decodeAndDecrypt(envelopeData []byte) (*message.Message, error) {
+	var envelope envelope.Envelope
+	if err := json.Unmarshal(envelopeData, &envelope); err != nil {
+		return nil, err
+	}
+
+	messageData, err := s.decryptor.Decrypt(&envelope)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't decrypt message with player's private key")
+	}
+
+	if s.debugMode {
+		fmt.Printf("Received a message: %s\n", string(messageData))
+	}
+
+	msg := new(message.Message)
+	if err := msg.UnmarshalJSON(messageData); err != nil {
+		return nil, err
+	}
+
+	//if s.debugMode {
+	//	fmt.Printf("Received a message: %+v\n", msg)
+	//}
+
+	return msg, nil
 }
 
 // NOTE: should be run as a goroutine

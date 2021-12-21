@@ -5,7 +5,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/rsa"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"net/url"
 	"strings"
 
