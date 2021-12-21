@@ -154,10 +154,11 @@ var (
 	minAmountToClaim    = env.GetFloat("MIN_AMOUNT_TO_CLAIM", 0)
 
 	// KYC
-	appToken  = env.MustString("KYC_APP_TOKEN")
-	appSecret = env.MustString("KYC_APP_SECRET")
-	baseURL   = env.MustString("KYC_APP_BASE_URL")
-	ttl       = env.GetInt("KYC_APP_TTL", 1200)
+	kycAppToken   = env.MustString("KYC_APP_TOKEN")
+	kycAppSecret  = env.MustString("KYC_APP_SECRET")
+	kycAppBaseURL = env.MustString("KYC_APP_BASE_URL")
+	kycAppTTL     = env.GetInt("KYC_APP_TTL", 1200)
+	kycSkip       = env.GetBool("KYC_SKIP", true)
 
 	// NATS
 	natsURL   = env.MustString("NATS_URL")
@@ -250,7 +251,9 @@ func main() {
 	}
 
 	// KYC middleware
-	kycMdw := sumsub.KYCStatusMdw(authRepository.GetKYCStatus)
+	kycMdw := sumsub.KYCStatusMdw(authRepository.GetKYCStatus, func() bool {
+		return kycSkip
+	})
 
 	var walletSvcClient *walletClient.Client
 	// Wallet service
@@ -331,7 +334,7 @@ func main() {
 
 	{
 		// KYC
-		kycService := sumsub.New(appToken, appSecret, baseURL, ttl)
+		kycService := sumsub.New(kycAppToken, kycAppSecret, kycAppBaseURL, kycAppTTL)
 		kycClient := sumsub.NewClient(kycService)
 
 		// Auth service

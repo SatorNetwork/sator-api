@@ -13,9 +13,13 @@ import (
 // For a type to be a KYCStatus object, it must just have a GetKYCStatus method that returns user kyc status.
 type kycStatus func(ctx context.Context, uid uuid.UUID) (string, error)
 
-func KYCStatusMdw(keyFunc kycStatus) endpoint.Middleware {
+func KYCStatusMdw(keyFunc kycStatus, skipFunc func() bool) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			if skipFunc != nil && skipFunc() {
+				return next(ctx, request)
+			}
+
 			uid, err := jwt.UserIDFromContext(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("could not get user id: %w", err)
