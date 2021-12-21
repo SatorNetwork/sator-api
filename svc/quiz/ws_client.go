@@ -3,6 +3,7 @@ package quiz
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"time"
@@ -76,7 +77,7 @@ func (c *WsClient) Read() error {
 		}
 		answer := MessageAnswer{}
 		if err := json.Unmarshal(message, &answer); err != nil {
-			log.Printf("could not decode response message: %v\nmessage: %+v", err, string(message))
+			log.Printf("could not decode response message: %v\nmessage: %+v", err, html.EscapeString(string(message)))
 			continue
 		}
 		c.answers <- answer
