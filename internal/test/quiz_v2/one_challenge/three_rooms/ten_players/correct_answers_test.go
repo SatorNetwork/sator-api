@@ -3,6 +3,9 @@ package ten_players
 import (
 	"context"
 	"fmt"
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/user"
 	"testing"
 	"time"
 
@@ -26,19 +29,9 @@ func TestCorrectAnswers(t *testing.T) {
 	require.NoError(t, err)
 
 	playersNum := 30
-	signUpRequests := make([]*auth.SignUpRequest, playersNum)
-	signUpResponses := make([]*auth.SignUpResponse, playersNum)
+	users := make([]*user.User, playersNum)
 	for i := 0; i < playersNum; i++ {
-		signUpRequests[i] = auth.RandomSignUpRequest()
-		signUpResponses[i], err = c.Auth.SignUp(signUpRequests[i])
-		require.NoError(t, err)
-		require.NotNil(t, signUpResponses[i])
-		require.NotEmpty(t, signUpResponses[i].AccessToken)
-
-		err = c.Auth.VerifyAcount(signUpResponses[i].AccessToken, &auth.VerifyAccountRequest{
-			OTP: "12345",
-		})
-		require.NoError(t, err)
+		users[i] = user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	}
 
 	userExpectedMessages := make([][]*message.Message, playersNum)
@@ -51,16 +44,20 @@ func TestCorrectAnswers(t *testing.T) {
 
 	messageVerifiers := make([]*message_verifier.MessageVerifier, playersNum)
 	for i := 0; i < playersNum; i++ {
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResponses[i].AccessToken, challengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[i].AccessToken(), challengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
 		recvMessageSubj := getQuizLinkResp.Data.RecvMessageSubj
 		userID := getQuizLinkResp.Data.UserID
+		serverPublicKey, err := internal_rsa.BytesToPublicKey([]byte(getQuizLinkResp.Data.ServerPublicKey))
+		require.NoError(t, err)
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(users[i].PrivateKey()))
 		if i == 0 {
 			natsSubscriber.EnableDebugMode()
 		}
