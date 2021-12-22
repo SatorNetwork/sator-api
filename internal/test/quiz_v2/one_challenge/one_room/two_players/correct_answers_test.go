@@ -2,9 +2,9 @@ package two_players
 
 import (
 	"context"
-	"crypto/rsa"
 	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/user"
 	"testing"
 	"time"
 
@@ -27,72 +27,25 @@ func TestCorrectAnswers(t *testing.T) {
 	defaultChallengeID, err := c.DB.ChallengeDB().DefaultChallengeID(context.Background())
 	require.NoError(t, err)
 
-	signUpRequest := auth.RandomSignUpRequest()
-	signUpResp, err := c.Auth.SignUp(signUpRequest)
-	require.NoError(t, err)
-	require.NotNil(t, signUpResp)
-	require.NotEmpty(t, signUpResp.AccessToken)
-
-	err = c.Auth.VerifyAcount(signUpResp.AccessToken, &auth.VerifyAccountRequest{
-		OTP: "12345",
-	})
-	require.NoError(t, err)
-
-	var privateKey1 *rsa.PrivateKey
-	{
-		privateKey, publicKey, err := internal_rsa.GenerateKeyPair(4096)
-		require.NoError(t, err)
-		publcKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
-		require.NoError(t, err)
-		err = c.Auth.RegisterPublicKey(signUpResp.AccessToken, &auth.RegisterPublicKeyRequest{
-			PublicKey: string(publcKeyBytes),
-		})
-		require.NoError(t, err)
-
-		privateKey1 = privateKey
-	}
-
-	signUpRequest2 := auth.RandomSignUpRequest()
-	signUpResp2, err := c.Auth.SignUp(signUpRequest2)
-	require.NoError(t, err)
-	require.NotNil(t, signUpResp2)
-	require.NotEmpty(t, signUpResp2.AccessToken)
-
-	err = c.Auth.VerifyAcount(signUpResp2.AccessToken, &auth.VerifyAccountRequest{
-		OTP: "12345",
-	})
-	require.NoError(t, err)
-
-	var privateKey2 *rsa.PrivateKey
-	{
-		privateKey, publicKey, err := internal_rsa.GenerateKeyPair(4096)
-		require.NoError(t, err)
-		publcKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
-		require.NoError(t, err)
-		err = c.Auth.RegisterPublicKey(signUpResp2.AccessToken, &auth.RegisterPublicKeyRequest{
-			PublicKey: string(publcKeyBytes),
-		})
-		require.NoError(t, err)
-
-		privateKey2 = privateKey
-	}
+	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
+	user2 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 
 	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
 		Modify(
 			message_container.PFuncIndex(0),
 			func(msg *message.Message) {
-				msg.PlayerIsJoinedMessage.Username = signUpRequest.Username
+				msg.PlayerIsJoinedMessage.Username = user1.Username()
 			}).
 		Modify(
 			message_container.PFuncIndex(1),
 			func(msg *message.Message) {
-				msg.PlayerIsJoinedMessage.Username = signUpRequest2.Username
+				msg.PlayerIsJoinedMessage.Username = user2.Username()
 			}).
 		Messages()
 
 	var user1MessageVerifier *message_verifier.MessageVerifier
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResp.AccessToken, defaultChallengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(user1.AccessToken(), defaultChallengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
@@ -105,7 +58,7 @@ func TestCorrectAnswers(t *testing.T) {
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
 		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
-		natsSubscriber.SetDecryptor(envelope.NewDecryptor(privateKey1))
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(user1.PrivateKey()))
 		natsSubscriber.EnableDebugMode()
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
@@ -118,7 +71,7 @@ func TestCorrectAnswers(t *testing.T) {
 			{
 				MessageType: message.PlayerIsJoinedMessageType,
 				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequest.Username,
+					Username: user1.Username(),
 				},
 			},
 		}
@@ -135,7 +88,7 @@ func TestCorrectAnswers(t *testing.T) {
 	}
 
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResp2.AccessToken, defaultChallengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(user2.AccessToken(), defaultChallengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
@@ -148,7 +101,7 @@ func TestCorrectAnswers(t *testing.T) {
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
 		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
-		natsSubscriber.SetDecryptor(envelope.NewDecryptor(privateKey2))
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(user2.PrivateKey()))
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
