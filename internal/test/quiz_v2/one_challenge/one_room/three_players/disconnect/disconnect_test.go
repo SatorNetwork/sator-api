@@ -2,6 +2,9 @@ package two_players
 
 import (
 	"context"
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/user"
 	"testing"
 	"time"
 
@@ -24,33 +27,27 @@ func TestUserIsDisconnected(t *testing.T) {
 	require.NoError(t, err)
 
 	playersNum := 3
-	signUpRequests := make([]*auth.SignUpRequest, playersNum)
-	signUpResponses := make([]*auth.SignUpResponse, playersNum)
+	users := make([]*user.User, playersNum)
 	for i := 0; i < playersNum; i++ {
-		signUpRequests[i] = auth.RandomSignUpRequest()
-		signUpResponses[i], err = c.Auth.SignUp(signUpRequests[i])
-		require.NoError(t, err)
-		require.NotNil(t, signUpResponses[i])
-		require.NotEmpty(t, signUpResponses[i].AccessToken)
-
-		err = c.Auth.VerifyAcount(signUpResponses[i].AccessToken, &auth.VerifyAccountRequest{
-			OTP: "12345",
-		})
-		require.NoError(t, err)
+		users[i] = user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	}
 
 	var user1MessageVerifier *message_verifier.MessageVerifier
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResponses[0].AccessToken, challengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[0].AccessToken(), challengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
 		recvMessageSubj := getQuizLinkResp.Data.RecvMessageSubj
 		userID := getQuizLinkResp.Data.UserID
+		serverPublicKey, err := internal_rsa.BytesToPublicKey([]byte(getQuizLinkResp.Data.ServerPublicKey))
+		require.NoError(t, err)
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(users[0].PrivateKey()))
 		natsSubscriber.EnableDebugMode()
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
@@ -63,7 +60,7 @@ func TestUserIsDisconnected(t *testing.T) {
 			{
 				MessageType: message.PlayerIsJoinedMessageType,
 				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequests[0].Username,
+					Username: users[0].Username(),
 				},
 			},
 		}
@@ -80,16 +77,20 @@ func TestUserIsDisconnected(t *testing.T) {
 	}
 
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResponses[1].AccessToken, challengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[1].AccessToken(), challengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
 		recvMessageSubj := getQuizLinkResp.Data.RecvMessageSubj
 		userID := getQuizLinkResp.Data.UserID
+		serverPublicKey, err := internal_rsa.BytesToPublicKey([]byte(getQuizLinkResp.Data.ServerPublicKey))
+		require.NoError(t, err)
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(users[1].PrivateKey()))
 		natsSubscriber.SetKeepaliveCfg(&nats_subscriber.KeepaliveCfg{
 			Disabled: true,
 		})
@@ -116,19 +117,19 @@ func TestUserIsDisconnected(t *testing.T) {
 			{
 				MessageType: message.PlayerIsJoinedMessageType,
 				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequests[0].Username,
+					Username: users[0].Username(),
 				},
 			},
 			{
 				MessageType: message.PlayerIsJoinedMessageType,
 				PlayerIsJoinedMessage: &message.PlayerIsJoinedMessage{
-					Username: signUpRequests[1].Username,
+					Username: users[1].Username(),
 				},
 			},
 			{
 				MessageType: message.PlayerIsDisconnectedMessageType,
 				PlayerIsDisconnectedMessage: &message.PlayerIsDisconnectedMessage{
-					Username: signUpRequests[1].Username,
+					Username: users[1].Username(),
 				},
 			},
 		}
@@ -139,7 +140,7 @@ func TestUserIsDisconnected(t *testing.T) {
 	}
 
 	{
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResponses[2].AccessToken, challengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[2].AccessToken(), challengeID.String())
 		require.NoError(t, err)
 		_ = getQuizLinkResp
 	}
