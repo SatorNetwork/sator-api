@@ -1202,6 +1202,12 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 				isFinal = true
 			}
 		}
+	} else if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		reason = "The email address has been found on the blacklist"
+		isFinal = true
+	} else if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); u.SanitizedEmail.Valid && yes {
+		reason = "The email address has been found on the blacklist"
+		isFinal = true
 	} else {
 		if u.KycStatus.Valid {
 			switch u.KycStatus.String {
@@ -1215,6 +1221,8 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 				kycStatus = "The user was rejected. It's the final decision and cannot be changed."
 			case sumsub.KYCStatusInProgress:
 				kycStatus = "Verification has not been completed yet."
+			case sumsub.KYCStatusInit:
+				kycStatus = "The user has not uploaded all documents yet."
 			default:
 				kycStatus = "N/A"
 			}
