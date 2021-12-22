@@ -120,7 +120,7 @@ func (q *Queries) GetWhitelistByAllowedValue(ctx context.Context, arg GetWhiteli
 const isEmailWhitelisted = `-- name: IsEmailWhitelisted :one
 SELECT count(*) > 0 FROM whitelist
 WHERE (allowed_type = 'email_domain'
-AND $1::text LIKE CONCAT('%', allowed_value))
+AND $1::text LIKE CONCAT('%@', allowed_value))
 OR (allowed_type = 'email'
 AND allowed_value = $1::text)
 LIMIT 1

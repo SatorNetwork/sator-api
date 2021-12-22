@@ -333,7 +333,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 				"email": []string{ErrRestrictedEmailDomain.Error()},
 			})
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
+		if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
 			return Token{}, validator.NewValidationError(url.Values{
 				"email": []string{ErrRestrictedEmailDomain.Error()},
 			})
