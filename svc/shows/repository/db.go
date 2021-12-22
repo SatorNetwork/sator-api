@@ -85,6 +85,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getShowsByCategoryStmt, err = db.PrepareContext(ctx, getShowsByCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShowsByCategory: %w", err)
 	}
+	if q.likeDislikeEpisodeReviewStmt, err = db.PrepareContext(ctx, likeDislikeEpisodeReview); err != nil {
+		return nil, fmt.Errorf("error preparing query LikeDislikeEpisodeReview: %w", err)
+	}
 	if q.rateEpisodeStmt, err = db.PrepareContext(ctx, rateEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query RateEpisode: %w", err)
 	}
@@ -213,6 +216,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getShowsByCategoryStmt: %w", cerr)
 		}
 	}
+	if q.likeDislikeEpisodeReviewStmt != nil {
+		if cerr := q.likeDislikeEpisodeReviewStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing likeDislikeEpisodeReviewStmt: %w", cerr)
+		}
+	}
 	if q.rateEpisodeStmt != nil {
 		if cerr := q.rateEpisodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing rateEpisodeStmt: %w", cerr)
@@ -303,6 +311,7 @@ type Queries struct {
 	getShowByIDStmt                           *sql.Stmt
 	getShowsStmt                              *sql.Stmt
 	getShowsByCategoryStmt                    *sql.Stmt
+	likeDislikeEpisodeReviewStmt              *sql.Stmt
 	rateEpisodeStmt                           *sql.Stmt
 	reviewEpisodeStmt                         *sql.Stmt
 	reviewsListStmt                           *sql.Stmt
@@ -336,6 +345,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getShowByIDStmt:                           q.getShowByIDStmt,
 		getShowsStmt:                              q.getShowsStmt,
 		getShowsByCategoryStmt:                    q.getShowsByCategoryStmt,
+		likeDislikeEpisodeReviewStmt:              q.likeDislikeEpisodeReviewStmt,
 		rateEpisodeStmt:                           q.rateEpisodeStmt,
 		reviewEpisodeStmt:                         q.reviewEpisodeStmt,
 		reviewsListStmt:                           q.reviewsListStmt,

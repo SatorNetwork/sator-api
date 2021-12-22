@@ -40,6 +40,7 @@ type (
 		GetReviewsList         endpoint.Endpoint
 		GetReviewsListByUserID endpoint.Endpoint
 		DeleteReviewByID       endpoint.Endpoint
+		LikeDislikeEpisode     endpoint.Endpoint
 
 		AddClapsForShow endpoint.Endpoint
 	}
@@ -68,6 +69,7 @@ type (
 		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
 		GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error)
 		DeleteReviewByID(ctx context.Context, id uuid.UUID) error
+		LikeDislikeEpisodeReview(cxt context.Context, id, uid uuid.UUID, param string) error
 
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
@@ -189,6 +191,12 @@ type (
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
 		utils.PaginationRequest
 	}
+
+	// LikeDislikeEpisodeRequest struct
+	LikeDislikeEpisodeRequest struct {
+		ReviewID string `json:"review_id" validate:"required,uuid"`
+		Param    string `json:"like_dislike" validate:"required,omitempty"`
+	}
 )
 
 // MakeEndpoints ...
@@ -219,6 +227,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetReviewsList:         MakeGetReviewsListEndpoint(s, validateFunc),
 		GetReviewsListByUserID: MakeGetReviewsListByUserIDEndpoint(s, validateFunc),
 		DeleteReviewByID:       MakeDeleteReviewByIDEndpoint(s),
+		LikeDislikeEpisode:     MakeLikeDislikeEpisodeEndpoint(s, validateFunc),
 
 		AddClapsForShow: MakeAddClapsForShowEndpoint(s),
 	}
@@ -249,6 +258,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetReviewsList = mdw(e.GetReviewsList)
 			e.GetReviewsListByUserID = mdw(e.GetReviewsListByUserID)
 			e.DeleteReviewByID = mdw(e.DeleteReviewByID)
+			e.LikeDislikeEpisode = mdw(e.LikeDislikeEpisode)
 
 			e.AddClapsForShow = mdw(e.AddClapsForShow)
 		}
@@ -914,6 +924,36 @@ func MakeAddClapsForShowEndpoint(s service) endpoint.Endpoint {
 			if errors.Is(err, ErrMaxClaps) {
 				return false, nil
 			}
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeLikeDislikeEpisodeEndpoint ...
+func MakeLikeDislikeEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(LikeDislikeEpisodeRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		reviewID, err := uuid.Parse(req.ReviewID)
+		if err != nil {
+			return nil, fmt.Errorf("%w review id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.LikeDislikeEpisodeReview(ctx, reviewID, uid, req.Param); err != nil {
 			return nil, err
 		}
 

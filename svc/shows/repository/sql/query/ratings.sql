@@ -75,3 +75,9 @@ ORDER BY created_at DESC
 -- name: DeleteReview :exec
 DELETE FROM ratings
 WHERE id = @id;
+
+-- name: LikeDislikeEpisodeReview :exec
+UPDATE ratings
+SET user_id = @user_id,
+    like_dislike = @like_dislike
+WHERE id = @id;

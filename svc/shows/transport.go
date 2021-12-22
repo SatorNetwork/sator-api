@@ -163,6 +163,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/reviews/{review_id}/{like_dislike}", httptransport.NewServer(
+		e.LikeDislikeEpisode,
+		decodeLikeDislikeEpisodeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	// Seasons
 	r.Post("/{show_id}/seasons", httptransport.NewServer(
 		e.AddSeason,
@@ -459,4 +466,20 @@ func decodeAddClapsForShowRequest(_ context.Context, r *http.Request) (interface
 	}
 
 	return showID, nil
+}
+
+func decodeLikeDislikeEpisodeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req LikeDislikeEpisodeRequest
+	id := chi.URLParam(r, "review_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed review id", ErrInvalidParameter)
+	}
+	param := chi.URLParam(r, "like_dislike")
+	if param == "" {
+		return nil, fmt.Errorf("%w: missed like/dislike pamameter", ErrInvalidParameter)
+	}
+	req.ReviewID = id
+	req.Param = param
+
+	return req, nil
 }

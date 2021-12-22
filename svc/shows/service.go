@@ -16,7 +16,13 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultHintText = "Start watching to earn SAO"
+const (
+	defaultHintText = "Start watching to earn SAO"
+
+	episodeWithoutAssessment = 0
+	likeEpisode              = 1
+	dislikeEpisode           = 2
+)
 
 type (
 	// Service struct
@@ -120,6 +126,7 @@ type (
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
+		LikeDislikeEpisodeReview(ctx context.Context, arg repository.LikeDislikeEpisodeReviewParams) error
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -855,4 +862,30 @@ func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID
 	}
 
 	return listEpisodes, nil
+}
+
+// LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
+func (s *Service) LikeDislikeEpisodeReview(cxt context.Context, id, uid uuid.UUID, param string) error {
+	var p int32
+	switch param {
+	case "like":
+		p = likeEpisode
+	case "dislike":
+		p = dislikeEpisode
+	default:
+		p = episodeWithoutAssessment
+	}
+
+	err := s.sr.LikeDislikeEpisodeReview(cxt, repository.LikeDislikeEpisodeReviewParams{
+		ID:     id,
+		UserID: uid,
+		LikeDislike: sql.NullInt32{
+			Int32: p,
+			Valid: true,
+		}})
+	if err != nil {
+		return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", uid, err)
+	}
+
+	return nil
 }

@@ -2436,6 +2436,39 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /shows/reviews/{review_id}/{like_dislike}:
+    post:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Used to store users review episode assessment (like/dislike/reset).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: review_id
+          in: path
+          description: Review ID.
+          required: true
+          schema:
+            type: string
+        - name: like_dislike
+          in: path
+          description: like, dislike or reset.
+          required: true
+          schema:
+            type: string
+          example: like
+
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/{show_id}/seasons:
     post:
       tags:

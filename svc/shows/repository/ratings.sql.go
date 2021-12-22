@@ -22,7 +22,7 @@ func (q *Queries) DeleteReview(ctx context.Context, id uuid.UUID) error {
 
 const didUserRateEpisode = `-- name: DidUserRateEpisode :one
 SELECT EXISTS(
-    SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings 
+    SELECT episode_id, user_id, rating, created_at, id, title, review, username, like_dislike FROM ratings 
     WHERE user_id = $1 
     AND episode_id = $2
 )
@@ -42,7 +42,7 @@ func (q *Queries) DidUserRateEpisode(ctx context.Context, arg DidUserRateEpisode
 
 const didUserReviewEpisode = `-- name: DidUserReviewEpisode :one
 SELECT EXISTS(
-    SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings 
+    SELECT episode_id, user_id, rating, created_at, id, title, review, username, like_dislike FROM ratings 
     WHERE user_id = $1 
     AND episode_id = $2
     AND review IS NOT NULL
@@ -80,6 +80,24 @@ func (q *Queries) GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID)
 	var i GetEpisodeRatingByIDRow
 	err := row.Scan(&i.AvgRating, &i.Ratings)
 	return i, err
+}
+
+const likeDislikeEpisodeReview = `-- name: LikeDislikeEpisodeReview :exec
+UPDATE ratings
+SET user_id = $1,
+    like_dislike = $2
+WHERE id = $3
+`
+
+type LikeDislikeEpisodeReviewParams struct {
+	UserID      uuid.UUID     `json:"user_id"`
+	LikeDislike sql.NullInt32 `json:"like_dislike"`
+	ID          uuid.UUID     `json:"id"`
+}
+
+func (q *Queries) LikeDislikeEpisodeReview(ctx context.Context, arg LikeDislikeEpisodeReviewParams) error {
+	_, err := q.exec(ctx, q.likeDislikeEpisodeReviewStmt, likeDislikeEpisodeReview, arg.UserID, arg.LikeDislike, arg.ID)
+	return err
 }
 
 const rateEpisode = `-- name: RateEpisode :exec
@@ -152,7 +170,7 @@ func (q *Queries) ReviewEpisode(ctx context.Context, arg ReviewEpisodeParams) er
 }
 
 const reviewsList = `-- name: ReviewsList :many
-SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
+SELECT episode_id, user_id, rating, created_at, id, title, review, username, like_dislike FROM ratings
 WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
@@ -184,6 +202,7 @@ func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rat
 			&i.Title,
 			&i.Review,
 			&i.Username,
+			&i.LikeDislike,
 		); err != nil {
 			return nil, err
 		}
@@ -199,7 +218,7 @@ func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rat
 }
 
 const reviewsListByUserID = `-- name: ReviewsListByUserID :many
-SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
+SELECT episode_id, user_id, rating, created_at, id, title, review, username, like_dislike FROM ratings
 WHERE user_id = $1
   AND title IS NOT NULL
   AND review IS NOT NULL
@@ -231,6 +250,7 @@ func (q *Queries) ReviewsListByUserID(ctx context.Context, arg ReviewsListByUser
 			&i.Title,
 			&i.Review,
 			&i.Username,
+			&i.LikeDislike,
 		); err != nil {
 			return nil, err
 		}
