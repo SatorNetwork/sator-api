@@ -1200,6 +1200,12 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 		} else if strings.Contains(u.BlockReason.String, "frequent rewards") {
 			reason = "Suspicion of fraud"
 			isFinal = false
+		} else if !u.BlockReason.Valid || strings.TrimSpace(u.BlockReason.String) == "" {
+			reason = "N/A"
+			isFinal = false
+		} else {
+			reason = u.BlockReason.String
+			isFinal = false
 		}
 
 		if !isFinal {
