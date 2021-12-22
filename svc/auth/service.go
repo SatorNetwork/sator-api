@@ -1191,6 +1191,12 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 		} else if strings.Contains(u.BlockReason.String, "invalid email") {
 			reason = "Invalid email address"
 			isFinal = false
+		} else if strings.Contains(u.BlockReason.String, "document") {
+			reason = u.BlockReason.String
+			isFinal = true
+		} else if strings.Contains(u.BlockReason.String, "blacklist") {
+			reason = "User's documents were rejected"
+			isFinal = true
 		} else if strings.Contains(u.BlockReason.String, "frequent rewards") {
 			reason = "Suspicion of fraud"
 			isFinal = false
@@ -1202,22 +1208,35 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 				isFinal = true
 			}
 		}
-	} else {
-		if u.KycStatus.Valid {
-			switch u.KycStatus.String {
-			case sumsub.KYCStatusNotVerified:
-				kycStatus = "Not verified"
-			case sumsub.KYCStatusRetry:
-				kycStatus = "Invalid documents or bad quality of selfie/docs. The user should upload valid documents or/and retake a selfie."
-			case sumsub.KYCStatusApproved:
-				kycStatus = "Verified"
-			case sumsub.KYCStatusRejected:
-				kycStatus = "The user was rejected. It's the final decision and cannot be changed."
-			case sumsub.KYCStatusInProgress:
-				kycStatus = "Verification has not been completed yet."
-			default:
-				kycStatus = "N/A"
+	} else if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+		u.Disabled = true
+		reason = "The email address has been found on the blacklist"
+		isFinal = true
+	} else if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); u.SanitizedEmail.Valid && yes {
+		u.Disabled = true
+		reason = "The email address has been found on the blacklist"
+		isFinal = true
+	}
+
+	if u.KycStatus.Valid {
+		switch u.KycStatus.String {
+		case sumsub.KYCStatusNotVerified:
+			kycStatus = "Not verified"
+		case sumsub.KYCStatusRetry:
+			kycStatus = "Invalid documents or bad quality of selfie/docs. The user should upload valid documents or/and retake a selfie."
+		case sumsub.KYCStatusApproved:
+			kycStatus = "Verified"
+			if u.Disabled {
+				isFinal = false
 			}
+		case sumsub.KYCStatusRejected:
+			kycStatus = "The user was rejected. It's the final decision and cannot be changed."
+		case sumsub.KYCStatusInProgress:
+			kycStatus = "Verification has not been completed yet."
+		case sumsub.KYCStatusInit:
+			kycStatus = "The user has not uploaded all documents yet."
+		default:
+			kycStatus = "N/A"
 		}
 	}
 
