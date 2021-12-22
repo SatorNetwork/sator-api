@@ -42,6 +42,7 @@ type natsPlayer struct {
 	disconnectChan           chan struct{}
 
 	encryptor *envelope.Encryptor
+	decryptor *envelope.Decryptor
 
 	done chan struct{}
 
@@ -56,6 +57,7 @@ func NewNatsPlayer(
 	sendMessageSubj string,
 	recvMessageSubj string,
 	playerPublicKey *rsa.PublicKey,
+	serverPrivateKey *rsa.PrivateKey,
 ) (player.Player, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
@@ -82,6 +84,7 @@ func NewNatsPlayer(
 		disconnectChan:           make(chan struct{}, defaultChanBuffSize),
 
 		encryptor: envelope.NewEncryptor(playerPublicKey),
+		decryptor: envelope.NewDecryptor(serverPrivateKey),
 
 		done: make(chan struct{}),
 
@@ -103,9 +106,9 @@ func (p *natsPlayer) ChallengeID() string {
 
 func (p *natsPlayer) Start() error {
 	subscription, err := p.nc.Subscribe(p.recvMessageSubj, func(m *nats.Msg) {
-		var msg message.Message
-		if err := json.Unmarshal(m.Data, &msg); err != nil {
-			log.Printf("can't unmarshal nats message: %v\n", err)
+		msg, err := p.decodeAndDecrypt(m.Data)
+		if err != nil {
+			log.Printf("can't decode & decrypt message: %v\n", err)
 			return
 		}
 
@@ -123,7 +126,7 @@ func (p *natsPlayer) Start() error {
 			return
 		}
 
-		p.recvMessageChan <- &msg
+		p.recvMessageChan <- msg
 	})
 	if err != nil {
 		return err
@@ -202,6 +205,25 @@ func (p *natsPlayer) encodeAndEncrypt(msg *message.Message) ([]byte, error) {
 	}
 
 	return envelopeData, nil
+}
+
+func (p *natsPlayer) decodeAndDecrypt(envelopeData []byte) (*message.Message, error) {
+	var envelope envelope.Envelope
+	if err := json.Unmarshal(envelopeData, &envelope); err != nil {
+		return nil, err
+	}
+
+	messageData, err := p.decryptor.Decrypt(&envelope)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't decrypt message with server's private key")
+	}
+
+	msg := new(message.Message)
+	if err := msg.UnmarshalJSON(messageData); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
 
 func (p *natsPlayer) flushOutgoingBuffer() {

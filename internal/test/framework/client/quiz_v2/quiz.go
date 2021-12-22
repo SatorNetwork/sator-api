@@ -25,6 +25,7 @@ type GetQuizLinkResponse struct {
 		RecvMessageSubj string `json:"recv_message_subj"`
 		SendMessageSubj string `json:"send_message_subj"`
 		UserID          string `json:"user_id"`
+		ServerPublicKey string `json:"server_public_key"`
 	} `json:"data"`
 }
 

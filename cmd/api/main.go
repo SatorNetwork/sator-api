@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"log"
 	"net/http"
 	"os"
@@ -162,6 +163,8 @@ var (
 	// NATS
 	natsURL   = env.MustString("NATS_URL")
 	natsWSURL = env.MustString("NATS_WS_URL")
+
+	serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
 )
 
 var circulatingSupply float64 = 0
@@ -230,6 +233,11 @@ func main() {
 		r.Get("/health", healthCheckHandler)
 		r.Get("/supply", supplyHandler)
 		r.Get("/ws", testWsHandler)
+	}
+
+	serverRSAPrivateKey, err := internal_rsa.BytesToPrivateKey([]byte(serverRSAPrivateKey))
+	if err != nil {
+		log.Fatalf("can't decode server's RSA private key")
 	}
 
 	// auth repo
@@ -523,7 +531,7 @@ func main() {
 	}
 
 	{
-		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, authClient)
+		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, authClient, serverRSAPrivateKey)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
 			logger,

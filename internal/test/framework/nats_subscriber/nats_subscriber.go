@@ -41,6 +41,7 @@ type natsSubscriber struct {
 	debugMode               bool
 	keepaliveCfg            *KeepaliveCfg
 
+	encryptor *envelope.Encryptor
 	decryptor *envelope.Decryptor
 
 	done chan struct{}
@@ -83,6 +84,10 @@ func (s *natsSubscriber) SetKeepaliveCfg(keepaliveCfg *KeepaliveCfg) {
 }
 
 // TODO: move to constructor
+func (s *natsSubscriber) SetEncryptor(encryptor *envelope.Encryptor) {
+	s.encryptor = encryptor
+}
+
 func (s *natsSubscriber) SetDecryptor(decryptor *envelope.Decryptor) {
 	s.decryptor = decryptor
 }
@@ -109,6 +114,23 @@ func (s *natsSubscriber) Start() error {
 	go s.startEventProcessor()
 
 	return nil
+}
+
+func (s *natsSubscriber) encodeAndEncrypt(msg *message.Message) ([]byte, error) {
+	messageData, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := s.encryptor.Encrypt(messageData)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't encrypt message with server's public key")
+	}
+	envelopeData, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, err
+	}
+
+	return envelopeData, nil
 }
 
 func (s *natsSubscriber) decodeAndDecrypt(envelopeData []byte) (*message.Message, error) {
@@ -169,9 +191,9 @@ func (s *natsSubscriber) Close() error {
 }
 
 func (s *natsSubscriber) SendMessage(msg *message.Message) error {
-	data, err := json.Marshal(msg)
+	data, err := s.encodeAndEncrypt(msg)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "can't encode & encrypt message")
 	}
 
 	if err := s.nc.Publish(s.sendMessageSubj, data); err != nil {

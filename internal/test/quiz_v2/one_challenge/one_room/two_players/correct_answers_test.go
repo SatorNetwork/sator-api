@@ -98,10 +98,13 @@ func TestCorrectAnswers(t *testing.T) {
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
 		recvMessageSubj := getQuizLinkResp.Data.RecvMessageSubj
 		userID := getQuizLinkResp.Data.UserID
+		serverPublicKey, err := internal_rsa.BytesToPublicKey([]byte(getQuizLinkResp.Data.ServerPublicKey))
+		require.NoError(t, err)
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
 		natsSubscriber.SetDecryptor(envelope.NewDecryptor(privateKey1))
 		natsSubscriber.EnableDebugMode()
 		err = natsSubscriber.Start()
@@ -138,10 +141,13 @@ func TestCorrectAnswers(t *testing.T) {
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
 		recvMessageSubj := getQuizLinkResp.Data.RecvMessageSubj
 		userID := getQuizLinkResp.Data.UserID
+		serverPublicKey, err := internal_rsa.BytesToPublicKey([]byte(getQuizLinkResp.Data.ServerPublicKey))
+		require.NoError(t, err)
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
 		natsSubscriber.SetDecryptor(envelope.NewDecryptor(privateKey2))
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
