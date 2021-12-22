@@ -5,19 +5,18 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"net/url"
 	"strings"
 
-	"github.com/SatorNetwork/sator-api/internal/deviceid"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	"github.com/SatorNetwork/sator-api/internal/utils"
-
-	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/internal/validator"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
+
+	"github.com/SatorNetwork/sator-api/internal/deviceid"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/internal/validator"
 )
 
 type (

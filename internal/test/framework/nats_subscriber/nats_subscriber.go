@@ -3,14 +3,14 @@ package nats_subscriber
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
-	"github.com/pkg/errors"
 	"testing"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 )
 

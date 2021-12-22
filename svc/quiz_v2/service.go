@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"

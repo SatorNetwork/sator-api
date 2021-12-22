@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/sumsub"
 
 	db_internal "github.com/SatorNetwork/sator-api/internal/db"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"

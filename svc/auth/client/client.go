@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/rsa"
+
 	"github.com/google/uuid"
 )
 

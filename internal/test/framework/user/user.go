@@ -2,11 +2,13 @@ package user
 
 import (
 	"crypto/rsa"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/auth"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type User struct {

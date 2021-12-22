@@ -2,18 +2,18 @@ package ten_players
 
 import (
 	"context"
-	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
-	"github.com/SatorNetwork/sator-api/internal/test/framework/user"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/message_verifier"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/nats_subscriber"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/user"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/utils"
 	"github.com/SatorNetwork/sator-api/internal/test/quiz_v2/message_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
