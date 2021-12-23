@@ -21,10 +21,11 @@ const defaultHintText = "Start watching to earn SAO"
 type (
 	// Service struct
 	Service struct {
-		sr  showsRepository
-		chc challengesClient
-		pc  profileClient
-		ac  authClient
+		sr           showsRepository
+		chc          challengesClient
+		pc           profileClient
+		ac           authClient
+		sentTipsFunc sentTipsFunction
 	}
 
 	// Show struct
@@ -120,6 +121,7 @@ type (
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
+		GetReviewByID(ctx context.Context, id uuid.UUID) (repository.Rating, error)
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -142,11 +144,14 @@ type (
 	authClient interface {
 		GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error)
 	}
+
+	// Simple function
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -159,8 +164,11 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 	if ac == nil {
 		log.Fatalln("auth client is not set")
 	}
+	if sentTipsFunc == nil {
+		log.Fatalln("sentTipsFunc is not set")
+	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc}
 }
 
 // GetShows returns shows.
@@ -855,4 +863,19 @@ func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID
 	}
 
 	return listEpisodes, nil
+}
+
+// SendTipsToReviewAuthor used to send tips to an episode review author.
+func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid.UUID, amount float64) error {
+	review, err := s.sr.GetReviewByID(ctx, reviewID)
+	if err != nil {
+		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
+	}
+
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, fmt.Sprintf("tips for episode review: %s", reviewID))
+	if err != nil {
+		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
+	}
+
+	return nil
 }

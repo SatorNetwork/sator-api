@@ -64,6 +64,10 @@ AND review IS NOT NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: GetReviewByID :one
+SELECT * FROM ratings
+WHERE id = $1;
+
 -- name: ReviewsListByUserID :many
 SELECT * FROM ratings
 WHERE user_id = $1

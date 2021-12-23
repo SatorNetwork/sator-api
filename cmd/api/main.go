@@ -436,7 +436,7 @@ func main() {
 
 		// Shows service
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient), jwtMdw),
+			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer), jwtMdw),
 			logger,
 		))
 	}

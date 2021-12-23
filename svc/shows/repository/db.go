@@ -70,6 +70,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getListEpisodesByIDsStmt, err = db.PrepareContext(ctx, getListEpisodesByIDs); err != nil {
 		return nil, fmt.Errorf("error preparing query GetListEpisodesByIDs: %w", err)
 	}
+	if q.getReviewByIDStmt, err = db.PrepareContext(ctx, getReviewByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReviewByID: %w", err)
+	}
 	if q.getSeasonByIDStmt, err = db.PrepareContext(ctx, getSeasonByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSeasonByID: %w", err)
 	}
@@ -188,6 +191,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getListEpisodesByIDsStmt: %w", cerr)
 		}
 	}
+	if q.getReviewByIDStmt != nil {
+		if cerr := q.getReviewByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReviewByIDStmt: %w", cerr)
+		}
+	}
 	if q.getSeasonByIDStmt != nil {
 		if cerr := q.getSeasonByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSeasonByIDStmt: %w", cerr)
@@ -298,6 +306,7 @@ type Queries struct {
 	getEpisodeRatingByIDStmt                  *sql.Stmt
 	getEpisodesByShowIDStmt                   *sql.Stmt
 	getListEpisodesByIDsStmt                  *sql.Stmt
+	getReviewByIDStmt                         *sql.Stmt
 	getSeasonByIDStmt                         *sql.Stmt
 	getSeasonsByShowIDStmt                    *sql.Stmt
 	getShowByIDStmt                           *sql.Stmt
@@ -331,6 +340,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
 		getListEpisodesByIDsStmt:                  q.getListEpisodesByIDsStmt,
+		getReviewByIDStmt:                         q.getReviewByIDStmt,
 		getSeasonByIDStmt:                         q.getSeasonByIDStmt,
 		getSeasonsByShowIDStmt:                    q.getSeasonsByShowIDStmt,
 		getShowByIDStmt:                           q.getShowByIDStmt,

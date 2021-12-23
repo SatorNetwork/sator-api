@@ -42,6 +42,8 @@ type (
 		DeleteReviewByID       endpoint.Endpoint
 
 		AddClapsForShow endpoint.Endpoint
+
+		SendTipsToReviewAuthor endpoint.Endpoint
 	}
 
 	service interface {
@@ -70,6 +72,8 @@ type (
 		DeleteReviewByID(ctx context.Context, id uuid.UUID) error
 
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
+
+		SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid.UUID, amount float64) error
 	}
 
 	// GetShowChallengesRequest struct
@@ -184,6 +188,12 @@ type (
 		Review    string `json:"review" validate:"required"`
 	}
 
+	// SendTipsRequest struct
+	SendTipsRequest struct {
+		ReviewID string  `json:"review_id" validate:"required,uuid"`
+		Amount   float64 `json:"amount" validate:"required,gte=1,lte=10"`
+	}
+
 	// GetReviewsListRequest struct
 	GetReviewsListRequest struct {
 		EpisodeID string `json:"episode_id" validate:"required,uuid"`
@@ -221,6 +231,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		DeleteReviewByID:       MakeDeleteReviewByIDEndpoint(s),
 
 		AddClapsForShow: MakeAddClapsForShowEndpoint(s),
+
+		SendTipsToReviewAuthor: MakeSendTipsToReviewAuthorEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -251,6 +263,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.DeleteReviewByID = mdw(e.DeleteReviewByID)
 
 			e.AddClapsForShow = mdw(e.AddClapsForShow)
+
+			e.SendTipsToReviewAuthor = mdw(e.SendTipsToReviewAuthor)
 		}
 	}
 
@@ -911,6 +925,39 @@ func MakeAddClapsForShowEndpoint(s service) endpoint.Endpoint {
 		}
 
 		if err := s.AddClapsForShow(ctx, showID, uid); err != nil {
+			if errors.Is(err, ErrMaxClaps) {
+				return false, nil
+			}
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeSendTipsToReviewAuthorEndpoint ...
+func MakeSendTipsToReviewAuthorEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(SendTipsRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		reviewID, err := uuid.Parse(req.ReviewID)
+		if err != nil {
+			return nil, fmt.Errorf("%w review id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.SendTipsToReviewAuthor(ctx, reviewID, uid, req.Amount); err != nil {
 			if errors.Is(err, ErrMaxClaps) {
 				return false, nil
 			}
