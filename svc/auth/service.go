@@ -1237,6 +1237,7 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 			}
 		case sumsub.KYCStatusRejected:
 			kycStatus = "The user was rejected. It's the final decision and cannot be changed."
+			isFinal = true
 		case sumsub.KYCStatusInProgress:
 			kycStatus = "Verification has not been completed yet."
 		case sumsub.KYCStatusInit:
