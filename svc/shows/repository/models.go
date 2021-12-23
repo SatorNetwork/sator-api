@@ -28,15 +28,21 @@ type Episode struct {
 }
 
 type Rating struct {
-	EpisodeID   uuid.UUID      `json:"episode_id"`
-	UserID      uuid.UUID      `json:"user_id"`
-	Rating      int32          `json:"rating"`
-	CreatedAt   time.Time      `json:"created_at"`
-	ID          uuid.UUID      `json:"id"`
-	Title       sql.NullString `json:"title"`
-	Review      sql.NullString `json:"review"`
-	Username    sql.NullString `json:"username"`
-	LikeDislike sql.NullInt32  `json:"like_dislike"`
+	EpisodeID uuid.UUID      `json:"episode_id"`
+	UserID    uuid.UUID      `json:"user_id"`
+	Rating    int32          `json:"rating"`
+	CreatedAt time.Time      `json:"created_at"`
+	ID        uuid.UUID      `json:"id"`
+	Title     sql.NullString `json:"title"`
+	Review    sql.NullString `json:"review"`
+	Username  sql.NullString `json:"username"`
+}
+
+type ReviewsRating struct {
+	ReviewID    uuid.UUID     `json:"review_id"`
+	UserID      uuid.UUID     `json:"user_id"`
+	LikeDislike sql.NullInt32 `json:"like_dislike"`
+	CreatedAt   time.Time     `json:"created_at"`
 }
 
 type Season struct {

@@ -865,7 +865,7 @@ func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID
 }
 
 // LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
-func (s *Service) LikeDislikeEpisodeReview(cxt context.Context, id, uid uuid.UUID, param string) error {
+func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uuid.UUID, param string) error {
 	var p int32
 	switch param {
 	case "like":
@@ -876,9 +876,9 @@ func (s *Service) LikeDislikeEpisodeReview(cxt context.Context, id, uid uuid.UUI
 		p = episodeWithoutAssessment
 	}
 
-	err := s.sr.LikeDislikeEpisodeReview(cxt, repository.LikeDislikeEpisodeReviewParams{
-		ID:     id,
-		UserID: uid,
+	err := s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
+		ReviewID: reviewID,
+		UserID:   uid,
 		LikeDislike: sql.NullInt32{
 			Int32: p,
 			Valid: true,

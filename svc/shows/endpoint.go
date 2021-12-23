@@ -69,7 +69,7 @@ type (
 		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
 		GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error)
 		DeleteReviewByID(ctx context.Context, id uuid.UUID) error
-		LikeDislikeEpisodeReview(cxt context.Context, id, uid uuid.UUID, param string) error
+		LikeDislikeEpisodeReview(ctx context.Context, id, uid uuid.UUID, param string) error
 
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
