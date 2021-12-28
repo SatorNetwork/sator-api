@@ -103,6 +103,24 @@ func (q *Queries) GetReviewByID(ctx context.Context, id uuid.UUID) (Rating, erro
 	return i, err
 }
 
+const getUsersEpisodeRatingByID = `-- name: GetUsersEpisodeRatingByID :one
+SELECT rating FROM ratings
+WHERE episode_id = $1
+  AND user_id = $2
+`
+
+type GetUsersEpisodeRatingByIDParams struct {
+	EpisodeID uuid.UUID `json:"episode_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetUsersEpisodeRatingByID(ctx context.Context, arg GetUsersEpisodeRatingByIDParams) (int32, error) {
+	row := q.queryRow(ctx, q.getUsersEpisodeRatingByIDStmt, getUsersEpisodeRatingByID, arg.EpisodeID, arg.UserID)
+	var rating int32
+	err := row.Scan(&rating)
+	return rating, err
+}
+
 const rateEpisode = `-- name: RateEpisode :exec
 INSERT INTO ratings (
     episode_id,

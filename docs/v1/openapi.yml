@@ -2106,6 +2106,10 @@ paths:
                     type: number
                     example: 123
                     description: "How many times episode was rated"
+                  users_episode_rating:
+                    type: number
+                    example: 7
+                    description: "Rating set by the user"
                   active_users:
                     type: number
                     example: 12

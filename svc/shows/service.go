@@ -66,6 +66,7 @@ type (
 		VerificationChallengeID *uuid.UUID `json:"verification_challenge_id"`
 		Rating                  float64    `json:"rating"`
 		RatingsCount            int64      `json:"ratings_count"`
+		UsersEpisodeRating      int32      `json:"users_episode_rating"`
 		ActiveUsers             int32      `json:"active_users"`
 		UserRewardsAmount       float64    `json:"user_rewards_amount"`
 		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
@@ -114,6 +115,7 @@ type (
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
 		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+		GetUsersEpisodeRatingByID(ctx context.Context, arg repository.GetUsersEpisodeRatingByIDParams) (int32, error)
 
 		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
@@ -355,7 +357,15 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 
 	avgRating, ratingsCount, err := s.getAverageEpisodesRatingByID(ctx, episodeID)
 	if err != nil {
-		return Episode{}, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get avarage episode rating with id=%s: %w", episodeID, err)
+	}
+
+	usersEpisodeRating, err := s.sr.GetUsersEpisodeRatingByID(ctx, repository.GetUsersEpisodeRatingByIDParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+	})
+	if err != nil {
+		return Episode{}, fmt.Errorf("could not get users episode rating with id=%s: %w", episodeID, err)
 	}
 
 	receivedAmount, err := s.chc.GetChallengeReceivedRewardAmount(ctx, episode.ChallengeID.UUID)
@@ -373,17 +383,18 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 		return Episode{}, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
 	}
 
-	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
+	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number, usersEpisodeRating), nil
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure with extra data
-func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
+func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number, usersEpisodeRating int32) Episode {
 	ep := castRowToEpisode(source)
 	ep.Rating = rating
 	ep.RatingsCount = ratingsCount
 	ep.ActiveUsers = number
 	ep.TotalRewardsAmount = receivedAmount
 	ep.UserRewardsAmount = receivedRewardAmountByUser
+	ep.UsersEpisodeRating = usersEpisodeRating
 
 	return ep
 }
