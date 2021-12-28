@@ -191,7 +191,7 @@ type (
 	// SendTipsRequest struct
 	SendTipsRequest struct {
 		ReviewID string  `json:"review_id" validate:"required,uuid"`
-		Amount   float64 `json:"amount" validate:"required,gte=1,lte=10"`
+		Amount   float64 `json:"amount" validate:"required"`
 	}
 
 	// GetReviewsListRequest struct
