@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rsa"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
 	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/internal/utils"
@@ -102,6 +104,9 @@ type (
 		// KYC
 		UpdateKYCStatus(ctx context.Context, arg repository.UpdateKYCStatusParams) error
 		UpdateUserStatus(ctx context.Context, arg repository.UpdateUserStatusParams) error
+
+		UpdatePublicKey(ctx context.Context, arg repository.UpdatePublicKeyParams) error
+		GetPublicKey(ctx context.Context, id uuid.UUID) (sql.NullString, error)
 	}
 
 	mailer interface {
@@ -1200,6 +1205,12 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 		} else if strings.Contains(u.BlockReason.String, "frequent rewards") {
 			reason = "Suspicion of fraud"
 			isFinal = false
+		} else if !u.BlockReason.Valid || strings.TrimSpace(u.BlockReason.String) == "" {
+			reason = "N/A"
+			isFinal = false
+		} else {
+			reason = u.BlockReason.String
+			isFinal = false
 		}
 
 		if !isFinal {
@@ -1231,6 +1242,7 @@ func (s *Service) GetUserStatus(ctx context.Context, email string) (UserStatus, 
 			}
 		case sumsub.KYCStatusRejected:
 			kycStatus = "The user was rejected. It's the final decision and cannot be changed."
+			isFinal = true
 		case sumsub.KYCStatusInProgress:
 			kycStatus = "Verification has not been completed yet."
 		case sumsub.KYCStatusInit:
@@ -1352,4 +1364,38 @@ func (s *Service) GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, e
 	}
 
 	return user.Username, nil
+}
+
+func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publicKey *rsa.PublicKey) error {
+	publicKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
+	if err != nil {
+		return fmt.Errorf("can't serialize public key to bytes: %v\n", err)
+	}
+
+	err = s.ur.UpdatePublicKey(ctx, repository.UpdatePublicKeyParams{
+		PublicKey: string(publicKeyBytes),
+		ID:        userID,
+	})
+	if err != nil {
+		return fmt.Errorf("can't update public key: %v\n", err)
+	}
+	// TODO(evg): check that caller is an owner of the private key?
+
+	return nil
+}
+
+func (s *Service) GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error) {
+	encodedPublicKey, err := s.ur.GetPublicKey(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("can't get public key by user's uid(%v): %v\n", userID, err)
+	}
+	if !encodedPublicKey.Valid {
+		return nil, ErrPublicKeyIsNotRegistered
+	}
+	publicKey, err := internal_rsa.BytesToPublicKey([]byte(encodedPublicKey.String))
+	if err != nil {
+		return nil, fmt.Errorf("can't deserialize bytes to public key: %v\n", err)
+	}
+
+	return publicKey, nil
 }

@@ -49,6 +49,10 @@ type VerifyAccountRequest struct {
 	OTP string `json:"otp"`
 }
 
+type RegisterPublicKeyRequest struct {
+	PublicKey string `json:"public_key"`
+}
+
 func RandomSignUpRequest() *SignUpRequest {
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Uint64()
@@ -129,6 +133,33 @@ func (a *AuthClient) VerifyAcount(accessToken string, req *VerifyAccountRequest)
 	body, err := json.Marshal(req)
 	if err != nil {
 		return errors.Wrap(err, "can't marshal create transfer request")
+	}
+	reader := bytes.NewReader(body)
+	httpReq, err := http.NewRequest(http.MethodPost, url, reader)
+	if err != nil {
+		return errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+
+	return nil
+}
+
+func (a *AuthClient) RegisterPublicKey(accessToken string, req *RegisterPublicKeyRequest) error {
+	url := "http://localhost:8080/auth/user/public_key/register"
+	body, err := json.Marshal(req)
+	if err != nil {
+		return errors.Wrap(err, "can't marshal register public key request")
 	}
 	reader := bytes.NewReader(body)
 	httpReq, err := http.NewRequest(http.MethodPost, url, reader)

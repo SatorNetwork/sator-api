@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 )
 
@@ -36,10 +38,13 @@ type natsSubscriber struct {
 	recvMessageSubscription *nats.Subscription
 
 	questionMessageCallback messageCallback
+	debugMode               bool
+	keepaliveCfg            *KeepaliveCfg
 
-	debugMode    bool
-	keepaliveCfg *KeepaliveCfg
-	done         chan struct{}
+	encryptor *envelope.Encryptor
+	decryptor *envelope.Decryptor
+
+	done chan struct{}
 
 	t *testing.T
 }
@@ -78,19 +83,19 @@ func (s *natsSubscriber) SetKeepaliveCfg(keepaliveCfg *KeepaliveCfg) {
 	s.keepaliveCfg = keepaliveCfg
 }
 
+// TODO: move to constructor
+func (s *natsSubscriber) SetEncryptor(encryptor *envelope.Encryptor) {
+	s.encryptor = encryptor
+}
+
+func (s *natsSubscriber) SetDecryptor(decryptor *envelope.Decryptor) {
+	s.decryptor = decryptor
+}
+
 func (s *natsSubscriber) Start() error {
 	subscription, err := s.nc.Subscribe(s.recvMessageSubj, func(m *nats.Msg) {
-		if s.debugMode {
-			fmt.Printf("Received a message: %s\n", string(m.Data))
-		}
-
-		msg := new(message.Message)
-		err := msg.UnmarshalJSON(m.Data)
+		msg, err := s.decodeAndDecrypt(m.Data)
 		require.NoError(s.t, err)
-
-		//if s.debugMode {
-		//	fmt.Printf("Received a message: %+v\n", msg)
-		//}
 
 		s.recvMessageChan <- msg
 
@@ -109,6 +114,50 @@ func (s *natsSubscriber) Start() error {
 	go s.startEventProcessor()
 
 	return nil
+}
+
+func (s *natsSubscriber) encodeAndEncrypt(msg *message.Message) ([]byte, error) {
+	messageData, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := s.encryptor.Encrypt(messageData)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't encrypt message with server's public key")
+	}
+	envelopeData, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, err
+	}
+
+	return envelopeData, nil
+}
+
+func (s *natsSubscriber) decodeAndDecrypt(envelopeData []byte) (*message.Message, error) {
+	var envelope envelope.Envelope
+	if err := json.Unmarshal(envelopeData, &envelope); err != nil {
+		return nil, err
+	}
+
+	messageData, err := s.decryptor.Decrypt(&envelope)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't decrypt message with player's private key")
+	}
+
+	if s.debugMode {
+		fmt.Printf("Received a message: %s\n", string(messageData))
+	}
+
+	msg := new(message.Message)
+	if err := msg.UnmarshalJSON(messageData); err != nil {
+		return nil, err
+	}
+
+	//if s.debugMode {
+	//	fmt.Printf("Received a message: %+v\n", msg)
+	//}
+
+	return msg, nil
 }
 
 // NOTE: should be run as a goroutine
@@ -142,9 +191,9 @@ func (s *natsSubscriber) Close() error {
 }
 
 func (s *natsSubscriber) SendMessage(msg *message.Message) error {
-	data, err := json.Marshal(msg)
+	data, err := s.encodeAndEncrypt(msg)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "can't encode & encrypt message")
 	}
 
 	if err := s.nc.Publish(s.sendMessageSubj, data); err != nil {

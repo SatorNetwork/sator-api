@@ -2114,6 +2114,10 @@ paths:
                     type: number
                     example: 123
                     description: "How many times episode was rated"
+                  users_episode_rating:
+                    type: number
+                    example: 7
+                    description: "Rating set by the user"
                   active_users:
                     type: number
                     example: 12
@@ -2475,6 +2479,43 @@ paths:
           required: true
           schema:
             type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/reviews/{review_id}/tips:
+    post:
+      tags:
+        - "Shows"
+        - "Episodes"
+        - "Reviews"
+      summary: Used to send tips to episode review author.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: review_id
+          in: path
+          description: Review ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 5.223
+                  description: Tips amount in SAO.
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

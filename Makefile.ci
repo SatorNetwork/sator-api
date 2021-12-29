@@ -1,3 +1,34 @@
+define SERVER_RSA_PRIVATE_KEY
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAyzOP1bef/mRQELQSU99VMXx5JSS/uoEjDVUYbv54qZ0ZNr/x
+mr/LVDmklAH85YXoVI9Ze116ms4o27/iSyDRDQzZQJMZQeZkhsrCjl047KCEtuSB
+KlrWV514C0PZAI8E5dIOmcThqDL6Oe3ko3cxc5On27O8i1L02ZR63lzAHsiYUKZJ
+LCuumsgRjN3Qmnxgsj7blCNlo2Inc04hIU7FxNePnDQeIq9InTQwe8kpdrR3+z7O
+M2dOwsgzwQXfRmhRVmMv9WyBOA7ppbhED2xDV0HtwlE7zvVXVzz0XlIH0Bcg2hJV
+nOUspMNOVN98hovTNW1zYapq8K4WzdzTLWu6ewIDAQABAoIBAEk+mb8YhFRHRlDv
+B5gx7Vx8GJLZ7z5D5CWfIcKIeWfyF6+TenwkXB9M89Th7o2xOfCZB1Effd0lKLcl
+MGWSO6hvlDPhkf4eFOg9V+nHEojAx3XBYgmpWo+UVDwDRcocw1Av6lFlFU3yqh2N
+cZe2lB2sAJqB7BlwWo+/JJbYaevuD6i6SQUy6kXrbDAFbMY0phcuL4qkW3KsywpY
+2bijso8HeLVurk74MaAezbgwVzrhReA89RQruJtEIT4EYECknxammam5PuCSeflV
+Mpsh31KP8PSu6Le4ejMYqKnQhLBV1kpA2tZ00NwP1T8PgRcxmBW+YhxDIK/PIwJv
+lz0Z8FECgYEA1YVgVX3NZ6HMTmokM/u+rIjAg08meSVokUjnosvdef8RTEYT5DlZ
+3RoCmKzth4T9GJE56Cvo+0C6Xvcba2QiHBCuvwa0NCOqNv37qtXsAOwKwBxVx8nn
+9LSsrpmrXl407C64mM4pPXH5FMkHrK7AwGikxiceCWZFl4ULcZZDB/MCgYEA86Cb
+5uu9Ah3i6X5Sm/wV4WAejLYKIgw046BRXF2ZJB+Rk66l9NG28hIgszQr4tgPVqQ8
+m4u/xctII5fSLNN+fKxz7Pqb5uPDrWbBvyk4BAlz+oCV6DpQQrmX79OSSz3GLLxa
+IG2CXYe41s02wJZ+WF6Ap/+SRt8qXEOkZpm27VkCgYApC2iHRpWTlECn2jN3Yq82
+j1siYraslwpQ00jjvHiomOWEWfw85OFnZTaWjrdiU6grbs9I2BgDJGAvHSVCMY91
+Aaf1xJ4jX6+6vnwATPr++mDeqRO8Qg26tnhzX8rXaxiVRi3qAcdfrmcJHdPB2B3p
+XrQ9+wsFF4nNJKAch5v/DQKBgQCQtB6lg/OZpEK4yQ0sFQix+rNqhF10Z6eqY/iv
+UfC54f5Hp35u8XkmQtolVqGSdR53KcnN4a2gP+OzMGPnuB7y0kNwyFF9TF9XSSde
+8Y6R50N50JI5gxlU6IN0MUg9ZI2m2KD3jdPW1dxVyUHyFfEpb8gfAM/TRI4Wix7E
+yhw60QKBgQCmmaR1Eg8/sJV/5SiAgHzXkOjPRmQjmwESazhe10mja0s/dyHk7Si3
+x7YDoJeQm7c+GO6lb46/ccFU/MGXNmtEDeaLT5bVaZ81zkEWED2AjdHK6S4yttx/
+o5uW70B4smBr2njkjibrTjaY1Mb7z4zFVPpK7ohEAulTnqKdHdFeqQ==
+-----END RSA PRIVATE KEY-----
+endef
+export SERVER_RSA_PRIVATE_KEY
+
 # Variables
 LATEST_COMMIT := $$(git rev-parse HEAD)
 .PHONY: help up down run-local migrate-local
@@ -43,6 +74,7 @@ run-local: ## Run api via `go run`
 	KYC_APP_BASE_URL=XXXXXXXXXX \
 	NATS_URL=nats://127.0.0.1:4222 \
 	NATS_WS_URL=ws://127.0.0.1:8080 \
+	SERVER_RSA_PRIVATE_KEY="$$SERVER_RSA_PRIVATE_KEY" \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" -race cmd/api/main.go &
 migrate-local: ## Run all migrations on local environment
 	@rm -Rvf migrations/*.sql && \
@@ -50,4 +82,4 @@ migrate-local: ## Run all migrations on local environment
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	go run ./cmd/migrate/main.go
 test:
-	go test -p 1 -count=1 -race ./internal/test/... ./svc/...
+	go test -p 1 -count=1 -race ./internal/... ./svc/...

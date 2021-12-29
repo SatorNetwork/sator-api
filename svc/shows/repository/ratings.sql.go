@@ -82,6 +82,45 @@ func (q *Queries) GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID)
 	return i, err
 }
 
+const getReviewByID = `-- name: GetReviewByID :one
+SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
+WHERE id = $1
+`
+
+func (q *Queries) GetReviewByID(ctx context.Context, id uuid.UUID) (Rating, error) {
+	row := q.queryRow(ctx, q.getReviewByIDStmt, getReviewByID, id)
+	var i Rating
+	err := row.Scan(
+		&i.EpisodeID,
+		&i.UserID,
+		&i.Rating,
+		&i.CreatedAt,
+		&i.ID,
+		&i.Title,
+		&i.Review,
+		&i.Username,
+	)
+	return i, err
+}
+
+const getUsersEpisodeRatingByID = `-- name: GetUsersEpisodeRatingByID :one
+SELECT rating FROM ratings
+WHERE episode_id = $1
+  AND user_id = $2
+`
+
+type GetUsersEpisodeRatingByIDParams struct {
+	EpisodeID uuid.UUID `json:"episode_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetUsersEpisodeRatingByID(ctx context.Context, arg GetUsersEpisodeRatingByIDParams) (int32, error) {
+	row := q.queryRow(ctx, q.getUsersEpisodeRatingByIDStmt, getUsersEpisodeRatingByID, arg.EpisodeID, arg.UserID)
+	var rating int32
+	err := row.Scan(&rating)
+	return rating, err
+}
+
 const rateEpisode = `-- name: RateEpisode :exec
 INSERT INTO ratings (
     episode_id,

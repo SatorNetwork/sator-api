@@ -29,10 +29,11 @@ type (
 
 	// Service struct
 	Service struct {
-		sr  showsRepository
-		chc challengesClient
-		pc  profileClient
-		ac  authClient
+		sr           showsRepository
+		chc          challengesClient
+		pc           profileClient
+		ac           authClient
+		sentTipsFunc sentTipsFunction
 	}
 
 	// Show struct
@@ -73,6 +74,7 @@ type (
 		VerificationChallengeID *uuid.UUID `json:"verification_challenge_id"`
 		Rating                  float64    `json:"rating"`
 		RatingsCount            int64      `json:"ratings_count"`
+		UsersEpisodeRating      int32      `json:"users_episode_rating"`
 		ActiveUsers             int32      `json:"active_users"`
 		UserRewardsAmount       float64    `json:"user_rewards_amount"`
 		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
@@ -123,6 +125,7 @@ type (
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
 		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+		GetUsersEpisodeRatingByID(ctx context.Context, arg repository.GetUsersEpisodeRatingByIDParams) (int32, error)
 
 		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
@@ -133,6 +136,7 @@ type (
 		LikeDislikeEpisodeReview(ctx context.Context, arg repository.LikeDislikeEpisodeReviewParams) error
 		GetReviewRating(ctx context.Context, arg repository.GetReviewRatingParams) (int64, error)
 		IsUserRatedReview(ctx context.Context, arg repository.IsUserRatedReviewParams) (bool, error)
+		GetReviewByID(ctx context.Context, id uuid.UUID) (repository.Rating, error)
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -155,11 +159,14 @@ type (
 	authClient interface {
 		GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error)
 	}
+
+	// Simple function
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -172,8 +179,11 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 	if ac == nil {
 		log.Fatalln("auth client is not set")
 	}
+	if sentTipsFunc == nil {
+		log.Fatalln("sentTipsFunc is not set")
+	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc}
 }
 
 // GetShows returns shows.
@@ -360,7 +370,15 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 
 	avgRating, ratingsCount, err := s.getAverageEpisodesRatingByID(ctx, episodeID)
 	if err != nil {
-		return Episode{}, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get avarage episode rating with id=%s: %w", episodeID, err)
+	}
+
+	usersEpisodeRating, err := s.sr.GetUsersEpisodeRatingByID(ctx, repository.GetUsersEpisodeRatingByIDParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+	})
+	if err != nil {
+		return Episode{}, fmt.Errorf("could not get users episode rating with id=%s: %w", episodeID, err)
 	}
 
 	receivedAmount, err := s.chc.GetChallengeReceivedRewardAmount(ctx, episode.ChallengeID.UUID)
@@ -378,17 +396,18 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 		return Episode{}, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
 	}
 
-	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
+	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number, usersEpisodeRating), nil
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure with extra data
-func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
+func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number, usersEpisodeRating int32) Episode {
 	ep := castRowToEpisode(source)
 	ep.Rating = rating
 	ep.RatingsCount = ratingsCount
 	ep.ActiveUsers = number
 	ep.TotalRewardsAmount = receivedAmount
 	ep.UserRewardsAmount = receivedRewardAmountByUser
+	ep.UsersEpisodeRating = usersEpisodeRating
 
 	return ep
 }
@@ -918,4 +937,19 @@ func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID
 	}
 
 	return listEpisodes, nil
+}
+
+// SendTipsToReviewAuthor used to send tips to an episode review author.
+func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid.UUID, amount float64) error {
+	review, err := s.sr.GetReviewByID(ctx, reviewID)
+	if err != nil {
+		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
+	}
+
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, fmt.Sprintf("tips for episode review: %s", reviewID))
+	if err != nil {
+		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
+	}
+
+	return nil
 }

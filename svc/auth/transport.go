@@ -235,6 +235,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/user/public_key/register", httptransport.NewServer(
+		e.RegisterPublicKey,
+		decodeRegisterPublicKeyRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -441,4 +448,13 @@ func decodeVerificationCallBack(_ context.Context, r *http.Request) (interface{}
 	}
 
 	return req.ExternalUserId, nil
+}
+
+func decodeRegisterPublicKeyRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req RegisterPublicKeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
 }

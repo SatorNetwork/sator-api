@@ -163,6 +163,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/reviews/{review_id}/tips", httptransport.NewServer(
+		e.SendTipsToReviewAuthor,
+		decodeSendTipsToReviewAuthorRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	// Seasons
 	r.Post("/{show_id}/seasons", httptransport.NewServer(
 		e.AddSeason,
@@ -480,6 +487,21 @@ func decodeLikeDislikeEpisodeRequest(_ context.Context, r *http.Request) (interf
 	}
 	req.ReviewID = id
 	req.Param = param
+
+	return req, nil
+}
+
+func decodeSendTipsToReviewAuthorRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req SendTipsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	reviewID := chi.URLParam(r, "review_id")
+	if reviewID == "" {
+		return nil, fmt.Errorf("%w: missed review id", ErrInvalidParameter)
+	}
+	req.ReviewID = reviewID
 
 	return req, nil
 }

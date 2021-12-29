@@ -7,10 +7,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/message_verifier"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/nats_subscriber"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/user"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/utils"
 	"github.com/SatorNetwork/sator-api/internal/test/quiz_v2/message_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
@@ -26,19 +29,9 @@ func TestCorrectAnswers(t *testing.T) {
 
 	playersNum := 4
 	//playersInRoom := 2
-	signUpRequests := make([]*auth.SignUpRequest, playersNum)
-	signUpResponses := make([]*auth.SignUpResponse, playersNum)
+	users := make([]*user.User, playersNum)
 	for i := 0; i < playersNum; i++ {
-		signUpRequests[i] = auth.RandomSignUpRequest()
-		signUpResponses[i], err = c.Auth.SignUp(signUpRequests[i])
-		require.NoError(t, err)
-		require.NotNil(t, signUpResponses[i])
-		require.NotEmpty(t, signUpResponses[i].AccessToken)
-
-		err = c.Auth.VerifyAcount(signUpResponses[i].AccessToken, &auth.VerifyAccountRequest{
-			OTP: "12345",
-		})
-		require.NoError(t, err)
+		users[i] = user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	}
 
 	userExpectedMessages := make([][]*message.Message, playersNum)
@@ -47,12 +40,12 @@ func TestCorrectAnswers(t *testing.T) {
 			Modify(
 				message_container.PFuncIndex(0),
 				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequests[0].Username
+					msg.PlayerIsJoinedMessage.Username = users[0].Username()
 				}).
 			Modify(
 				message_container.PFuncIndex(1),
 				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequests[1].Username
+					msg.PlayerIsJoinedMessage.Username = users[1].Username()
 				})
 		userExpectedMessages[0] = mc.Copy().Messages()
 		userExpectedMessages[1] = mc.Copy().Messages()
@@ -63,12 +56,12 @@ func TestCorrectAnswers(t *testing.T) {
 			Modify(
 				message_container.PFuncIndex(0),
 				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequests[2].Username
+					msg.PlayerIsJoinedMessage.Username = users[2].Username()
 				}).
 			Modify(
 				message_container.PFuncIndex(1),
 				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = signUpRequests[3].Username
+					msg.PlayerIsJoinedMessage.Username = users[3].Username()
 				})
 		userExpectedMessages[2] = mc.Copy().Messages()
 		userExpectedMessages[3] = mc.Copy().Messages()
@@ -76,16 +69,20 @@ func TestCorrectAnswers(t *testing.T) {
 
 	messageVerifiers := make([]*message_verifier.MessageVerifier, playersNum)
 	for i := 0; i < playersNum; i++ {
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(signUpResponses[i].AccessToken, defaultChallengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[i].AccessToken(), defaultChallengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
 		recvMessageSubj := getQuizLinkResp.Data.RecvMessageSubj
 		userID := getQuizLinkResp.Data.UserID
+		serverPublicKey, err := internal_rsa.BytesToPublicKey([]byte(getQuizLinkResp.Data.ServerPublicKey))
+		require.NoError(t, err)
 
 		natsSubscriber, err := nats_subscriber.New(userID, sendMessageSubj, recvMessageSubj, t)
 		require.NoError(t, err)
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
+		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
+		natsSubscriber.SetDecryptor(envelope.NewDecryptor(users[i].PrivateKey()))
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
