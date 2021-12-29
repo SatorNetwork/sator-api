@@ -205,7 +205,7 @@ type (
 	// LikeDislikeEpisodeRequest struct
 	LikeDislikeEpisodeRequest struct {
 		ReviewID string `json:"review_id" validate:"required,uuid"`
-		Param    string `json:"rating_type" validate:"required,in:like,dislike"`
+		Param    string `json:"rating_type" validate:"required,oneof=like dislike"`
 	}
 )
 
