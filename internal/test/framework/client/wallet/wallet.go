@@ -20,7 +20,13 @@ type WalletClient struct {
 
 func New() *WalletClient {
 	return &WalletClient{
-		solanaClient: solana.New("http://localhost:8899"),
+		solanaClient: solana.New("http://localhost:8899", solana.Config{
+			SystemProgram:  "11111111111111111111111111111111",
+			SysvarRent:     "SysvarRent111111111111111111111111111111111",
+			SysvarClock:    "SysvarC1ock11111111111111111111111111111111",
+			SplToken:       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+			StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		}),
 	}
 }
 

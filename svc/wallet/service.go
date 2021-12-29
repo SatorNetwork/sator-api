@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -62,6 +63,12 @@ type (
 		AddEthereumAccount(ctx context.Context, arg repository.AddEthereumAccountParams) (repository.EthereumAccount, error)
 		GetEthereumAccountByID(ctx context.Context, id uuid.UUID) (repository.EthereumAccount, error)
 		GetEthereumAccountByUserIDAndType(ctx context.Context, arg repository.GetEthereumAccountByUserIDAndTypeParams) (repository.EthereumAccount, error)
+
+		AddStake(ctx context.Context, arg repository.AddStakeParams) (repository.Stake, error)
+		DeleteStakeByUserID(ctx context.Context, userID uuid.UUID) error
+		GetStakeByUserID(ctx context.Context, userID uuid.UUID) (repository.Stake, error)
+		GetTotalStake(ctx context.Context) (float64, error)
+		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
 	}
 
 	solanaClient interface {
@@ -72,6 +79,10 @@ type (
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]solana.ConfirmedTransactionResponse, error)
+
+		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
+		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
+		Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 	}
 
 	ethereumClient interface {
@@ -559,14 +570,29 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 }
 
 // GetStake Mocked method for stake
-func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error) {
+func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Stake, error) {
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Stake{}, fmt.Errorf("you do not have stake: %w", err)
+		}
+		return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
+	}
+
+	totalStake, err := s.wr.GetTotalStake(ctx)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get total stake by user id: %w", err)
+	}
+
+	yourShare := stake.StakeAmount / totalStake * 100
+
 	return Stake{
 		Staking: Staking{
 			AssetName:   "SAO",
-			APY:         138.9,
-			TotalStaked: 23423454567,
-			Staked:      345.75,
-			YourShare:   0.021,
+			APY:         138.9, // TODO: Figure out what this field mean and fill it!!!
+			TotalStaked: totalStake,
+			Staked:      stake.StakeAmount,
+			YourShare:   yourShare,
 		},
 		Loyalty: Loyalty{
 			LevelTitle:    "Genin",
@@ -576,8 +602,53 @@ func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, erro
 }
 
 // SetStake Mocked method for stake
-func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error) {
+func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
 	return true, nil
+}
+
+// Unstake method for unstake
+func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error {
+	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get fee payer account: %w", err)
+	}
+	fee := s.sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey)
+
+	pool, err := s.wr.GetSolanaAccountByType(ctx, StakePoolAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get stake pool account: %w", err)
+	}
+	stakePool := common.PublicKeyFromString(pool.PublicKey)
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAccount, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	userWalletPK := common.PublicKeyFromString(solanaAccount.PublicKey)
+
+	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get issuer account: %w", err)
+	}
+	issuerAccount := s.sc.AccountFromPrivateKeyBytes(issuer.PrivateKey)
+
+	_, err = s.sc.Unstake(ctx, fee, issuerAccount, stakePool, userWalletPK)
+	if err != nil {
+		return fmt.Errorf("could not unstake: %w", err)
+	}
+
+	err = s.wr.DeleteStakeByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not delete stake by user id: %w", err)
+	}
+
+	return nil
 }
 
 func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {

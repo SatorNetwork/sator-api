@@ -108,6 +108,11 @@ var (
 	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
+	solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
+	solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
+	solanaSplToken              = env.MustString("SOLANA_SPL_TOKEN")
+	solanaStakeProgramID        = env.MustString("SOLANA_STAKE_PROGRAM_ID")
 	tokenCirculatingSupply      = env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844)
 
 	// Mailer
@@ -272,7 +277,13 @@ func main() {
 			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
 		}
 
-		solanaClient := solana.New(solanaApiBaseUrl)
+		solanaClient := solana.New(solanaApiBaseUrl, solana.Config{
+			SystemProgram:  solanaSystemProgram,
+			SysvarRent:     solanaSysvarRent,
+			SysvarClock:    solanaSysvarClock,
+			SplToken:       solanaSplToken,
+			StakeProgramID: solanaStakeProgramID,
+		})
 		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
 		}

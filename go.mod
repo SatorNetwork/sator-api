@@ -30,6 +30,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.9.1
+	github.com/near/borsh-go v0.3.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1

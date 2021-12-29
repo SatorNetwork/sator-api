@@ -14,6 +14,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/dmitrymomot/go-env"
 	"github.com/google/uuid"
 	"github.com/oklog/run"
@@ -29,7 +30,12 @@ var (
 	dbMaxIdleConns = env.GetInt("DATABASE_IDLE_CONNS", 0)
 
 	// Solana
-	solanaApiBaseUrl = env.MustString("SOLANA_API_BASE_URL")
+	solanaApiBaseUrl     = env.MustString("SOLANA_API_BASE_URL")
+	solanaSystemProgram  = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	solanaSysvarRent     = env.MustString("SOLANA_SYSVAR_RENT")
+	solanaSysvarClock    = env.MustString("SOLANA_SYSVAR_CLOCK")
+	solanaSplToken       = env.MustString("SOLANA_SPL_TOKEN")
+	solanaStakeProgramID = env.MustString("SOLANA_STAKE_PROGRAM_ID")
 
 	interval = env.GetDuration("EXEC_INTERVAL", time.Hour)
 )
@@ -86,7 +92,13 @@ func main() {
 					return createSolanaWalletIfNotExists(
 						ctx,
 						repository.New(tx),
-						solana.New(solanaApiBaseUrl),
+						solana.New(solanaApiBaseUrl, solana.Config{
+							SystemProgram:  solanaSystemProgram,
+							SysvarRent:     solanaSysvarRent,
+							SysvarClock:    solanaSysvarClock,
+							SplToken:       solanaSplToken,
+							StakeProgramID: solanaStakeProgramID,
+						}),
 						user.ID,
 					)
 				}); err != nil {
