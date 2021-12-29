@@ -38,6 +38,13 @@ type Rating struct {
 	Username  sql.NullString `json:"username"`
 }
 
+type ReviewsRating struct {
+	ReviewID   uuid.UUID     `json:"review_id"`
+	UserID     uuid.UUID     `json:"user_id"`
+	RatingType sql.NullInt32 `json:"rating_type"`
+	CreatedAt  time.Time     `json:"created_at"`
+}
+
 type Season struct {
 	ID           uuid.UUID `json:"id"`
 	ShowID       uuid.UUID `json:"show_id"`

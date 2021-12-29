@@ -2026,10 +2026,18 @@ paths:
                       type: integer
                       example: 123
                       description: Number of review likes
-                    unlikes:
+                    dislikes:
                       type: integer
                       example: 75
-                      description: Number of review unlikes
+                      description: Number of review dislikes
+                    is_liked:
+                      type: boolean
+                      example: true
+                      description: Is current user likes this review
+                    is_disliked:
+                      type: boolean
+                      example: false
+                      description: Is current user dislikes this review
                     created_at:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
@@ -2399,14 +2407,55 @@ paths:
                       type: integer
                       example: 123
                       description: Number of review likes
-                    unlikes:
+                    dislikes:
                       type: integer
                       example: 75
-                      description: Number of review unlikes
+                      description: Number of review dislikes
+                    is_liked:
+                      type: boolean
+                      example: true
+                      description: Is current user likes this review
+                    is_disliked:
+                      type: boolean
+                      example: false
+                      description: Is current user dislikes this review
                     created_at:
                       type: string
                       example: "2006-01-02T15:04:05Z07:00"
                       description: "RFC3339"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/reviews/{review_id}/{rating_type}:
+    post:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Used to store users review episode assessment (like/dislike).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: review_id
+          in: path
+          description: Review ID.
+          required: true
+          schema:
+            type: string
+        - name: rating_type
+          in: path
+          description: like, dislike.
+          required: true
+          schema:
+            type: string
+          example: like
+
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

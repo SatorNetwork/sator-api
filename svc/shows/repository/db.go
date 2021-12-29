@@ -73,6 +73,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getReviewByIDStmt, err = db.PrepareContext(ctx, getReviewByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetReviewByID: %w", err)
 	}
+	if q.getReviewRatingStmt, err = db.PrepareContext(ctx, getReviewRating); err != nil {
+		return nil, fmt.Errorf("error preparing query GetReviewRating: %w", err)
+	}
 	if q.getSeasonByIDStmt, err = db.PrepareContext(ctx, getSeasonByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSeasonByID: %w", err)
 	}
@@ -90,6 +93,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getUsersEpisodeRatingByIDStmt, err = db.PrepareContext(ctx, getUsersEpisodeRatingByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUsersEpisodeRatingByID: %w", err)
+	}
+	if q.isUserRatedReviewStmt, err = db.PrepareContext(ctx, isUserRatedReview); err != nil {
+		return nil, fmt.Errorf("error preparing query IsUserRatedReview: %w", err)
+	}
+	if q.likeDislikeEpisodeReviewStmt, err = db.PrepareContext(ctx, likeDislikeEpisodeReview); err != nil {
+		return nil, fmt.Errorf("error preparing query LikeDislikeEpisodeReview: %w", err)
 	}
 	if q.rateEpisodeStmt, err = db.PrepareContext(ctx, rateEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query RateEpisode: %w", err)
@@ -199,6 +208,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getReviewByIDStmt: %w", cerr)
 		}
 	}
+	if q.getReviewRatingStmt != nil {
+		if cerr := q.getReviewRatingStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getReviewRatingStmt: %w", cerr)
+		}
+	}
 	if q.getSeasonByIDStmt != nil {
 		if cerr := q.getSeasonByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSeasonByIDStmt: %w", cerr)
@@ -227,6 +241,16 @@ func (q *Queries) Close() error {
 	if q.getUsersEpisodeRatingByIDStmt != nil {
 		if cerr := q.getUsersEpisodeRatingByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUsersEpisodeRatingByIDStmt: %w", cerr)
+		}
+	}
+	if q.isUserRatedReviewStmt != nil {
+		if cerr := q.isUserRatedReviewStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isUserRatedReviewStmt: %w", cerr)
+		}
+	}
+	if q.likeDislikeEpisodeReviewStmt != nil {
+		if cerr := q.likeDislikeEpisodeReviewStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing likeDislikeEpisodeReviewStmt: %w", cerr)
 		}
 	}
 	if q.rateEpisodeStmt != nil {
@@ -315,12 +339,15 @@ type Queries struct {
 	getEpisodesByShowIDStmt                   *sql.Stmt
 	getListEpisodesByIDsStmt                  *sql.Stmt
 	getReviewByIDStmt                         *sql.Stmt
+	getReviewRatingStmt                       *sql.Stmt
 	getSeasonByIDStmt                         *sql.Stmt
 	getSeasonsByShowIDStmt                    *sql.Stmt
 	getShowByIDStmt                           *sql.Stmt
 	getShowsStmt                              *sql.Stmt
 	getShowsByCategoryStmt                    *sql.Stmt
 	getUsersEpisodeRatingByIDStmt             *sql.Stmt
+	isUserRatedReviewStmt                     *sql.Stmt
+	likeDislikeEpisodeReviewStmt              *sql.Stmt
 	rateEpisodeStmt                           *sql.Stmt
 	reviewEpisodeStmt                         *sql.Stmt
 	reviewsListStmt                           *sql.Stmt
@@ -350,12 +377,15 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
 		getListEpisodesByIDsStmt:                  q.getListEpisodesByIDsStmt,
 		getReviewByIDStmt:                         q.getReviewByIDStmt,
+		getReviewRatingStmt:                       q.getReviewRatingStmt,
 		getSeasonByIDStmt:                         q.getSeasonByIDStmt,
 		getSeasonsByShowIDStmt:                    q.getSeasonsByShowIDStmt,
 		getShowByIDStmt:                           q.getShowByIDStmt,
 		getShowsStmt:                              q.getShowsStmt,
 		getShowsByCategoryStmt:                    q.getShowsByCategoryStmt,
 		getUsersEpisodeRatingByIDStmt:             q.getUsersEpisodeRatingByIDStmt,
+		isUserRatedReviewStmt:                     q.isUserRatedReviewStmt,
+		likeDislikeEpisodeReviewStmt:              q.likeDislikeEpisodeReviewStmt,
 		rateEpisodeStmt:                           q.rateEpisodeStmt,
 		reviewEpisodeStmt:                         q.reviewEpisodeStmt,
 		reviewsListStmt:                           q.reviewsListStmt,
