@@ -1377,6 +1377,8 @@ paths:
                     watch:
                       type: string
                       example: "https://youtube.com/ERGbevesrf"
+                    has_nft:
+                      type: boolean
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
@@ -1567,6 +1569,8 @@ paths:
                   watch:
                     type: string
                     example: "https://youtube.com/ERGbevesrf"
+                  has_nft:
+                    type: boolean
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

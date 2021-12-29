@@ -43,6 +43,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteNFTRelationStmt, err = db.PrepareContext(ctx, deleteNFTRelation); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteNFTRelation: %w", err)
 	}
+	if q.doesRelationIDHasRelationNFTStmt, err = db.PrepareContext(ctx, doesRelationIDHasRelationNFT); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesRelationIDHasRelationNFT: %w", err)
+	}
 	if q.doesUserOwnNFTStmt, err = db.PrepareContext(ctx, doesUserOwnNFT); err != nil {
 		return nil, fmt.Errorf("error preparing query DoesUserOwnNFT: %w", err)
 	}
@@ -114,6 +117,11 @@ func (q *Queries) Close() error {
 	if q.deleteNFTRelationStmt != nil {
 		if cerr := q.deleteNFTRelationStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteNFTRelationStmt: %w", cerr)
+		}
+	}
+	if q.doesRelationIDHasRelationNFTStmt != nil {
+		if cerr := q.doesRelationIDHasRelationNFTStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesRelationIDHasRelationNFTStmt: %w", cerr)
 		}
 	}
 	if q.doesUserOwnNFTStmt != nil {
@@ -208,49 +216,51 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                              DBTX
-	tx                              *sql.Tx
-	addNFTCategoryStmt              *sql.Stmt
-	addNFTItemStmt                  *sql.Stmt
-	addNFTItemOwnerStmt             *sql.Stmt
-	addNFTRelationStmt              *sql.Stmt
-	deleteNFTCategoryByIDStmt       *sql.Stmt
-	deleteNFTItemByIDStmt           *sql.Stmt
-	deleteNFTRelationStmt           *sql.Stmt
-	doesUserOwnNFTStmt              *sql.Stmt
-	getMainNFTCategoryStmt          *sql.Stmt
-	getNFTCategoriesListStmt        *sql.Stmt
-	getNFTCategoryByIDStmt          *sql.Stmt
-	getNFTItemByIDStmt              *sql.Stmt
-	getNFTItemsListStmt             *sql.Stmt
-	getNFTItemsListByOwnerIDStmt    *sql.Stmt
-	getNFTItemsListByRelationIDStmt *sql.Stmt
-	resetMainNFTCategoryStmt        *sql.Stmt
-	updateNFTCategoryStmt           *sql.Stmt
-	updateNFTItemStmt               *sql.Stmt
+	db                               DBTX
+	tx                               *sql.Tx
+	addNFTCategoryStmt               *sql.Stmt
+	addNFTItemStmt                   *sql.Stmt
+	addNFTItemOwnerStmt              *sql.Stmt
+	addNFTRelationStmt               *sql.Stmt
+	deleteNFTCategoryByIDStmt        *sql.Stmt
+	deleteNFTItemByIDStmt            *sql.Stmt
+	deleteNFTRelationStmt            *sql.Stmt
+	doesRelationIDHasRelationNFTStmt *sql.Stmt
+	doesUserOwnNFTStmt               *sql.Stmt
+	getMainNFTCategoryStmt           *sql.Stmt
+	getNFTCategoriesListStmt         *sql.Stmt
+	getNFTCategoryByIDStmt           *sql.Stmt
+	getNFTItemByIDStmt               *sql.Stmt
+	getNFTItemsListStmt              *sql.Stmt
+	getNFTItemsListByOwnerIDStmt     *sql.Stmt
+	getNFTItemsListByRelationIDStmt  *sql.Stmt
+	resetMainNFTCategoryStmt         *sql.Stmt
+	updateNFTCategoryStmt            *sql.Stmt
+	updateNFTItemStmt                *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                              tx,
-		tx:                              tx,
-		addNFTCategoryStmt:              q.addNFTCategoryStmt,
-		addNFTItemStmt:                  q.addNFTItemStmt,
-		addNFTItemOwnerStmt:             q.addNFTItemOwnerStmt,
-		addNFTRelationStmt:              q.addNFTRelationStmt,
-		deleteNFTCategoryByIDStmt:       q.deleteNFTCategoryByIDStmt,
-		deleteNFTItemByIDStmt:           q.deleteNFTItemByIDStmt,
-		deleteNFTRelationStmt:           q.deleteNFTRelationStmt,
-		doesUserOwnNFTStmt:              q.doesUserOwnNFTStmt,
-		getMainNFTCategoryStmt:          q.getMainNFTCategoryStmt,
-		getNFTCategoriesListStmt:        q.getNFTCategoriesListStmt,
-		getNFTCategoryByIDStmt:          q.getNFTCategoryByIDStmt,
-		getNFTItemByIDStmt:              q.getNFTItemByIDStmt,
-		getNFTItemsListStmt:             q.getNFTItemsListStmt,
-		getNFTItemsListByOwnerIDStmt:    q.getNFTItemsListByOwnerIDStmt,
-		getNFTItemsListByRelationIDStmt: q.getNFTItemsListByRelationIDStmt,
-		resetMainNFTCategoryStmt:        q.resetMainNFTCategoryStmt,
-		updateNFTCategoryStmt:           q.updateNFTCategoryStmt,
-		updateNFTItemStmt:               q.updateNFTItemStmt,
+		db:                               tx,
+		tx:                               tx,
+		addNFTCategoryStmt:               q.addNFTCategoryStmt,
+		addNFTItemStmt:                   q.addNFTItemStmt,
+		addNFTItemOwnerStmt:              q.addNFTItemOwnerStmt,
+		addNFTRelationStmt:               q.addNFTRelationStmt,
+		deleteNFTCategoryByIDStmt:        q.deleteNFTCategoryByIDStmt,
+		deleteNFTItemByIDStmt:            q.deleteNFTItemByIDStmt,
+		deleteNFTRelationStmt:            q.deleteNFTRelationStmt,
+		doesRelationIDHasRelationNFTStmt: q.doesRelationIDHasRelationNFTStmt,
+		doesUserOwnNFTStmt:               q.doesUserOwnNFTStmt,
+		getMainNFTCategoryStmt:           q.getMainNFTCategoryStmt,
+		getNFTCategoriesListStmt:         q.getNFTCategoriesListStmt,
+		getNFTCategoryByIDStmt:           q.getNFTCategoryByIDStmt,
+		getNFTItemByIDStmt:               q.getNFTItemByIDStmt,
+		getNFTItemsListStmt:              q.getNFTItemsListStmt,
+		getNFTItemsListByOwnerIDStmt:     q.getNFTItemsListByOwnerIDStmt,
+		getNFTItemsListByRelationIDStmt:  q.getNFTItemsListByRelationIDStmt,
+		resetMainNFTCategoryStmt:         q.resetMainNFTCategoryStmt,
+		updateNFTCategoryStmt:            q.updateNFTCategoryStmt,
+		updateNFTItemStmt:                q.updateNFTItemStmt,
 	}
 }

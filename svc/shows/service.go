@@ -26,6 +26,7 @@ type (
 		pc           profileClient
 		ac           authClient
 		sentTipsFunc sentTipsFunction
+		nc           nftClient
 	}
 
 	// Show struct
@@ -41,6 +42,7 @@ type (
 		RealmsTitle    string    `json:"realms_title"`
 		RealmsSubtitle string    `json:"realms_subtitle"`
 		Watch          string    `json:"watch"`
+		HasNFT         bool      `json:"has_nft"`
 	}
 
 	Season struct {
@@ -147,13 +149,18 @@ type (
 		GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error)
 	}
 
+	// NFT service client
+	nftClient interface {
+		DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
+	}
+
 	// Simple function
 	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -169,8 +176,11 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 	if sentTipsFunc == nil {
 		log.Fatalln("sentTipsFunc is not set")
 	}
+	if nc == nil {
+		log.Fatalln("nft client is not set")
+	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc}
 }
 
 // GetShows returns shows.
@@ -182,7 +192,13 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToListShow(shows), nil
+
+	sl, err := s.castToListShow(ctx, shows)
+	if err != nil {
+		return nil, fmt.Errorf("could not cast to list show : %w", err)
+	}
+
+	return sl, nil
 }
 
 // GetShowChallenges returns challenges by show id.
@@ -196,29 +212,34 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID, userID uuid.UUI
 }
 
 // Cast repository.Show to service Show structure
-func castToListShow(source []repository.Show) []Show {
+func (s *Service) castToListShow(ctx context.Context, source []repository.Show) ([]Show, error) {
 	result := make([]Show, 0, len(source))
-	for _, s := range source {
+	for _, sw := range source {
+		hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, sw.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+		}
 		sh := Show{
-			ID:             s.ID,
-			Title:          s.Title,
-			Cover:          s.Cover,
-			HasNewEpisode:  s.HasNewEpisode,
-			Category:       s.Category.String,
-			Description:    s.Description.String,
-			RealmsTitle:    s.RealmsTitle.String,
-			RealmsSubtitle: s.RealmsSubtitle.String,
-			Watch:          s.Watch.String,
+			ID:             sw.ID,
+			Title:          sw.Title,
+			Cover:          sw.Cover,
+			HasNewEpisode:  sw.HasNewEpisode,
+			Category:       sw.Category.String,
+			Description:    sw.Description.String,
+			RealmsTitle:    sw.RealmsTitle.String,
+			RealmsSubtitle: sw.RealmsSubtitle.String,
+			Watch:          sw.Watch.String,
+			HasNFT:         hasNFT,
 		}
 
-		if !s.RealmsTitle.Valid {
+		if !sw.RealmsTitle.Valid {
 			sh.RealmsTitle = "Realms"
 		}
 
 		result = append(result, sh)
 	}
 
-	return result
+	return result, nil
 }
 
 // GetShowByID returns show with provided id.
@@ -227,7 +248,30 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
 	}
-	return castToShowWithClaps(show), nil
+	hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, show.ID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+	}
+
+	result := Show{
+		ID:             show.ID,
+		Title:          show.Title,
+		Cover:          show.Cover,
+		HasNewEpisode:  show.HasNewEpisode,
+		Category:       show.Category.String,
+		Description:    show.Description.String,
+		Claps:          show.Claps,
+		RealmsTitle:    show.RealmsTitle.String,
+		RealmsSubtitle: show.RealmsSubtitle.String,
+		Watch:          show.Watch.String,
+		HasNFT:         hasNFT,
+	}
+
+	if !show.RealmsTitle.Valid {
+		result.RealmsTitle = "Realms"
+	}
+
+	return result, nil
 }
 
 // Cast repository.Show to service Show structure
@@ -251,28 +295,6 @@ func castToShow(source repository.Show) Show {
 	return result
 }
 
-// Cast repository.GetShowByIDRow to service Show structure
-func castToShowWithClaps(source repository.GetShowByIDRow) Show {
-	result := Show{
-		ID:             source.ID,
-		Title:          source.Title,
-		Cover:          source.Cover,
-		HasNewEpisode:  source.HasNewEpisode,
-		Category:       source.Category.String,
-		Description:    source.Description.String,
-		Claps:          source.Claps,
-		RealmsTitle:    source.RealmsTitle.String,
-		RealmsSubtitle: source.RealmsSubtitle.String,
-		Watch:          source.Watch.String,
-	}
-
-	if !source.RealmsTitle.Valid {
-		result.RealmsTitle = "Realms"
-	}
-
-	return result
-}
-
 // GetShowsByCategory returns show by provided category.
 func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error) {
 	shows, err := s.sr.GetShowsByCategory(ctx, repository.GetShowsByCategoryParams{
@@ -283,7 +305,13 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToListShow(shows), nil
+
+	sl, err := s.castToListShow(ctx, shows)
+	if err != nil {
+		return nil, fmt.Errorf("could not cast to list show : %w", err)
+	}
+
+	return sl, nil
 }
 
 // GetEpisodesByShowID returns episodes by show id.

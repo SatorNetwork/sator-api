@@ -39,3 +39,17 @@ func (q *Queries) DeleteNFTRelation(ctx context.Context, arg DeleteNFTRelationPa
 	_, err := q.exec(ctx, q.deleteNFTRelationStmt, deleteNFTRelation, arg.NFTItemID, arg.RelationID)
 	return err
 }
+
+const doesRelationIDHasRelationNFT = `-- name: DoesRelationIDHasRelationNFT :one
+SELECT EXISTS(
+    SELECT nft_item_id FROM nft_relations
+    WHERE relation_id = $1
+)
+`
+
+func (q *Queries) DoesRelationIDHasRelationNFT(ctx context.Context, relationID uuid.UUID) (bool, error) {
+	row := q.queryRow(ctx, q.doesRelationIDHasRelationNFTStmt, doesRelationIDHasRelationNFT, relationID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
