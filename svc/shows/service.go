@@ -889,21 +889,6 @@ func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, 
 	return s.castReviewsList(ctx, reviews, currentUserID), nil
 }
 
-// GetActivatedUserEpisodes returns list activated episodes by user id.
-func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Episode, error) {
-	listIDs, err := s.chc.ListIDsAvailableUserEpisodes(ctx, userID, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("could not get list ids user available episodes: %w", err)
-	}
-
-	listEpisodes, err := s.GetListEpisodesByIDs(ctx, listIDs)
-	if err != nil {
-		return nil, fmt.Errorf("could not get list user available episodes: %w", err)
-	}
-
-	return listEpisodes, nil
-}
-
 // LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
 func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uuid.UUID, ratingType ReviewRatingType) error {
 	err := s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
@@ -918,4 +903,19 @@ func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uu
 	}
 
 	return nil
+}
+
+// GetActivatedUserEpisodes returns list activated episodes by user id.
+func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Episode, error) {
+	listIDs, err := s.chc.ListIDsAvailableUserEpisodes(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("could not get list ids user available episodes: %w", err)
+	}
+
+	listEpisodes, err := s.GetListEpisodesByIDs(ctx, listIDs)
+	if err != nil {
+		return nil, fmt.Errorf("could not get list user available episodes: %w", err)
+	}
+
+	return listEpisodes, nil
 }

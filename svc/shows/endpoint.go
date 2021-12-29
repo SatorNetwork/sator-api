@@ -908,34 +908,6 @@ func MakeDeleteReviewByIDEndpoint(s service) endpoint.Endpoint {
 	}
 }
 
-// MakeAddClapsForShowEndpoint ...
-func MakeAddClapsForShowEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
-
-		uid, err := jwt.UserIDFromContext(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not get user profile id: %w", err)
-		}
-
-		showID, err := uuid.Parse(request.(string))
-		if err != nil {
-			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
-		}
-
-		if err := s.AddClapsForShow(ctx, showID, uid); err != nil {
-			if errors.Is(err, ErrMaxClaps) {
-				return false, nil
-			}
-			return nil, err
-		}
-
-		return true, nil
-	}
-}
-
 // MakeLikeDislikeEpisodeEndpoint ...
 func MakeLikeDislikeEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -969,6 +941,34 @@ func MakeLikeDislikeEpisodeEndpoint(s service, v validator.ValidateFunc) endpoin
 		}
 
 		if err := s.LikeDislikeEpisodeReview(ctx, reviewID, uid, ratingType); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeAddClapsForShowEndpoint ...
+func MakeAddClapsForShowEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		showID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		if err := s.AddClapsForShow(ctx, showID, uid); err != nil {
+			if errors.Is(err, ErrMaxClaps) {
+				return false, nil
+			}
 			return nil, err
 		}
 
