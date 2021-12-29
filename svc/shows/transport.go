@@ -163,13 +163,6 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/reviews/{review_id}/{rating_type}", httptransport.NewServer(
-		e.LikeDislikeEpisode,
-		decodeLikeDislikeEpisodeRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
 	// Seasons
 	r.Post("/{show_id}/seasons", httptransport.NewServer(
 		e.AddSeason,
@@ -188,6 +181,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Post("/{show_id}/claps", httptransport.NewServer(
 		e.AddClapsForShow,
 		decodeAddClapsForShowRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/reviews/{review_id}/{rating_type}", httptransport.NewServer(
+		e.LikeDislikeEpisode,
+		decodeLikeDislikeEpisodeRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
