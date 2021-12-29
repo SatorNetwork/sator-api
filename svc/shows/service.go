@@ -364,7 +364,7 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 		EpisodeID: episodeID,
 		UserID:    userID,
 	})
-	if err != nil {
+	if err != nil && !db.IsNotFoundError(err) {
 		return Episode{}, fmt.Errorf("could not get users episode rating with id=%s: %w", episodeID, err)
 	}
 
