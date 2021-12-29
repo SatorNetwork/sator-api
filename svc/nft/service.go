@@ -69,6 +69,7 @@ type (
 		UpdateNFTItem(ctx context.Context, arg repository.UpdateNFTItemParams) error
 		DeleteNFTItemByID(ctx context.Context, id uuid.UUID) error
 		AddNFTRelation(ctx context.Context, arg repository.AddNFTRelationParams) error
+		DoesRelationIDHasRelationNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
 	}
 
 	NFTItemRow struct {
@@ -432,4 +433,13 @@ func (s *Service) UpdateNFTItem(ctx context.Context, nft *NFT) error {
 	}
 
 	return nil
+}
+
+func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID) (bool, error) {
+	hasRelationID, err := s.nftRepo.DoesRelationIDHasRelationNFT(ctx, relationID)
+	if err != nil {
+		return false, fmt.Errorf("could not check is there related NFT with relation id=%s: %w", relationID, err)
+	}
+
+	return hasRelationID, nil
 }

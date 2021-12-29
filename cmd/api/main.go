@@ -15,8 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/sumsub"
-
 	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
@@ -26,6 +24,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/resizer"
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	storage "github.com/SatorNetwork/sator-api/internal/storage"
+	"github.com/SatorNetwork/sator-api/internal/sumsub"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authc "github.com/SatorNetwork/sator-api/svc/auth/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -39,6 +38,7 @@ import (
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
 	"github.com/SatorNetwork/sator-api/svc/nft"
+	nftC "github.com/SatorNetwork/sator-api/svc/nft/client"
 	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
@@ -340,6 +340,7 @@ func main() {
 	))
 
 	var authClient *authc.Client
+	var nftClient *nftC.Client
 	{
 		// KYC
 		kycService := sumsub.New(kycAppToken, kycAppSecret, kycAppBaseURL, kycAppTTL)
@@ -412,6 +413,20 @@ func main() {
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
+	{
+		// NFT service
+		nftRepository, err := nftRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("nftRepo error: %v", err)
+		}
+		nftService := nft.NewService(nftRepository, walletSvcClient.PayForService)
+		r.Mount("/nft", nft.MakeHTTPHandler(
+			nft.MakeEndpoints(nftService, jwtMdw),
+			logger,
+		))
+		nftClient = nftC.New(nftService)
+	}
+
 	// Shows service
 	{
 
@@ -448,7 +463,7 @@ func main() {
 
 		// Shows service
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer), jwtMdw),
+			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient), jwtMdw),
 			logger,
 		))
 	}
@@ -542,19 +557,6 @@ func main() {
 
 		go quizV2Svc.StartEngine()
 		// TODO(evg): gracefully shutdown the engine
-	}
-
-	{
-		// NFT service
-		nftRepository, err := nftRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("nftRepo error: %v", err)
-		}
-		nftService := nft.NewService(nftRepository, walletSvcClient.PayForService)
-		r.Mount("/nft", nft.MakeHTTPHandler(
-			nft.MakeEndpoints(nftService, jwtMdw),
-			logger,
-		))
 	}
 
 	{
