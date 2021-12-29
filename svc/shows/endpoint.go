@@ -66,10 +66,10 @@ type (
 
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
 		ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error
-		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error)
-		GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error)
+		GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32, currentUserID uuid.UUID) ([]Review, error)
+		GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32, currentUserID uuid.UUID) ([]Review, error)
 		DeleteReviewByID(ctx context.Context, id uuid.UUID) error
-		LikeDislikeEpisodeReview(ctx context.Context, id, uid uuid.UUID, param string) error
+		LikeDislikeEpisodeReview(ctx context.Context, id, uid uuid.UUID, ratingType ReviewRatingType) error
 
 		AddClapsForShow(ctx context.Context, showID, userID uuid.UUID) error
 	}
@@ -195,7 +195,7 @@ type (
 	// LikeDislikeEpisodeRequest struct
 	LikeDislikeEpisodeRequest struct {
 		ReviewID string `json:"review_id" validate:"required,uuid"`
-		Param    string `json:"like_dislike" validate:"required,omitempty"`
+		Param    string `json:"rating_type" validate:"required,in:like,dislike"`
 	}
 )
 
@@ -851,7 +851,12 @@ func MakeGetReviewsListEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetReviewsList(ctx, episodeID, req.Limit(), req.Offset())
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		resp, err := s.GetReviewsList(ctx, episodeID, req.Limit(), req.Offset(), uid)
 		if err != nil {
 			return nil, err
 		}
@@ -873,7 +878,7 @@ func MakeGetReviewsListByUserIDEndpoint(s service, v validator.ValidateFunc) end
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		resp, err := s.GetReviewsListByUserID(ctx, uid, req.Limit(), req.Offset())
+		resp, err := s.GetReviewsListByUserID(ctx, uid, req.Limit(), req.Offset(), uid)
 		if err != nil {
 			return nil, err
 		}
@@ -948,12 +953,22 @@ func MakeLikeDislikeEpisodeEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
+		var ratingType ReviewRatingType
+		switch req.Param {
+		case "like":
+			ratingType = LikeReview
+		case "dislike":
+			ratingType = DislikeReview
+		default:
+			return nil, fmt.Errorf("undefined rating type: %s", req.Param)
+		}
+
 		reviewID, err := uuid.Parse(req.ReviewID)
 		if err != nil {
 			return nil, fmt.Errorf("%w review id: %v", ErrInvalidParameter, err)
 		}
 
-		if err := s.LikeDislikeEpisodeReview(ctx, reviewID, uid, req.Param); err != nil {
+		if err := s.LikeDislikeEpisodeReview(ctx, reviewID, uid, ratingType); err != nil {
 			return nil, err
 		}
 

@@ -163,7 +163,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/reviews/{review_id}/{like_dislike}", httptransport.NewServer(
+	r.Post("/reviews/{review_id}/{rating_type}", httptransport.NewServer(
 		e.LikeDislikeEpisode,
 		decodeLikeDislikeEpisodeRequest,
 		httpencoder.EncodeResponse,
@@ -474,7 +474,7 @@ func decodeLikeDislikeEpisodeRequest(_ context.Context, r *http.Request) (interf
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed review id", ErrInvalidParameter)
 	}
-	param := chi.URLParam(r, "like_dislike")
+	param := chi.URLParam(r, "rating_type")
 	if param == "" {
 		return nil, fmt.Errorf("%w: missed like/dislike pamameter", ErrInvalidParameter)
 	}

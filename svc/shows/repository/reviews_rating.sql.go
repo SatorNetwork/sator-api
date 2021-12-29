@@ -10,27 +10,67 @@ import (
 	"github.com/google/uuid"
 )
 
+const getReviewRating = `-- name: GetReviewRating :one
+SELECT count(*)
+FROM reviews_rating
+WHERE review_id = $1
+AND rating_type = $2
+`
+
+type GetReviewRatingParams struct {
+	ReviewID   uuid.UUID     `json:"review_id"`
+	RatingType sql.NullInt32 `json:"rating_type"`
+}
+
+func (q *Queries) GetReviewRating(ctx context.Context, arg GetReviewRatingParams) (int64, error) {
+	row := q.queryRow(ctx, q.getReviewRatingStmt, getReviewRating, arg.ReviewID, arg.RatingType)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const isUserRatedReview = `-- name: IsUserRatedReview :one
+SELECT count(*) > 0 
+FROM reviews_rating
+WHERE user_id = $1 
+AND review_id = $2
+AND rating_type = $3
+`
+
+type IsUserRatedReviewParams struct {
+	UserID     uuid.UUID     `json:"user_id"`
+	ReviewID   uuid.UUID     `json:"review_id"`
+	RatingType sql.NullInt32 `json:"rating_type"`
+}
+
+func (q *Queries) IsUserRatedReview(ctx context.Context, arg IsUserRatedReviewParams) (bool, error) {
+	row := q.queryRow(ctx, q.isUserRatedReviewStmt, isUserRatedReview, arg.UserID, arg.ReviewID, arg.RatingType)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const likeDislikeEpisodeReview = `-- name: LikeDislikeEpisodeReview :exec
 INSERT INTO reviews_rating (
     review_id,
     user_id,
-    like_dislike
+    rating_type
 ) VALUES (
              $1,
              $2,
              $3
          ) ON CONFLICT (review_id, user_id) DO
 UPDATE SET
-    like_dislike = EXCLUDED.like_dislike
+    rating_type = EXCLUDED.rating_type
 `
 
 type LikeDislikeEpisodeReviewParams struct {
-	ReviewID    uuid.UUID     `json:"review_id"`
-	UserID      uuid.UUID     `json:"user_id"`
-	LikeDislike sql.NullInt32 `json:"like_dislike"`
+	ReviewID   uuid.UUID     `json:"review_id"`
+	UserID     uuid.UUID     `json:"user_id"`
+	RatingType sql.NullInt32 `json:"rating_type"`
 }
 
 func (q *Queries) LikeDislikeEpisodeReview(ctx context.Context, arg LikeDislikeEpisodeReviewParams) error {
-	_, err := q.exec(ctx, q.likeDislikeEpisodeReviewStmt, likeDislikeEpisodeReview, arg.ReviewID, arg.UserID, arg.LikeDislike)
+	_, err := q.exec(ctx, q.likeDislikeEpisodeReviewStmt, likeDislikeEpisodeReview, arg.ReviewID, arg.UserID, arg.RatingType)
 	return err
 }
