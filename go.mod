@@ -5,6 +5,7 @@ go 1.16
 replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompatible
 
 require (
+	github.com/anytypeio/go-slip10 v0.0.0-20200330114100-25f30c832993
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible
@@ -38,6 +39,7 @@ require (
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
 	github.com/stretchr/testify v1.7.0
 	github.com/thedevsaddam/govalidator v1.9.10
+	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/zeebo/errs v1.2.2
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect

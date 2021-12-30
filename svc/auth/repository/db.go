@@ -76,6 +76,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getNotSanitizedUsersListDescStmt, err = db.PrepareContext(ctx, getNotSanitizedUsersListDesc); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNotSanitizedUsersListDesc: %w", err)
 	}
+	if q.getPublicKeyStmt, err = db.PrepareContext(ctx, getPublicKey); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPublicKey: %w", err)
+	}
 	if q.getUserByEmailStmt, err = db.PrepareContext(ctx, getUserByEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmail: %w", err)
 	}
@@ -126,6 +129,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateKYCStatusStmt, err = db.PrepareContext(ctx, updateKYCStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateKYCStatus: %w", err)
+	}
+	if q.updatePublicKeyStmt, err = db.PrepareContext(ctx, updatePublicKey); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdatePublicKey: %w", err)
 	}
 	if q.updateUserEmailStmt, err = db.PrepareContext(ctx, updateUserEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserEmail: %w", err)
@@ -240,6 +246,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getNotSanitizedUsersListDescStmt: %w", cerr)
 		}
 	}
+	if q.getPublicKeyStmt != nil {
+		if cerr := q.getPublicKeyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPublicKeyStmt: %w", cerr)
+		}
+	}
 	if q.getUserByEmailStmt != nil {
 		if cerr := q.getUserByEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByEmailStmt: %w", cerr)
@@ -323,6 +334,11 @@ func (q *Queries) Close() error {
 	if q.updateKYCStatusStmt != nil {
 		if cerr := q.updateKYCStatusStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateKYCStatusStmt: %w", cerr)
+		}
+	}
+	if q.updatePublicKeyStmt != nil {
+		if cerr := q.updatePublicKeyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updatePublicKeyStmt: %w", cerr)
 		}
 	}
 	if q.updateUserEmailStmt != nil {
@@ -412,6 +428,7 @@ type Queries struct {
 	getBlacklistByRestrictedValueStmt   *sql.Stmt
 	getKYCStatusStmt                    *sql.Stmt
 	getNotSanitizedUsersListDescStmt    *sql.Stmt
+	getPublicKeyStmt                    *sql.Stmt
 	getUserByEmailStmt                  *sql.Stmt
 	getUserByIDStmt                     *sql.Stmt
 	getUserBySanitizedEmailStmt         *sql.Stmt
@@ -429,6 +446,7 @@ type Queries struct {
 	isUserDisabledStmt                  *sql.Stmt
 	linkDeviceToUserStmt                *sql.Stmt
 	updateKYCStatusStmt                 *sql.Stmt
+	updatePublicKeyStmt                 *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
 	updateUserSanitizedEmailStmt        *sql.Stmt
@@ -459,6 +477,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getBlacklistByRestrictedValueStmt:   q.getBlacklistByRestrictedValueStmt,
 		getKYCStatusStmt:                    q.getKYCStatusStmt,
 		getNotSanitizedUsersListDescStmt:    q.getNotSanitizedUsersListDescStmt,
+		getPublicKeyStmt:                    q.getPublicKeyStmt,
 		getUserByEmailStmt:                  q.getUserByEmailStmt,
 		getUserByIDStmt:                     q.getUserByIDStmt,
 		getUserBySanitizedEmailStmt:         q.getUserBySanitizedEmailStmt,
@@ -476,6 +495,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		isUserDisabledStmt:                  q.isUserDisabledStmt,
 		linkDeviceToUserStmt:                q.linkDeviceToUserStmt,
 		updateKYCStatusStmt:                 q.updateKYCStatusStmt,
+		updatePublicKeyStmt:                 q.updatePublicKeyStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
 		updateUserSanitizedEmailStmt:        q.updateUserSanitizedEmailStmt,

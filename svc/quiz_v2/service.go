@@ -2,11 +2,14 @@ package quiz_v2
 
 import (
 	"context"
+	"crypto/rsa"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
+	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"
@@ -19,15 +22,30 @@ type (
 		natsURL    string
 		natsWSURL  string
 		challenges quiz_v2_challenge.ChallengesService
+		ac         authClient
+
+		serverRSAPrivateKey *rsa.PrivateKey
+	}
+
+	authClient interface {
+		GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error)
 	}
 )
 
-func NewService(natsURL, natsWSURL string, challenges quiz_v2_challenge.ChallengesService) *Service {
+func NewService(
+	natsURL,
+	natsWSURL string,
+	challenges quiz_v2_challenge.ChallengesService,
+	ac authClient,
+	serverRSAPrivateKey *rsa.PrivateKey,
+) *Service {
 	s := &Service{
-		engine:     engine.New(challenges),
-		natsURL:    natsURL,
-		natsWSURL:  natsWSURL,
-		challenges: challenges,
+		engine:              engine.New(challenges),
+		natsURL:             natsURL,
+		natsWSURL:           natsWSURL,
+		challenges:          challenges,
+		ac:                  ac,
+		serverRSAPrivateKey: serverRSAPrivateKey,
 	}
 
 	return s
@@ -58,7 +76,21 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	recvMessageSubj := fmt.Sprintf("%v/%v", prefix, "recv")
 	sendMessageSubj := fmt.Sprintf("%v/%v", prefix, "send")
 
-	player, err := nats_player.NewNatsPlayer(uid.String(), challengeID.String(), username, s.natsURL, recvMessageSubj, sendMessageSubj)
+	publicKey, err := s.ac.GetPublicKey(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	player, err := nats_player.NewNatsPlayer(
+		uid.String(),
+		challengeID.String(),
+		username,
+		s.natsURL,
+		recvMessageSubj,
+		sendMessageSubj,
+		publicKey,
+		s.serverRSAPrivateKey,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create nats player")
 	}
@@ -67,12 +99,18 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 	}
 	s.engine.AddPlayer(player)
 
+	publicKeyBytes, err := internal_rsa.PublicKeyToBytes(&s.serverRSAPrivateKey.PublicKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't encode server's public key")
+	}
+
 	return &GetQuizLinkResponse{
 		BaseQuizURL:     s.natsURL,
 		BaseQuizWSURL:   s.natsWSURL,
 		RecvMessageSubj: recvMessageSubj,
 		SendMessageSubj: sendMessageSubj,
 		UserID:          uid.String(),
+		ServerPublicKey: string(publicKeyBytes),
 	}, nil
 }
 

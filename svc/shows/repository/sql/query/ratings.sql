@@ -19,6 +19,11 @@ INSERT INTO ratings (
 UPDATE SET
     rating = EXCLUDED.rating;
 
+-- name: GetUsersEpisodeRatingByID :one
+SELECT rating FROM ratings
+WHERE episode_id = $1
+  AND user_id = $2;
+
 -- name: ReviewEpisode :exec
 INSERT INTO ratings (
     episode_id,
@@ -63,6 +68,10 @@ AND title IS NOT NULL
 AND review IS NOT NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetReviewByID :one
+SELECT * FROM ratings
+WHERE id = $1;
 
 -- name: ReviewsListByUserID :many
 SELECT * FROM ratings

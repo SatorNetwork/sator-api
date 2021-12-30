@@ -127,3 +127,13 @@ WHERE id = $1
 SELECT username 
 FROM users
 WHERE id = @id;
+
+-- name: UpdatePublicKey :exec
+UPDATE users
+SET public_key = @public_key::text
+WHERE id = @id;
+
+-- name: GetPublicKey :one
+SELECT public_key
+FROM users
+WHERE id = @id;

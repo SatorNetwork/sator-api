@@ -16,15 +16,25 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultHintText = "Start watching to earn SAO"
+const (
+	defaultHintText = "Start watching to earn SAO"
+
+	LikeReview    ReviewRatingType = 1
+	DislikeReview ReviewRatingType = 2
+)
 
 type (
+	// ReviewRatingType ...
+	ReviewRatingType int32
+
 	// Service struct
 	Service struct {
-		sr  showsRepository
-		chc challengesClient
-		pc  profileClient
-		ac  authClient
+		sr           showsRepository
+		chc          challengesClient
+		pc           profileClient
+		ac           authClient
+		sentTipsFunc sentTipsFunction
+		nc           nftClient
 	}
 
 	// Show struct
@@ -40,6 +50,7 @@ type (
 		RealmsTitle    string    `json:"realms_title"`
 		RealmsSubtitle string    `json:"realms_subtitle"`
 		Watch          string    `json:"watch"`
+		HasNFT         bool      `json:"has_nft"`
 	}
 
 	Season struct {
@@ -65,6 +76,7 @@ type (
 		VerificationChallengeID *uuid.UUID `json:"verification_challenge_id"`
 		Rating                  float64    `json:"rating"`
 		RatingsCount            int64      `json:"ratings_count"`
+		UsersEpisodeRating      int32      `json:"users_episode_rating"`
 		ActiveUsers             int32      `json:"active_users"`
 		UserRewardsAmount       float64    `json:"user_rewards_amount"`
 		TotalRewardsAmount      float64    `json:"total_rewards_amount"`
@@ -82,7 +94,9 @@ type (
 		Title      string `json:"title"`
 		Review     string `json:"review"`
 		Likes      int64  `json:"likes"`
-		Unlikes    int64  `json:"unlikes"`
+		Dislikes   int64  `json:"dislikes"`
+		IsLiked    bool   `json:"is_liked"`
+		IsDisliked bool   `json:"is_disliked"`
 		CreatedAt  string `json:"created_at"`
 	}
 
@@ -113,6 +127,7 @@ type (
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
 		RateEpisode(ctx context.Context, arg repository.RateEpisodeParams) error
 		DidUserRateEpisode(ctx context.Context, arg repository.DidUserRateEpisodeParams) (bool, error)
+		GetUsersEpisodeRatingByID(ctx context.Context, arg repository.GetUsersEpisodeRatingByIDParams) (int32, error)
 
 		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
@@ -120,6 +135,10 @@ type (
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
+		LikeDislikeEpisodeReview(ctx context.Context, arg repository.LikeDislikeEpisodeReviewParams) error
+		GetReviewRating(ctx context.Context, arg repository.GetReviewRatingParams) (int64, error)
+		IsUserRatedReview(ctx context.Context, arg repository.IsUserRatedReviewParams) (bool, error)
+		GetReviewByID(ctx context.Context, id uuid.UUID) (repository.Rating, error)
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -142,11 +161,19 @@ type (
 	authClient interface {
 		GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, error)
 	}
+
+	// NFT service client
+	nftClient interface {
+		DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
+	}
+
+	// Simple function
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -159,8 +186,14 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 	if ac == nil {
 		log.Fatalln("auth client is not set")
 	}
+	if sentTipsFunc == nil {
+		log.Fatalln("sentTipsFunc is not set")
+	}
+	if nc == nil {
+		log.Fatalln("nft client is not set")
+	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc}
 }
 
 // GetShows returns shows.
@@ -172,7 +205,13 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToListShow(shows), nil
+
+	sl, err := s.castToListShow(ctx, shows)
+	if err != nil {
+		return nil, fmt.Errorf("could not cast to list show : %w", err)
+	}
+
+	return sl, nil
 }
 
 // GetShowChallenges returns challenges by show id.
@@ -186,29 +225,34 @@ func (s *Service) GetShowChallenges(ctx context.Context, showID, userID uuid.UUI
 }
 
 // Cast repository.Show to service Show structure
-func castToListShow(source []repository.Show) []Show {
+func (s *Service) castToListShow(ctx context.Context, source []repository.Show) ([]Show, error) {
 	result := make([]Show, 0, len(source))
-	for _, s := range source {
+	for _, sw := range source {
+		hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, sw.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+		}
 		sh := Show{
-			ID:             s.ID,
-			Title:          s.Title,
-			Cover:          s.Cover,
-			HasNewEpisode:  s.HasNewEpisode,
-			Category:       s.Category.String,
-			Description:    s.Description.String,
-			RealmsTitle:    s.RealmsTitle.String,
-			RealmsSubtitle: s.RealmsSubtitle.String,
-			Watch:          s.Watch.String,
+			ID:             sw.ID,
+			Title:          sw.Title,
+			Cover:          sw.Cover,
+			HasNewEpisode:  sw.HasNewEpisode,
+			Category:       sw.Category.String,
+			Description:    sw.Description.String,
+			RealmsTitle:    sw.RealmsTitle.String,
+			RealmsSubtitle: sw.RealmsSubtitle.String,
+			Watch:          sw.Watch.String,
+			HasNFT:         hasNFT,
 		}
 
-		if !s.RealmsTitle.Valid {
+		if !sw.RealmsTitle.Valid {
 			sh.RealmsTitle = "Realms"
 		}
 
 		result = append(result, sh)
 	}
 
-	return result
+	return result, nil
 }
 
 // GetShowByID returns show with provided id.
@@ -217,7 +261,30 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
 	}
-	return castToShowWithClaps(show), nil
+	hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, show.ID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+	}
+
+	result := Show{
+		ID:             show.ID,
+		Title:          show.Title,
+		Cover:          show.Cover,
+		HasNewEpisode:  show.HasNewEpisode,
+		Category:       show.Category.String,
+		Description:    show.Description.String,
+		Claps:          show.Claps,
+		RealmsTitle:    show.RealmsTitle.String,
+		RealmsSubtitle: show.RealmsSubtitle.String,
+		Watch:          show.Watch.String,
+		HasNFT:         hasNFT,
+	}
+
+	if !show.RealmsTitle.Valid {
+		result.RealmsTitle = "Realms"
+	}
+
+	return result, nil
 }
 
 // Cast repository.Show to service Show structure
@@ -241,28 +308,6 @@ func castToShow(source repository.Show) Show {
 	return result
 }
 
-// Cast repository.GetShowByIDRow to service Show structure
-func castToShowWithClaps(source repository.GetShowByIDRow) Show {
-	result := Show{
-		ID:             source.ID,
-		Title:          source.Title,
-		Cover:          source.Cover,
-		HasNewEpisode:  source.HasNewEpisode,
-		Category:       source.Category.String,
-		Description:    source.Description.String,
-		Claps:          source.Claps,
-		RealmsTitle:    source.RealmsTitle.String,
-		RealmsSubtitle: source.RealmsSubtitle.String,
-		Watch:          source.Watch.String,
-	}
-
-	if !source.RealmsTitle.Valid {
-		result.RealmsTitle = "Realms"
-	}
-
-	return result
-}
-
 // GetShowsByCategory returns show by provided category.
 func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error) {
 	shows, err := s.sr.GetShowsByCategory(ctx, repository.GetShowsByCategoryParams{
@@ -273,7 +318,13 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
-	return castToListShow(shows), nil
+
+	sl, err := s.castToListShow(ctx, shows)
+	if err != nil {
+		return nil, fmt.Errorf("could not cast to list show : %w", err)
+	}
+
+	return sl, nil
 }
 
 // GetEpisodesByShowID returns episodes by show id.
@@ -347,7 +398,15 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 
 	avgRating, ratingsCount, err := s.getAverageEpisodesRatingByID(ctx, episodeID)
 	if err != nil {
-		return Episode{}, fmt.Errorf("could not get avarage episoderating with id=%s: %w", episodeID, err)
+		return Episode{}, fmt.Errorf("could not get avarage episode rating with id=%s: %w", episodeID, err)
+	}
+
+	usersEpisodeRating, err := s.sr.GetUsersEpisodeRatingByID(ctx, repository.GetUsersEpisodeRatingByIDParams{
+		EpisodeID: episodeID,
+		UserID:    userID,
+	})
+	if err != nil && !db.IsNotFoundError(err) {
+		return Episode{}, fmt.Errorf("could not get users episode rating with id=%s: %w", episodeID, err)
 	}
 
 	receivedAmount, err := s.chc.GetChallengeReceivedRewardAmount(ctx, episode.ChallengeID.UUID)
@@ -365,17 +424,18 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 		return Episode{}, fmt.Errorf("could not get number users who have access to episode with id = %v: %w", episodeID, err)
 	}
 
-	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number), nil
+	return castRowToEpisodeExtended(episode, avgRating, receivedAmount, receivedAmountByUser, ratingsCount, number, usersEpisodeRating), nil
 }
 
 // Cast repository.GetEpisodeByIDRow to service Episode structure with extra data
-func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number int32) Episode {
+func castRowToEpisodeExtended(source repository.GetEpisodeByIDRow, rating, receivedAmount, receivedRewardAmountByUser float64, ratingsCount int64, number, usersEpisodeRating int32) Episode {
 	ep := castRowToEpisode(source)
 	ep.Rating = rating
 	ep.RatingsCount = ratingsCount
 	ep.ActiveUsers = number
 	ep.TotalRewardsAmount = receivedAmount
 	ep.UserRewardsAmount = receivedRewardAmountByUser
+	ep.UsersEpisodeRating = usersEpisodeRating
 
 	return ep
 }
@@ -749,7 +809,7 @@ func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID
 	return nil
 }
 
-func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32) ([]Review, error) {
+func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit, offset int32, currentUserID uuid.UUID) ([]Review, error) {
 	reviews, err := s.sr.ReviewsList(ctx, repository.ReviewsListParams{
 		EpisodeID: episodeID,
 		Limit:     limit,
@@ -762,19 +822,19 @@ func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit
 		return nil, err
 	}
 
-	return s.castReviewsList(ctx, reviews), nil
+	return s.castReviewsList(ctx, reviews, currentUserID), nil
 }
 
-func (s *Service) castReviewsList(ctx context.Context, source []repository.Rating) []Review {
+func (s *Service) castReviewsList(ctx context.Context, source []repository.Rating, currentUserID uuid.UUID) []Review {
 	result := make([]Review, 0, len(source))
 	for _, r := range source {
-		result = append(result, s.castReview(ctx, r))
+		result = append(result, s.castReview(ctx, r, currentUserID))
 	}
 
 	return result
 }
 
-func (s *Service) castReview(ctx context.Context, source repository.Rating) Review {
+func (s *Service) castReview(ctx context.Context, source repository.Rating, currentUserID uuid.UUID) Review {
 	profile, err := s.pc.GetProfileByUserID(ctx, source.UserID, "")
 	if err != nil {
 		log.Printf("could not get profile by user id: %v", err)
@@ -783,6 +843,36 @@ func (s *Service) castReview(ctx context.Context, source repository.Rating) Revi
 	if err != nil {
 		log.Printf("could not get username by user id: %v", err)
 	}
+	likes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
+		ReviewID: source.ID,
+		RatingType: sql.NullInt32{
+			Int32: int32(LikeReview),
+			Valid: true,
+		},
+	})
+	dislikes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
+		ReviewID: source.ID,
+		RatingType: sql.NullInt32{
+			Int32: int32(DislikeReview),
+			Valid: true,
+		},
+	})
+	isLiked, _ := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
+		UserID:   currentUserID,
+		ReviewID: source.ID,
+		RatingType: sql.NullInt32{
+			Int32: int32(LikeReview),
+			Valid: true,
+		},
+	})
+	isDisliked, _ := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
+		UserID:   currentUserID,
+		ReviewID: source.ID,
+		RatingType: sql.NullInt32{
+			Int32: int32(DislikeReview),
+			Valid: true,
+		},
+	})
 	return Review{
 		ID:         source.ID.String(),
 		UserID:     source.UserID.String(),
@@ -792,6 +882,10 @@ func (s *Service) castReview(ctx context.Context, source repository.Rating) Revi
 		Title:      source.Title.String,
 		Review:     source.Review.String,
 		CreatedAt:  source.CreatedAt.Format(time.RFC3339),
+		Likes:      likes,
+		Dislikes:   dislikes,
+		IsLiked:    isLiked,
+		IsDisliked: isDisliked,
 	}
 }
 
@@ -826,7 +920,7 @@ func (s *Service) AddClapsForShow(ctx context.Context, showID, userID uuid.UUID)
 }
 
 // GetReviewsListByUserID ...
-func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]Review, error) {
+func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32, currentUserID uuid.UUID) ([]Review, error) {
 	reviews, err := s.sr.ReviewsListByUserID(ctx, repository.ReviewsListByUserIDParams{
 		UserID: userID,
 		Limit:  limit,
@@ -839,7 +933,23 @@ func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, 
 		return nil, err
 	}
 
-	return s.castReviewsList(ctx, reviews), nil
+	return s.castReviewsList(ctx, reviews, currentUserID), nil
+}
+
+// LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
+func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uuid.UUID, ratingType ReviewRatingType) error {
+	err := s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
+		ReviewID: reviewID,
+		UserID:   uid,
+		RatingType: sql.NullInt32{
+			Int32: int32(ratingType),
+			Valid: true,
+		}})
+	if err != nil {
+		return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", uid, err)
+	}
+
+	return nil
 }
 
 // GetActivatedUserEpisodes returns list activated episodes by user id.
@@ -855,4 +965,19 @@ func (s *Service) GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID
 	}
 
 	return listEpisodes, nil
+}
+
+// SendTipsToReviewAuthor used to send tips to an episode review author.
+func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid.UUID, amount float64) error {
+	review, err := s.sr.GetReviewByID(ctx, reviewID)
+	if err != nil {
+		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
+	}
+
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, fmt.Sprintf("tips for episode review: %s", reviewID))
+	if err != nil {
+		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
+	}
+
+	return nil
 }
