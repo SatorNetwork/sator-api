@@ -214,6 +214,48 @@ func (s *Service) GetShows(ctx context.Context, limit, offset int32) (interface{
 	return sl, nil
 }
 
+// GetShowsWithNFT returns shows list which has NFT.
+func (s *Service) GetShowsWithNFT(ctx context.Context, limit, offset int32) (interface{}, error) {
+	shows, err := s.sr.GetShows(ctx, repository.GetShowsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get shows list: %w", err)
+	}
+
+	result := make([]Show, 0, len(shows))
+	for _, sw := range shows {
+		hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, sw.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+		}
+		if hasNFT == false {
+			continue
+		}
+		sh := Show{
+			ID:             sw.ID,
+			Title:          sw.Title,
+			Cover:          sw.Cover,
+			HasNewEpisode:  sw.HasNewEpisode,
+			Category:       sw.Category.String,
+			Description:    sw.Description.String,
+			RealmsTitle:    sw.RealmsTitle.String,
+			RealmsSubtitle: sw.RealmsSubtitle.String,
+			Watch:          sw.Watch.String,
+			HasNFT:         hasNFT,
+		}
+
+		if !sw.RealmsTitle.Valid {
+			sh.RealmsTitle = "Realms"
+		}
+
+		result = append(result, sh)
+	}
+
+	return result, nil
+}
+
 // GetShowChallenges returns challenges by show id.
 func (s *Service) GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error) {
 	challenges, err := s.chc.GetListByShowID(ctx, showID, userID, limit, offset)
