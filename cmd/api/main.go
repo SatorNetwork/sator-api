@@ -16,7 +16,6 @@ import (
 	"time"
 
 	db_internal "github.com/SatorNetwork/sator-api/internal/db"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
 	"github.com/SatorNetwork/sator-api/internal/firebase"
 	"github.com/SatorNetwork/sator-api/internal/jwt"
@@ -46,7 +45,6 @@ import (
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
-	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
 	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -162,10 +160,10 @@ var (
 	kycSkip       = env.GetBool("KYC_SKIP", false)
 
 	// NATS
-	natsURL   = env.MustString("NATS_URL")
-	natsWSURL = env.MustString("NATS_WS_URL")
+	// natsURL   = env.MustString("NATS_URL")
+	// natsWSURL = env.MustString("NATS_WS_URL")
 
-	serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
+	// serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
 )
 
 var circulatingSupply float64 = 0
@@ -236,10 +234,11 @@ func main() {
 		r.Get("/ws", testWsHandler)
 	}
 
-	serverRSAPrivateKey, err := internal_rsa.BytesToPrivateKey([]byte(serverRSAPrivateKey))
-	if err != nil {
-		log.Fatalf("can't decode server's RSA private key")
-	}
+	// TODO: enable when it will be ready
+	// serverRSAPrivateKey, err := internal_rsa.BytesToPrivateKey([]byte(serverRSAPrivateKey))
+	// if err != nil {
+	// 	log.Fatalf("can't decode server's RSA private key")
+	// }
 
 	// auth repo
 	authRepository, err := authRepo.Prepare(ctx, db)
@@ -548,16 +547,17 @@ func main() {
 		})
 	}
 
-	{
-		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, authClient, serverRSAPrivateKey)
-		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
-			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
-			logger,
-		))
+	// TODO: enable when it will be ready
+	// {
+	// 	quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, authClient, serverRSAPrivateKey)
+	// 	r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
+	// 		quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
+	// 		logger,
+	// 	))
 
-		go quizV2Svc.StartEngine()
-		// TODO(evg): gracefully shutdown the engine
-	}
+	// 	go quizV2Svc.StartEngine()
+	// 	// TODO(evg): gracefully shutdown the engine
+	// }
 
 	{
 		// Init and run http server
