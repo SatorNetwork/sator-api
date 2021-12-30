@@ -76,7 +76,7 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, issuer types
 	return txhash, stakePool, nil
 }
 
-// Stake stakes given amount for given period.
+// Stake ...
 func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error) {
 	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
 	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
@@ -151,7 +151,7 @@ func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, 
 	return txhash, nil
 }
 
-// Unstake unstake.
+// Unstake ...
 func (c *Client) Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error) {
 	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
 	splToken := c.PublicKeyFromString(c.config.SplToken)

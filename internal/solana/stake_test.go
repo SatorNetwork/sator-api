@@ -2,74 +2,81 @@ package solana_test
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 	"testing"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
 
-	//"github.com/portto/solana-go-sdk/common"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
-)
-
-var (
-	feePayerPub = "67CXqkdKLhZxeDaHos2dxNGpqaiJvvva77TDnEipxXPx"
-	feePayer    = types.AccountFromPrivateKeyBytes([]byte{0xc2, 0x30, 0x16, 0x0, 0x95, 0x1b, 0xf8, 0x86, 0xf8, 0x71, 0x31, 0xab, 0x7d, 0x9d, 0x3b, 0x9d, 0x74, 0x6, 0x8d, 0xa6, 0xe1, 0xf0, 0x3, 0xd7, 0xdb, 0x26, 0xca, 0x5d, 0x98, 0x32, 0x2e, 0x4b, 0x35, 0x4, 0x1, 0x3b, 0xf, 0xdc, 0xe0, 0x52, 0x7e, 0x1c, 0x1f, 0xfc, 0x96, 0x68, 0x5f, 0xdc, 0x1d, 0xdd, 0x26, 0x7, 0xbf, 0x33, 0x1b, 0x1b, 0x84, 0xef, 0xf8, 0xd4, 0xec, 0x7d, 0xb7, 0xa6})
-
-	issuerPub = "7gdYR2pRwM61cea9qmKF8fEXsgRa77KYtV5xh2o4xEA"
-	issuer    = types.AccountFromPrivateKeyBytes([]byte{0x7d, 0x36, 0x17, 0xd5, 0x2c, 0xc8, 0x64, 0xf2, 0x9a, 0x39, 0x2f, 0x8b, 0xb6, 0x40, 0x4e, 0xf9, 0xcd, 0x4c, 0x85, 0xa8, 0x9a, 0xbe, 0x3c, 0xfe, 0xa9, 0xe1, 0xad, 0xbc, 0xb5, 0x40, 0x2a, 0xf9, 0x1, 0xb6, 0x4b, 0x6f, 0x7e, 0x76, 0xc3, 0x3d, 0x4b, 0xf6, 0xcf, 0xc6, 0xb4, 0x6, 0xd8, 0x1f, 0xcf, 0x96, 0xe1, 0x67, 0x5a, 0xdf, 0xd3, 0x22, 0xbf, 0xe2, 0x8a, 0xa6, 0x92, 0xa, 0xee, 0x2f})
-
-	assetPub = "E3S44kKvw4ssUV71oLSvcNfKH77XwwFNUz6XHEjkRwec"
-	asset    = types.AccountFromPrivateKeyBytes([]byte{0x2b, 0xe7, 0x8c, 0x5, 0xbd, 0x7f, 0x6f, 0x7a, 0xb4, 0xd6, 0x68, 0x7a, 0xfa, 0xf3, 0xd6, 0x14, 0x9c, 0xce, 0x9a, 0xff, 0x72, 0x6a, 0x9, 0x40, 0x52, 0x16, 0x54, 0xe7, 0xe5, 0x75, 0xe0, 0x15, 0xc1, 0xc7, 0x6b, 0x43, 0x40, 0xe9, 0xdf, 0xc3, 0x9, 0x8a, 0x4f, 0xbd, 0x30, 0x99, 0xc4, 0x5d, 0x64, 0xcd, 0x43, 0xf5, 0xdf, 0x82, 0xf4, 0xc6, 0x4b, 0x6c, 0x5, 0x1c, 0xdc, 0xbc, 0x45, 0xd})
-
-	userPub = "B2KhBdBCcKWexFob3wrdcfbjaQ31kZ3r7mrQxaqNLVh9"
-	user    = types.AccountFromPrivateKeyBytes([]byte{0xa, 0x51, 0xfd, 0xbe, 0xde, 0x59, 0xb7, 0x1c, 0x2c, 0x9e, 0x56, 0x8a, 0xad, 0x9, 0x57, 0xc3, 0x19, 0x25, 0xfa, 0xca, 0x6f, 0x17, 0xe1, 0xec, 0x11, 0x5d, 0xd5, 0xad, 0x20, 0xd6, 0xe, 0xc2, 0x94, 0xeb, 0x96, 0xa, 0xe7, 0xd4, 0xec, 0x4c, 0x87, 0xb4, 0x34, 0x38, 0xd9, 0x73, 0xa6, 0x48, 0xaf, 0xbe, 0xa0, 0xf7, 0xa5, 0x52, 0x2e, 0x6b, 0xcf, 0x9f, 0xa7, 0xda, 0x78, 0x89, 0x9b, 0x10})
-
-	//asset    = types.AccountFromPrivateKeyBytes([]byte{213, 192, 236, 172, 129, 236, 157, 105, 169, 136, 46, 123, 109, 101, 48, 172, 124, 140, 128, 105, 10, 96, 229, 160, 116, 186, 58, 152, 181, 244, 123, 125, 162, 253, 106, 157, 104, 123, 65, 211, 209, 132, 130, 73, 185, 218, 92, 21, 65, 183, 177, 123, 72, 83, 37, 76, 144, 180, 119, 107, 90, 151, 97, 183})
-
-	//issuer    = types.AccountFromPrivateKeyBytes([]byte{0x7d, 0x36, 0x17, 0xd5, 0x2c, 0xc8, 0x64, 0xf2, 0x9a, 0x39, 0x2f, 0x8b, 0xb6, 0x40, 0x4e, 0xf9, 0xcd, 0x4c, 0x85, 0xa8, 0x9a, 0xbe, 0x3c, 0xfe, 0xa9, 0xe1, 0xad, 0xbc, 0xb5, 0x40, 0x2a, 0xf9, 0x1, 0xb6, 0x4b, 0x6f, 0x7e, 0x76, 0xc3, 0x3d, 0x4b, 0xf6, 0xcf, 0xc6, 0xb4, 0x6, 0xd8, 0x1f, 0xcf, 0x96, 0xe1, 0x67, 0x5a, 0xdf, 0xd3, 0x22, 0xbf, 0xe2, 0x8a, 0xa6, 0x92, 0xa, 0xee, 0x2f})
-
-	//feePayer = types.AccountFromPrivateKeyBytes([]byte{115, 91, 202, 172, 215, 254, 239, 102, 127, 239, 39, 117, 165, 14, 239, 60, 242, 138, 216, 4, 183, 230, 36, 122, 133, 128, 12, 201, 176, 200, 144, 182, 17, 64, 8, 222, 37, 225, 40, 90, 140, 94, 207, 194, 215, 172, 41, 156, 184, 231, 78, 111, 144, 102, 2, 211, 156, 35, 90, 19, 91, 13, 43, 209})
 )
 
 func TestScNew(t *testing.T) {
 	c := solana.New("https://api.devnet.solana.com/", solana.Config{
-		SystemProgram:  "",
-		SysvarRent:     "",
-		SysvarClock:    "",
-		SplToken:       "",
-		StakeProgramID: "",
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
 	})
-	ctx := context.Background()
 
+	feePayerPrivate, err := base64.StdEncoding.DecodeString("MeFkg3Y/Ssa+CwfoZO6SvunvBDvxc/y/Jk/Ux/7G6F2vhaKpJyy/+5dPzj7iwO4hNlBxa3rtoRmeJzRLPPhZ5A==")
+	if err != nil {
+		log.Fatalf("feePayerPk base64 decoding error: %v", err)
+	}
+
+	IssuerPrivate, err := base64.StdEncoding.DecodeString("ICjjYoQ8RTqN8jc8Nn27Nda6miIA2xnvs4om1hh1TDn51/MOHeUiZeoIVb9Q4/csWYfLqBCOCMb6x5OUufGjBQ==")
+	if err != nil {
+		log.Fatalf("IssuerPk base64 decoding error: %v", err)
+	}
+
+	feePayerPub := common.PublicKeyFromString("CpAY2VpdxVK5kEQvoKCqNtaMomUMr8iVSXRPJFBZPZtf")
+	issuerPub := common.PublicKeyFromString("HpHWCqBPRm7QCZDkR39WuoZp9xHF351T5U3AfHWXj8RA")
+	asset := common.PublicKeyFromString("FBDfbe7CFXHHNzDpNBYf4Evcg5GKrThYNjk4wP2xwjwA")
+
+	feePayer := types.Account{
+		PublicKey:  feePayerPub,
+		PrivateKey: feePayerPrivate,
+	}
+
+	issuer := types.Account{
+		PublicKey:  issuerPub,
+		PrivateKey: IssuerPrivate,
+	}
+
+	ctx := context.Background()
 	wallet := types.NewAccount()
 
-	tx, err := c.CreateAccountWithATA(ctx, asset.PublicKey.ToBase58(), wallet.PublicKey.ToBase58(), feePayer)
+	tx, err := c.CreateAccountWithATA(ctx, asset.ToBase58(), wallet.PublicKey.ToBase58(), feePayer)
 	if err != nil {
-		println(err)
+		log.Println(err.Error())
+	}
+
+	for i := 0; i < 5; i++ {
+		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 2)
+		if err == nil {
+			break
+		}
+
+		time.Sleep(5 * time.Second)
+		log.Println(err.Error())
 	}
 
 	time.Sleep(5 * time.Second)
 
-	tx, err = c.SendAssetsWithAutoDerive(ctx, asset.PublicKey.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 10)
+	tx, stakePool, err := c.InitializeStakePool(ctx, feePayer, issuer, asset)
 	if err != nil {
-		println(err)
+		println(err.Error())
 	}
-
-	time.Sleep(5 * time.Second)
-
-	tx, stakePool, err := c.InitializeStakePool(ctx, feePayer, issuer, asset.PublicKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	println("tx = ")
-	println(tx)
+	log.Println(tx)
 
 	time.Sleep(time.Second * 5)
 
 	for i := 0; i < 5; i++ {
-		if tx, err := c.Stake(ctx, feePayer,
-			wallet, stakePool.PublicKey, asset.PublicKey, 10, 1); err != nil {
+		if tx, err = c.Stake(ctx, feePayer,
+			wallet, stakePool.PublicKey, asset, 10, 1); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 20)
 		} else {
@@ -80,7 +87,7 @@ func TestScNew(t *testing.T) {
 
 	time.Sleep(20 * time.Second)
 	for i := 0; i < 5; i++ {
-		if tx, err := c.Unstake(ctx, feePayer, issuer, stakePool.PublicKey, wallet.PublicKey); err != nil {
+		if tx, err := c.Unstake(ctx, feePayer, wallet, stakePool.PublicKey, asset); err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 20)
 		} else {
