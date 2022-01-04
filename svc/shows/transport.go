@@ -24,6 +24,11 @@ type (
 	}
 )
 
+// Predefined request query keys
+const (
+	withNFT = "with_nft"
+)
+
 // MakeHTTPHandler ...
 func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r := chi.NewRouter()
@@ -222,9 +227,12 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 }
 
 func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return utils.PaginationRequest{
-		Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
-		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+	return GetShowsRequest{
+		WithNFT: r.URL.Query().Get(withNFT),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
 	}, nil
 }
 
