@@ -41,8 +41,15 @@ func (q *Queries) DeleteNFTRelation(ctx context.Context, arg DeleteNFTRelationPa
 }
 
 const doesRelationIDHasRelationNFT = `-- name: DoesRelationIDHasRelationNFT :one
+WITH minted_nft_items AS (
+    SELECT COUNT(user_id)::INT as minted, nft_item_id
+    FROM nft_owners
+    GROUP BY nft_owners.nft_item_id
+)
 SELECT EXISTS(
-    SELECT nft_item_id FROM nft_relations
+    SELECT nft_relations.nft_item_id
+    FROM nft_relations
+        LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_relations.nft_item_id
     WHERE relation_id = $1
 )
 `
