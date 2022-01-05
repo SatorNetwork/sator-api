@@ -20,5 +20,5 @@ cmd/quiz/
 .trash/
 .DS_Store
 Makefile.local
-MakefileDEV.local
+Makefile.DEV.local
 geth.*
