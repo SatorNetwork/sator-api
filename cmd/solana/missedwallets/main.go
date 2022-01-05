@@ -22,6 +22,8 @@ import (
 	_ "github.com/lib/pq" // init pg driver
 )
 
+// go build -o ./bin/missedwallets ./cmd/solana/missedwallets/
+
 var (
 	// DB
 	dbConnString   = env.MustString("DATABASE_URL")
@@ -35,6 +37,8 @@ var (
 )
 
 func main() {
+	log.Println("Start worker to create missed wallets")
+
 	// Init DB connection
 	db, err := sql.Open("postgres", dbConnString)
 	if err != nil {
