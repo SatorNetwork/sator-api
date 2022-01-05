@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -589,20 +590,100 @@ func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Sta
 	return Stake{
 		Staking: Staking{
 			AssetName:   "SAO",
-			APY:         138.9, // TODO: Figure out what this field mean and fill it!!!
+			// APY:         138.9,
 			TotalStaked: totalStake,
 			Staked:      stake.StakeAmount,
 			YourShare:   yourShare,
 		},
 		Loyalty: Loyalty{
-			LevelTitle:    "Genin",
-			LevelSubtitle: "25% rewards multiplier",
+			// LevelTitle:    "Genin",
+			// LevelSubtitle: "25% rewards multiplier",
 		},
 	}, nil
 }
 
-// SetStake Mocked method for stake
+// SetStake method for set stake
 func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
+	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
+	if err != nil {
+		return false, fmt.Errorf("could not get fee payer account: %w", err)
+	}
+	fee := s.sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey)
+
+	pool, err := s.wr.GetSolanaAccountByType(ctx, StakePoolAccount.String())
+	if err != nil {
+		return false, fmt.Errorf("could not get stake pool account: %w", err)
+	}
+	stakePool := common.PublicKeyFromString(pool.PublicKey)
+
+	assetAcc, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return false, fmt.Errorf("could not get issuer account: %w", err)
+	}
+	asset := s.sc.AccountFromPrivateKeyBytes(assetAcc.PrivateKey)
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return false, fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAccount, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return false, fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+
+	for i := 0; i < 5; i++ {
+		if tx, err := s.sc.Stake(ctx, fee, userWallet, stakePool, asset.PublicKey, duration, uint64(amount)); err != nil {
+			if i < 4 {
+				log.Println(err)
+			} else {
+				return false, fmt.Errorf("transaction: %w", err)
+			}
+			time.Sleep(time.Second * 5)
+		} else {
+			log.Printf("successful transaction: %s", tx)
+			break
+		}
+	}
+
+	// Store stake data in our db.
+	staked, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			_, err := s.wr.AddStake(ctx, repository.AddStakeParams{
+				UserID:      userID,
+				WalletID:    walletID,
+				StakeAmount: amount,
+				StakeDuration: sql.NullInt32{
+					Int32: int32(duration),
+					Valid: true,
+				},
+				UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+			})
+			if err != nil {
+				return false, fmt.Errorf("could not add stake for user= %v, %w", userID, err)
+			}
+
+			return true, nil
+		}
+		err := s.wr.UpdateStake(ctx, repository.UpdateStakeParams{
+			UserID:      userID,
+			StakeAmount: staked.StakeAmount + amount,
+			StakeDuration: sql.NullInt32{
+				Int32: int32(duration),
+				Valid: true,
+			},
+			UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+		})
+		if err != nil {
+			return false, fmt.Errorf("could not update stake for user= %v, %w", userID, err)
+		}
+
+		return false, fmt.Errorf("could not get stake for user= %v, %w", userID, err)
+	}
+
 	return true, nil
 }
 
@@ -613,6 +694,12 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get fee payer account: %w", err)
 	}
 	fee := s.sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey)
+
+	assetAcc, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
+	if err != nil {
+		return fmt.Errorf("could not get issuer account: %w", err)
+	}
+	asset := s.sc.AccountFromPrivateKeyBytes(assetAcc.PrivateKey)
 
 	pool, err := s.wr.GetSolanaAccountByType(ctx, StakePoolAccount.String())
 	if err != nil {
@@ -630,17 +717,20 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get wallet: %w", err)
 	}
 
-	userWalletPK := common.PublicKeyFromString(solanaAccount.PublicKey)
+	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
 
-	issuer, err := s.wr.GetSolanaAccountByType(ctx, IssuerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get issuer account: %w", err)
-	}
-	issuerAccount := s.sc.AccountFromPrivateKeyBytes(issuer.PrivateKey)
-
-	_, err = s.sc.Unstake(ctx, fee, issuerAccount, stakePool, userWalletPK)
-	if err != nil {
-		return fmt.Errorf("could not unstake: %w", err)
+	for i := 0; i < 5; i++ {
+		if tx, err := s.sc.Unstake(ctx, fee, userWallet, stakePool, asset.PublicKey); err != nil {
+			if i < 4 {
+				log.Println(err)
+			} else {
+				return fmt.Errorf("transaction: %w", err)
+			}
+			time.Sleep(time.Second * 5)
+		} else {
+			log.Printf("successful transaction: %s", tx)
+			break
+		}
 	}
 
 	err = s.wr.DeleteStakeByUserID(ctx, userID)
