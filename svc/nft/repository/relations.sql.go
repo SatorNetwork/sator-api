@@ -41,17 +41,21 @@ func (q *Queries) DeleteNFTRelation(ctx context.Context, arg DeleteNFTRelationPa
 }
 
 const doesRelationIDHasRelationNFT = `-- name: DoesRelationIDHasRelationNFT :one
-WITH minted_nft_items AS (
-    SELECT COUNT(user_id)::INT as minted, nft_item_id
+WITH minted_nfts AS (
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
     FROM nft_owners
-    GROUP BY nft_owners.nft_item_id
+    GROUP BY nft_item_id
 )
 SELECT EXISTS(
-    SELECT nft_relations.nft_item_id
-    FROM nft_relations
-        LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_relations.nft_item_id
-    WHERE relation_id = $1
-)
+               SELECT nft_relations.nft_item_id
+               FROM nft_relations
+               WHERE relation_id = $1 AND nft_item_id IN (
+                   SELECT nft_items.id
+                   FROM nft_items
+                            LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+                   WHERE nft_items.supply > COALESCE (minted_nfts.minted, 0)
+               )
+           )
 `
 
 func (q *Queries) DoesRelationIDHasRelationNFT(ctx context.Context, relationID uuid.UUID) (bool, error) {
