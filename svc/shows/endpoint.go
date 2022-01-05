@@ -20,6 +20,7 @@ type (
 		AddShow            endpoint.Endpoint
 		DeleteShowByID     endpoint.Endpoint
 		GetShows           endpoint.Endpoint
+		GetShowsWithNFT    endpoint.Endpoint
 		GetShowChallenges  endpoint.Endpoint
 		GetShowByID        endpoint.Endpoint
 		GetShowsByCategory endpoint.Endpoint
@@ -51,6 +52,7 @@ type (
 		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
+		GetShowsWithNFT(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
@@ -207,6 +209,12 @@ type (
 		ReviewID string `json:"review_id" validate:"required,uuid"`
 		Param    string `json:"rating_type" validate:"required,oneof=like dislike"`
 	}
+
+	// GetShowsRequest struct
+	GetShowsRequest struct {
+		WithNFT string `json:"with_nft"`
+		utils.PaginationRequest
+	}
 )
 
 // MakeEndpoints ...
@@ -217,6 +225,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		AddShow:            MakeAddShowEndpoint(s, validateFunc),
 		DeleteShowByID:     MakeDeleteShowByIDEndpoint(s),
 		GetShows:           MakeGetShowsEndpoint(s, validateFunc),
+		GetShowsWithNFT:    MakeGetShowsEndpoint(s, validateFunc),
 		GetShowChallenges:  MakeGetShowChallengesEndpoint(s, validateFunc),
 		GetShowByID:        MakeGetShowByIDEndpoint(s),
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
@@ -250,6 +259,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.AddShow = mdw(e.AddShow)
 			e.DeleteShowByID = mdw(e.DeleteShowByID)
 			e.GetShows = mdw(e.GetShows)
+			e.GetShowsWithNFT = mdw(e.GetShowsWithNFT)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
 			e.GetShowByID = mdw(e.GetShowByID)
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
@@ -288,9 +298,18 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, err
 		}
 
-		req := request.(utils.PaginationRequest)
+		req := request.(GetShowsRequest)
 		if err := v(req); err != nil {
 			return nil, err
+		}
+
+		if req.WithNFT == "true" {
+			resp, err := s.GetShowsWithNFT(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return resp, nil
 		}
 
 		resp, err := s.GetShows(ctx, req.Limit(), req.Offset())

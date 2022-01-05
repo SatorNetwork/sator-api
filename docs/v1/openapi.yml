@@ -1343,6 +1343,12 @@ paths:
           required: false
           schema:
             type: integer
+        - name: with_nft
+          in: query
+          description: If with_nft=true it returns list only shows with nft.
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Returns shows list with pagination.
