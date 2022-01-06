@@ -33,6 +33,7 @@ type (
 		satorAssetSolanaAddr        string
 		feePayerSolanaAddr          string
 		feePayerSolanaPrivateKey    []byte
+		stakePoolSolanaPublicKey    string
 		tokenHolderSolanaAddr       string
 		tokenHolderSolanaPrivateKey []byte
 
@@ -589,7 +590,7 @@ func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Sta
 
 	return Stake{
 		Staking: Staking{
-			AssetName:   "SAO",
+			AssetName: "SAO",
 			// APY:         138.9,
 			TotalStaked: totalStake,
 			Staked:      stake.StakeAmount,
@@ -604,23 +605,9 @@ func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Sta
 
 // SetStake method for set stake
 func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
-	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
-	if err != nil {
-		return false, fmt.Errorf("could not get fee payer account: %w", err)
-	}
-	fee := s.sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey)
-
-	pool, err := s.wr.GetSolanaAccountByType(ctx, StakePoolAccount.String())
-	if err != nil {
-		return false, fmt.Errorf("could not get stake pool account: %w", err)
-	}
-	stakePool := common.PublicKeyFromString(pool.PublicKey)
-
-	assetAcc, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return false, fmt.Errorf("could not get issuer account: %w", err)
-	}
-	asset := s.sc.AccountFromPrivateKeyBytes(assetAcc.PrivateKey)
+	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
+	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
 
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
@@ -635,7 +622,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
 
 	for i := 0; i < 5; i++ {
-		if tx, err := s.sc.Stake(ctx, fee, userWallet, stakePool, asset.PublicKey, duration, uint64(amount)); err != nil {
+		if tx, err := s.sc.Stake(ctx, feePayer, userWallet, stakePool, asset, duration, uint64(amount)); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {
@@ -689,23 +676,9 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 
 // Unstake method for unstake
 func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error {
-	feePayer, err := s.wr.GetSolanaAccountByType(ctx, FeePayerAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get fee payer account: %w", err)
-	}
-	fee := s.sc.AccountFromPrivateKeyBytes(feePayer.PrivateKey)
-
-	assetAcc, err := s.wr.GetSolanaAccountByType(ctx, AssetAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get issuer account: %w", err)
-	}
-	asset := s.sc.AccountFromPrivateKeyBytes(assetAcc.PrivateKey)
-
-	pool, err := s.wr.GetSolanaAccountByType(ctx, StakePoolAccount.String())
-	if err != nil {
-		return fmt.Errorf("could not get stake pool account: %w", err)
-	}
-	stakePool := common.PublicKeyFromString(pool.PublicKey)
+	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
+	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
 
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
@@ -720,7 +693,7 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
 
 	for i := 0; i < 5; i++ {
-		if tx, err := s.sc.Unstake(ctx, fee, userWallet, stakePool, asset.PublicKey); err != nil {
+		if tx, err := s.sc.Unstake(ctx, feePayer, userWallet, stakePool, asset); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {
