@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sort"
 	"time"
-
-	"github.com/SatorNetwork/sator-api/svc/profile"
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 
 	"github.com/google/uuid"
@@ -872,6 +872,9 @@ func (s *Service) castReviewsList(ctx context.Context, source []repository.Ratin
 	for _, r := range source {
 		result = append(result, s.castReview(ctx, r, currentUserID))
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Likes > result[j].Likes
+	})
 
 	return result
 }
