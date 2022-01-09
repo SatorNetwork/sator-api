@@ -62,11 +62,27 @@ SELECT EXISTS(
 );
 
 -- name: ReviewsList :many
-SELECT * FROM ratings
+WITH likes_numbers AS (
+    SELECT count(*) AS likes_number
+    FROM reviews_rating
+    WHERE review_id = ratings.id
+      AND rating_type = 1
+), dislikes_numbers AS (
+    SELECT count(*) AS dislikes_number
+    FROM reviews_rating
+    WHERE review_id = ratings.id
+      AND rating_type = 2
+)
+SELECT ratings.*,
+       coalesce(likes_numbers.likes_number, 0) as likes_number,
+       coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
+FROM ratings
+LEFT JOIN likes_numbers ON ratings.id = reviews_rating.review_id
+LEFT JOIN dislikes_numbers ON ratings.id = reviews_rating.review_id
 WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
-ORDER BY created_at DESC
+ORDER BY likes_number DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetReviewByID :one
@@ -74,11 +90,27 @@ SELECT * FROM ratings
 WHERE id = $1;
 
 -- name: ReviewsListByUserID :many
-SELECT * FROM ratings
-WHERE user_id = $1
+WITH likes_numbers AS (
+    SELECT count(*) AS likes_number
+    FROM reviews_rating
+    WHERE review_id = ratings.id
+      AND rating_type = 1
+), dislikes_numbers AS (
+    SELECT count(*) AS dislikes_number
+    FROM reviews_rating
+    WHERE review_id = ratings.id
+      AND rating_type = 2
+)
+SELECT ratings.*,
+       coalesce(likes_numbers.likes_number, 0) as likes_number,
+       coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
+FROM ratings
+         LEFT JOIN likes_numbers ON ratings.id = reviews_rating.review_id
+         LEFT JOIN dislikes_numbers ON ratings.id = reviews_rating.review_id
+WHERE ratings.user_id = $1
   AND title IS NOT NULL
   AND review IS NOT NULL
-ORDER BY created_at DESC
+ORDER BY likes_number DESC
     LIMIT $2 OFFSET $3;
 
 -- name: DeleteReview :exec
