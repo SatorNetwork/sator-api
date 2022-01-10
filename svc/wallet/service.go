@@ -466,6 +466,10 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 		return PreparedTransferTransaction{}, fmt.Errorf("%w: %.2f", ErrMinimalAmountToSend, s.minAmountToTransfer)
 	}
 
+	if bal < amount {
+		return PreparedTransferTransaction{}, fmt.Errorf("balance is lower then requested amount: %.2f", bal)
+	}
+
 	var toEncode struct {
 		Amount        float64
 		Asset         string
