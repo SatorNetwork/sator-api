@@ -26,10 +26,10 @@ VALUES (
 `
 
 type AddStakeLevelParams struct {
-	MinStakeAmount sql.NullInt32 `json:"min_stake_amount"`
-	Title          string        `json:"title"`
-	Subtitle       string        `json:"subtitle"`
-	Multiplier     sql.NullInt32 `json:"multiplier"`
+	MinStakeAmount sql.NullFloat64 `json:"min_stake_amount"`
+	Title          string          `json:"title"`
+	Subtitle       string          `json:"subtitle"`
+	Multiplier     sql.NullInt32   `json:"multiplier"`
 }
 
 func (q *Queries) AddStakeLevel(ctx context.Context, arg AddStakeLevelParams) (StakeLevel, error) {
@@ -112,11 +112,11 @@ WHERE id = $1
 `
 
 type UpdateStakeLevelParams struct {
-	ID             uuid.UUID     `json:"id"`
-	MinStakeAmount sql.NullInt32 `json:"min_stake_amount"`
-	Title          string        `json:"title"`
-	Subtitle       string        `json:"subtitle"`
-	Multiplier     sql.NullInt32 `json:"multiplier"`
+	ID             uuid.UUID       `json:"id"`
+	MinStakeAmount sql.NullFloat64 `json:"min_stake_amount"`
+	Title          string          `json:"title"`
+	Subtitle       string          `json:"subtitle"`
+	Multiplier     sql.NullInt32   `json:"multiplier"`
 }
 
 func (q *Queries) UpdateStakeLevel(ctx context.Context, arg UpdateStakeLevelParams) error {

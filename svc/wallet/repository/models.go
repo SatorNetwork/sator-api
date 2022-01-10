@@ -29,11 +29,11 @@ type SolanaAccount struct {
 }
 
 type StakeLevel struct {
-	ID             uuid.UUID     `json:"id"`
-	MinStakeAmount sql.NullInt32 `json:"min_stake_amount"`
-	Title          string        `json:"title"`
-	Subtitle       string        `json:"subtitle"`
-	Multiplier     sql.NullInt32 `json:"multiplier"`
+	ID             uuid.UUID       `json:"id"`
+	MinStakeAmount sql.NullFloat64 `json:"min_stake_amount"`
+	Title          string          `json:"title"`
+	Subtitle       string          `json:"subtitle"`
+	Multiplier     sql.NullInt32   `json:"multiplier"`
 }
 
 type Wallet struct {
