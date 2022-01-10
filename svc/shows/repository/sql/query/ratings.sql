@@ -63,15 +63,15 @@ SELECT EXISTS(
 
 -- name: ReviewsList :many
 WITH likes_numbers AS (
-    SELECT count(*) AS likes_number
+    SELECT count(*) AS likes_number, review_id
     FROM reviews_rating
-    WHERE review_id = ratings.id
-      AND rating_type = 1
+    WHERE rating_type = 1
+    GROUP BY review_id
 ), dislikes_numbers AS (
-    SELECT count(*) AS dislikes_number
+    SELECT count(*) AS dislikes_number, review_id
     FROM reviews_rating
-    WHERE review_id = ratings.id
-      AND rating_type = 2
+    WHERE rating_type = 2
+    GROUP BY review_id
 )
 SELECT
     ratings.*,
@@ -92,15 +92,15 @@ WHERE id = $1;
 
 -- name: ReviewsListByUserID :many
 WITH likes_numbers AS (
-    SELECT count(*) AS likes_number
+    SELECT count(*) AS likes_number, review_id
     FROM reviews_rating
-    WHERE review_id = ratings.id
-      AND rating_type = 1
+    WHERE rating_type = 1
+    GROUP BY review_id
 ), dislikes_numbers AS (
-    SELECT count(*) AS dislikes_number
+    SELECT count(*) AS dislikes_number, review_id
     FROM reviews_rating
-    WHERE review_id = ratings.id
-      AND rating_type = 2
+    WHERE rating_type = 2
+    GROUP BY review_id
 )
 SELECT ratings.*,
     coalesce(likes_numbers.likes_number, 0) as likes_number,
