@@ -203,12 +203,13 @@ WITH likes_numbers AS (
     WHERE review_id = ratings.id
       AND rating_type = 2
 )
-SELECT ratings.episode_id, ratings.user_id, ratings.rating, ratings.created_at, ratings.id, ratings.title, ratings.review, ratings.username,
-       coalesce(likes_numbers.likes_number, 0) as likes_number,
-       coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
+SELECT
+    ratings.episode_id, ratings.user_id, ratings.rating, ratings.created_at, ratings.id, ratings.title, ratings.review, ratings.username,
+    coalesce(likes_numbers.likes_number, 0) as likes_number,
+    coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
 FROM ratings
-LEFT JOIN likes_numbers ON ratings.id = reviews_rating.review_id
-LEFT JOIN dislikes_numbers ON ratings.id = reviews_rating.review_id
+    LEFT JOIN likes_numbers ON ratings.id = likes_numbers.review_id
+    LEFT JOIN dislikes_numbers ON ratings.id = dislikes_numbers.review_id
 WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
@@ -282,14 +283,14 @@ WITH likes_numbers AS (
       AND rating_type = 2
 )
 SELECT ratings.episode_id, ratings.user_id, ratings.rating, ratings.created_at, ratings.id, ratings.title, ratings.review, ratings.username,
-       coalesce(likes_numbers.likes_number, 0) as likes_number,
-       coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
+    coalesce(likes_numbers.likes_number, 0) as likes_number,
+    coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
 FROM ratings
-         LEFT JOIN likes_numbers ON ratings.id = reviews_rating.review_id
-         LEFT JOIN dislikes_numbers ON ratings.id = reviews_rating.review_id
+    LEFT JOIN likes_numbers ON ratings.id = likes_numbers.review_id
+    LEFT JOIN dislikes_numbers ON ratings.id = dislikes_numbers.review_id
 WHERE ratings.user_id = $1
-  AND title IS NOT NULL
-  AND review IS NOT NULL
+    AND title IS NOT NULL
+    AND review IS NOT NULL
 ORDER BY likes_number DESC
     LIMIT $2 OFFSET $3
 `
