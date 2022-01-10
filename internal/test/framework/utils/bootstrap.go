@@ -41,7 +41,13 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 }
 
 func CheckIfBootstrapNeeded(ctx context.Context) (bool, error) {
-	sc := solana.New("http://localhost:8899")
+	sc := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	_, tokenHolder, asset := accounts.GetAccounts()
 
 	tokenHolderAta, _, err := common.FindAssociatedTokenAddress(tokenHolder.PublicKey, asset.PublicKey)
@@ -65,7 +71,13 @@ func Bootstrap(ctx context.Context, t *testing.T) error {
 }
 
 func airdropSolToFeePayer(ctx context.Context, t *testing.T) {
-	solanaClient := solana.New("http://localhost:8899")
+	solanaClient := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	feePayer := accounts.GetFeePayer()
 	const solToAirdrop = 1
 
@@ -86,7 +98,13 @@ func airdropSolToFeePayer(ctx context.Context, t *testing.T) {
 }
 
 func createAsset(ctx context.Context, t *testing.T) {
-	solanaClient := solana.New("http://localhost:8899")
+	solanaClient := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	feePayer, tokenHolder, asset := accounts.GetAccounts()
 
 	_, err := solanaClient.CreateAsset(
@@ -99,7 +117,13 @@ func createAsset(ctx context.Context, t *testing.T) {
 }
 
 func issueTokensToTokenHolder(ctx context.Context, t *testing.T) {
-	solanaClient := solana.New("http://localhost:8899")
+	solanaClient := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	feePayer, tokenHolder, asset := accounts.GetAccounts()
 	const tokensToIssue = 500000000
 
