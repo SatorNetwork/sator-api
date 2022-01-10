@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/common"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
@@ -20,7 +21,13 @@ type WalletClient struct {
 
 func New() *WalletClient {
 	return &WalletClient{
-		solanaClient: solana.New("http://localhost:8899"),
+		solanaClient: solana.New("http://localhost:8899", solana.Config{
+			SystemProgram:  common.SystemProgramID.ToBase58(),
+			SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+			SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+			SplToken:       common.TokenProgramID.ToBase58(),
+			StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		}),
 	}
 }
 
@@ -73,11 +80,11 @@ type GetWalletTxs struct {
 }
 
 type Tx struct {
-	Id        string    `json:"id"`
-	WalletId  string    `json:"wallet_id"`
-	TxHash    string    `json:"tx_hash"`
-	Amount    float64   `json:"amount"`
-	CreatedAt string `json:"created_at"`
+	Id        string  `json:"id"`
+	WalletId  string  `json:"wallet_id"`
+	TxHash    string  `json:"tx_hash"`
+	Amount    float64 `json:"amount"`
+	CreatedAt string  `json:"created_at"`
 }
 
 func (w *WalletClient) GetWallets(accessToken string) ([]*Wallet, error) {
@@ -160,7 +167,6 @@ func (w *WalletClient) GetWalletTxs(accessToken string, walletTransactionsUrl st
 
 	return resp.Data, nil
 }
-
 
 func (w *WalletClient) CreateTransfer(accessToken string, req *wallet.CreateTransferRequest) (*CreateTransferResponse, error) {
 	url := fmt.Sprintf("http://localhost:8080/wallets/%v/create-transfer", req.SenderWalletID)
