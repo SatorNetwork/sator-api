@@ -7,10 +7,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/profile"
-
 	"github.com/SatorNetwork/sator-api/internal/db"
 	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 
 	"github.com/google/uuid"
@@ -132,8 +131,8 @@ type (
 		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
 		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
-		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.Rating, error)
-		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.Rating, error)
+		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.ReviewsListRow, error)
+		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.ReviewsListByUserIDRow, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
 		LikeDislikeEpisodeReview(ctx context.Context, arg repository.LikeDislikeEpisodeReviewParams) error
 		GetReviewRating(ctx context.Context, arg repository.GetReviewRatingParams) (int64, error)
@@ -867,7 +866,7 @@ func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit
 	return s.castReviewsList(ctx, reviews, currentUserID), nil
 }
 
-func (s *Service) castReviewsList(ctx context.Context, source []repository.Rating, currentUserID uuid.UUID) []Review {
+func (s *Service) castReviewsList(ctx context.Context, source []repository.ReviewsListRow, currentUserID uuid.UUID) []Review {
 	result := make([]Review, 0, len(source))
 	for _, r := range source {
 		result = append(result, s.castReview(ctx, r, currentUserID))
@@ -876,8 +875,17 @@ func (s *Service) castReviewsList(ctx context.Context, source []repository.Ratin
 	return result
 }
 
-func (s *Service) castReview(ctx context.Context, source repository.Rating, currentUserID uuid.UUID) Review {
-	profile, err := s.pc.GetProfileByUserID(ctx, source.UserID, "")
+func (s *Service) castReviewsListByUserID(ctx context.Context, source []repository.ReviewsListByUserIDRow, currentUserID uuid.UUID) []Review {
+	result := make([]Review, 0, len(source))
+	for _, r := range source {
+		result = append(result, s.castReview(ctx, repository.ReviewsListRow(r), currentUserID))
+	}
+
+	return result
+}
+
+func (s *Service) castReview(ctx context.Context, source repository.ReviewsListRow, currentUserID uuid.UUID) Review {
+	prof, err := s.pc.GetProfileByUserID(ctx, source.UserID, "")
 	if err != nil {
 		log.Printf("could not get profile by user id: %v", err)
 	}
@@ -885,20 +893,20 @@ func (s *Service) castReview(ctx context.Context, source repository.Rating, curr
 	if err != nil {
 		log.Printf("could not get username by user id: %v", err)
 	}
-	likes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
-		ReviewID: source.ID,
-		RatingType: sql.NullInt32{
-			Int32: int32(LikeReview),
-			Valid: true,
-		},
-	})
-	dislikes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
-		ReviewID: source.ID,
-		RatingType: sql.NullInt32{
-			Int32: int32(DislikeReview),
-			Valid: true,
-		},
-	})
+	//likes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
+	//	ReviewID: source.ID,
+	//	RatingType: sql.NullInt32{
+	//		Int32: int32(LikeReview),
+	//		Valid: true,
+	//	},
+	//})
+	//dislikes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
+	//	ReviewID: source.ID,
+	//	RatingType: sql.NullInt32{
+	//		Int32: int32(DislikeReview),
+	//		Valid: true,
+	//	},
+	//})
 	isLiked, _ := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
 		UserID:   currentUserID,
 		ReviewID: source.ID,
@@ -919,13 +927,13 @@ func (s *Service) castReview(ctx context.Context, source repository.Rating, curr
 		ID:         source.ID.String(),
 		UserID:     source.UserID.String(),
 		Username:   username,
-		UserAvatar: profile.Avatar,
+		UserAvatar: prof.Avatar,
 		Rating:     int(source.Rating),
 		Title:      source.Title.String,
 		Review:     source.Review.String,
 		CreatedAt:  source.CreatedAt.Format(time.RFC3339),
-		Likes:      likes,
-		Dislikes:   dislikes,
+		Likes:      source.LikesNumber,
+		Dislikes:   source.DislikesNumber,
 		IsLiked:    isLiked,
 		IsDisliked: isDisliked,
 	}
@@ -975,7 +983,7 @@ func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, 
 		return nil, err
 	}
 
-	return s.castReviewsList(ctx, reviews, currentUserID), nil
+	return s.castReviewsListByUserID(ctx, reviews, currentUserID), nil
 }
 
 // LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
