@@ -643,7 +643,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 			} else {
 				return false, fmt.Errorf("transaction: %w", err)
 			}
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 10)
 		} else {
 			log.Printf("successful transaction: %s", tx)
 			break
@@ -837,7 +837,11 @@ func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32,
 	}
 
 	for i := 0; i < len(stakeLevels); i++ {
-		if stakeLevels[i].MinStakeAmount.Float64 < stake.StakeAmount {
+		if stakeLevels[i].Disabled.Bool {
+			continue
+		}
+
+		if stakeLevels[i].MinStakeAmount.Float64 < stake.StakeAmount && stakeLevels[i].MinDaysAmount.Int32 < stake.StakeDuration.Int32 {
 			return stakeLevels[i].Multiplier.Int32, nil
 		}
 	}

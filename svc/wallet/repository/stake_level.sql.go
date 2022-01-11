@@ -13,47 +13,57 @@ import (
 const addStakeLevel = `-- name: AddStakeLevel :one
 INSERT INTO stake_levels (
         min_stake_amount,
+        min_days_amount,
         title,
         subtitle,
-        multiplier
+        multiplier,
+        disabled
     )
 VALUES (
         $1,
         $2,
         $3,
-        $4
-    ) ON CONFLICT (title) DO NOTHING RETURNING id, min_stake_amount, title, subtitle, multiplier
+        $4,
+        $5,
+        $6
+    ) ON CONFLICT (title) DO NOTHING RETURNING id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
 `
 
 type AddStakeLevelParams struct {
 	MinStakeAmount sql.NullFloat64 `json:"min_stake_amount"`
+	MinDaysAmount  sql.NullInt32   `json:"min_days_amount"`
 	Title          string          `json:"title"`
 	Subtitle       string          `json:"subtitle"`
 	Multiplier     sql.NullInt32   `json:"multiplier"`
+	Disabled       sql.NullBool    `json:"disabled"`
 }
 
 func (q *Queries) AddStakeLevel(ctx context.Context, arg AddStakeLevelParams) (StakeLevel, error) {
 	row := q.queryRow(ctx, q.addStakeLevelStmt, addStakeLevel,
 		arg.MinStakeAmount,
+		arg.MinDaysAmount,
 		arg.Title,
 		arg.Subtitle,
 		arg.Multiplier,
+		arg.Disabled,
 	)
 	var i StakeLevel
 	err := row.Scan(
 		&i.ID,
 		&i.MinStakeAmount,
+		&i.MinDaysAmount,
 		&i.Title,
 		&i.Subtitle,
 		&i.Multiplier,
+		&i.Disabled,
 	)
 	return i, err
 }
 
 const getAllStakeLevels = `-- name: GetAllStakeLevels :many
-SELECT id, min_stake_amount, title, subtitle, multiplier
+SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
 FROM stake_levels
-ORDER BY min_stake_amount ASC
+ORDER BY min_stake_amount DESC
 `
 
 func (q *Queries) GetAllStakeLevels(ctx context.Context) ([]StakeLevel, error) {
@@ -68,9 +78,11 @@ func (q *Queries) GetAllStakeLevels(ctx context.Context) ([]StakeLevel, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.MinStakeAmount,
+			&i.MinDaysAmount,
 			&i.Title,
 			&i.Subtitle,
 			&i.Multiplier,
+			&i.Disabled,
 		); err != nil {
 			return nil, err
 		}
@@ -86,7 +98,7 @@ func (q *Queries) GetAllStakeLevels(ctx context.Context) ([]StakeLevel, error) {
 }
 
 const getStakeLevelByID = `-- name: GetStakeLevelByID :one
-SELECT id, min_stake_amount, title, subtitle, multiplier
+SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
 FROM stake_levels
 WHERE id = $1
 LIMIT 1
@@ -98,34 +110,40 @@ func (q *Queries) GetStakeLevelByID(ctx context.Context, id uuid.UUID) (StakeLev
 	err := row.Scan(
 		&i.ID,
 		&i.MinStakeAmount,
+		&i.MinDaysAmount,
 		&i.Title,
 		&i.Subtitle,
 		&i.Multiplier,
+		&i.Disabled,
 	)
 	return i, err
 }
 
 const updateStakeLevel = `-- name: UpdateStakeLevel :exec
 UPDATE stake_levels
-SET min_stake_amount = $2, title = $3, subtitle = $4, multiplier = $5
+SET min_stake_amount = $2, min_days_amount= $3, title = $4, subtitle = $5, multiplier = $6, disabled = $7
 WHERE id = $1
 `
 
 type UpdateStakeLevelParams struct {
 	ID             uuid.UUID       `json:"id"`
 	MinStakeAmount sql.NullFloat64 `json:"min_stake_amount"`
+	MinDaysAmount  sql.NullInt32   `json:"min_days_amount"`
 	Title          string          `json:"title"`
 	Subtitle       string          `json:"subtitle"`
 	Multiplier     sql.NullInt32   `json:"multiplier"`
+	Disabled       sql.NullBool    `json:"disabled"`
 }
 
 func (q *Queries) UpdateStakeLevel(ctx context.Context, arg UpdateStakeLevelParams) error {
 	_, err := q.exec(ctx, q.updateStakeLevelStmt, updateStakeLevel,
 		arg.ID,
 		arg.MinStakeAmount,
+		arg.MinDaysAmount,
 		arg.Title,
 		arg.Subtitle,
 		arg.Multiplier,
+		arg.Disabled,
 	)
 	return err
 }

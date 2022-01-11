@@ -7,6 +7,13 @@ func WithAssetSolanaAddress(addr string) ServiceOption {
 	}
 }
 
+// WithStakePoolSolanaAddress ...
+func WithStakePoolSolanaAddress(addr string) ServiceOption {
+	return func(s *Service) {
+		s.stakePoolSolanaPublicKey = addr
+	}
+}
+
 // WithSolanaFeePayer ...
 func WithSolanaFeePayer(addr string, pk []byte) ServiceOption {
 	return func(s *Service) {

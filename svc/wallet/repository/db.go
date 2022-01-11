@@ -67,11 +67,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getStakeByUserIDStmt, err = db.PrepareContext(ctx, getStakeByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStakeByUserID: %w", err)
 	}
-	if q.getTotalStakeStmt, err = db.PrepareContext(ctx, getTotalStake); err != nil {
-		return nil, fmt.Errorf("error preparing query GetTotalStake: %w", err)
-	}
 	if q.getStakeLevelByIDStmt, err = db.PrepareContext(ctx, getStakeLevelByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStakeLevelByID: %w", err)
+	}
+	if q.getTotalStakeStmt, err = db.PrepareContext(ctx, getTotalStake); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTotalStake: %w", err)
 	}
 	if q.getWalletByEthereumAccountIDStmt, err = db.PrepareContext(ctx, getWalletByEthereumAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWalletByEthereumAccountID: %w", err)
@@ -174,14 +174,14 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getStakeByUserIDStmt: %w", cerr)
 		}
 	}
-	if q.getTotalStakeStmt != nil {
-		if cerr := q.getTotalStakeStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getTotalStakeStmt: %w", cerr)
-		}
-	}
 	if q.getStakeLevelByIDStmt != nil {
 		if cerr := q.getStakeLevelByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getStakeLevelByIDStmt: %w", cerr)
+		}
+	}
+	if q.getTotalStakeStmt != nil {
+		if cerr := q.getTotalStakeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTotalStakeStmt: %w", cerr)
 		}
 	}
 	if q.getWalletByEthereumAccountIDStmt != nil {
@@ -272,8 +272,8 @@ type Queries struct {
 	getSolanaAccountByTypeStmt            *sql.Stmt
 	getSolanaAccountByUserIDAndTypeStmt   *sql.Stmt
 	getSolanaAccountTypeByPublicKeyStmt   *sql.Stmt
-	getStakeLevelByIDStmt                 *sql.Stmt
 	getStakeByUserIDStmt                  *sql.Stmt
+	getStakeLevelByIDStmt                 *sql.Stmt
 	getTotalStakeStmt                     *sql.Stmt
 	getWalletByEthereumAccountIDStmt      *sql.Stmt
 	getWalletByIDStmt                     *sql.Stmt
@@ -303,8 +303,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getSolanaAccountByUserIDAndTypeStmt:   q.getSolanaAccountByUserIDAndTypeStmt,
 		getSolanaAccountTypeByPublicKeyStmt:   q.getSolanaAccountTypeByPublicKeyStmt,
 		getStakeByUserIDStmt:                  q.getStakeByUserIDStmt,
-		getTotalStakeStmt:                     q.getTotalStakeStmt,
 		getStakeLevelByIDStmt:                 q.getStakeLevelByIDStmt,
+		getTotalStakeStmt:                     q.getTotalStakeStmt,
 		getWalletByEthereumAccountIDStmt:      q.getWalletByEthereumAccountIDStmt,
 		getWalletByIDStmt:                     q.getWalletByIDStmt,
 		getWalletBySolanaAccountIDStmt:        q.getWalletBySolanaAccountIDStmt,
