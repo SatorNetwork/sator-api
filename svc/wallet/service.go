@@ -714,7 +714,7 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 			} else {
 				return fmt.Errorf("transaction: %w", err)
 			}
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 10)
 		} else {
 			log.Printf("successful transaction: %s", tx)
 			break
