@@ -19,7 +19,7 @@ LIMIT 1;
 -- name: GetAllStakeLevels :many
 SELECT *
 FROM stake_levels
-ORDER BY min_stake_amount ASC;
+ORDER BY min_stake_amount DESC;
 -- name: UpdateStakeLevel :exec
 UPDATE stake_levels
 SET min_stake_amount = $2, title = $3, subtitle = $4, multiplier = $5

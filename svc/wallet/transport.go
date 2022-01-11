@@ -87,7 +87,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{wallet_id}/stake", httptransport.NewServer(
+	r.Get("/stake", httptransport.NewServer(
 		e.GetStake,
 		decodeGetStakeRequest,
 		httpencoder.EncodeResponse,
@@ -162,11 +162,7 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 }
 
 func decodeGetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := chi.URLParam(r, "wallet_id")
-	if id == "" {
-		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
-	}
-	return id, nil
+	return nil, nil
 }
 
 func decodeSetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {

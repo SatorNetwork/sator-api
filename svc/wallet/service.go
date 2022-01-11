@@ -71,6 +71,8 @@ type (
 		GetStakeByUserID(ctx context.Context, userID uuid.UUID) (repository.Stake, error)
 		GetTotalStake(ctx context.Context) (float64, error)
 		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
+
+		GetAllStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
 	}
 
 	solanaClient interface {
@@ -576,7 +578,7 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 }
 
 // GetStake Mocked method for stake
-func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Stake, error) {
+func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error) {
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
 		if db.IsNotFoundError(err) {
@@ -590,19 +592,28 @@ func (s *Service) GetStake(ctx context.Context, userID, walletID uuid.UUID) (Sta
 		return Stake{}, fmt.Errorf("could not get total stake by user id: %w", err)
 	}
 
-	yourShare := stake.StakeAmount / totalStake * 100
+	var userStakeLevel repository.StakeLevel
+
+	stakeLevel, err := s.wr.GetAllStakeLevels(ctx)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get stake levels list: %w", err)
+	}
+
+	for i := 0; i < len(stakeLevel); i++ {
+		if stakeLevel[i].MinStakeAmount.Float64 < stake.StakeAmount {
+			userStakeLevel = stakeLevel[i]
+			break
+		}
+	}
 
 	return Stake{
 		Staking: Staking{
-			AssetName: "SAO",
-			// APY:         138.9,
 			TotalStaked: totalStake,
 			Staked:      stake.StakeAmount,
-			YourShare:   yourShare,
 		},
 		Loyalty: Loyalty{
-			// LevelTitle:    "Genin",
-			// LevelSubtitle: "25% rewards multiplier",
+			LevelTitle:    userStakeLevel.Title,
+			LevelSubtitle: userStakeLevel.Subtitle,
 		},
 	}, nil
 }
@@ -810,4 +821,26 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 	}
 
 	return nil
+}
+
+// GetMultiplier returns multiplier according to wallet's stake level.
+func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		// since multiplier == 1 equals to no multiplier should return 1
+		return 1, fmt.Errorf("could not get stake by user id: %w", err)
+	}
+
+	stakeLevels, err := s.wr.GetAllStakeLevels(ctx)
+	if err != nil {
+		return 1, fmt.Errorf("could not get stake levels: %w", err)
+	}
+
+	for i := 0; i < len(stakeLevels); i++ {
+		if stakeLevels[i].MinStakeAmount.Float64 < stake.StakeAmount {
+			return stakeLevels[i].Multiplier.Int32, nil
+		}
+	}
+
+	return 1, nil
 }
