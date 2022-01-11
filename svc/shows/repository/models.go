@@ -72,3 +72,15 @@ type ShowClap struct {
 	UserID    uuid.UUID `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type ShowsCategory struct {
+	ID       uuid.UUID    `json:"id"`
+	Title    string       `json:"title"`
+	Disabled sql.NullBool `json:"disabled"`
+	Sort     int32        `json:"sort"`
+}
+
+type ShowsToCategory struct {
+	CategoryID uuid.UUID `json:"category_id"`
+	ShowID     uuid.UUID `json:"show_id"`
+}

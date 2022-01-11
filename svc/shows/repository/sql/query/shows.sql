@@ -22,9 +22,17 @@ FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
 WHERE shows.id = @id AND shows.archived = FALSE;
 -- name: GetShowsByCategory :many
-SELECT *
+WITH filtred_shows AS (
+    SELECT show_id
+    FROM shows_to_category
+    WHERE category_id = $1 AND disabled = false
+    GROUP BY show_id
+    )
+SELECT
+       shows.*,
+       coalesce (filtred_shows.show_id, 0) as show_id
 FROM shows
-WHERE category = $1 AND archived = FALSE
+INNER JOIN filtred_shows ON shows.id = filtred_shows.show_id
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
@@ -25,6 +26,12 @@ type (
 		GetShowByID        endpoint.Endpoint
 		GetShowsByCategory endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
+
+		AddShowCategories      endpoint.Endpoint
+		DeleteShowCategoryByID endpoint.Endpoint
+		UpdateShowCategory     endpoint.Endpoint
+		GetShowCategoryByID    endpoint.Endpoint
+		GetShowCategories      endpoint.Endpoint
 
 		AddSeason        endpoint.Endpoint
 		DeleteSeasonByID endpoint.Endpoint
@@ -57,6 +64,12 @@ type (
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
+
+		AddShowCategories(ctx context.Context, sc ShowCategory) (ShowCategory, error)
+		DeleteShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) error
+		UpdateShowCategory(ctx context.Context, sc ShowCategory) error
+		GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error)
+		GetShowCategories(ctx context.Context, limit, offset int32) ([]ShowCategory, error)
 
 		AddSeason(ctx context.Context, ss Season) (Season, error)
 		DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error
@@ -215,6 +228,21 @@ type (
 		WithNFT string `json:"with_nft"`
 		utils.PaginationRequest
 	}
+
+	// AddShowsCategoryRequest struct
+	AddShowsCategoryRequest struct {
+		Title    string `json:"title" validate:"required,gt=0"`
+		Disabled string `json:"disabled"`
+		Sort     int32  `json:"sort" validate:"required"`
+	}
+
+	// UpdateShowCategoryRequest struct
+	UpdateShowCategoryRequest struct {
+		ID       string `json:"id" validate:"required,uuid"`
+		Title    string `json:"title" validate:"required,gt=0"`
+		Disabled string `json:"disabled"`
+		Sort     int32  `json:"sort" validate:"required"`
+	}
 )
 
 // MakeEndpoints ...
@@ -230,6 +258,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowByID:        MakeGetShowByIDEndpoint(s),
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
+
+		AddShowCategories:      MakeAddShowCategoriesEndpoint(s, validateFunc),
+		DeleteShowCategoryByID: MakeDeleteShowCategoryByIDEndpoint(s),
+		UpdateShowCategory:     MakeUpdateShowCategoryEndpoint(s, validateFunc),
+		GetShowCategoryByID:    MakeGetShowCategoryByIDEndpoint(s),
+		GetShowCategories:      MakeGetShowCategoriesEndpoint(s, validateFunc),
 
 		AddSeason:        MakeAddSeasonEndpoint(s, validateFunc),
 		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
@@ -264,6 +298,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowByID = mdw(e.GetShowByID)
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
+
+			e.AddShowCategories = mdw(e.AddShowCategories)
+			e.DeleteShowCategoryByID = mdw(e.DeleteShowCategoryByID)
+			e.UpdateShowCategory = mdw(e.UpdateShowCategory)
+			e.GetShowCategoryByID = mdw(e.GetShowCategoryByID)
+			e.GetShowCategories = mdw(e.GetShowCategories)
 
 			e.AddSeason = mdw(e.AddSeason)
 			e.DeleteSeasonByID = mdw(e.DeleteSeasonByID)
@@ -1039,5 +1079,134 @@ func MakeSendTipsToReviewAuthorEndpoint(s service, v validator.ValidateFunc) end
 		}
 
 		return true, nil
+	}
+}
+
+// MakeAddShowCategoriesEndpoint ...
+func MakeAddShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(AddShowsCategoryRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		parseBool, err := strconv.ParseBool(req.Disabled)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse bool from string: %w", err)
+		}
+
+		resp, err := s.AddShowCategories(ctx, ShowCategory{
+			Title:    req.Title,
+			Disabled: parseBool,
+			Sort:     req.Sort,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeUpdateShowCategoryEndpoint ...
+func MakeUpdateShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(UpdateShowCategoryRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(req.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		parseBool, err := strconv.ParseBool(req.Disabled)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse bool from string: %w", err)
+		}
+
+		err = s.UpdateShowCategory(ctx, ShowCategory{
+			ID:       id,
+			Sort:     req.Sort,
+			Title:    req.Title,
+			Disabled: parseBool,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDeleteShowCategoryByIDEndpoint ...
+func MakeDeleteShowCategoryByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get id: %w", err)
+		}
+
+		err = s.DeleteShowCategoryByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetShowCategoryByIDEndpoint ...
+func MakeGetShowCategoryByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get id: %w", err)
+		}
+
+		resp, err := s.GetShowCategoryByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetShowCategoriesEndpoint ...
+func MakeGetShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(utils.PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetShowCategories(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

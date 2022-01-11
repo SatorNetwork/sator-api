@@ -99,13 +99,20 @@ type (
 		CreatedAt  string `json:"created_at"`
 	}
 
+	ShowCategory struct {
+		ID       uuid.UUID `json:"id"`
+		Title    string    `json:"title"`
+		Disabled bool      `json:"disabled"`
+		Sort     int32     `json:"sort"`
+	}
+
 	showsRepository interface {
 		// Shows
 		AddShow(ctx context.Context, arg repository.AddShowParams) (repository.Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
-		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
+		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.GetShowsByCategoryRow, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
 		// Seasons
@@ -142,6 +149,13 @@ type (
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
 		CountUserClaps(ctx context.Context, arg repository.CountUserClapsParams) (int64, error)
+
+		// Show category
+		AddShowCategory(ctx context.Context, arg repository.AddShowCategoryParams) (repository.ShowsCategory, error)
+		DeleteShowCategoryByID(ctx context.Context, id uuid.UUID) error
+		GetShowCategories(ctx context.Context, arg repository.GetShowCategoriesParams) ([]repository.ShowsCategory, error)
+		GetShowCategoryByID(ctx context.Context, id uuid.UUID) (repository.ShowsCategory, error)
+		UpdateShowCategory(ctx context.Context, arg repository.UpdateShowCategoryParams) error
 	}
 
 	// Challenges service client
@@ -350,22 +364,53 @@ func castToShow(source repository.Show) Show {
 }
 
 // GetShowsByCategory returns show by provided category.
-func (s *Service) GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error) {
+func (s *Service) GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error) {
 	shows, err := s.sr.GetShowsByCategory(ctx, repository.GetShowsByCategoryParams{
-		Category: sql.NullString{String: category, Valid: true},
-		Limit:    limit,
-		Offset:   offset,
+		CategoryID: category,
+		Limit:      limit,
+		Offset:     offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
 
-	sl, err := s.castToListShow(ctx, shows)
+	sl, err := s.castRowsToListShow(ctx, shows)
 	if err != nil {
 		return nil, fmt.Errorf("could not cast to list show : %w", err)
 	}
 
 	return sl, nil
+}
+
+// Cast repository.GetShowsByCategoryRow to service Show structure
+func (s *Service) castRowsToListShow(ctx context.Context, source []repository.GetShowsByCategoryRow) ([]Show, error) {
+	result := make([]Show, 0, len(source))
+	for _, sw := range source {
+		hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, sw.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+		}
+		sh := Show{
+			ID:             sw.ID,
+			Title:          sw.Title,
+			Cover:          sw.Cover,
+			HasNewEpisode:  sw.HasNewEpisode,
+			Category:       sw.Category.String,
+			Description:    sw.Description.String,
+			RealmsTitle:    sw.RealmsTitle.String,
+			RealmsSubtitle: sw.RealmsSubtitle.String,
+			Watch:          sw.Watch.String,
+			HasNFT:         hasNFT,
+		}
+
+		if !sw.RealmsTitle.Valid {
+			sh.RealmsTitle = "Realms"
+		}
+
+		result = append(result, sh)
+	}
+
+	return result, nil
 }
 
 // GetEpisodesByShowID returns episodes by show id.
@@ -893,20 +938,6 @@ func (s *Service) castReview(ctx context.Context, source repository.ReviewsListR
 	if err != nil {
 		log.Printf("could not get username by user id: %v", err)
 	}
-	//likes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
-	//	ReviewID: source.ID,
-	//	RatingType: sql.NullInt32{
-	//		Int32: int32(LikeReview),
-	//		Valid: true,
-	//	},
-	//})
-	//dislikes, _ := s.sr.GetReviewRating(ctx, repository.GetReviewRatingParams{
-	//	ReviewID: source.ID,
-	//	RatingType: sql.NullInt32{
-	//		Int32: int32(DislikeReview),
-	//		Valid: true,
-	//	},
-	//})
 	isLiked, _ := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
 		UserID:   currentUserID,
 		ReviewID: source.ID,
@@ -1030,4 +1061,89 @@ func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid
 	}
 
 	return nil
+}
+
+// AddShowCategories ...
+func (s *Service) AddShowCategories(ctx context.Context, sc ShowCategory) (ShowCategory, error) {
+	category, err := s.sr.AddShowCategory(ctx, repository.AddShowCategoryParams{
+		Title: sc.Title,
+		Disabled: sql.NullBool{
+			Bool:  sc.Disabled,
+			Valid: true,
+		},
+		Sort: sc.Sort,
+	})
+	if err != nil {
+		return ShowCategory{}, fmt.Errorf("could not add episode with title=%s: %w", sc.Title, err)
+	}
+
+	return castToShowCategory(category), nil
+}
+
+// DeleteShowCategoryByID ...
+func (s *Service) DeleteShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) error {
+	if err := s.sr.DeleteShowCategoryByID(ctx, showCategoryID); err != nil {
+		return fmt.Errorf("could not delete show category with id=%s:%w", showCategoryID, err)
+	}
+
+	return nil
+}
+
+// UpdateShowCategory ...
+func (s *Service) UpdateShowCategory(ctx context.Context, sc ShowCategory) error {
+	if err := s.sr.UpdateShowCategory(ctx, repository.UpdateShowCategoryParams{
+		ID:    sc.ID,
+		Title: sc.Title,
+		Disabled: sql.NullBool{
+			Bool:  sc.Disabled,
+			Valid: true,
+		},
+		Sort: sc.Sort,
+	}); err != nil {
+		return fmt.Errorf("could not update show category with id=%s:%w", sc.ID, err)
+	}
+	return nil
+}
+
+// GetShowCategoryByID returns show category with provided id.
+func (s *Service) GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error) {
+	category, err := s.sr.GetShowCategoryByID(ctx, showCategoryID)
+	if err != nil {
+		return ShowCategory{}, fmt.Errorf("could not get show category with id=%s: %w", showCategoryID, err)
+	}
+
+	return castToShowCategory(category), nil
+}
+
+// GetShowCategories returns show category list.
+func (s *Service) GetShowCategories(ctx context.Context, limit, offset int32) ([]ShowCategory, error) {
+	category, err := s.sr.GetShowCategories(ctx, repository.GetShowCategoriesParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return []ShowCategory{}, fmt.Errorf("could not get show category list: %w", err)
+	}
+
+	return castToShowCategoriesList(category), nil
+}
+
+// Cast []repository.ShowsCategory to service []ShowCategory.
+func castToShowCategoriesList(source []repository.ShowsCategory) []ShowCategory {
+	result := make([]ShowCategory, 0, len(source))
+	for _, r := range source {
+		result = append(result, castToShowCategory(r))
+	}
+
+	return result
+}
+
+// Cast repository.ShowsCategory to service ShowCategory structure.
+func castToShowCategory(source repository.ShowsCategory) ShowCategory {
+	return ShowCategory{
+		ID:       source.ID,
+		Title:    source.Title,
+		Disabled: source.Disabled.Bool,
+		Sort:     source.Sort,
+	}
 }
