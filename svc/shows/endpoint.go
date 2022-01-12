@@ -232,7 +232,7 @@ type (
 	// AddShowsCategoryRequest struct
 	AddShowsCategoryRequest struct {
 		Title    string `json:"title" validate:"required,gt=0"`
-		Disabled string `json:"disabled"`
+		Disabled string `json:"disabled" validate:"required"`
 		Sort     int32  `json:"sort" validate:"required"`
 	}
 

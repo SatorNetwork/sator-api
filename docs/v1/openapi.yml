@@ -1667,6 +1667,211 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /shows/categories:
+    get:
+      tags:
+        - "Category"
+      summary: Get categories list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns categories list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                      example: "title"
+                    disabled:
+                      type: string
+                      example: "false"
+                    sort:
+                      type: number
+                      example: 123
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - "Category"
+      summary: Used for create new category.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "title"
+                - "disabled"
+                - "sort"
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                disabled:
+                  type: string
+                  example: "false"
+                sort:
+                  type: number
+                  example: 123
+      responses:
+        "200":
+          description: Returns category data.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - "title"
+                  - "disabled"
+                  - "sort"
+                properties:
+                  title:
+                    type: string
+                    example: "title"
+                  disabled:
+                    type: string
+                    example: "false"
+                  sort:
+                    type: number
+                    example: 123
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+
+  /shows/categories/{category_id}:
+    get:
+      tags:
+        - "Category"
+      summary: Get category by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns show details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    example: "title"
+                  disabled:
+                    type: string
+                    example: "false"
+                  sort:
+                    type: number
+                    example: 123
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    put:
+      tags:
+        - "Category"
+      summary: Used for update category by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "title"
+                - "disabled"
+                - "sort"
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                disabled:
+                  type: string
+                  example: "false"
+                sort:
+                  type: number
+                  example: 123
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Category"
+      summary: Used for delete category by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/filter/{category}:
     get:
       tags:
@@ -1677,7 +1882,7 @@ paths:
       parameters:
         - name: category
           in: path
-          description: Category.
+          description: Category id.
           required: true
           schema:
             type: string
