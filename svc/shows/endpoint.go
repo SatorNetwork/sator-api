@@ -62,7 +62,7 @@ type (
 		GetShowsWithNFT(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
+		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddShowCategories(ctx context.Context, sc ShowCategory) (ShowCategory, error)
@@ -425,8 +425,13 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
+		id, err := uuid.Parse(req.Category)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
 		if req.Category != "" {
-			resp, err := s.GetShowsByCategory(ctx, req.Category, req.Limit(), req.Offset())
+			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
 			if err != nil {
 				return nil, err
 			}

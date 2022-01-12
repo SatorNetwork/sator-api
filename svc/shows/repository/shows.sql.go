@@ -191,16 +191,22 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
 WITH filtred_shows AS (
-    SELECT show_id
+    SELECT show_id, category_id
     FROM shows_to_category
-    WHERE category_id = $1 AND disabled = false
-    GROUP BY show_id
+    WHERE category_id = $1
+    GROUP BY show_id, category_id
+    ORDER BY category_id DESC
+    ), filtered_category AS (
+    SELECT id, title, disabled, sort
+    FROM shows_categories
+    WHERE id = $1 AND disabled = false
     )
 SELECT
        shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.archived,
-       coalesce (filtred_shows.show_id, 0) as show_id
+       coalesce (filtred_shows.show_id, '00000000-0000-0000-0000-000000000000'::uuid) AS show_id
 FROM shows
 INNER JOIN filtred_shows ON shows.id = filtred_shows.show_id
+INNER JOIN shows_categories ON shows_categories.id = filtred_shows.category_id
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
