@@ -110,7 +110,7 @@ type (
 		Title          string   `json:"title,omitempty" validate:"required,gt=0"`
 		Cover          string   `json:"cover,omitempty" validate:"required,gt=0"`
 		HasNewEpisode  bool     `json:"has_new_episode,omitempty"`
-		Category       []string `json:"category,omitempty"`
+		Categories     []string `json:"categories,omitempty"`
 		Description    string   `json:"description,omitempty"`
 		RealmsTitle    string   `json:"realms_title,omitempty"`
 		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
@@ -123,7 +123,7 @@ type (
 		Title          string   `json:"title,omitempty" validate:"required"`
 		Cover          string   `json:"cover,omitempty" validate:"required"`
 		HasNewEpisode  bool     `json:"has_new_episode,omitempty"`
-		Category       []string `json:"category,omitempty"`
+		Categories     []string `json:"categories,omitempty"`
 		Description    string   `json:"description,omitempty"`
 		RealmsTitle    string   `json:"realms_title,omitempty"`
 		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
@@ -460,21 +460,20 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
-		var category []uuid.UUID
-		for i := 0; i < len(req.Category); i++ {
-
-			id, err := uuid.Parse(req.Category[i])
+		categories := make([]uuid.UUID, 0, len(req.Categories))
+		for _, cat := range req.Categories {
+			id, err := uuid.Parse(cat)
 			if err != nil {
 				return nil, fmt.Errorf("could not get show id: %w", err)
 			}
-			category = append(category, id)
+			categories = append(categories, id)
 		}
 
 		resp, err := s.AddShow(ctx, Show{
 			Title:          req.Title,
 			Cover:          req.Cover,
 			HasNewEpisode:  req.HasNewEpisode,
-			Category:       category,
+			Categories:     categories,
 			Description:    req.Description,
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
@@ -502,14 +501,13 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		var category []uuid.UUID
-		for i := 0; i < len(req.Category); i++ {
-
-			idc, err := uuid.Parse(req.Category[i])
+		categories := make([]uuid.UUID, 0, len(req.Categories))
+		for _, cat := range req.Categories {
+			idc, err := uuid.Parse(cat)
 			if err != nil {
 				return nil, fmt.Errorf("could not get show id: %w", err)
 			}
-			category = append(category, idc)
+			categories = append(categories, idc)
 		}
 
 		err = s.UpdateShow(ctx, Show{
@@ -517,7 +515,7 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			Title:          req.Title,
 			Cover:          req.Cover,
 			HasNewEpisode:  req.HasNewEpisode,
-			Category:       category,
+			Categories:     categories,
 			Description:    req.Description,
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,

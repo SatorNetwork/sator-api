@@ -43,7 +43,7 @@ type (
 		Title          string      `json:"title"`
 		Cover          string      `json:"cover"`
 		HasNewEpisode  bool        `json:"has_new_episode"`
-		Category       []uuid.UUID `json:"category"`
+		Categories     []uuid.UUID `json:"categories"`
 		Description    string      `json:"description"`
 		Claps          int64       `json:"claps"`
 		RealmsTitle    string      `json:"realms_title"`
@@ -347,7 +347,7 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 	}
 
 	for i := 0; i < len(categories); i++ {
-		result.Category = append(result.Category, categories[i])
+		result.Categories = append(result.Categories, categories[i])
 	}
 
 	return result, nil
@@ -633,9 +633,9 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		return Show{}, fmt.Errorf("could not delete categories with show id=%s: %w", show.ID, err)
 	}
 
-	for i := 0; i < len(sh.Category); i++ {
+	for i := 0; i < len(sh.Categories); i++ {
 		_, err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
-			CategoryID: sh.Category[i],
+			CategoryID: sh.Categories[i],
 			ShowID:     show.ID,
 		})
 		if err != nil && !db.IsNotFoundError(err) {
@@ -679,9 +679,9 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		return fmt.Errorf("could not delete categories with show id=%s: %w", sh.ID, err)
 	}
 
-	for i := 0; i < len(sh.Category); i++ {
+	for i := 0; i < len(sh.Categories); i++ {
 		_, err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
-			CategoryID: sh.Category[i],
+			CategoryID: sh.Categories[i],
 			ShowID:     sh.ID,
 		})
 		if err != nil && !db.IsNotFoundError(err) {
