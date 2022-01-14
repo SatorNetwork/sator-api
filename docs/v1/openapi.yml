@@ -1703,6 +1703,9 @@ paths:
                 items:
                   type: object
                   properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                     title:
                       type: string
                       example: "title"
@@ -1753,6 +1756,9 @@ paths:
                   - "disabled"
                   - "sort"
                 properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                   title:
                     type: string
                     example: "title"
@@ -1792,6 +1798,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                   title:
                     type: string
                     example: "title"

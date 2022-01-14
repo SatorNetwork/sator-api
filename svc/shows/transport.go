@@ -91,8 +91,8 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Post("/categories", httptransport.NewServer(
-		e.AddShowCategories,
-		decodeAddShowCategoriesRequest,
+		e.AddShowCategory,
+		decodeAddShowCategoryRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -568,7 +568,7 @@ func decodeGetShowCategoryByIDRequest(_ context.Context, r *http.Request) (inter
 	return categoryID, nil
 }
 
-func decodeAddShowCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeAddShowCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req AddShowsCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)

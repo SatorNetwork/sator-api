@@ -27,7 +27,7 @@ type (
 		GetShowsByCategory endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
 
-		AddShowCategories      endpoint.Endpoint
+		AddShowCategory        endpoint.Endpoint
 		DeleteShowCategoryByID endpoint.Endpoint
 		UpdateShowCategory     endpoint.Endpoint
 		GetShowCategoryByID    endpoint.Endpoint
@@ -65,7 +65,7 @@ type (
 		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
-		AddShowCategories(ctx context.Context, sc ShowCategory) (ShowCategory, error)
+		AddShowCategory(ctx context.Context, sc ShowCategory) (ShowCategory, error)
 		DeleteShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) error
 		UpdateShowCategory(ctx context.Context, sc ShowCategory) error
 		GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error)
@@ -259,7 +259,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
 
-		AddShowCategories:      MakeAddShowCategoriesEndpoint(s, validateFunc),
+		AddShowCategory:        MakeAddShowCategoryEndpoint(s, validateFunc),
 		DeleteShowCategoryByID: MakeDeleteShowCategoryByIDEndpoint(s),
 		UpdateShowCategory:     MakeUpdateShowCategoryEndpoint(s, validateFunc),
 		GetShowCategoryByID:    MakeGetShowCategoryByIDEndpoint(s),
@@ -299,7 +299,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
 
-			e.AddShowCategories = mdw(e.AddShowCategories)
+			e.AddShowCategory = mdw(e.AddShowCategory)
 			e.DeleteShowCategoryByID = mdw(e.DeleteShowCategoryByID)
 			e.UpdateShowCategory = mdw(e.UpdateShowCategory)
 			e.GetShowCategoryByID = mdw(e.GetShowCategoryByID)
@@ -430,7 +430,7 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
-		if req.Category != "" {
+		if id != uuid.Nil {
 			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
 			if err != nil {
 				return nil, err
@@ -1087,10 +1087,10 @@ func MakeSendTipsToReviewAuthorEndpoint(s service, v validator.ValidateFunc) end
 	}
 }
 
-// MakeAddShowCategoriesEndpoint ...
-func MakeAddShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+// MakeAddShowCategoryEndpoint ...
+func MakeAddShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
 			return nil, err
 		}
 
@@ -1104,7 +1104,7 @@ func MakeAddShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, fmt.Errorf("could not parse bool from string: %w", err)
 		}
 
-		resp, err := s.AddShowCategories(ctx, ShowCategory{
+		resp, err := s.AddShowCategory(ctx, ShowCategory{
 			Title:    req.Title,
 			Disabled: parseBool,
 			Sort:     req.Sort,

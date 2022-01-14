@@ -190,60 +190,33 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
-WITH filtred_shows AS (
-    SELECT show_id, category_id
-    FROM shows_to_category
-    WHERE category_id = $1
-    GROUP BY show_id, category_id
-    ORDER BY category_id DESC
-    ), filtered_category AS (
-    SELECT id, title, disabled, sort
-    FROM shows_categories
-    WHERE id = $1 AND disabled = false
-    )
-SELECT
-       shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.archived,
-       coalesce (filtred_shows.show_id, '00000000-0000-0000-0000-000000000000'::uuid) AS show_id
-FROM shows
-INNER JOIN filtred_shows ON shows.id = filtred_shows.show_id
-INNER JOIN shows_categories ON shows_categories.id = filtred_shows.category_id
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived FROM shows
+WHERE id IN(
+        SELECT DISTINCT show_id FROM shows_to_category
+              JOIN shows_categories ON shows_categories.id = shows_to_category.category_id
+        WHERE shows_categories.disabled = FALSE
+          AND shows_categories.id = $1)
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
-    LIMIT $2 OFFSET $3
+    LIMIT $3 OFFSET $2
 `
 
 type GetShowsByCategoryParams struct {
 	CategoryID uuid.UUID `json:"category_id"`
-	Limit      int32     `json:"limit"`
-	Offset     int32     `json:"offset"`
+	Offset     int32     `json:"offset_val"`
+	Limit      int32     `json:"limit_val"`
 }
 
-type GetShowsByCategoryRow struct {
-	ID             uuid.UUID      `json:"id"`
-	Title          string         `json:"title"`
-	Cover          string         `json:"cover"`
-	HasNewEpisode  bool           `json:"has_new_episode"`
-	UpdatedAt      sql.NullTime   `json:"updated_at"`
-	CreatedAt      time.Time      `json:"created_at"`
-	Category       sql.NullString `json:"category"`
-	Description    sql.NullString `json:"description"`
-	RealmsTitle    sql.NullString `json:"realms_title"`
-	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
-	Watch          sql.NullString `json:"watch"`
-	Archived       bool           `json:"archived"`
-	ShowID         uuid.UUID      `json:"show_id"`
-}
-
-func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategoryParams) ([]GetShowsByCategoryRow, error) {
-	rows, err := q.query(ctx, q.getShowsByCategoryStmt, getShowsByCategory, arg.CategoryID, arg.Limit, arg.Offset)
+func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategoryParams) ([]Show, error) {
+	rows, err := q.query(ctx, q.getShowsByCategoryStmt, getShowsByCategory, arg.CategoryID, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetShowsByCategoryRow
+	var items []Show
 	for rows.Next() {
-		var i GetShowsByCategoryRow
+		var i Show
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -257,7 +230,6 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Archived,
-			&i.ShowID,
 		); err != nil {
 			return nil, err
 		}

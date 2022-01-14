@@ -112,7 +112,7 @@ type (
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, arg repository.GetShowsParams) ([]repository.Show, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
-		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.GetShowsByCategoryRow, error)
+		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
 
 		// Seasons
@@ -374,43 +374,12 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category uuid.UUID, li
 		return nil, fmt.Errorf("could not get shows list: %w", err)
 	}
 
-	sl, err := s.castRowsToListShow(ctx, shows)
+	sl, err := s.castToListShow(ctx, shows)
 	if err != nil {
 		return nil, fmt.Errorf("could not cast to list show : %w", err)
 	}
 
 	return sl, nil
-}
-
-// Cast repository.GetShowsByCategoryRow to service Show structure
-func (s *Service) castRowsToListShow(ctx context.Context, source []repository.GetShowsByCategoryRow) ([]Show, error) {
-	result := make([]Show, 0, len(source))
-	for _, sw := range source {
-		hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, sw.ID)
-		if err != nil {
-			return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
-		}
-		sh := Show{
-			ID:             sw.ID,
-			Title:          sw.Title,
-			Cover:          sw.Cover,
-			HasNewEpisode:  sw.HasNewEpisode,
-			Category:       sw.Category.String,
-			Description:    sw.Description.String,
-			RealmsTitle:    sw.RealmsTitle.String,
-			RealmsSubtitle: sw.RealmsSubtitle.String,
-			Watch:          sw.Watch.String,
-			HasNFT:         hasNFT,
-		}
-
-		if !sw.RealmsTitle.Valid {
-			sh.RealmsTitle = "Realms"
-		}
-
-		result = append(result, sh)
-	}
-
-	return result, nil
 }
 
 // GetEpisodesByShowID returns episodes by show id.
@@ -1063,8 +1032,8 @@ func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid
 	return nil
 }
 
-// AddShowCategories ...
-func (s *Service) AddShowCategories(ctx context.Context, sc ShowCategory) (ShowCategory, error) {
+// AddShowCategory ...
+func (s *Service) AddShowCategory(ctx context.Context, sc ShowCategory) (ShowCategory, error) {
 	category, err := s.sr.AddShowCategory(ctx, repository.AddShowCategoryParams{
 		Title: sc.Title,
 		Disabled: sql.NullBool{
