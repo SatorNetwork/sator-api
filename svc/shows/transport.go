@@ -75,6 +75,42 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	// show categories
+	r.Get("/categories", httptransport.NewServer(
+		e.GetShowCategories,
+		decodeGetShowCategoriesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/categories/{category_id}", httptransport.NewServer(
+		e.GetShowCategoryByID,
+		decodeGetShowCategoryByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/categories", httptransport.NewServer(
+		e.AddShowCategory,
+		decodeAddShowCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/categories/{category_id}", httptransport.NewServer(
+		e.UpdateShowCategory,
+		decodeUpdateShowCategoryRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/categories/{category_id}", httptransport.NewServer(
+		e.DeleteShowCategoryByID,
+		decodeDeleteShowCategoryByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	// challenges
 	r.Get("/{show_id}/challenges", httptransport.NewServer(
 		e.GetShowChallenges,
@@ -512,4 +548,53 @@ func decodeSendTipsToReviewAuthorRequest(_ context.Context, r *http.Request) (in
 	req.ReviewID = reviewID
 
 	return req, nil
+}
+
+func decodeDeleteShowCategoryByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+
+	return categoryID, nil
+}
+
+func decodeGetShowCategoryByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+
+	return categoryID, nil
+}
+
+func decodeAddShowCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req AddShowsCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	return req, nil
+}
+
+func decodeUpdateShowCategoryRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateShowCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	categoryID := chi.URLParam(r, "category_id")
+	if categoryID == "" {
+		return nil, fmt.Errorf("%w: missed category id", ErrInvalidParameter)
+	}
+	req.ID = categoryID
+
+	return req, nil
+}
+
+func decodeGetShowCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return utils.PaginationRequest{
+		Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+	}, nil
 }

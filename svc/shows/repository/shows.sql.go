@@ -190,23 +190,26 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived
-FROM shows
-WHERE category = $1 AND archived = FALSE
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived FROM shows
+WHERE id IN(
+        SELECT DISTINCT show_id FROM shows_to_categories
+              JOIN show_categories ON show_categories.id = shows_to_categories.category_id
+        WHERE show_categories.disabled = FALSE
+          AND show_categories.id = $1)
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
-    LIMIT $2 OFFSET $3
+    LIMIT $3 OFFSET $2
 `
 
 type GetShowsByCategoryParams struct {
-	Category sql.NullString `json:"category"`
-	Limit    int32          `json:"limit"`
-	Offset   int32          `json:"offset"`
+	CategoryID uuid.UUID `json:"category_id"`
+	Offset     int32     `json:"offset_val"`
+	Limit      int32     `json:"limit_val"`
 }
 
 func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategoryParams) ([]Show, error) {
-	rows, err := q.query(ctx, q.getShowsByCategoryStmt, getShowsByCategory, arg.Category, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.getShowsByCategoryStmt, getShowsByCategory, arg.CategoryID, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
