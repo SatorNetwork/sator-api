@@ -11,7 +11,7 @@ import (
 )
 
 const addShowCategory = `-- name: AddShowCategory :one
-INSERT INTO shows_categories (
+INSERT INTO show_categories (
     sort,
     title,
     disabled
@@ -29,9 +29,9 @@ type AddShowCategoryParams struct {
 	Disabled sql.NullBool `json:"disabled"`
 }
 
-func (q *Queries) AddShowCategory(ctx context.Context, arg AddShowCategoryParams) (ShowsCategory, error) {
+func (q *Queries) AddShowCategory(ctx context.Context, arg AddShowCategoryParams) (ShowCategory, error) {
 	row := q.queryRow(ctx, q.addShowCategoryStmt, addShowCategory, arg.Sort, arg.Title, arg.Disabled)
-	var i ShowsCategory
+	var i ShowCategory
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
@@ -41,8 +41,31 @@ func (q *Queries) AddShowCategory(ctx context.Context, arg AddShowCategoryParams
 	return i, err
 }
 
+const addShowToCategory = `-- name: AddShowToCategory :one
+INSERT INTO shows_to_categories (
+    category_id,
+    show_id
+    )
+VALUES (
+           $1,
+           $2
+       ) RETURNING category_id, show_id
+`
+
+type AddShowToCategoryParams struct {
+	CategoryID uuid.UUID `json:"category_id"`
+	ShowID     uuid.UUID `json:"show_id"`
+}
+
+func (q *Queries) AddShowToCategory(ctx context.Context, arg AddShowToCategoryParams) (ShowsToCategory, error) {
+	row := q.queryRow(ctx, q.addShowToCategoryStmt, addShowToCategory, arg.CategoryID, arg.ShowID)
+	var i ShowsToCategory
+	err := row.Scan(&i.CategoryID, &i.ShowID)
+	return i, err
+}
+
 const deleteShowCategoryByID = `-- name: DeleteShowCategoryByID :exec
-DELETE FROM shows_categories
+DELETE FROM show_categories
 WHERE id = $1
 `
 
@@ -51,9 +74,48 @@ func (q *Queries) DeleteShowCategoryByID(ctx context.Context, id uuid.UUID) erro
 	return err
 }
 
+const deleteShowToCategoryByShowID = `-- name: DeleteShowToCategoryByShowID :exec
+DELETE FROM shows_to_categories
+WHERE show_id = $1
+`
+
+func (q *Queries) DeleteShowToCategoryByShowID(ctx context.Context, showID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteShowToCategoryByShowIDStmt, deleteShowToCategoryByShowID, showID)
+	return err
+}
+
+const getCategoriesByShowID = `-- name: GetCategoriesByShowID :many
+SELECT category_id
+FROM shows_to_categories
+WHERE show_id = $1
+`
+
+func (q *Queries) GetCategoriesByShowID(ctx context.Context, showID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.query(ctx, q.getCategoriesByShowIDStmt, getCategoriesByShowID, showID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var category_id uuid.UUID
+		if err := rows.Scan(&category_id); err != nil {
+			return nil, err
+		}
+		items = append(items, category_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getShowCategories = `-- name: GetShowCategories :many
 SELECT id, title, disabled, sort
-FROM shows_categories
+FROM show_categories
 WHERE disabled = FALSE
 ORDER BY sort DESC
     LIMIT $1 OFFSET $2
@@ -64,15 +126,15 @@ type GetShowCategoriesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetShowCategories(ctx context.Context, arg GetShowCategoriesParams) ([]ShowsCategory, error) {
+func (q *Queries) GetShowCategories(ctx context.Context, arg GetShowCategoriesParams) ([]ShowCategory, error) {
 	rows, err := q.query(ctx, q.getShowCategoriesStmt, getShowCategories, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ShowsCategory
+	var items []ShowCategory
 	for rows.Next() {
-		var i ShowsCategory
+		var i ShowCategory
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -94,13 +156,13 @@ func (q *Queries) GetShowCategories(ctx context.Context, arg GetShowCategoriesPa
 
 const getShowCategoryByID = `-- name: GetShowCategoryByID :one
 SELECT id, title, disabled, sort
-FROM shows_categories
+FROM show_categories
 WHERE id = $1
 `
 
-func (q *Queries) GetShowCategoryByID(ctx context.Context, id uuid.UUID) (ShowsCategory, error) {
+func (q *Queries) GetShowCategoryByID(ctx context.Context, id uuid.UUID) (ShowCategory, error) {
 	row := q.queryRow(ctx, q.getShowCategoryByIDStmt, getShowCategoryByID, id)
-	var i ShowsCategory
+	var i ShowCategory
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
@@ -111,7 +173,7 @@ func (q *Queries) GetShowCategoryByID(ctx context.Context, id uuid.UUID) (ShowsC
 }
 
 const updateShowCategory = `-- name: UpdateShowCategory :exec
-UPDATE shows_categories
+UPDATE show_categories
 SET sort = $1,
     title = $2,
     disabled = $3

@@ -107,27 +107,27 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title          string `json:"title,omitempty" validate:"required,gt=0"`
-		Cover          string `json:"cover,omitempty" validate:"required,gt=0"`
-		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
-		Category       string `json:"category,omitempty"`
-		Description    string `json:"description,omitempty"`
-		RealmsTitle    string `json:"realms_title,omitempty"`
-		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
-		Watch          string `json:"watch,omitempty"`
+		Title          string   `json:"title,omitempty" validate:"required,gt=0"`
+		Cover          string   `json:"cover,omitempty" validate:"required,gt=0"`
+		HasNewEpisode  bool     `json:"has_new_episode,omitempty"`
+		Category       []string `json:"category,omitempty"`
+		Description    string   `json:"description,omitempty"`
+		RealmsTitle    string   `json:"realms_title,omitempty"`
+		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
+		Watch          string   `json:"watch,omitempty"`
 	}
 
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
-		ID             string `json:"id,omitempty" validate:"required,uuid"`
-		Title          string `json:"title,omitempty" validate:"required"`
-		Cover          string `json:"cover,omitempty" validate:"required"`
-		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
-		Category       string `json:"category,omitempty"`
-		Description    string `json:"description,omitempty"`
-		RealmsTitle    string `json:"realms_title,omitempty"`
-		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
-		Watch          string `json:"watch,omitempty"`
+		ID             string   `json:"id,omitempty" validate:"required,uuid"`
+		Title          string   `json:"title,omitempty" validate:"required"`
+		Cover          string   `json:"cover,omitempty" validate:"required"`
+		HasNewEpisode  bool     `json:"has_new_episode,omitempty"`
+		Category       []string `json:"category,omitempty"`
+		Description    string   `json:"description,omitempty"`
+		RealmsTitle    string   `json:"realms_title,omitempty"`
+		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
+		Watch          string   `json:"watch,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -460,11 +460,21 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
+		var category []uuid.UUID
+		for i := 0; i < len(req.Category); i++ {
+
+			id, err := uuid.Parse(req.Category[i])
+			if err != nil {
+				return nil, fmt.Errorf("could not get show id: %w", err)
+			}
+			category = append(category, id)
+		}
+
 		resp, err := s.AddShow(ctx, Show{
 			Title:          req.Title,
 			Cover:          req.Cover,
 			HasNewEpisode:  req.HasNewEpisode,
-			Category:       req.Category,
+			Category:       category,
 			Description:    req.Description,
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
@@ -492,12 +502,22 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
+		var category []uuid.UUID
+		for i := 0; i < len(req.Category); i++ {
+
+			idc, err := uuid.Parse(req.Category[i])
+			if err != nil {
+				return nil, fmt.Errorf("could not get show id: %w", err)
+			}
+			category = append(category, idc)
+		}
+
 		err = s.UpdateShow(ctx, Show{
 			ID:             id,
 			Title:          req.Title,
 			Cover:          req.Cover,
 			HasNewEpisode:  req.HasNewEpisode,
-			Category:       req.Category,
+			Category:       category,
 			Description:    req.Description,
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
@@ -1120,7 +1140,7 @@ func MakeAddShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.E
 // MakeUpdateShowCategoryEndpoint ...
 func MakeUpdateShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
 			return nil, err
 		}
 
@@ -1156,7 +1176,7 @@ func MakeUpdateShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 // MakeDeleteShowCategoryByIDEndpoint ...
 func MakeDeleteShowCategoryByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
 			return nil, err
 		}
 

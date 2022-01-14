@@ -1,16 +1,16 @@
 -- name: GetShowCategories :many
 SELECT *
-FROM shows_categories
+FROM show_categories
 WHERE disabled = FALSE
 ORDER BY sort DESC
     LIMIT $1 OFFSET $2;
 -- name: GetShowCategoryByID :one
 SELECT *
-FROM shows_categories
+FROM show_categories
 WHERE id = $1;
 
 -- name: AddShowCategory :one
-INSERT INTO shows_categories (
+INSERT INTO show_categories (
     sort,
     title,
     disabled
@@ -22,12 +22,31 @@ VALUES (
        ) RETURNING *;
 
 -- name: UpdateShowCategory :exec
-UPDATE shows_categories
+UPDATE show_categories
 SET sort = @sort,
     title = @title,
     disabled = @disabled
 WHERE id = @id;
 
 -- name: DeleteShowCategoryByID :exec
-DELETE FROM shows_categories
+DELETE FROM show_categories
 WHERE id = @id;
+
+-- name: AddShowToCategory :one
+INSERT INTO shows_to_categories (
+    category_id,
+    show_id
+    )
+VALUES (
+           @category_id,
+           @show_id
+       ) RETURNING *;
+
+-- name: DeleteShowToCategoryByShowID :exec
+DELETE FROM shows_to_categories
+WHERE show_id = @show_id;
+
+-- name: GetCategoriesByShowID :many
+SELECT category_id
+FROM shows_to_categories
+WHERE show_id = $1;

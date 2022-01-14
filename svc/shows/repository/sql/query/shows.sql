@@ -24,10 +24,10 @@ WHERE shows.id = @id AND shows.archived = FALSE;
 -- name: GetShowsByCategory :many
 SELECT * FROM shows
 WHERE id IN(
-        SELECT DISTINCT show_id FROM shows_to_category
-              JOIN shows_categories ON shows_categories.id = shows_to_category.category_id
-        WHERE shows_categories.disabled = FALSE
-          AND shows_categories.id = @category_id)
+        SELECT DISTINCT show_id FROM shows_to_categories
+              JOIN show_categories ON show_categories.id = shows_to_categories.category_id
+        WHERE show_categories.disabled = FALSE
+          AND show_categories.id = @category_id)
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
