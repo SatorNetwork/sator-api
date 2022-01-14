@@ -84,7 +84,7 @@ func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, 
 	splToken := c.PublicKeyFromString(c.config.SplToken)
 	programID := c.PublicKeyFromString(c.config.StakeProgramID)
 
-	amount = amount * 1000_000_000
+	amount = amount * c.mltpl
 
 	data, err := borsh.Serialize(StakeInput{
 		Number:   1,

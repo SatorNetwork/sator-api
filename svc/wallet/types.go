@@ -132,6 +132,7 @@ type (
 	Staking struct {
 		TotalStaked float64 `json:"total_staked"`
 		Staked      float64 `json:"staked"`
+		YourShare   float64 `json:",omitempty"`
 	}
 
 	// Loyalty struct

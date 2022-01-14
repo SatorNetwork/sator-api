@@ -827,13 +827,12 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
-		// since multiplier == 1 equals to no multiplier should return 1
-		return 1, fmt.Errorf("could not get stake by user id: %w", err)
+		return 0, fmt.Errorf("could not get stake by user id: %w", err)
 	}
 
 	stakeLevels, err := s.wr.GetAllStakeLevels(ctx)
 	if err != nil {
-		return 1, fmt.Errorf("could not get stake levels: %w", err)
+		return 0, fmt.Errorf("could not get stake levels: %w", err)
 	}
 
 	for i := 0; i < len(stakeLevels); i++ {
@@ -846,5 +845,5 @@ func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32,
 		}
 	}
 
-	return 1, nil
+	return 0, nil
 }
