@@ -33,7 +33,7 @@ type (
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
-		GetStake(ctx context.Context, userID, walletID uuid.UUID) (Stake, error)
+		GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 	}
@@ -271,12 +271,7 @@ func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		walletID, err := uuid.Parse(request.(string))
-		if err != nil {
-			return nil, fmt.Errorf("could not get wallet id: %w", err)
-		}
-
-		stake, err := s.GetStake(ctx, uid, walletID)
+		stake, err := s.GetStake(ctx, uid)
 		if err != nil {
 			return nil, err
 		}

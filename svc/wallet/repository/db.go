@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addStakeStmt, err = db.PrepareContext(ctx, addStake); err != nil {
 		return nil, fmt.Errorf("error preparing query AddStake: %w", err)
 	}
+	if q.addStakeLevelStmt, err = db.PrepareContext(ctx, addStakeLevel); err != nil {
+		return nil, fmt.Errorf("error preparing query AddStakeLevel: %w", err)
+	}
 	if q.createWalletStmt, err = db.PrepareContext(ctx, createWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateWallet: %w", err)
 	}
@@ -39,6 +42,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.deleteWalletByIDStmt, err = db.PrepareContext(ctx, deleteWalletByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteWalletByID: %w", err)
+	}
+	if q.getAllStakeLevelsStmt, err = db.PrepareContext(ctx, getAllStakeLevels); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllStakeLevels: %w", err)
 	}
 	if q.getEthereumAccountByIDStmt, err = db.PrepareContext(ctx, getEthereumAccountByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEthereumAccountByID: %w", err)
@@ -61,6 +67,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getStakeByUserIDStmt, err = db.PrepareContext(ctx, getStakeByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStakeByUserID: %w", err)
 	}
+	if q.getStakeLevelByIDStmt, err = db.PrepareContext(ctx, getStakeLevelByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStakeLevelByID: %w", err)
+	}
 	if q.getTotalStakeStmt, err = db.PrepareContext(ctx, getTotalStake); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTotalStake: %w", err)
 	}
@@ -82,6 +91,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateStakeStmt, err = db.PrepareContext(ctx, updateStake); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStake: %w", err)
 	}
+	if q.updateStakeLevelStmt, err = db.PrepareContext(ctx, updateStakeLevel); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateStakeLevel: %w", err)
+	}
 	return &q, nil
 }
 
@@ -102,6 +114,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addStakeStmt: %w", cerr)
 		}
 	}
+	if q.addStakeLevelStmt != nil {
+		if cerr := q.addStakeLevelStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addStakeLevelStmt: %w", cerr)
+		}
+	}
 	if q.createWalletStmt != nil {
 		if cerr := q.createWalletStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createWalletStmt: %w", cerr)
@@ -115,6 +132,11 @@ func (q *Queries) Close() error {
 	if q.deleteWalletByIDStmt != nil {
 		if cerr := q.deleteWalletByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteWalletByIDStmt: %w", cerr)
+		}
+	}
+	if q.getAllStakeLevelsStmt != nil {
+		if cerr := q.getAllStakeLevelsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllStakeLevelsStmt: %w", cerr)
 		}
 	}
 	if q.getEthereumAccountByIDStmt != nil {
@@ -152,6 +174,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getStakeByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.getStakeLevelByIDStmt != nil {
+		if cerr := q.getStakeLevelByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStakeLevelByIDStmt: %w", cerr)
+		}
+	}
 	if q.getTotalStakeStmt != nil {
 		if cerr := q.getTotalStakeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getTotalStakeStmt: %w", cerr)
@@ -185,6 +212,11 @@ func (q *Queries) Close() error {
 	if q.updateStakeStmt != nil {
 		if cerr := q.updateStakeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateStakeStmt: %w", cerr)
+		}
+	}
+	if q.updateStakeLevelStmt != nil {
+		if cerr := q.updateStakeLevelStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateStakeLevelStmt: %w", cerr)
 		}
 	}
 	return err
@@ -229,9 +261,11 @@ type Queries struct {
 	addEthereumAccountStmt                *sql.Stmt
 	addSolanaAccountStmt                  *sql.Stmt
 	addStakeStmt                          *sql.Stmt
+	addStakeLevelStmt                     *sql.Stmt
 	createWalletStmt                      *sql.Stmt
 	deleteStakeByUserIDStmt               *sql.Stmt
 	deleteWalletByIDStmt                  *sql.Stmt
+	getAllStakeLevelsStmt                 *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
 	getEthereumAccountByUserIDAndTypeStmt *sql.Stmt
 	getSolanaAccountByIDStmt              *sql.Stmt
@@ -239,6 +273,7 @@ type Queries struct {
 	getSolanaAccountByUserIDAndTypeStmt   *sql.Stmt
 	getSolanaAccountTypeByPublicKeyStmt   *sql.Stmt
 	getStakeByUserIDStmt                  *sql.Stmt
+	getStakeLevelByIDStmt                 *sql.Stmt
 	getTotalStakeStmt                     *sql.Stmt
 	getWalletByEthereumAccountIDStmt      *sql.Stmt
 	getWalletByIDStmt                     *sql.Stmt
@@ -246,6 +281,7 @@ type Queries struct {
 	getWalletByUserIDAndTypeStmt          *sql.Stmt
 	getWalletsByUserIDStmt                *sql.Stmt
 	updateStakeStmt                       *sql.Stmt
+	updateStakeLevelStmt                  *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -255,9 +291,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addEthereumAccountStmt:                q.addEthereumAccountStmt,
 		addSolanaAccountStmt:                  q.addSolanaAccountStmt,
 		addStakeStmt:                          q.addStakeStmt,
+		addStakeLevelStmt:                     q.addStakeLevelStmt,
 		createWalletStmt:                      q.createWalletStmt,
 		deleteStakeByUserIDStmt:               q.deleteStakeByUserIDStmt,
 		deleteWalletByIDStmt:                  q.deleteWalletByIDStmt,
+		getAllStakeLevelsStmt:                 q.getAllStakeLevelsStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,
 		getEthereumAccountByUserIDAndTypeStmt: q.getEthereumAccountByUserIDAndTypeStmt,
 		getSolanaAccountByIDStmt:              q.getSolanaAccountByIDStmt,
@@ -265,6 +303,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getSolanaAccountByUserIDAndTypeStmt:   q.getSolanaAccountByUserIDAndTypeStmt,
 		getSolanaAccountTypeByPublicKeyStmt:   q.getSolanaAccountTypeByPublicKeyStmt,
 		getStakeByUserIDStmt:                  q.getStakeByUserIDStmt,
+		getStakeLevelByIDStmt:                 q.getStakeLevelByIDStmt,
 		getTotalStakeStmt:                     q.getTotalStakeStmt,
 		getWalletByEthereumAccountIDStmt:      q.getWalletByEthereumAccountIDStmt,
 		getWalletByIDStmt:                     q.getWalletByIDStmt,
@@ -272,5 +311,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getWalletByUserIDAndTypeStmt:          q.getWalletByUserIDAndTypeStmt,
 		getWalletsByUserIDStmt:                q.getWalletsByUserIDStmt,
 		updateStakeStmt:                       q.updateStakeStmt,
+		updateStakeLevelStmt:                  q.updateStakeLevelStmt,
 	}
 }

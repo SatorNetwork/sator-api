@@ -130,11 +130,9 @@ type (
 
 	// Staking struct
 	Staking struct {
-		AssetName   string  `json:"asset_name"`
-		APY         float64 `json:"apy"`
 		TotalStaked float64 `json:"total_staked"`
 		Staked      float64 `json:"staked"`
-		YourShare   float64 `json:"your_share"`
+		YourShare   float64 `json:",omitempty"`
 	}
 
 	// Loyalty struct
