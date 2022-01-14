@@ -1428,7 +1428,7 @@ paths:
                 watch:
                   type: string
                   example: "https://youtube.com/ERGbevesrf"
-                category:
+                categories:
                   type: array
                   items:
                     type: string
@@ -1468,7 +1468,7 @@ paths:
                   watch:
                     type: string
                     example: "https://youtube.com/ERGbevesrf"
-                  category:
+                  categories:
                     type: array
                     items:
                       type: string
@@ -1584,7 +1584,7 @@ paths:
                     example: "https://youtube.com/ERGbevesrf"
                   has_nft:
                     type: boolean
-                  category:
+                  categories:
                       type: array
                       items:
                         type: string
@@ -1627,7 +1627,7 @@ paths:
                 has_new_episode:
                   type: boolean
                   example: true
-                category:
+                categories:
                   type: array
                   items:
                     type: string
