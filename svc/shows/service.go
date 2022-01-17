@@ -154,6 +154,7 @@ type (
 		AddShowCategory(ctx context.Context, arg repository.AddShowCategoryParams) (repository.ShowCategory, error)
 		DeleteShowCategoryByID(ctx context.Context, id uuid.UUID) error
 		GetShowCategories(ctx context.Context, arg repository.GetShowCategoriesParams) ([]repository.ShowCategory, error)
+		GetShowCategoriesWithDisabled(ctx context.Context, arg repository.GetShowCategoriesWithDisabledParams) ([]repository.ShowCategory, error)
 		GetShowCategoryByID(ctx context.Context, id uuid.UUID) (repository.ShowCategory, error)
 		UpdateShowCategory(ctx context.Context, arg repository.UpdateShowCategoryParams) error
 
@@ -248,7 +249,7 @@ func (s *Service) GetShowsWithNFT(ctx context.Context, limit, offset int32) (int
 		if err != nil {
 			return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
 		}
-		if hasNFT == false {
+		if !hasNFT {
 			continue
 		}
 		sh := Show{
@@ -1120,6 +1121,19 @@ func (s *Service) GetShowCategoryByID(ctx context.Context, showCategoryID uuid.U
 // GetShowCategories returns show category list.
 func (s *Service) GetShowCategories(ctx context.Context, limit, offset int32) ([]ShowCategory, error) {
 	category, err := s.sr.GetShowCategories(ctx, repository.GetShowCategoriesParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return []ShowCategory{}, fmt.Errorf("could not get show category list: %w", err)
+	}
+
+	return castToShowCategoriesList(category), nil
+}
+
+// GetShowCategoriesWithDisabled returns show category list with disabled ones.
+func (s *Service) GetShowCategoriesWithDisabled(ctx context.Context, limit, offset int32) ([]ShowCategory, error) {
+	category, err := s.sr.GetShowCategoriesWithDisabled(ctx, repository.GetShowCategoriesWithDisabledParams{
 		Limit:  limit,
 		Offset: offset,
 	})

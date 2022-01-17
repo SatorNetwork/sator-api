@@ -593,8 +593,11 @@ func decodeUpdateShowCategoryRequest(_ context.Context, r *http.Request) (interf
 }
 
 func decodeGetShowCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return utils.PaginationRequest{
-		Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
-		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+	return GetShowCategoriesRequest{
+		WithDisabled: r.URL.Query().Get("with_disabled"),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
 	}, nil
 }

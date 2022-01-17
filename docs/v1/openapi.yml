@@ -1585,10 +1585,10 @@ paths:
                   has_nft:
                     type: boolean
                   categories:
-                      type: array
-                      items:
-                        type: string
-                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    type: array
+                    items:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
 
         "401":
           $ref: "#/components/responses/UnauthorizedError"
@@ -1705,6 +1705,12 @@ paths:
           required: false
           schema:
             type: integer
+        - name: with_disabled
+          in: query
+          description: Set true or 1 to get all categories with disabled ones. Skip to get only enabled categories.
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: Returns categories list with pagination.
@@ -1787,14 +1793,13 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
-
   /shows/categories/{category_id}:
     get:
       tags:
         - "Category"
       summary: Get category by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: category_id
           in: path
@@ -1832,7 +1837,7 @@ paths:
         - "Category"
       summary: Used for update category by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: category_id
           in: path
@@ -1875,7 +1880,7 @@ paths:
         - "Category"
       summary: Used for delete category by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: category_id
           in: path
@@ -2736,7 +2741,7 @@ paths:
         - "Reviews"
       summary: Used to send tips to episode review author.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: review_id
           in: path

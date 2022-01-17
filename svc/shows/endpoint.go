@@ -70,6 +70,7 @@ type (
 		UpdateShowCategory(ctx context.Context, sc ShowCategory) error
 		GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error)
 		GetShowCategories(ctx context.Context, limit, offset int32) ([]ShowCategory, error)
+		GetShowCategoriesWithDisabled(ctx context.Context, limit, offset int32) ([]ShowCategory, error)
 
 		AddSeason(ctx context.Context, ss Season) (Season, error)
 		DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error
@@ -242,6 +243,11 @@ type (
 		Title    string `json:"title" validate:"required,gt=0"`
 		Disabled string `json:"disabled"`
 		Sort     int32  `json:"sort" validate:"required"`
+	}
+
+	GetShowCategoriesRequest struct {
+		WithDisabled string `json:"with_disabled,omitempty"`
+		utils.PaginationRequest
 	}
 )
 
@@ -1220,9 +1226,18 @@ func MakeGetShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		req := request.(utils.PaginationRequest)
+		req := request.(GetShowCategoriesRequest)
 		if err := v(req); err != nil {
 			return nil, err
+		}
+
+		if withDisabled, _ := strconv.ParseBool(req.WithDisabled); withDisabled {
+			resp, err := s.GetShowCategoriesWithDisabled(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return resp, nil
 		}
 
 		resp, err := s.GetShowCategories(ctx, req.Limit(), req.Offset())

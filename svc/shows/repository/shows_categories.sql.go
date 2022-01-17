@@ -154,6 +154,46 @@ func (q *Queries) GetShowCategories(ctx context.Context, arg GetShowCategoriesPa
 	return items, nil
 }
 
+const getShowCategoriesWithDisabled = `-- name: GetShowCategoriesWithDisabled :many
+SELECT id, title, disabled, sort
+FROM show_categories
+ORDER BY sort DESC
+    LIMIT $1 OFFSET $2
+`
+
+type GetShowCategoriesWithDisabledParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetShowCategoriesWithDisabled(ctx context.Context, arg GetShowCategoriesWithDisabledParams) ([]ShowCategory, error) {
+	rows, err := q.query(ctx, q.getShowCategoriesWithDisabledStmt, getShowCategoriesWithDisabled, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ShowCategory
+	for rows.Next() {
+		var i ShowCategory
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Disabled,
+			&i.Sort,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getShowCategoryByID = `-- name: GetShowCategoryByID :one
 SELECT id, title, disabled, sort
 FROM show_categories
