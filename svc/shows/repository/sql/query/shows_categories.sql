@@ -2,14 +2,14 @@
 SELECT *
 FROM show_categories
 WHERE disabled = FALSE
-ORDER BY sort DESC
-    LIMIT $1 OFFSET $2;
+ORDER BY sort ASC
+LIMIT $1 OFFSET $2;
 
 -- name: GetShowCategoriesWithDisabled :many
 SELECT *
 FROM show_categories
-ORDER BY sort DESC
-    LIMIT $1 OFFSET $2;
+ORDER BY sort ASC
+LIMIT $1 OFFSET $2;
 
 -- name: GetShowCategoryByID :one
 SELECT *
