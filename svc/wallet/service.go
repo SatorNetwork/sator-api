@@ -254,19 +254,19 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				// },
 			}
 		}
-	case GeneralAccount.String():
-		if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
-			balance = []Balance{
-				{
-					Currency: s.solanaAssetName,
-					Amount:   bal,
-				},
-				// {
-				// 	Currency: "USD",
-				// 	Amount:   bal * 70, // FIXME: setup currency rate
-				// },
-			}
-		}
+		// case GeneralAccount.String():
+		// 	if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
+		// 		balance = []Balance{
+		// 			{
+		// 				Currency: s.solanaAssetName,
+		// 				Amount:   bal,
+		// 			},
+		// 			// {
+		// 			// 	Currency: "USD",
+		// 			// 	Amount:   bal * 70, // FIXME: setup currency rate
+		// 			// },
+		// 		}
+		// 	}
 	}
 
 	return Wallet{
@@ -284,11 +284,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
-			// {
-			// 	Type: ActionStakeTokens.String(),
-			// 	Name: ActionStakeTokens.Name(),
-			// 	URL:  "",
-			// },
+			{
+				Type: ActionStakeTokens.String(),
+				Name: ActionStakeTokens.Name(),
+				URL:  "",
+			},
 		},
 		Balance: balance,
 	}, nil
