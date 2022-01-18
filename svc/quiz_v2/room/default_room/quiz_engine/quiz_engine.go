@@ -10,6 +10,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/question_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
+	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 )
 
 const defaultWinnersNum = 2
@@ -24,7 +25,7 @@ type QuizEngine interface {
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
 	RegisterQuestionSendingEvent(questionNum int) error
 	GetPrizePoolDistribution() map[uuid.UUID]float64
-	GetWinners() []*result_table.Winner
+	GetWinners() ([]*result_table.Winner, error)
 }
 
 type quizEngine struct {
@@ -32,7 +33,7 @@ type quizEngine struct {
 	resultTable       result_table.ResultTable
 }
 
-func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) (*quizEngine, error) {
+func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService, wallets walletClient.Client) (*quizEngine, error) {
 	qc, err := question_container.New(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
@@ -44,7 +45,7 @@ func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) 
 		PrizePool:          qc.GetChallenge().PrizePoolAmount,
 		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
 	}
-	rt := result_table.New(&cfg)
+	rt := result_table.New(&cfg, wallets)
 
 	return &quizEngine{
 		questionContainer: qc,
@@ -106,6 +107,6 @@ func (e *quizEngine) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 	return e.resultTable.GetPrizePoolDistribution()
 }
 
-func (e *quizEngine) GetWinners() []*result_table.Winner {
+func (e *quizEngine) GetWinners() ([]*result_table.Winner, error) {
 	return e.resultTable.GetWinners()
 }
