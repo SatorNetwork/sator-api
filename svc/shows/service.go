@@ -315,14 +315,14 @@ func (s *Service) castToListShow(ctx context.Context, source []repository.Show) 
 }
 
 // GetShowByID returns show with provided id.
-func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error) {
+func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
 	show, err := s.sr.GetShowByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("could not get show with id=%s: %w", id, err)
+		return Show{}, fmt.Errorf("could not get show with id=%s: %w", id, err)
 	}
 	hasNFT, err := s.nc.DoesRelationIDHasNFT(ctx, show.ID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get challenges list by show id: %v", err)
+		return Show{}, fmt.Errorf("could not get challenges list by show id: %v", err)
 	}
 
 	result := Show{
@@ -344,7 +344,7 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 
 	categories, err := s.sr.GetCategoriesByShowID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("could not get categories list by show id: %v", err)
+		return Show{}, fmt.Errorf("could not get categories list by show id: %v", err)
 	}
 
 	for i := 0; i < len(categories); i++ {
@@ -352,26 +352,6 @@ func (s *Service) GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, e
 	}
 
 	return result, nil
-}
-
-// Cast repository.Show to service Show structure
-func castToShow(source repository.Show) Show {
-	result := Show{
-		ID:             source.ID,
-		Title:          source.Title,
-		Cover:          source.Cover,
-		HasNewEpisode:  source.HasNewEpisode,
-		Description:    source.Description.String,
-		RealmsTitle:    source.RealmsTitle.String,
-		RealmsSubtitle: source.RealmsSubtitle.String,
-		Watch:          source.Watch.String,
-	}
-
-	if !source.RealmsTitle.Valid {
-		result.RealmsTitle = "Realms"
-	}
-
-	return result
 }
 
 // GetShowsByCategory returns show by provided category.
@@ -629,22 +609,16 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		return Show{}, fmt.Errorf("could not add show with title=%s: %w", sh.Title, err)
 	}
 
-	err = s.sr.DeleteShowToCategoryByShowID(ctx, show.ID)
-	if err != nil && !db.IsNotFoundError(err) {
-		return Show{}, fmt.Errorf("could not delete categories with show id=%s: %w", show.ID, err)
-	}
-
-	for i := 0; i < len(sh.Categories); i++ {
-		_, err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
-			CategoryID: sh.Categories[i],
+	for _, cat := range sh.Categories {
+		if _, err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
+			CategoryID: cat,
 			ShowID:     show.ID,
-		})
-		if err != nil && !db.IsNotFoundError(err) {
-			return Show{}, fmt.Errorf("could not add category to show with show id=%s: %w", show.ID, err)
+		}); err != nil && !db.IsNotFoundError(err) {
+			log.Printf("could not add category to show with show id=%s: %v", show.ID, err)
 		}
 	}
 
-	return castToShow(show), nil
+	return s.GetShowByID(ctx, show.ID)
 }
 
 // UpdateShow ...
@@ -680,13 +654,12 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		return fmt.Errorf("could not delete categories with show id=%s: %w", sh.ID, err)
 	}
 
-	for i := 0; i < len(sh.Categories); i++ {
-		_, err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
-			CategoryID: sh.Categories[i],
+	for _, cat := range sh.Categories {
+		if _, err = s.sr.AddShowToCategory(ctx, repository.AddShowToCategoryParams{
+			CategoryID: cat,
 			ShowID:     sh.ID,
-		})
-		if err != nil && !db.IsNotFoundError(err) {
-			return fmt.Errorf("could not add category to show with show id=%s: %w", sh.ID, err)
+		}); err != nil && !db.IsNotFoundError(err) {
+			log.Printf("could not add category to show with show id=%s: %v", sh.ID, err)
 		}
 	}
 

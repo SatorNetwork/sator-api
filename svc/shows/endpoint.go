@@ -61,7 +61,7 @@ type (
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowsWithNFT(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (Show, error)
 		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
