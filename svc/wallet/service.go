@@ -624,6 +624,58 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 	return nil
 }
 
+// PayForNFT draft
+func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error {
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     uid,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return fmt.Errorf("could not make payment for %s: %w", info, err)
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
+	if err != nil {
+		return fmt.Errorf("could not get wallet balance")
+	}
+
+	if bal < amount {
+		return fmt.Errorf("not enough balance for payment: %v", bal)
+	}
+
+	if creatorShare > 100 {
+		creatorShare = 100
+	}
+
+	satorShare := amount
+
+	if creatorShare > 0 && creatorAddr != "" {
+		creatorAmount := amount / 100 * float64(creatorShare)
+
+		if err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount); err != nil {
+			return fmt.Errorf("could not make payment for %s: %w", info, err)
+		}
+
+		satorShare = amount - creatorAmount
+	}
+
+	if satorShare > 0 {
+		if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare); err != nil {
+			return fmt.Errorf("could not make payment for %s: %w", info, err)
+		}
+	}
+
+	return nil
+}
+
 // P2PTransfer draft
 func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error {
 	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{

@@ -14,7 +14,7 @@ import (
 const addNFTItem = `-- name: AddNFTItem :one
 INSERT INTO nft_items (name, description, cover, supply, buy_now_price, token_uri)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at
+RETURNING id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at, creator_address, creator_share
 `
 
 type AddNFTItemParams struct {
@@ -47,6 +47,8 @@ func (q *Queries) AddNFTItem(ctx context.Context, arg AddNFTItemParams) (NFTItem
 		&i.TokenURI,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.CreatorAddress,
+		&i.CreatorShare,
 	)
 	return i, err
 }
@@ -102,7 +104,7 @@ WITH minted_nft_items AS (
     WHERE nft_owners.nft_item_id = $1
     GROUP BY nft_owners.nft_item_id
 )
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at,
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, nft_items.creator_address, nft_items.creator_share,
     coalesce(minted_nft_items.minted, 0) AS minted
 FROM nft_items
 LEFT JOIN minted_nft_items ON minted_nft_items.nft_item_id = nft_items.id
@@ -112,17 +114,19 @@ LIMIT 1
 `
 
 type GetNFTItemByIDRow struct {
-	ID          uuid.UUID      `json:"id"`
-	OwnerID     uuid.NullUUID  `json:"owner_id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Cover       string         `json:"cover"`
-	Supply      int64          `json:"supply"`
-	BuyNowPrice float64        `json:"buy_now_price"`
-	TokenURI    string         `json:"token_uri"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	CreatedAt   time.Time      `json:"created_at"`
-	Minted      int32          `json:"minted"`
+	ID             uuid.UUID      `json:"id"`
+	OwnerID        uuid.NullUUID  `json:"owner_id"`
+	Name           string         `json:"name"`
+	Description    sql.NullString `json:"description"`
+	Cover          string         `json:"cover"`
+	Supply         int64          `json:"supply"`
+	BuyNowPrice    float64        `json:"buy_now_price"`
+	TokenURI       string         `json:"token_uri"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatorAddress sql.NullString `json:"creator_address"`
+	CreatorShare   sql.NullInt32  `json:"creator_share"`
+	Minted         int32          `json:"minted"`
 }
 
 func (q *Queries) GetNFTItemByID(ctx context.Context, id uuid.UUID) (GetNFTItemByIDRow, error) {
@@ -139,6 +143,8 @@ func (q *Queries) GetNFTItemByID(ctx context.Context, id uuid.UUID) (GetNFTItemB
 		&i.TokenURI,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.CreatorAddress,
+		&i.CreatorShare,
 		&i.Minted,
 	)
 	return i, err
@@ -150,7 +156,7 @@ WITH minted_nfts AS (
     FROM nft_owners
     GROUP BY nft_item_id
 )
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, minted_nfts.minted as minted
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, nft_items.creator_address, nft_items.creator_share, minted_nfts.minted as minted
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
 WHERE nft_items.supply > 0
@@ -164,17 +170,19 @@ type GetNFTItemsListParams struct {
 }
 
 type GetNFTItemsListRow struct {
-	ID          uuid.UUID      `json:"id"`
-	OwnerID     uuid.NullUUID  `json:"owner_id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Cover       string         `json:"cover"`
-	Supply      int64          `json:"supply"`
-	BuyNowPrice float64        `json:"buy_now_price"`
-	TokenURI    string         `json:"token_uri"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	CreatedAt   time.Time      `json:"created_at"`
-	Minted      sql.NullInt32  `json:"minted"`
+	ID             uuid.UUID      `json:"id"`
+	OwnerID        uuid.NullUUID  `json:"owner_id"`
+	Name           string         `json:"name"`
+	Description    sql.NullString `json:"description"`
+	Cover          string         `json:"cover"`
+	Supply         int64          `json:"supply"`
+	BuyNowPrice    float64        `json:"buy_now_price"`
+	TokenURI       string         `json:"token_uri"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatorAddress sql.NullString `json:"creator_address"`
+	CreatorShare   sql.NullInt32  `json:"creator_share"`
+	Minted         sql.NullInt32  `json:"minted"`
 }
 
 func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams) ([]GetNFTItemsListRow, error) {
@@ -197,6 +205,8 @@ func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams
 			&i.TokenURI,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.CreatorAddress,
+			&i.CreatorShare,
 			&i.Minted,
 		); err != nil {
 			return nil, err
@@ -213,7 +223,7 @@ func (q *Queries) GetNFTItemsList(ctx context.Context, arg GetNFTItemsListParams
 }
 
 const getNFTItemsListByOwnerID = `-- name: GetNFTItemsListByOwnerID :many
-SELECT id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at
+SELECT id, owner_id, name, description, cover, supply, buy_now_price, token_uri, updated_at, created_at, creator_address, creator_share
 FROM nft_items
 WHERE nft_items.id = ANY(SELECT DISTINCT nft_owners.nft_item_id
                         FROM nft_owners
@@ -248,6 +258,8 @@ func (q *Queries) GetNFTItemsListByOwnerID(ctx context.Context, arg GetNFTItemsL
 			&i.TokenURI,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.CreatorAddress,
+			&i.CreatorShare,
 		); err != nil {
 			return nil, err
 		}
@@ -268,7 +280,7 @@ WITH minted_nfts AS (
     FROM nft_owners
     GROUP BY nft_item_id
 )
-SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, minted_nfts.minted as minted
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, nft_items.creator_address, nft_items.creator_share, minted_nfts.minted as minted
 FROM nft_items
     LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
 WHERE nft_items.id = ANY(SELECT DISTINCT nft_relations.nft_item_id 
@@ -287,17 +299,19 @@ type GetNFTItemsListByRelationIDParams struct {
 }
 
 type GetNFTItemsListByRelationIDRow struct {
-	ID          uuid.UUID      `json:"id"`
-	OwnerID     uuid.NullUUID  `json:"owner_id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
-	Cover       string         `json:"cover"`
-	Supply      int64          `json:"supply"`
-	BuyNowPrice float64        `json:"buy_now_price"`
-	TokenURI    string         `json:"token_uri"`
-	UpdatedAt   sql.NullTime   `json:"updated_at"`
-	CreatedAt   time.Time      `json:"created_at"`
-	Minted      sql.NullInt32  `json:"minted"`
+	ID             uuid.UUID      `json:"id"`
+	OwnerID        uuid.NullUUID  `json:"owner_id"`
+	Name           string         `json:"name"`
+	Description    sql.NullString `json:"description"`
+	Cover          string         `json:"cover"`
+	Supply         int64          `json:"supply"`
+	BuyNowPrice    float64        `json:"buy_now_price"`
+	TokenURI       string         `json:"token_uri"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatorAddress sql.NullString `json:"creator_address"`
+	CreatorShare   sql.NullInt32  `json:"creator_share"`
+	Minted         sql.NullInt32  `json:"minted"`
 }
 
 func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTItemsListByRelationIDParams) ([]GetNFTItemsListByRelationIDRow, error) {
@@ -320,6 +334,8 @@ func (q *Queries) GetNFTItemsListByRelationID(ctx context.Context, arg GetNFTIte
 			&i.TokenURI,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.CreatorAddress,
+			&i.CreatorShare,
 			&i.Minted,
 		); err != nil {
 			return nil, err

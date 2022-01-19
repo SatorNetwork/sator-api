@@ -73,21 +73,23 @@ type (
 	}
 
 	NFTItemRow struct {
-		ID          uuid.UUID      `json:"id"`
-		OwnerID     uuid.NullUUID  `json:"owner_id"`
-		Name        string         `json:"name"`
-		Description sql.NullString `json:"description"`
-		Cover       string         `json:"cover"`
-		Supply      int64          `json:"supply"`
-		BuyNowPrice float64        `json:"buy_now_price"`
-		TokenURI    string         `json:"token_uri"`
-		UpdatedAt   sql.NullTime   `json:"updated_at"`
-		CreatedAt   time.Time      `json:"created_at"`
-		Minted      sql.NullInt32  `json:"minted"`
+		ID             uuid.UUID      `json:"id"`
+		OwnerID        uuid.NullUUID  `json:"owner_id"`
+		Name           string         `json:"name"`
+		Description    sql.NullString `json:"description"`
+		Cover          string         `json:"cover"`
+		Supply         int64          `json:"supply"`
+		BuyNowPrice    float64        `json:"buy_now_price"`
+		TokenURI       string         `json:"token_uri"`
+		UpdatedAt      sql.NullTime   `json:"updated_at"`
+		CreatedAt      time.Time      `json:"created_at"`
+		CreatorAddress sql.NullString `json:"creator_address"`
+		CreatorShare   sql.NullInt32  `json:"creator_share"`
+		Minted         sql.NullInt32  `json:"minted"`
 	}
 
 	// Simple function
-	buyNFTFunction func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
+	buyNFTFunction func(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error
 )
 
 // NewService is a factory function,
@@ -143,7 +145,14 @@ func (s *Service) BuyNFT(ctx context.Context, userID uuid.UUID, nftID uuid.UUID)
 		return ErrAlreadyBought
 	}
 
-	if err := s.buyNFTFunc(ctx, userID, item.BuyNowPrice, fmt.Sprintf("NFT purchase: %s", nftID)); err != nil {
+	if err := s.buyNFTFunc(
+		ctx,
+		userID,
+		item.BuyNowPrice,
+		fmt.Sprintf("NFT purchase: %s", nftID),
+		item.CreatorAddress.String,
+		item.CreatorShare.Int32,
+	); err != nil {
 		return fmt.Errorf("NFT purchase error: %w", err)
 	}
 

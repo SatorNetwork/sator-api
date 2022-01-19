@@ -21,6 +21,7 @@ type (
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
 		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ wallet.Transactions, err error)
 		PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error
+		PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error
 		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
 	}
 )
@@ -58,6 +59,11 @@ func (c *Client) GetListTransactionsByWalletID(ctx context.Context, userID, wall
 // PayForService ...
 func (c *Client) PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error {
 	return c.s.PayForService(ctx, uid, amount, info)
+}
+
+// PayForNFT ...
+func (c *Client) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error {
+	return c.s.PayForNFT(ctx, uid, amount, info, creatorAddr, creatorShare)
 }
 
 // P2PTransfer ...

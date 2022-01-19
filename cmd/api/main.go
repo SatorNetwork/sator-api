@@ -419,7 +419,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("nftRepo error: %v", err)
 		}
-		nftService := nft.NewService(nftRepository, walletSvcClient.PayForService)
+		nftService := nft.NewService(nftRepository, walletSvcClient.PayForNFT)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,
