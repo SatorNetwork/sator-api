@@ -432,7 +432,7 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
-		id := uuid.MustParse(req.Category)
+		id, _ := uuid.Parse(req.Category)
 		if id != uuid.Nil {
 			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
 			if err != nil {
