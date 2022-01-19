@@ -244,6 +244,59 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 	return items, nil
 }
 
+const getShowsByOldCategory = `-- name: GetShowsByOldCategory :many
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived
+FROM shows
+WHERE archived = FALSE
+AND category = $1::varchar
+ORDER BY has_new_episode DESC,
+    updated_at DESC,
+    created_at DESC
+LIMIT $3 OFFSET $2
+`
+
+type GetShowsByOldCategoryParams struct {
+	Category string `json:"category"`
+	Offset   int32  `json:"offset_val"`
+	Limit    int32  `json:"limit_val"`
+}
+
+func (q *Queries) GetShowsByOldCategory(ctx context.Context, arg GetShowsByOldCategoryParams) ([]Show, error) {
+	rows, err := q.query(ctx, q.getShowsByOldCategoryStmt, getShowsByOldCategory, arg.Category, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Show
+	for rows.Next() {
+		var i Show
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Cover,
+			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Category,
+			&i.Description,
+			&i.RealmsTitle,
+			&i.RealmsSubtitle,
+			&i.Watch,
+			&i.Archived,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateShow = `-- name: UpdateShow :exec
 UPDATE shows
 SET title = $1,

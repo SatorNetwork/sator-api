@@ -63,6 +63,7 @@ type (
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (Show, error)
 		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
+		GetShowsByOldCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddShowCategory(ctx context.Context, sc ShowCategory) (ShowCategory, error)
@@ -431,17 +432,19 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
-		id, err := uuid.Parse(req.Category)
-		if err != nil {
-			return nil, fmt.Errorf("could not get show id: %w", err)
-		}
-
+		id := uuid.MustParse(req.Category)
 		if id != uuid.Nil {
 			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
 			if err != nil {
 				return nil, err
 			}
-
+			return resp, nil
+		} else if req.Category != "" && id == uuid.Nil {
+			// FIXME: remove after all shows will be migrated to the new categories
+			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
 			return resp, nil
 		}
 

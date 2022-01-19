@@ -114,6 +114,7 @@ type (
 		GetShowByID(ctx context.Context, id uuid.UUID) (repository.GetShowByIDRow, error)
 		GetShowsByCategory(ctx context.Context, arg repository.GetShowsByCategoryParams) ([]repository.Show, error)
 		UpdateShow(ctx context.Context, arg repository.UpdateShowParams) error
+		GetShowsByOldCategory(ctx context.Context, arg repository.GetShowsByOldCategoryParams) ([]repository.Show, error)
 
 		// Seasons
 		AddSeason(ctx context.Context, arg repository.AddSeasonParams) (repository.Season, error)
@@ -360,6 +361,26 @@ func (s *Service) GetShowsByCategory(ctx context.Context, category uuid.UUID, li
 		CategoryID: category,
 		Limit:      limit,
 		Offset:     offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get shows list: %w", err)
+	}
+
+	sl, err := s.castToListShow(ctx, shows)
+	if err != nil {
+		return nil, fmt.Errorf("could not cast to list show : %w", err)
+	}
+
+	return sl, nil
+}
+
+// GetShowsByOldCategory returns show by provided category.
+// TODO: DEPRECATED, will be removed in one of the following releases
+func (s *Service) GetShowsByOldCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error) {
+	shows, err := s.sr.GetShowsByOldCategory(ctx, repository.GetShowsByOldCategoryParams{
+		Category: category,
+		Limit:    limit,
+		Offset:   offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not get shows list: %w", err)
