@@ -58,6 +58,20 @@ AND nft_items.supply > 0
 ORDER BY nft_items.created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
+-- name: GetAllNFTItems :many
+WITH minted_nfts AS (
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
+    FROM nft_owners
+    GROUP BY nft_item_id
+)
+SELECT nft_items.*, minted_nfts.minted as minted
+FROM nft_items
+    LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+WHERE nft_items.supply > COALESCE(minted_nfts.minted, 0) 
+AND nft_items.supply > 0
+ORDER BY nft_items.created_at DESC
+LIMIT @limit_val OFFSET @offset_val;
+
 -- name: AddNFTItem :one
 INSERT INTO nft_items (name, description, cover, supply, buy_now_price, token_uri)
 VALUES (@name, @description, @cover, @supply, @buy_now_price, @token_uri)

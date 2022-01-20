@@ -22,6 +22,10 @@ func CheckRole(userRole Role, allowedRoles ...Role) error {
 }
 
 func CheckRoleFromContext(ctx context.Context, allowedRoles ...Role) error {
+	return CheckRole(GetRoleFromContext(ctx), allowedRoles...)
+}
+
+func GetRoleFromContext(ctx context.Context) Role {
 	role, err := jwt.RoleFromContext(ctx)
 	if err != nil {
 		role = RoleGuest.String()
@@ -31,5 +35,21 @@ func CheckRoleFromContext(ctx context.Context, allowedRoles ...Role) error {
 		}
 	}
 
-	return CheckRole(Role(role), allowedRoles...)
+	switch r := Role(role); r {
+	case RoleAdmin, RoleContentManager, RoleModerator, RoleGuest, RoleShowRunner, RoleUser:
+		return r
+	}
+
+	return RoleGuest
+}
+
+func IsCurrentUserHasRole(ctx context.Context, roles ...Role) bool {
+	userRole := GetRoleFromContext(ctx)
+	for _, r := range roles {
+		if r == userRole {
+			return true
+		}
+	}
+
+	return false
 }
