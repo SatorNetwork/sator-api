@@ -312,6 +312,10 @@ func (r *defaultRoom) sendWinnersTable() {
 		return
 	}
 
+	//winners := r.quizEngine.GetWinners()
+	//if challenge.MaxWinners < int32(len(winners)){
+	//
+	//}
 	msgWinners := make([]*message.Winner, 0, len(winners))
 	for _, w := range winners {
 		username := r.players[w.UserID].Username()

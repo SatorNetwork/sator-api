@@ -109,6 +109,9 @@ type (
 		AttemptsLeft       int32      `json:"attempts_left"`
 		ReceivedReward     float64    `json:"received_reward"`
 		ReceivedRewardStr  string     `json:"received_reward_str"`
+		MaxWinners         int32      `json:"max_winners"`
+		QuestionsPerGame   int32      `json:"questions_per_game"`
+		MinCorrectAnswers  int32      `json:"min_correct_answers"`
 	}
 
 	RawChallenge struct {
@@ -124,6 +127,9 @@ type (
 		EpisodeID          *uuid.UUID `json:"episode_id"`
 		Kind               int32      `json:"kind"`
 		UserMaxAttempts    int32      `json:"user_max_attempts"`
+		MaxWinners         int32      `json:"max_winners"`
+		QuestionsPerGame   int32      `json:"questions_per_game"`
+		MinCorrectAnswers  int32      `json:"min_correct_answers"`
 	}
 
 	// Question struct
@@ -438,6 +444,9 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		AttemptsLeft:       attemptsLeft,
 		ReceivedReward:     receivedReward,
 		ReceivedRewardStr:  fmt.Sprintf("%.2f SAO", receivedReward),
+		MaxWinners:         c.MaxWinners.Int32,
+		QuestionsPerGame:   c.QuestionsPerGame,
+		MinCorrectAnswers:  c.MinCorrectAnswers,
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
@@ -460,6 +469,9 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 		TimePerQuestionSec: c.TimePerQuestion.Int32,
 		Kind:               c.Kind,
 		UserMaxAttempts:    c.UserMaxAttempts,
+		MaxWinners:         c.MaxWinners.Int32,
+		QuestionsPerGame:   c.QuestionsPerGame,
+		MinCorrectAnswers:  c.MinCorrectAnswers,
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
@@ -471,6 +483,10 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 
 // AddChallenge ..
 func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, error) {
+	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
+		return Challenge{}, fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
 	params := repository.AddChallengeParams{
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
@@ -481,7 +497,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		PrizePool:      ch.PrizePoolAmount,
 		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
-			Int32: int32(ch.TimePerQuestionSec),
+			Int32: ch.TimePerQuestionSec,
 			Valid: true,
 		},
 		UpdatedAt: sql.NullTime{
@@ -490,6 +506,12 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
+		MaxWinners: sql.NullInt32{
+			Int32: ch.MaxWinners,
+			Valid: true,
+		},
+		QuestionsPerGame:  ch.QuestionsPerGame,
+		MinCorrectAnswers: ch.MinCorrectAnswers,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
@@ -515,6 +537,10 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 
 // UpdateChallenge ..
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
+	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
+		return fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
 	params := repository.UpdateChallengeParams{
 		ID:     ch.ID,
 		ShowID: ch.ShowID,
@@ -526,11 +552,17 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		PrizePool:      ch.PrizePoolAmount,
 		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
-			Int32: int32(ch.TimePerQuestionSec),
+			Int32: ch.TimePerQuestionSec,
 			Valid: ch.TimePerQuestionSec > 0,
 		},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
+		MaxWinners: sql.NullInt32{
+			Int32: ch.MaxWinners,
+			Valid: true,
+		},
+		QuestionsPerGame:  ch.QuestionsPerGame,
+		MinCorrectAnswers: ch.MinCorrectAnswers,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {

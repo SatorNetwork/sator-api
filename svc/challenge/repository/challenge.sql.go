@@ -21,7 +21,10 @@ INSERT INTO challenges (
     updated_at,
     episode_id,
     kind,
-    user_max_attempts
+    user_max_attempts,
+    max_winners,
+    questions_per_game,
+    min_correct_answers
 )
 VALUES (
            $1,
@@ -33,21 +36,27 @@ VALUES (
            $7,
            $8,
            $9,
-           $10
-       ) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
+           $10,
+           $11,
+           $12,
+           $13
+       ) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
 `
 
 type AddChallengeParams struct {
-	ShowID          uuid.UUID      `json:"show_id"`
-	Title           string         `json:"title"`
-	Description     sql.NullString `json:"description"`
-	PrizePool       float64        `json:"prize_pool"`
-	PlayersToStart  int32          `json:"players_to_start"`
-	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
-	UpdatedAt       sql.NullTime   `json:"updated_at"`
-	EpisodeID       uuid.NullUUID  `json:"episode_id"`
-	Kind            int32          `json:"kind"`
-	UserMaxAttempts int32          `json:"user_max_attempts"`
+	ShowID            uuid.UUID      `json:"show_id"`
+	Title             string         `json:"title"`
+	Description       sql.NullString `json:"description"`
+	PrizePool         float64        `json:"prize_pool"`
+	PlayersToStart    int32          `json:"players_to_start"`
+	TimePerQuestion   sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
+	EpisodeID         uuid.NullUUID  `json:"episode_id"`
+	Kind              int32          `json:"kind"`
+	UserMaxAttempts   int32          `json:"user_max_attempts"`
+	MaxWinners        sql.NullInt32  `json:"max_winners"`
+	QuestionsPerGame  int32          `json:"questions_per_game"`
+	MinCorrectAnswers int32          `json:"min_correct_answers"`
 }
 
 func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Challenge, error) {
@@ -62,6 +71,9 @@ func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Cha
 		arg.EpisodeID,
 		arg.Kind,
 		arg.UserMaxAttempts,
+		arg.MaxWinners,
+		arg.QuestionsPerGame,
+		arg.MinCorrectAnswers,
 	)
 	var i Challenge
 	err := row.Scan(
@@ -77,6 +89,9 @@ func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Cha
 		&i.EpisodeID,
 		&i.Kind,
 		&i.UserMaxAttempts,
+		&i.MaxWinners,
+		&i.QuestionsPerGame,
+		&i.MinCorrectAnswers,
 	)
 	return i, err
 }
@@ -92,7 +107,7 @@ func (q *Queries) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getChallengeByEpisodeID = `-- name: GetChallengeByEpisodeID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
 FROM challenges
 WHERE episode_id = $1
 ORDER BY created_at DESC
@@ -115,12 +130,15 @@ func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.Nu
 		&i.EpisodeID,
 		&i.Kind,
 		&i.UserMaxAttempts,
+		&i.MaxWinners,
+		&i.QuestionsPerGame,
+		&i.MinCorrectAnswers,
 	)
 	return i, err
 }
 
 const getChallengeByID = `-- name: GetChallengeByID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
 FROM challenges
 WHERE id = $1
 ORDER BY created_at DESC
@@ -143,12 +161,15 @@ func (q *Queries) GetChallengeByID(ctx context.Context, id uuid.UUID) (Challenge
 		&i.EpisodeID,
 		&i.Kind,
 		&i.UserMaxAttempts,
+		&i.MaxWinners,
+		&i.QuestionsPerGame,
+		&i.MinCorrectAnswers,
 	)
 	return i, err
 }
 
 const getChallengeByTitle = `-- name: GetChallengeByTitle :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
 FROM challenges
 WHERE title = $1
 ORDER BY created_at DESC
@@ -171,12 +192,15 @@ func (q *Queries) GetChallengeByTitle(ctx context.Context, title string) (Challe
 		&i.EpisodeID,
 		&i.Kind,
 		&i.UserMaxAttempts,
+		&i.MaxWinners,
+		&i.QuestionsPerGame,
+		&i.MinCorrectAnswers,
 	)
 	return i, err
 }
 
 const getChallenges = `-- name: GetChallenges :many
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
 FROM challenges
 WHERE show_id = $1
 ORDER BY updated_at DESC,
@@ -212,6 +236,9 @@ func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([
 			&i.EpisodeID,
 			&i.Kind,
 			&i.UserMaxAttempts,
+			&i.MaxWinners,
+			&i.QuestionsPerGame,
+			&i.MinCorrectAnswers,
 		); err != nil {
 			return nil, err
 		}
@@ -237,22 +264,28 @@ SET show_id = $1,
     updated_at = $7,
     episode_id = $8,
     kind = $9,
-    user_max_attempts = $10
-WHERE id = $11
+    user_max_attempts = $10,
+    max_winners = $11,
+    questions_per_game = $12,
+    min_correct_answers = $13
+WHERE id = $14
 `
 
 type UpdateChallengeParams struct {
-	ShowID          uuid.UUID      `json:"show_id"`
-	Title           string         `json:"title"`
-	Description     sql.NullString `json:"description"`
-	PrizePool       float64        `json:"prize_pool"`
-	PlayersToStart  int32          `json:"players_to_start"`
-	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
-	UpdatedAt       sql.NullTime   `json:"updated_at"`
-	EpisodeID       uuid.NullUUID  `json:"episode_id"`
-	Kind            int32          `json:"kind"`
-	UserMaxAttempts int32          `json:"user_max_attempts"`
-	ID              uuid.UUID      `json:"id"`
+	ShowID            uuid.UUID      `json:"show_id"`
+	Title             string         `json:"title"`
+	Description       sql.NullString `json:"description"`
+	PrizePool         float64        `json:"prize_pool"`
+	PlayersToStart    int32          `json:"players_to_start"`
+	TimePerQuestion   sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
+	EpisodeID         uuid.NullUUID  `json:"episode_id"`
+	Kind              int32          `json:"kind"`
+	UserMaxAttempts   int32          `json:"user_max_attempts"`
+	MaxWinners        sql.NullInt32  `json:"max_winners"`
+	QuestionsPerGame  int32          `json:"questions_per_game"`
+	MinCorrectAnswers int32          `json:"min_correct_answers"`
+	ID                uuid.UUID      `json:"id"`
 }
 
 func (q *Queries) UpdateChallenge(ctx context.Context, arg UpdateChallengeParams) error {
@@ -267,6 +300,9 @@ func (q *Queries) UpdateChallenge(ctx context.Context, arg UpdateChallengeParams
 		arg.EpisodeID,
 		arg.Kind,
 		arg.UserMaxAttempts,
+		arg.MaxWinners,
+		arg.QuestionsPerGame,
+		arg.MinCorrectAnswers,
 		arg.ID,
 	)
 	return err

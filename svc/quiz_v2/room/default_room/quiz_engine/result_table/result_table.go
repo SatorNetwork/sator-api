@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
@@ -22,13 +24,14 @@ type ResultTable interface {
 	GetWinners() ([]*Winner, error)
 
 	calcWinnersMap() map[uuid.UUID]uint32
-	calcPTSMap() map[uuid.UUID]uint32
-	getWinnerIDs() []uuid.UUID
+	calcPTSMap() (map[uuid.UUID]uint32, int32)
+	getWinnerIDs() ([]uuid.UUID, error)
 }
 
 type user struct {
 	id  uuid.UUID
 	pts uint32
+	cells int32
 }
 
 type Winner struct {
@@ -50,16 +53,23 @@ type resultTable struct {
 
 	stakeLevels interfaces.StakeLevels
 
+	challenges  quiz_v2_challenge.ChallengesService
+	challengeID uuid.UUID
+
 	cfg *Config
 }
 
 func New(cfg *Config, stakeLevels interfaces.StakeLevels) ResultTable {
+//func New(cfg *Config, challenges quiz_v2_challenge.ChallengesService, challengeID uuid.UUID) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
 		tableMutex:     &sync.Mutex{},
 		questionSentAt: make([]time.Time, cfg.QuestionNum),
 
 		stakeLevels: stakeLevels,
+
+		challenges:  challenges,
+		challengeID: challengeID,
 
 		cfg: cfg,
 	}
@@ -149,8 +159,11 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 }
 
 func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
-	ptsMap := rt.calcPTSMap()
-	winnerIDs := rt.getWinnerIDs()
+	ptsMap, _ := rt.calcPTSMap()
+	winnerIDs, err := rt.getWinnerIDs()
+	if err != nil {
+		log.Println(err)
+	}
 
 	winnersMap := make(map[uuid.UUID]uint32, rt.cfg.WinnersNum)
 	for _, winnerID := range winnerIDs {
@@ -160,38 +173,55 @@ func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
 	return winnersMap
 }
 
-func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
+func (rt *resultTable) calcPTSMap() (map[uuid.UUID]uint32, int32) {
 	ptsMap := make(map[uuid.UUID]uint32, 0)
+	var cells int32
 	for userID, row := range rt.table {
 		for _, cell := range row {
 			ptsMap[userID] += cell.PTS()
+			cells++
 		}
 	}
 
-	return ptsMap
+	return ptsMap, cells
 }
 
-func (rt *resultTable) getWinnerIDs() []uuid.UUID {
+func (rt *resultTable) getWinnerIDs() ([]uuid.UUID, error) {
 	users := rt.getUsersSortedByPTS()
-	winnersNum := minInt(rt.cfg.WinnersNum, len(users))
-	winners := users[:winnersNum]
+
+	var usersWinners []*user
+
+	challenge, err := rt.challenges.GetRawChallengeByID(context.Background(), rt.challengeID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range users {
+		if v.cells >= challenge.MinCorrectAnswers {
+			usersWinners = append(usersWinners, v)
+		}
+	}
+
+	winnersNum := minInt(rt.cfg.WinnersNum, len(usersWinners))
+	winners := usersWinners[:winnersNum]
 
 	winnerIDs := make([]uuid.UUID, 0, len(winners))
 	for _, winner := range winners {
 		winnerIDs = append(winnerIDs, winner.id)
 	}
 
-	return winnerIDs
+	return winnerIDs, nil
 }
 
 func (rt *resultTable) getUsersSortedByPTS() []*user {
-	ptsMap := rt.calcPTSMap()
+	ptsMap, cells := rt.calcPTSMap()
 
 	ptsSlice := make([]*user, 0, len(ptsMap))
 	for userID, pts := range ptsMap {
 		ptsSlice = append(ptsSlice, &user{
 			id:  userID,
 			pts: pts,
+			cells: cells,
 		})
 	}
 
