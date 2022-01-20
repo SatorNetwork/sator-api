@@ -271,7 +271,7 @@ func MakeCreateNFTEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 
 func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
 		}
 
