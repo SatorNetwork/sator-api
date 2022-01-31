@@ -2,6 +2,7 @@ package nats_player
 
 import (
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"sync"
@@ -106,14 +107,39 @@ func (p *natsPlayer) ChallengeID() string {
 
 func (p *natsPlayer) Start() error {
 	subscription, err := p.nc.Subscribe(p.recvMessageSubj, func(m *nats.Msg) {
+		{
+			tmpl := `
+				Received encrypted message
+				User's ID: %v
+				Username:  %v
+				Base64-encoded encrypted message: %v
+				`
+			log.Printf(tmpl, p.id, p.username, base64.StdEncoding.EncodeToString(m.Data))
+		}
+
 		msg, err := p.decodeAndDecrypt(m.Data)
 		if err != nil {
 			log.Printf("can't decode & decrypt message: %v\n", err)
 			return
 		}
+		{
+			tmpl := `
+				Message successfully decrypted & decoded
+				User's ID: %v
+				Username:  %v
+				Decrypted & decoded message: %+v
+				`
+			log.Printf(tmpl, p.id, p.username, msg)
+		}
 
 		if err := msg.CheckConsistency(); err != nil {
-			log.Println(err)
+			tmpl := `
+				Message isn't consistent: %v
+				User's ID: %v
+				Username:  %v
+				Decrypted & decoded message: %+v
+				`
+			log.Printf(tmpl, err, p.id, p.username, msg)
 			return
 		}
 
@@ -121,6 +147,13 @@ func (p *natsPlayer) Start() error {
 			p.lastUserIsActiveMsgMutex.Lock()
 			p.lastUserIsActiveMsg = time.Now()
 			p.lastUserIsActiveMsgMutex.Unlock()
+
+			tmpl := `
+				Player status is connected
+				User's ID: %v
+				Username:  %v
+				`
+			log.Printf(tmpl, p.id, p.username)
 
 			p.st.SetStatus(status_transactor.PlayerConnectedStatus)
 			return
@@ -146,6 +179,13 @@ LOOP:
 		select {
 		case <-ticker.C:
 			if p.checkIfDisconnected() {
+				tmpl := `
+					Player status is disconnected
+					User's ID: %v
+					Username:  %v
+					`
+				log.Printf(tmpl, p.id, p.username)
+
 				p.st.SetStatus(status_transactor.PlayerDisconnectedStatus)
 			}
 
@@ -172,7 +212,23 @@ func (p *natsPlayer) Close() error {
 }
 
 func (p *natsPlayer) SendMessage(msg *message.Message) error {
+	tmpl := `
+		Going to send message
+		User's ID: %v
+		Username:  %v
+		Message:   %+v
+		`
+	log.Printf(tmpl, p.id, p.username, msg)
+
 	if p.st.GetStatus() == status_transactor.UndefinedStatus {
+		tmpl := `
+		Going to send message (player status is Undefined); keep message in outgoingMessagesBuffer
+		User's ID: %v
+		Username:  %v
+		Message:   %+v
+		`
+		log.Printf(tmpl, p.id, p.username, msg)
+
 		p.outgoingMessagesBufferMtx.Lock()
 		p.outgoingMessagesBuffer = append(p.outgoingMessagesBuffer, msg)
 		p.outgoingMessagesBufferMtx.Unlock()
@@ -181,9 +237,13 @@ func (p *natsPlayer) SendMessage(msg *message.Message) error {
 
 	data, err := p.encodeAndEncrypt(msg)
 	if err != nil {
-		return errors.Wrap(err, "can't encode & encrypt message")
+		err := errors.Wrap(err, "can't encode & encrypt message")
+		log.Println(err)
+		return err
 	}
 	if err := p.nc.Publish(p.sendMessageSubj, data); err != nil {
+		err := errors.Wrapf(err, "can't publish message to %v", p.sendMessageSubj)
+		log.Println(err)
 		return err
 	}
 
@@ -194,6 +254,15 @@ func (p *natsPlayer) encodeAndEncrypt(msg *message.Message) ([]byte, error) {
 	messageData, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
+	}
+	{
+		tmpl := `
+			Going to send message
+			User's ID: %v
+			Username:  %v
+			Encoded message: %s
+			`
+		log.Printf(tmpl, p.id, p.username, messageData)
 	}
 	envelope, err := p.encryptor.Encrypt(messageData)
 	if err != nil {
@@ -216,6 +285,16 @@ func (p *natsPlayer) decodeAndDecrypt(envelopeData []byte) (*message.Message, er
 	messageData, err := p.decryptor.Decrypt(&envelope)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't decrypt message with server's private key")
+	}
+
+	{
+		tmpl := `
+			Message successfully decrypted
+			User's ID: %v
+			Username:  %v
+			Decrypted message: %s
+			`
+		log.Printf(tmpl, p.id, p.username, messageData)
 	}
 
 	msg := new(message.Message)
