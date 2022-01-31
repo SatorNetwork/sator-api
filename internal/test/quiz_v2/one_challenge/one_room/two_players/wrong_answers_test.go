@@ -121,7 +121,7 @@ func TestWrongAnswers(t *testing.T) {
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 15)
 
 		err = messageVerifier.Verify()
 		require.NoError(t, err)
