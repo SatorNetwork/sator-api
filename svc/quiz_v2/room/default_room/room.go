@@ -27,6 +27,7 @@ type questionWrapper struct {
 
 type answerWrapper struct {
 	message    *message.AnswerMessage
+	userID     string
 	receivedAt time.Time
 }
 
@@ -212,6 +213,7 @@ LOOP:
 		case msg := <-p.GetMessageStream():
 			r.answersChan <- &answerWrapper{
 				message:    msg.MustGetAnswerMessage(),
+				userID:     p.ID(),
 				receivedAt: time.Now(),
 			}
 
@@ -418,9 +420,9 @@ func (r *defaultRoom) sendMessageToRoom(message *message.Message) {
 }
 
 func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
-	userID, err := uuid.Parse(answer.message.UserID)
+	userID, err := uuid.Parse(answer.userID)
 	if err != nil {
-		return errors.Wrapf(err, "can't parse user's UID(%v)", answer.message.UserID)
+		return errors.Wrapf(err, "can't parse user's UID(%v)", answer.userID)
 	}
 	questionID, err := uuid.Parse(answer.message.QuestionID)
 	if err != nil {
@@ -465,9 +467,9 @@ func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
 		return err
 	}
 
-	p := r.getPlayerByID(answer.message.UserID)
+	p := r.getPlayerByID(answer.userID)
 	if err := p.SendMessage(msg); err != nil {
-		return errors.Wrapf(err, "can't send message to player with %v uid", answer.message.UserID)
+		return errors.Wrapf(err, "can't send message to player with %v uid", answer.userID)
 	}
 
 	return nil
