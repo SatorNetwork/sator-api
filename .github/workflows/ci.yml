@@ -25,6 +25,7 @@ jobs:
         run: sleep 10 && make -f Makefile.ci test
 
       - name: Archive sator-api log file
+        if: always()
         uses: actions/upload-artifact@v2
         with:
           name: sator-api.log
