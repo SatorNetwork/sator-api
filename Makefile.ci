@@ -81,7 +81,7 @@ run-local: ## Run api via `go run`
 	SOLANA_SYSVAR_CLOCK=XXXXXXXXXX \
 	SOLANA_SPL_TOKEN=XXXXXXXXXX \
 	SOLANA_STAKE_PROGRAM_ID=XXXXXXXXXX \
-	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" -race cmd/api/main.go &
+	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" -race cmd/api/main.go &> sator-api.log &
 migrate-local: ## Run all migrations on local environment
 	@rm -Rvf migrations/*.sql && \
 	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \

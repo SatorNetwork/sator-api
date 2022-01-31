@@ -22,4 +22,11 @@ jobs:
         run: make -f Makefile.ci up && sleep 10 && make -f Makefile.ci migrate-local run-local
 
       - name: Run e2e tests
-        run: make -f Makefile.ci test
+        run: sleep 10 && make -f Makefile.ci test
+
+      - name: Archive sator-api log file
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: sator-api.log
+          path: sator-api.log
