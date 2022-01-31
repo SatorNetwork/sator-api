@@ -104,7 +104,6 @@ func (m *Message) isConsistent() bool {
 		return m.QuestionMessage != nil
 	case AnswerMessageType:
 		ok := m.AnswerMessage != nil &&
-			m.AnswerMessage.UserID != "" &&
 			m.AnswerMessage.QuestionID != "" &&
 			m.AnswerMessage.AnswerID != ""
 		return ok
@@ -180,7 +179,6 @@ func NewQuestionMessage(payload *QuestionMessage) (*Message, error) {
 }
 
 type AnswerMessage struct {
-	UserID string `json:"user_id"`
 	// TODO(evg): check that QuestionID is correct
 	QuestionID string `json:"question_id"`
 	AnswerID   string `json:"answer_id"`
