@@ -224,6 +224,8 @@ LOOP:
 }
 
 func (r *defaultRoom) runCountdown() {
+	time.Sleep(time.Second * 2)
+
 	secondsLeft := 3
 	// first message should be sent without ticker delay
 	r.countdownChan <- secondsLeft
