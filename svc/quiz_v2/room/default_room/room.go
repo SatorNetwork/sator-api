@@ -102,12 +102,23 @@ LOOP:
 	for {
 		select {
 		case p := <-r.newPlayersChan:
+			{
+				tmpl := `
+				New player is joined
+				User's ID: %v
+				Username:  %v
+				`
+				log.Printf(tmpl, p.ID(), p.Username())
+			}
+
 			r.sendMessagesForNewPlayers(p)
 			r.sendPlayerIsJoinedMessage(p)
 
 			go r.watchPlayerMessages(p)
 
 			if r.IsFull() {
+				log.Println("Room is full")
+
 				r.st.SetStatus(status_transactor.RoomIsFullStatus)
 			}
 
