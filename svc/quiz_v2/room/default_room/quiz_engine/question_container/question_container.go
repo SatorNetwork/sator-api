@@ -65,6 +65,9 @@ func loadQuestions(challengeID string, challengesSvc quiz_v2_challenge.Challenge
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get questions by challenge id")
 	}
+	for idx := 0; idx < len(questions); idx++ {
+		questions[idx].Order = int32(idx + 1)
+	}
 
 	return questions, nil
 }
