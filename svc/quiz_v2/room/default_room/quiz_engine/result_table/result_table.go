@@ -226,7 +226,7 @@ func (rt *resultTable) createRowIfNecessary(userID uuid.UUID) {
 }
 
 func (rt *resultTable) getQuestionSentAt(qNum int) (time.Time, error) {
-	if qNum >= len(rt.questionSentAt) {
+	if qNum < 0 || qNum >= len(rt.questionSentAt) {
 		return time.Time{}, NewErrIndexOutOfRange(len(rt.questionSentAt), qNum)
 	}
 

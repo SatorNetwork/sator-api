@@ -99,6 +99,9 @@ func (e *questionContainer) GetQuestionNumByID(questionID uuid.UUID) (int, error
 	if err != nil {
 		return 0, err
 	}
+	if question.Order < 1 {
+		return 0, errors.Errorf("questions should be enumerated from 1")
+	}
 
 	return int(question.Order) - 1, nil
 }
