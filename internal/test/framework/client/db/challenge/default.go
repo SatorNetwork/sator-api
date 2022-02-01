@@ -34,9 +34,8 @@ func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions
 	return []questionWithOptions{
 		{
 			question: challengeRepo.AddQuestionParams{
-				ChallengeID:   challengeID,
-				Question:      "Joey played Dr. Drake Ramoray on which soap opera show?",
-				QuestionOrder: 1,
+				ChallengeID: challengeID,
+				Question:    "Joey played Dr. Drake Ramoray on which soap opera show?",
 			},
 			options: []challengeRepo.AddQuestionOptionParams{
 				{
@@ -75,9 +74,8 @@ func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions
 		},
 		{
 			question: challengeRepo.AddQuestionParams{
-				ChallengeID:   challengeID,
-				Question:      "What store does Phoebe hate?",
-				QuestionOrder: 2,
+				ChallengeID: challengeID,
+				Question:    "What store does Phoebe hate?",
 			},
 			options: []challengeRepo.AddQuestionOptionParams{
 				{
@@ -116,9 +114,8 @@ func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions
 		},
 		{
 			question: challengeRepo.AddQuestionParams{
-				ChallengeID:   challengeID,
-				Question:      "Rachel got a job with which company in Paris?",
-				QuestionOrder: 3,
+				ChallengeID: challengeID,
+				Question:    "Rachel got a job with which company in Paris?",
 			},
 			options: []challengeRepo.AddQuestionOptionParams{
 				{
@@ -157,9 +154,8 @@ func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions
 		},
 		{
 			question: challengeRepo.AddQuestionParams{
-				ChallengeID:   challengeID,
-				Question:      "Phoebe’s scientist boyfriend David worked in what city?",
-				QuestionOrder: 4,
+				ChallengeID: challengeID,
+				Question:    "Phoebe’s scientist boyfriend David worked in what city?",
 			},
 			options: []challengeRepo.AddQuestionOptionParams{
 				{
@@ -198,9 +194,8 @@ func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions
 		},
 		{
 			question: challengeRepo.AddQuestionParams{
-				ChallengeID:   challengeID,
-				Question:      "Monica dated an ophthalmologist named?",
-				QuestionOrder: 5,
+				ChallengeID: challengeID,
+				Question:    "Monica dated an ophthalmologist named?",
 			},
 			options: []challengeRepo.AddQuestionOptionParams{
 				{

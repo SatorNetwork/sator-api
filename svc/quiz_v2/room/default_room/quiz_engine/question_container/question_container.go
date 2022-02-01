@@ -65,6 +65,9 @@ func loadQuestions(challengeID string, challengesSvc quiz_v2_challenge.Challenge
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get questions by challenge id")
 	}
+	for idx := 0; idx < len(questions); idx++ {
+		questions[idx].Order = int32(idx + 1)
+	}
 
 	return questions, nil
 }
@@ -95,6 +98,9 @@ func (e *questionContainer) GetQuestionNumByID(questionID uuid.UUID) (int, error
 	question, err := e.GetQuestionByID(questionID)
 	if err != nil {
 		return 0, err
+	}
+	if question.Order < 1 {
+		return 0, errors.Errorf("questions should be enumerated from 1")
 	}
 
 	return int(question.Order) - 1, nil
