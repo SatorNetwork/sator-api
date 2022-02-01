@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
-	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 )
 
 type ResultTable interface {
@@ -23,6 +22,10 @@ type ResultTable interface {
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
 	getWinnerIDs() []uuid.UUID
+}
+
+type StakeLevels interface {
+	GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error)
 }
 
 type user struct {
@@ -47,18 +50,18 @@ type resultTable struct {
 	tableMutex     *sync.Mutex
 	questionSentAt []time.Time
 
-	wallet walletClient.Client
+	stakeLevels StakeLevels
 
 	cfg *Config
 }
 
-func New(cfg *Config, wallet walletClient.Client) ResultTable {
+func New(cfg *Config, stakeLevels StakeLevels) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
 		tableMutex:     &sync.Mutex{},
 		questionSentAt: make([]time.Time, cfg.QuestionNum),
 
-		wallet: wallet,
+		stakeLevels: stakeLevels,
 
 		cfg: cfg,
 	}
@@ -131,7 +134,7 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 
 	winners := make([]*Winner, 0, len(userIDToPrize))
 	for userID, prize := range userIDToPrize {
-		multiplier, err := rt.wallet.GetMultiplier(context.Background(), userID)
+		multiplier, err := rt.stakeLevels.GetMultiplier(context.Background(), userID)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user's multiplier")
 		}

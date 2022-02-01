@@ -45,7 +45,7 @@ func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService, 
 		PrizePool:          qc.GetChallenge().PrizePoolAmount,
 		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
 	}
-	rt := result_table.New(&cfg, wallets)
+	rt := result_table.New(&cfg, &wallets)
 
 	return &quizEngine{
 		questionContainer: qc,
