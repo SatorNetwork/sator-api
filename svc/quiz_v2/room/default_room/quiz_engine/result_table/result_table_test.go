@@ -4,24 +4,18 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 )
-
-type Mock struct{}
-
-func (mock Mock) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
-	return 1, nil
-}
 
 func TestResultTable(t *testing.T) {
 	userID1 := uuid.New()
 	userID2 := uuid.New()
 	userID3 := uuid.New()
 
-	mock := Mock{}
+	mock := &interfaces.StaticStakeLevel{}
 
 	if false {
 		cfg := Config{

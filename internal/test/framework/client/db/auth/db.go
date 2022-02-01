@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -40,4 +41,13 @@ func (db *DB) UpdateKYCStatus(ctx context.Context, email, status string) error {
 	}
 
 	return nil
+}
+
+func (db *DB) GetUserIDByEmail(ctx context.Context, email string) (uuid.UUID, error) {
+	u, err := db.authRepository.GetUserByEmail(ctx, email)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("could not get user by email %s", email)
+	}
+
+	return u.ID, nil
 }

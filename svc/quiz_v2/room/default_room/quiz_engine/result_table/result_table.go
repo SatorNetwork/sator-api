@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
 )
 
@@ -22,10 +23,6 @@ type ResultTable interface {
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
 	getWinnerIDs() []uuid.UUID
-}
-
-type StakeLevels interface {
-	GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error)
 }
 
 type user struct {
@@ -50,12 +47,12 @@ type resultTable struct {
 	tableMutex     *sync.Mutex
 	questionSentAt []time.Time
 
-	stakeLevels StakeLevels
+	stakeLevels interfaces.StakeLevels
 
 	cfg *Config
 }
 
-func New(cfg *Config, stakeLevels StakeLevels) ResultTable {
+func New(cfg *Config, stakeLevels interfaces.StakeLevels) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
 		tableMutex:     &sync.Mutex{},

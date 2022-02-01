@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
@@ -50,7 +50,7 @@ type defaultRoom struct {
 	done chan struct{}
 }
 
-func New(challengeID string, challenges quiz_v2_challenge.ChallengesService, wallets walletClient.Client) (*defaultRoom, error) {
+func New(challengeID string, challenges interfaces.ChallengesService, wallets walletClient.Client) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
 	quizEngine, err := quiz_engine.New(challengeID, challenges, wallets)

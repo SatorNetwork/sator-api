@@ -3,7 +3,7 @@ package engine
 import (
 	"log"
 
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room"
@@ -14,13 +14,13 @@ type Engine struct {
 	newPlayersChan    chan player.Player
 	challengeIDToRoom map[string]room.Room
 
-	challenges quiz_v2_challenge.ChallengesService
+	challenges interfaces.ChallengesService
 	wallets    walletClient.Client
 
 	done chan struct{}
 }
 
-func New(challenges quiz_v2_challenge.ChallengesService, wallets walletClient.Client) *Engine {
+func New(challenges interfaces.ChallengesService, wallets walletClient.Client) *Engine {
 	return &Engine{
 		newPlayersChan:    make(chan player.Player),
 		challengeIDToRoom: make(map[string]room.Room, 0),

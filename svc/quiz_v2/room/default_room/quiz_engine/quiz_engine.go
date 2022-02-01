@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/question_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
@@ -33,7 +33,7 @@ type quizEngine struct {
 	resultTable       result_table.ResultTable
 }
 
-func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService, wallets walletClient.Client) (*quizEngine, error) {
+func New(challengeID string, challengesSvc interfaces.ChallengesService, wallets walletClient.Client) (*quizEngine, error) {
 	qc, err := question_container.New(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err

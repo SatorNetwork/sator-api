@@ -8,12 +8,14 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/db/auth"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client/db/challenge"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/client/db/wallet"
 )
 
 type DB struct {
 	dbClient *sql.DB
 
 	challengeDB *challenge.DB
+	walletDB    *wallet.DB
 	authDB      *auth.DB
 }
 
@@ -35,15 +37,25 @@ func New() (*DB, error) {
 		return nil, errors.Wrap(err, "can't create challenge db")
 	}
 
+	walletDB, err := wallet.New(dbClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create wallet db")
+	}
+
 	return &DB{
 		dbClient:    dbClient,
 		challengeDB: challengeDB,
 		authDB:      authDB,
+		walletDB:    walletDB,
 	}, nil
 }
 
 func (db *DB) Bootstrap(ctx context.Context) error {
 	if err := db.challengeDB.Bootstrap(ctx); err != nil {
+		return err
+	}
+
+	if err := db.walletDB.Bootstrap(ctx); err != nil {
 		return err
 	}
 
@@ -56,4 +68,8 @@ func (db *DB) ChallengeDB() *challenge.DB {
 
 func (db *DB) AuthDB() *auth.DB {
 	return db.authDB
+}
+
+func (db *DB) WalletDB() *wallet.DB {
+	return db.walletDB
 }
