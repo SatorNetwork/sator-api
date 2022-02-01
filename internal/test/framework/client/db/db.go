@@ -59,6 +59,10 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		return errors.Wrap(err, "can't bootstrap wallet db")
 	}
 
+	if err := db.walletDB.Bootstrap(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
