@@ -3,11 +3,10 @@ package result_table
 import (
 	"context"
 	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"time"
-
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -52,15 +51,14 @@ type resultTable struct {
 	questionSentAt []time.Time
 
 	stakeLevels interfaces.StakeLevels
+	challenges  interfaces.ChallengesService
 
-	challenges  quiz_v2_challenge.ChallengesService
 	challengeID uuid.UUID
 
 	cfg *Config
 }
 
-func New(cfg *Config, stakeLevels interfaces.StakeLevels) ResultTable {
-//func New(cfg *Config, challenges quiz_v2_challenge.ChallengesService, challengeID uuid.UUID) ResultTable {
+func New(cfg *Config, stakeLevels interfaces.StakeLevels, challenges interfaces.ChallengesService, challengeID uuid.UUID) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
 		tableMutex:     &sync.Mutex{},

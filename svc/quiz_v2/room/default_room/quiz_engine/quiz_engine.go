@@ -13,8 +13,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
 )
 
-const defaultWinnersNum = 2
-
 type QuizEngine interface {
 	GetChallenge() *challenge.RawChallenge
 	GetNumberOfQuestions() int
@@ -55,8 +53,7 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService, stakeLe
 		PrizePool:          qc.GetChallenge().PrizePoolAmount,
 		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
 	}
-	rt := result_table.New(&cfg, stakeLevels)
-	//rt := result_table.New(&cfg, challengesSvc, id)
+	rt := result_table.New(&cfg, stakeLevels, challengesSvc, id)
 
 	return &quizEngine{
 		questionContainer: qc,
