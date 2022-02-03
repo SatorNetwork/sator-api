@@ -3,12 +3,12 @@ package result_table
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"

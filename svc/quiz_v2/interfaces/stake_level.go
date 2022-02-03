@@ -1,8 +1,9 @@
 package interfaces
 
 import (
+	"context"
+
 	"github.com/google/uuid"
-	"golang.org/x/net/context"
 )
 
 type StakeLevels interface {

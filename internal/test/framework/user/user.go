@@ -1,11 +1,11 @@
 package user
 
 import (
+	"context"
 	"crypto/rsa"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
