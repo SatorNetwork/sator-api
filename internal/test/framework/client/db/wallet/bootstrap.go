@@ -31,7 +31,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		},
 	})
 	if err != nil {
-		return errors.Wrap(err, "can't AddStakeLevel")
+		return errors.Wrap(err, "can't add stake level")
 	}
 
 	return nil

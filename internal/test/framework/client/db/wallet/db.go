@@ -17,7 +17,7 @@ func New(dbClient *sql.DB) (*DB, error) {
 	ctx := context.Background()
 	walletRepository, err := walletRepo.Prepare(ctx, dbClient)
 	if err != nil {
-		return nil, errors.Wrap(err, "challengeRepo error")
+		return nil, errors.Wrap(err, "can't prepare wallet repository")
 	}
 
 	return &DB{

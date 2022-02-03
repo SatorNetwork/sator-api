@@ -308,7 +308,7 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	winners, err := r.quizEngine.GetWinners()
 	if err != nil {
-		log.Println(err)
+		log.Printf("can't get winners: %v\n", err)
 		return
 	}
 

@@ -52,11 +52,11 @@ func New() (*DB, error) {
 
 func (db *DB) Bootstrap(ctx context.Context) error {
 	if err := db.challengeDB.Bootstrap(ctx); err != nil {
-		return err
+		return errors.Wrap(err, "can't bootstrap challenge db")
 	}
 
 	if err := db.walletDB.Bootstrap(ctx); err != nil {
-		return errors.Wrap(err, "walletDB Bootstrap error")
+		return errors.Wrap(err, "can't bootstrap wallet db")
 	}
 
 	return nil

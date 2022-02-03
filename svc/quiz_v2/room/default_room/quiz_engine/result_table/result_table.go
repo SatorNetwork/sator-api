@@ -3,6 +3,7 @@ package result_table
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"sort"
 	"sync"
 	"time"
@@ -133,7 +134,7 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 	for userID, prize := range userIDToPrize {
 		multiplier, err := rt.stakeLevels.GetMultiplier(context.Background(), userID)
 		if err != nil {
-			return nil, fmt.Errorf("could not get user's multiplier")
+			return nil, errors.Wrap(err, "could not get user's multiplier")
 		}
 
 		prize = prize / 100 * float64(multiplier)

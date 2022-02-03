@@ -13,7 +13,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"
-	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 )
 
 type (
@@ -37,12 +36,12 @@ func NewService(
 	natsURL,
 	natsWSURL string,
 	challenges interfaces.ChallengesService,
-	wallets walletClient.Client,
+	stakeLevels interfaces.StakeLevels,
 	ac authClient,
 	serverRSAPrivateKey *rsa.PrivateKey,
 ) *Service {
 	s := &Service{
-		engine:              engine.New(challenges, &wallets),
+		engine:              engine.New(challenges, stakeLevels),
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,
