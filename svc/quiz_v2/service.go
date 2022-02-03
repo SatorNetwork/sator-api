@@ -42,7 +42,7 @@ func NewService(
 	serverRSAPrivateKey *rsa.PrivateKey,
 ) *Service {
 	s := &Service{
-		engine:              engine.New(challenges, wallets),
+		engine:              engine.New(challenges, &wallets),
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,

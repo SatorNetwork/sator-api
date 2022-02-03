@@ -14,7 +14,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/status_transactor"
-	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 )
 
 const (
@@ -50,10 +49,10 @@ type defaultRoom struct {
 	done chan struct{}
 }
 
-func New(challengeID string, challenges interfaces.ChallengesService, wallets walletClient.Client) (*defaultRoom, error) {
+func New(challengeID string, challenges interfaces.ChallengesService, stakeLevels interfaces.StakeLevels) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
-	quizEngine, err := quiz_engine.New(challengeID, challenges, wallets)
+	quizEngine, err := quiz_engine.New(challengeID, challenges, stakeLevels)
 	if err != nil {
 		return nil, err
 	}

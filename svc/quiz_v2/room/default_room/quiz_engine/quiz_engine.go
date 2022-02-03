@@ -10,7 +10,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/question_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
-	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 )
 
 const defaultWinnersNum = 2
@@ -33,7 +32,7 @@ type quizEngine struct {
 	resultTable       result_table.ResultTable
 }
 
-func New(challengeID string, challengesSvc interfaces.ChallengesService, wallets walletClient.Client) (*quizEngine, error) {
+func New(challengeID string, challengesSvc interfaces.ChallengesService, stakeLevels interfaces.StakeLevels) (*quizEngine, error) {
 	qc, err := question_container.New(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
@@ -45,7 +44,7 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService, wallets
 		PrizePool:          qc.GetChallenge().PrizePoolAmount,
 		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
 	}
-	rt := result_table.New(&cfg, &wallets)
+	rt := result_table.New(&cfg, stakeLevels)
 
 	return &quizEngine{
 		questionContainer: qc,
