@@ -3,6 +3,7 @@ package wallet
 import (
 	"context"
 	"database/sql"
+	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		},
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "can't AddStakeLevel")
 	}
 
 	return nil
