@@ -10,8 +10,8 @@ import (
 
 	"github.com/SatorNetwork/sator-api/internal/db"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"
 )
 
@@ -21,7 +21,7 @@ type (
 
 		natsURL    string
 		natsWSURL  string
-		challenges quiz_v2_challenge.ChallengesService
+		challenges interfaces.ChallengesService
 		ac         authClient
 
 		serverRSAPrivateKey *rsa.PrivateKey
@@ -35,12 +35,13 @@ type (
 func NewService(
 	natsURL,
 	natsWSURL string,
-	challenges quiz_v2_challenge.ChallengesService,
+	challenges interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
 	ac authClient,
 	serverRSAPrivateKey *rsa.PrivateKey,
 ) *Service {
 	s := &Service{
-		engine:              engine.New(challenges),
+		engine:              engine.New(challenges, stakeLevels),
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,

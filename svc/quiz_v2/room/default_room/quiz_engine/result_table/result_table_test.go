@@ -6,12 +6,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 )
 
 func TestResultTable(t *testing.T) {
 	userID1 := uuid.New()
 	userID2 := uuid.New()
 	userID3 := uuid.New()
+
+	mock := &interfaces.StaticStakeLevel{}
 
 	if false {
 		cfg := Config{
@@ -20,7 +24,7 @@ func TestResultTable(t *testing.T) {
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
 		}
-		rt := New(&cfg)
+		rt := New(&cfg, mock)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -44,7 +48,7 @@ func TestResultTable(t *testing.T) {
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
 		}
-		rt := New(&cfg)
+		rt := New(&cfg, mock)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -77,7 +81,7 @@ func TestResultTable(t *testing.T) {
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
 		}
-		rt := New(&cfg)
+		rt := New(&cfg, mock)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 )
 
 type QuestionContainer interface {
@@ -25,7 +25,7 @@ type questionContainer struct {
 	questions []challenge.Question
 }
 
-func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) (*questionContainer, error) {
+func New(challengeID string, challengesSvc interfaces.ChallengesService) (*questionContainer, error) {
 	challenge, err := loadChallenge(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) 
 	}, nil
 }
 
-func loadChallenge(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) (*challenge.RawChallenge, error) {
+func loadChallenge(challengeID string, challengesSvc interfaces.ChallengesService) (*challenge.RawChallenge, error) {
 	ctx := context.Background()
 	challengeUID, err := uuid.Parse(challengeID)
 	if err != nil {
@@ -55,7 +55,7 @@ func loadChallenge(challengeID string, challengesSvc quiz_v2_challenge.Challenge
 	return &challenge, nil
 }
 
-func loadQuestions(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) ([]challenge.Question, error) {
+func loadQuestions(challengeID string, challengesSvc interfaces.ChallengesService) ([]challenge.Question, error) {
 	ctx := context.Background()
 	challengeUID, err := uuid.Parse(challengeID)
 	if err != nil {

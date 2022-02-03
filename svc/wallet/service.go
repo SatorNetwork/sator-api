@@ -879,6 +879,10 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+
 		return 0, fmt.Errorf("could not get stake by user id: %w", err)
 	}
 

@@ -14,6 +14,8 @@ import (
 )
 
 func TestScNew(t *testing.T) {
+	t.Skip()
+
 	c := solana.New("https://api.devnet.solana.com/", solana.Config{
 		SystemProgram:  common.SystemProgramID.ToBase58(),
 		SysvarRent:     common.SysVarRentPubkey.ToBase58(),

@@ -1,15 +1,15 @@
 package default_room
 
 import (
-	"github.com/pkg/errors"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
@@ -49,10 +49,10 @@ type defaultRoom struct {
 	done chan struct{}
 }
 
-func New(challengeID string, challenges quiz_v2_challenge.ChallengesService) (*defaultRoom, error) {
+func New(challengeID string, challenges interfaces.ChallengesService, stakeLevels interfaces.StakeLevels) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
-	quizEngine, err := quiz_engine.New(challengeID, challenges)
+	quizEngine, err := quiz_engine.New(challengeID, challenges, stakeLevels)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,12 @@ func (r *defaultRoom) sendWinnersTable() {
 		usernameIDToPrize[username] = prize
 	}
 
-	winners := r.quizEngine.GetWinners()
+	winners, err := r.quizEngine.GetWinners()
+	if err != nil {
+		log.Printf("can't get winners: %v\n", err)
+		return
+	}
+
 	msgWinners := make([]*message.Winner, 0, len(winners))
 	for _, w := range winners {
 		username := r.players[w.UserID].Username()

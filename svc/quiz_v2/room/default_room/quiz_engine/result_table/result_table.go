@@ -1,13 +1,16 @@
 package result_table
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
 )
 
@@ -16,7 +19,7 @@ type ResultTable interface {
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
 	GetPrizePoolDistribution() map[uuid.UUID]float64
-	GetWinners() []*Winner
+	GetWinners() ([]*Winner, error)
 
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
@@ -45,14 +48,18 @@ type resultTable struct {
 	tableMutex     *sync.Mutex
 	questionSentAt []time.Time
 
+	stakeLevels interfaces.StakeLevels
+
 	cfg *Config
 }
 
-func New(cfg *Config) ResultTable {
+func New(cfg *Config, stakeLevels interfaces.StakeLevels) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
 		tableMutex:     &sync.Mutex{},
 		questionSentAt: make([]time.Time, cfg.QuestionNum),
+
+		stakeLevels: stakeLevels,
 
 		cfg: cfg,
 	}
@@ -120,18 +127,25 @@ func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 	return distribution
 }
 
-func (rt *resultTable) GetWinners() []*Winner {
+func (rt *resultTable) GetWinners() ([]*Winner, error) {
 	userIDToPrize := rt.GetPrizePoolDistribution()
 
 	winners := make([]*Winner, 0, len(userIDToPrize))
 	for userID, prize := range userIDToPrize {
+		multiplier, err := rt.stakeLevels.GetMultiplier(context.Background(), userID)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get user's multiplier")
+		}
+
+		prize = prize / 100 * float64(multiplier)
+
 		winners = append(winners, &Winner{
 			UserID: userID.String(),
 			Prize:  fmt.Sprintf("%v", prize),
 		})
 	}
 
-	return winners
+	return winners, nil
 }
 
 func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {

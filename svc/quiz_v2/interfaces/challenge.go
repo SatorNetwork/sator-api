@@ -1,4 +1,4 @@
-package challenge
+package interfaces
 
 import (
 	"context"
