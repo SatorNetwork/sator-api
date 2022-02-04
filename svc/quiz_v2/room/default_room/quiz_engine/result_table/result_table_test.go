@@ -15,7 +15,9 @@ func TestResultTable(t *testing.T) {
 	userID2 := uuid.New()
 	userID3 := uuid.New()
 
-	mock := &interfaces.StaticStakeLevel{}
+	mockStakeLevel := &interfaces.StaticStakeLevel{}
+	mockChallenge := &interfaces.StaticChallenges{}
+	rndID := uuid.New()
 
 	if false {
 		cfg := Config{
@@ -24,7 +26,7 @@ func TestResultTable(t *testing.T) {
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
 		}
-		rt := New(&cfg, mock)
+		rt := New(&cfg, mockStakeLevel, mockChallenge, rndID)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -48,7 +50,7 @@ func TestResultTable(t *testing.T) {
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
 		}
-		rt := New(&cfg, mock)
+		rt := New(&cfg, mockStakeLevel, mockChallenge, rndID)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -63,8 +65,11 @@ func TestResultTable(t *testing.T) {
 			userID1: 30,
 			userID2: 20,
 		}
-		require.Equal(t, ptsMap, rt.calcPTSMap())
-		require.Equal(t, []uuid.UUID{userID1, userID2}, rt.getWinnerIDs())
+		pointsMap, _ := rt.calcPTSMap()
+		require.Equal(t, ptsMap, pointsMap)
+		winners, err := rt.getWinnerIDs()
+		require.NoError(t, err)
+		require.Equal(t, []uuid.UUID{userID1, userID2}, winners)
 		require.Equal(t, ptsMap, rt.calcWinnersMap())
 
 		userIDToPrice := map[uuid.UUID]float64{
@@ -81,7 +86,7 @@ func TestResultTable(t *testing.T) {
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
 		}
-		rt := New(&cfg, mock)
+		rt := New(&cfg, mockStakeLevel, mockChallenge, rndID)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -99,8 +104,11 @@ func TestResultTable(t *testing.T) {
 			userID2: 20,
 			userID3: 5,
 		}
-		require.Equal(t, ptsMap, rt.calcPTSMap())
-		require.Equal(t, []uuid.UUID{userID1, userID2}, rt.getWinnerIDs())
+		pointsMap, _ := rt.calcPTSMap()
+		require.Equal(t, ptsMap, pointsMap)
+		winners, err := rt.getWinnerIDs()
+		require.NoError(t, err)
+		require.Equal(t, []uuid.UUID{userID1, userID2}, winners)
 		winnersMap := map[uuid.UUID]uint32{
 			userID1: 30,
 			userID2: 20,
