@@ -28,6 +28,12 @@ var defaultChallenge = challengeRepo.AddChallengeParams{
 	},
 	Kind:            0,
 	UserMaxAttempts: 2,
+	MaxWinners: sql.NullInt32{
+		Int32: 2,
+		Valid: true,
+	},
+	QuestionsPerGame:  5,
+	MinCorrectAnswers: 1,
 }
 
 func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions {
