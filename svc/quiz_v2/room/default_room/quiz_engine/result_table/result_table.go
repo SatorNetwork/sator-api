@@ -28,8 +28,8 @@ type ResultTable interface {
 }
 
 type user struct {
-	id  uuid.UUID
-	pts uint32
+	id    uuid.UUID
+	pts   uint32
 	cells int32
 }
 
@@ -145,7 +145,7 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 			return nil, errors.Wrap(err, "could not get user's multiplier")
 		}
 
-		prize = prize / 100 * float64(multiplier)
+		prize = prize + (prize / 100 * float64(multiplier))
 
 		winners = append(winners, &Winner{
 			UserID: userID.String(),
@@ -217,8 +217,8 @@ func (rt *resultTable) getUsersSortedByPTS() []*user {
 	ptsSlice := make([]*user, 0, len(ptsMap))
 	for userID, pts := range ptsMap {
 		ptsSlice = append(ptsSlice, &user{
-			id:  userID,
-			pts: pts,
+			id:    userID,
+			pts:   pts,
 			cells: cells,
 		})
 	}
