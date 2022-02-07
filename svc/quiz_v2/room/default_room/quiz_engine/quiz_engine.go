@@ -52,8 +52,9 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService, stakeLe
 		WinnersNum:         int(challenge.MaxWinners),
 		PrizePool:          qc.GetChallenge().PrizePoolAmount,
 		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
+		MinCorrectAnswers:  challenge.MinCorrectAnswers,
 	}
-	rt := result_table.New(&cfg, stakeLevels, challengesSvc, id)
+	rt := result_table.New(&cfg, stakeLevels)
 
 	return &quizEngine{
 		questionContainer: qc,
