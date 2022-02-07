@@ -1,7 +1,6 @@
 package quiz_engine
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,15 +36,7 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService, stakeLe
 		return nil, err
 	}
 
-	id, err := uuid.Parse(challengeID)
-	if err != nil {
-		return nil, err
-	}
-
-	challenge, err := challengesSvc.GetRawChallengeByID(context.Background(), id)
-	if err != nil {
-		return nil, err
-	}
+	challenge := qc.GetChallenge()
 
 	cfg := result_table.Config{
 		QuestionNum:        int(challenge.QuestionsPerGame),

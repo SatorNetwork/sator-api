@@ -3,7 +3,6 @@ package result_table
 import (
 	"context"
 	"fmt"
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -24,7 +23,7 @@ type ResultTable interface {
 
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
-	getWinnerIDs() ([]uuid.UUID, error)
+	getWinnerIDs() []uuid.UUID
 }
 
 type user struct {
@@ -153,10 +152,7 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 
 func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
 	ptsMap := rt.calcPTSMap()
-	winnerIDs, err := rt.getWinnerIDs()
-	if err != nil {
-		log.Println(err)
-	}
+	winnerIDs := rt.getWinnerIDs()
 
 	winnersMap := make(map[uuid.UUID]uint32, rt.cfg.WinnersNum)
 	for _, winnerID := range winnerIDs {
@@ -177,7 +173,7 @@ func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
 	return ptsMap
 }
 
-func (rt *resultTable) getWinnerIDs() ([]uuid.UUID, error) {
+func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	users := rt.getUsersSortedByPTS()
 
 	var usersWinners []*user
@@ -196,7 +192,7 @@ func (rt *resultTable) getWinnerIDs() ([]uuid.UUID, error) {
 		winnerIDs = append(winnerIDs, winner.id)
 	}
 
-	return winnerIDs, nil
+	return winnerIDs
 }
 
 func (rt *resultTable) getUsersSortedByPTS() []*user {

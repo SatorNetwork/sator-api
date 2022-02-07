@@ -67,8 +67,7 @@ func TestResultTable(t *testing.T) {
 		}
 		pointsMap := rt.calcPTSMap()
 		require.Equal(t, ptsMap, pointsMap)
-		winners, err := rt.getWinnerIDs()
-		require.NoError(t, err)
+		winners := rt.getWinnerIDs()
 		require.Equal(t, []uuid.UUID{userID1, userID2}, winners)
 		require.Equal(t, ptsMap, rt.calcWinnersMap())
 
@@ -107,8 +106,7 @@ func TestResultTable(t *testing.T) {
 		}
 		pointsMap := rt.calcPTSMap()
 		require.Equal(t, ptsMap, pointsMap)
-		winners, err := rt.getWinnerIDs()
-		require.NoError(t, err)
+		winners := rt.getWinnerIDs()
 		require.Equal(t, []uuid.UUID{userID1, userID2}, winners)
 		winnersMap := map[uuid.UUID]uint32{
 			userID1: 30,
