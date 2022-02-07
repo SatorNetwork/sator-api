@@ -16,8 +16,6 @@ func TestResultTable(t *testing.T) {
 	userID3 := uuid.New()
 
 	mockStakeLevel := &interfaces.StaticStakeLevel{}
-	mockChallenge := &interfaces.StaticChallenges{}
-	rndID := uuid.New()
 
 	if false {
 		cfg := Config{
@@ -25,8 +23,9 @@ func TestResultTable(t *testing.T) {
 			WinnersNum:         2,
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
+			MinCorrectAnswers:  1,
 		}
-		rt := New(&cfg, mockStakeLevel, mockChallenge, rndID)
+		rt := New(&cfg, mockStakeLevel)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -49,8 +48,9 @@ func TestResultTable(t *testing.T) {
 			WinnersNum:         2,
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
+			MinCorrectAnswers:  1,
 		}
-		rt := New(&cfg, mockStakeLevel, mockChallenge, rndID)
+		rt := New(&cfg, mockStakeLevel)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -65,7 +65,7 @@ func TestResultTable(t *testing.T) {
 			userID1: 30,
 			userID2: 20,
 		}
-		pointsMap, _ := rt.calcPTSMap()
+		pointsMap := rt.calcPTSMap()
 		require.Equal(t, ptsMap, pointsMap)
 		winners, err := rt.getWinnerIDs()
 		require.NoError(t, err)
@@ -85,8 +85,9 @@ func TestResultTable(t *testing.T) {
 			WinnersNum:         2,
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
+			MinCorrectAnswers:  1,
 		}
-		rt := New(&cfg, mockStakeLevel, mockChallenge, rndID)
+		rt := New(&cfg, mockStakeLevel)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -104,7 +105,7 @@ func TestResultTable(t *testing.T) {
 			userID2: 20,
 			userID3: 5,
 		}
-		pointsMap, _ := rt.calcPTSMap()
+		pointsMap := rt.calcPTSMap()
 		require.Equal(t, ptsMap, pointsMap)
 		winners, err := rt.getWinnerIDs()
 		require.NoError(t, err)
