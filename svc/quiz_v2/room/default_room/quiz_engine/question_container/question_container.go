@@ -2,6 +2,8 @@ package question_container
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -25,7 +27,7 @@ type questionContainer struct {
 	questions []challenge.Question
 }
 
-func New(challengeID string, challengesSvc interfaces.ChallengesService) (*questionContainer, error) {
+func New(challengeID string, challengesSvc interfaces.ChallengesService, shuffle bool) (*questionContainer, error) {
 	challenge, err := loadChallenge(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
@@ -33,6 +35,13 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService) (*quest
 	questions, err := loadQuestions(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
+	}
+	questions, err = chooseNRandomQuestions(questions, int(challenge.QuestionsPerGame), shuffle)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't choose %v random questions", challenge.QuestionsPerGame)
+	}
+	for idx := 0; idx < len(questions); idx++ {
+		questions[idx].Order = int32(idx + 1)
 	}
 
 	return &questionContainer{
@@ -65,11 +74,24 @@ func loadQuestions(challengeID string, challengesSvc interfaces.ChallengesServic
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get questions by challenge id")
 	}
-	for idx := 0; idx < len(questions); idx++ {
-		questions[idx].Order = int32(idx + 1)
-	}
 
 	return questions, nil
+}
+
+func chooseNRandomQuestions(qs []challenge.Question, n int, shuffle bool) ([]challenge.Question, error) {
+	if len(qs) < n {
+		return nil, errors.Errorf("can't choose %v questions out of %v", n, len(qs))
+	}
+
+	if shuffle {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(
+			len(qs),
+			func(i, j int) { qs[i], qs[j] = qs[j], qs[i] },
+		)
+	}
+
+	return qs[:n], nil
 }
 
 func (e *questionContainer) GetChallenge() *challenge.RawChallenge {

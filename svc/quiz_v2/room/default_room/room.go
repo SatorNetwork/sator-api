@@ -49,10 +49,15 @@ type defaultRoom struct {
 	done chan struct{}
 }
 
-func New(challengeID string, challenges interfaces.ChallengesService, stakeLevels interfaces.StakeLevels) (*defaultRoom, error) {
+func New(
+	challengeID string,
+	challenges interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
+	shuffleQuestions bool,
+) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
-	quizEngine, err := quiz_engine.New(challengeID, challenges, stakeLevels)
+	quizEngine, err := quiz_engine.New(challengeID, challenges, stakeLevels, shuffleQuestions)
 	if err != nil {
 		return nil, err
 	}

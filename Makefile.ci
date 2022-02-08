@@ -81,6 +81,7 @@ run-local: ## Run api via `go run`
     SOLANA_SYSVAR_CLOCK=SysvarC1ock11111111111111111111111111111111 \
     SOLANA_SPL_TOKEN=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA \
     SOLANA_STAKE_PROGRAM_ID=CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u \
+    QUIZ_V2_SHUFFLE_QUESTIONS=false \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" -race cmd/api/main.go &> sator-api.log &
 migrate-local: ## Run all migrations on local environment
 	@rm -Rvf migrations/*.sql && \

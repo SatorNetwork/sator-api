@@ -30,8 +30,13 @@ type quizEngine struct {
 	resultTable       result_table.ResultTable
 }
 
-func New(challengeID string, challengesSvc interfaces.ChallengesService, stakeLevels interfaces.StakeLevels) (*quizEngine, error) {
-	qc, err := question_container.New(challengeID, challengesSvc)
+func New(
+	challengeID string,
+	challengesSvc interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
+	shuffleQuestions bool,
+) (*quizEngine, error) {
+	qc, err := question_container.New(challengeID, challengesSvc, shuffleQuestions)
 	if err != nil {
 		return nil, err
 	}

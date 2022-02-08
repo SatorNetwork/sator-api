@@ -37,6 +37,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		defaultChallengeCopy := deepcopy.Copy(defaultChallenge).(challengeRepo.AddChallengeParams)
 		defaultChallengeCopy.Title = "custom1"
 		defaultChallengeCopy.PlayersToStart = 3
+		defaultChallengeCopy.QuestionsPerGame = 1
 		challenge, err := db.challengeRepository.AddChallenge(ctx, defaultChallengeCopy)
 		if err != nil {
 			return errors.Wrapf(err, "can't add %v challenge", defaultChallengeCopy.Title)
@@ -62,6 +63,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		defaultChallengeCopy := deepcopy.Copy(defaultChallenge).(challengeRepo.AddChallengeParams)
 		defaultChallengeCopy.Title = "custom2"
 		defaultChallengeCopy.PlayersToStart = 10
+		defaultChallengeCopy.QuestionsPerGame = 1
 		challenge, err := db.challengeRepository.AddChallenge(ctx, defaultChallengeCopy)
 		if err != nil {
 			return errors.Wrapf(err, "can't add %v challenge", defaultChallengeCopy.Title)
