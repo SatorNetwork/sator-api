@@ -27,7 +27,7 @@ type questionContainer struct {
 	questions []challenge.Question
 }
 
-func New(challengeID string, challengesSvc interfaces.ChallengesService) (*questionContainer, error) {
+func New(challengeID string, challengesSvc interfaces.ChallengesService, shuffle bool) (*questionContainer, error) {
 	challenge, err := loadChallenge(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService) (*quest
 	if err != nil {
 		return nil, err
 	}
-	questions, err = chooseNRandomQuestions(questions, int(challenge.QuestionsPerGame))
+	questions, err = chooseNRandomQuestions(questions, int(challenge.QuestionsPerGame), shuffle)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't choose %v random questions", challenge.QuestionsPerGame)
 	}
@@ -78,16 +78,18 @@ func loadQuestions(challengeID string, challengesSvc interfaces.ChallengesServic
 	return questions, nil
 }
 
-func chooseNRandomQuestions(qs []challenge.Question, n int) ([]challenge.Question, error) {
+func chooseNRandomQuestions(qs []challenge.Question, n int, shuffle bool) ([]challenge.Question, error) {
 	if len(qs) < n {
 		return nil, errors.Errorf("can't choose %v questions out of %v", n, len(qs))
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(
-		len(qs),
-		func(i, j int) { qs[i], qs[j] = qs[j], qs[i] },
-	)
+	if shuffle {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(
+			len(qs),
+			func(i, j int) { qs[i], qs[j] = qs[j], qs[i] },
+		)
+	}
 
 	return qs[:n], nil
 }

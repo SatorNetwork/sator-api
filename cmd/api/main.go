@@ -171,6 +171,8 @@ var (
 	natsURL   = env.MustString("NATS_URL")
 	natsWSURL = env.MustString("NATS_WS_URL")
 
+	quizV2ShuffleQuestions = env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true)
+
 	serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
 )
 
@@ -562,7 +564,15 @@ func main() {
 	}
 
 	{
-		quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, walletSvcClient, authClient, serverRSAPrivateKey)
+		quizV2Svc := quiz_v2.NewService(
+			natsURL,
+			natsWSURL,
+			challengeSvcClient,
+			walletSvcClient,
+			authClient,
+			serverRSAPrivateKey,
+			quizV2ShuffleQuestions,
+		)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
 			logger,
