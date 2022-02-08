@@ -17,8 +17,13 @@ bin/
 # vendor/
 cmd/test/
 cmd/quiz/
+cmd/dlock/
+cmd/nft/
+cmd/sandbox/
 .trash/
 .DS_Store
 Makefile.local
 Makefile.DEV.local
 geth.*
+sator-api.log
+vendor/

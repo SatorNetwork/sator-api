@@ -15,19 +15,26 @@ type Engine struct {
 
 	challenges  interfaces.ChallengesService
 	stakeLevels interfaces.StakeLevels
+	rewards     interfaces.RewardsService
 
 	shuffleQuestions bool
 
 	done chan struct{}
 }
 
-func New(challenges interfaces.ChallengesService, stakeLevels interfaces.StakeLevels, shuffleQuestions bool) *Engine {
+func New(
+	challenges interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
+	rewards interfaces.RewardsService,
+	shuffleQuestions bool,
+) *Engine {
 	return &Engine{
 		newPlayersChan:    make(chan player.Player),
 		challengeIDToRoom: make(map[string]room.Room, 0),
 
 		challenges:  challenges,
 		stakeLevels: stakeLevels,
+		rewards:     rewards,
 
 		shuffleQuestions: shuffleQuestions,
 
@@ -67,7 +74,7 @@ func (e *Engine) AddPlayer(p player.Player) {
 
 func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
 	if _, ok := e.challengeIDToRoom[challengeID]; !ok {
-		room, err := default_room.New(challengeID, e.challenges, e.stakeLevels, e.shuffleQuestions)
+		room, err := default_room.New(challengeID, e.challenges, e.stakeLevels, e.rewards, e.shuffleQuestions)
 		if err != nil {
 			return nil, err
 		}

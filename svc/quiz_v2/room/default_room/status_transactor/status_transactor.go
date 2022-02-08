@@ -13,6 +13,7 @@ const (
 	CountdownFinishedStatus
 	QuestionAreSentStatus
 	WinnersTableAreSent
+	RewardsAreSent
 	RoomIsFinished
 	RoomIsClosed
 )
@@ -22,7 +23,8 @@ var allowedTransitionsMap = map[Status][]Status{
 	RoomIsFullStatus:        {CountdownFinishedStatus},
 	CountdownFinishedStatus: {QuestionAreSentStatus},
 	QuestionAreSentStatus:   {WinnersTableAreSent},
-	WinnersTableAreSent:     {RoomIsFinished},
+	WinnersTableAreSent:     {RewardsAreSent},
+	RewardsAreSent:          {RoomIsFinished},
 	RoomIsFinished:          {RoomIsClosed},
 	RoomIsClosed:            {},
 }

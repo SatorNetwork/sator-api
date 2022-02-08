@@ -37,12 +37,13 @@ func NewService(
 	natsWSURL string,
 	challenges interfaces.ChallengesService,
 	stakeLevels interfaces.StakeLevels,
+	rewards interfaces.RewardsService,
 	ac authClient,
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
 ) *Service {
 	s := &Service{
-		engine:              engine.New(challenges, stakeLevels, shuffleQuestions),
+		engine:              engine.New(challenges, stakeLevels, rewards, shuffleQuestions),
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,
