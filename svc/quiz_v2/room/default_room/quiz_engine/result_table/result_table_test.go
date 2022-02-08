@@ -65,10 +65,8 @@ func TestResultTable(t *testing.T) {
 			userID1: 30,
 			userID2: 20,
 		}
-		pointsMap := rt.calcPTSMap()
-		require.Equal(t, ptsMap, pointsMap)
-		winners := rt.getWinnerIDs()
-		require.Equal(t, []uuid.UUID{userID1, userID2}, winners)
+		require.Equal(t, ptsMap, rt.calcPTSMap())
+		require.Equal(t, []uuid.UUID{userID1, userID2}, rt.getWinnerIDs())
 		require.Equal(t, ptsMap, rt.calcWinnersMap())
 
 		userIDToPrice := map[uuid.UUID]float64{
@@ -104,10 +102,8 @@ func TestResultTable(t *testing.T) {
 			userID2: 20,
 			userID3: 5,
 		}
-		pointsMap := rt.calcPTSMap()
-		require.Equal(t, ptsMap, pointsMap)
-		winners := rt.getWinnerIDs()
-		require.Equal(t, []uuid.UUID{userID1, userID2}, winners)
+		require.Equal(t, ptsMap, rt.calcPTSMap())
+		require.Equal(t, []uuid.UUID{userID1, userID2}, rt.getWinnerIDs())
 		winnersMap := map[uuid.UUID]uint32{
 			userID1: 30,
 			userID2: 20,

@@ -27,9 +27,8 @@ type ResultTable interface {
 }
 
 type user struct {
-	id    uuid.UUID
-	pts   uint32
-	cells int32
+	id  uuid.UUID
+	pts uint32
 }
 
 type Winner struct {
@@ -175,17 +174,10 @@ func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
 
 func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	users := rt.getUsersSortedByPTS()
+	users = rt.filterUsersByCANum(users)
 
-	var usersWinners []*user
-
-	for _, v := range users {
-		if v.cells >= rt.cfg.MinCorrectAnswers {
-			usersWinners = append(usersWinners, v)
-		}
-	}
-
-	winnersNum := minInt(rt.cfg.WinnersNum, len(usersWinners))
-	winners := usersWinners[:winnersNum]
+	winnersNum := minInt(rt.cfg.WinnersNum, len(users))
+	winners := users[:winnersNum]
 
 	winnerIDs := make([]uuid.UUID, 0, len(winners))
 	for _, winner := range winners {
@@ -195,15 +187,26 @@ func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	return winnerIDs
 }
 
+func (rt *resultTable) filterUsersByCANum(users []*user) []*user {
+	filteredUsers := make([]*user, 0)
+	for _, u := range users {
+		caNum := rt.GetNumOfCorrectAnswersForUser(u.id)
+		if caNum >= rt.cfg.MinCorrectAnswers {
+			filteredUsers = append(filteredUsers, u)
+		}
+	}
+
+	return filteredUsers
+}
+
 func (rt *resultTable) getUsersSortedByPTS() []*user {
 	ptsMap := rt.calcPTSMap()
 
 	ptsSlice := make([]*user, 0, len(ptsMap))
 	for userID, pts := range ptsMap {
 		ptsSlice = append(ptsSlice, &user{
-			id:    userID,
-			pts:   pts,
-			cells: rt.GetNumOfCorrectAnswersForUser(userID),
+			id:  userID,
+			pts: pts,
 		})
 	}
 
@@ -276,13 +279,18 @@ func minInt(a int, b int) int {
 	return b
 }
 
-func (rt *resultTable) GetNumOfCorrectAnswersForUser(userID uuid.UUID) (ca int32) {
-	cells := rt.table[userID]
-	for i := 0; i < len(cells); i++ {
-		if cells[i].IsCorrect() {
-			ca++
+func (rt *resultTable) GetNumOfCorrectAnswersForUser(userID uuid.UUID) int32 {
+	row, ok := rt.table[userID]
+	if !ok {
+		// means no answer is registered for this user
+		return 0
+	}
+	var caNum int32
+	for _, cell := range row {
+		if cell.IsCorrect() {
+			caNum++
 		}
 	}
 
-	return
+	return caNum
 }
