@@ -40,6 +40,9 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService) (*quest
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't choose %v random questions", challenge.QuestionsPerGame)
 	}
+	for idx := 0; idx < len(questions); idx++ {
+		questions[idx].Order = int32(idx + 1)
+	}
 
 	return &questionContainer{
 		challenge: challenge,
@@ -70,9 +73,6 @@ func loadQuestions(challengeID string, challengesSvc interfaces.ChallengesServic
 	questions, err := challengesSvc.GetQuestionsByChallengeID(ctx, challengeUID)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get questions by challenge id")
-	}
-	for idx := 0; idx < len(questions); idx++ {
-		questions[idx].Order = int32(idx + 1)
 	}
 
 	return questions, nil
