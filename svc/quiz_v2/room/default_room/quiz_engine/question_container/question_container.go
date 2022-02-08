@@ -2,6 +2,8 @@ package question_container
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -33,6 +35,10 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService) (*quest
 	questions, err := loadQuestions(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
+	}
+	questions, err = chooseNRandomQuestions(questions, int(challenge.QuestionsPerGame))
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't choose %v random questions", challenge.QuestionsPerGame)
 	}
 
 	return &questionContainer{
@@ -70,6 +76,20 @@ func loadQuestions(challengeID string, challengesSvc interfaces.ChallengesServic
 	}
 
 	return questions, nil
+}
+
+func chooseNRandomQuestions(qs []challenge.Question, n int) ([]challenge.Question, error) {
+	if len(qs) < n {
+		return nil, errors.Errorf("can't choose %v questions out of %v", n, len(qs))
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(
+		len(qs),
+		func(i, j int) { qs[i], qs[j] = qs[j], qs[i] },
+	)
+
+	return qs[:n], nil
 }
 
 func (e *questionContainer) GetChallenge() *challenge.RawChallenge {
