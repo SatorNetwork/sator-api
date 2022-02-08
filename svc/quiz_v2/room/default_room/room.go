@@ -311,9 +311,12 @@ func (r *defaultRoom) sendWinnersTable() {
 		log.Printf("can't get winners: %v\n", err)
 		return
 	}
-
-	if challenge.MaxWinners < int32(len(winners)){
-		log.Printf("max amount of winners exceeded: %v\n", err)
+	if int32(len(winners)) > challenge.MaxWinners {
+		log.Printf(
+			"max amount of winners exceeded, max winners: %v, winners: %v\n",
+			challenge.MaxWinners,
+			len(winners),
+		)
 		return
 	}
 

@@ -35,14 +35,13 @@ func New(challengeID string, challengesSvc interfaces.ChallengesService, stakeLe
 	if err != nil {
 		return nil, err
 	}
-
 	challenge := qc.GetChallenge()
 
 	cfg := result_table.Config{
 		QuestionNum:        int(challenge.QuestionsPerGame),
 		WinnersNum:         int(challenge.MaxWinners),
-		PrizePool:          qc.GetChallenge().PrizePoolAmount,
-		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
+		PrizePool:          challenge.PrizePoolAmount,
+		TimePerQuestionSec: int(challenge.TimePerQuestionSec),
 		MinCorrectAnswers:  challenge.MinCorrectAnswers,
 	}
 	rt := result_table.New(&cfg, stakeLevels)
