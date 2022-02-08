@@ -78,6 +78,9 @@ type (
 		EpisodeID          string  `json:"episode_id,omitempty"`
 		Kind               int     `json:"kind"`
 		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
+		MaxWinners         int     `json:"max_winners"`
+		QuestionsPerGame   int     `json:"questions_per_game"`
+		MinCorrectAnswers  int     `json:"min_correct_answers"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -92,6 +95,9 @@ type (
 		EpisodeID          string  `json:"episode_id"`
 		Kind               int     `json:"kind"`
 		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
+		MaxWinners         int     `json:"max_winners"`
+		QuestionsPerGame   int     `json:"questions_per_game"`
+		MinCorrectAnswers  int     `json:"min_correct_answers"`
 	}
 
 	CheckAnswerRequest struct {
@@ -348,6 +354,9 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			Kind:               int32(req.Kind),
 			UserMaxAttempts:    int32(req.UserMaxAttempts),
+			MaxWinners:         int32(req.MaxWinners),
+			QuestionsPerGame:   int32(req.QuestionsPerGame),
+			MinCorrectAnswers:  int32(req.MinCorrectAnswers),
 		}
 
 		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
@@ -420,6 +429,9 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			TimePerQuestionSec: int32(req.TimePerQuestionSec),
 			Kind:               int32(req.Kind),
 			UserMaxAttempts:    int32(req.UserMaxAttempts),
+			MaxWinners:         int32(req.MaxWinners),
+			QuestionsPerGame:   int32(req.QuestionsPerGame),
+			MinCorrectAnswers:  int32(req.MinCorrectAnswers),
 		}
 
 		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {

@@ -28,18 +28,21 @@ type Attempt struct {
 }
 
 type Challenge struct {
-	ID              uuid.UUID      `json:"id"`
-	ShowID          uuid.UUID      `json:"show_id"`
-	Title           string         `json:"title"`
-	Description     sql.NullString `json:"description"`
-	PrizePool       float64        `json:"prize_pool"`
-	PlayersToStart  int32          `json:"players_to_start"`
-	TimePerQuestion sql.NullInt32  `json:"time_per_question"`
-	UpdatedAt       sql.NullTime   `json:"updated_at"`
-	CreatedAt       time.Time      `json:"created_at"`
-	EpisodeID       uuid.NullUUID  `json:"episode_id"`
-	Kind            int32          `json:"kind"`
-	UserMaxAttempts int32          `json:"user_max_attempts"`
+	ID                uuid.UUID      `json:"id"`
+	ShowID            uuid.UUID      `json:"show_id"`
+	Title             string         `json:"title"`
+	Description       sql.NullString `json:"description"`
+	PrizePool         float64        `json:"prize_pool"`
+	PlayersToStart    int32          `json:"players_to_start"`
+	TimePerQuestion   sql.NullInt32  `json:"time_per_question"`
+	UpdatedAt         sql.NullTime   `json:"updated_at"`
+	CreatedAt         time.Time      `json:"created_at"`
+	EpisodeID         uuid.NullUUID  `json:"episode_id"`
+	Kind              int32          `json:"kind"`
+	UserMaxAttempts   int32          `json:"user_max_attempts"`
+	MaxWinners        sql.NullInt32  `json:"max_winners"`
+	QuestionsPerGame  int32          `json:"questions_per_game"`
+	MinCorrectAnswers int32          `json:"min_correct_answers"`
 }
 
 type EpisodeAccess struct {

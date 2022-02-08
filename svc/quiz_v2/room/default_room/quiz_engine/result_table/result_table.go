@@ -41,6 +41,7 @@ type Config struct {
 	WinnersNum         int
 	PrizePool          float64
 	TimePerQuestionSec int
+	MinCorrectAnswers  int32
 }
 
 type resultTable struct {
@@ -137,7 +138,7 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 			return nil, errors.Wrap(err, "could not get user's multiplier")
 		}
 
-		prize = prize / 100 * float64(multiplier)
+		prize = prize + (prize / 100 * float64(multiplier))
 
 		winners = append(winners, &Winner{
 			UserID: userID.String(),
@@ -173,6 +174,8 @@ func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
 
 func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	users := rt.getUsersSortedByPTS()
+	users = rt.filterUsersByCANum(users)
+
 	winnersNum := minInt(rt.cfg.WinnersNum, len(users))
 	winners := users[:winnersNum]
 
@@ -182,6 +185,18 @@ func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	}
 
 	return winnerIDs
+}
+
+func (rt *resultTable) filterUsersByCANum(users []*user) []*user {
+	filteredUsers := make([]*user, 0)
+	for _, u := range users {
+		caNum := rt.GetNumOfCorrectAnswersForUser(u.id)
+		if caNum >= rt.cfg.MinCorrectAnswers {
+			filteredUsers = append(filteredUsers, u)
+		}
+	}
+
+	return filteredUsers
 }
 
 func (rt *resultTable) getUsersSortedByPTS() []*user {
@@ -262,4 +277,20 @@ func minInt(a int, b int) int {
 	}
 
 	return b
+}
+
+func (rt *resultTable) GetNumOfCorrectAnswersForUser(userID uuid.UUID) int32 {
+	row, ok := rt.table[userID]
+	if !ok {
+		// means no answer is registered for this user
+		return 0
+	}
+	var caNum int32
+	for _, cell := range row {
+		if cell.IsCorrect() {
+			caNum++
+		}
+	}
+
+	return caNum
 }

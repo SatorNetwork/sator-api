@@ -15,7 +15,7 @@ func TestResultTable(t *testing.T) {
 	userID2 := uuid.New()
 	userID3 := uuid.New()
 
-	mock := &interfaces.StaticStakeLevel{}
+	mockStakeLevel := &interfaces.StaticStakeLevel{}
 
 	if false {
 		cfg := Config{
@@ -23,8 +23,9 @@ func TestResultTable(t *testing.T) {
 			WinnersNum:         2,
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
+			MinCorrectAnswers:  1,
 		}
-		rt := New(&cfg, mock)
+		rt := New(&cfg, mockStakeLevel)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -47,8 +48,9 @@ func TestResultTable(t *testing.T) {
 			WinnersNum:         2,
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
+			MinCorrectAnswers:  1,
 		}
-		rt := New(&cfg, mock)
+		rt := New(&cfg, mockStakeLevel)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
@@ -80,8 +82,9 @@ func TestResultTable(t *testing.T) {
 			WinnersNum:         2,
 			PrizePool:          250,
 			TimePerQuestionSec: 8,
+			MinCorrectAnswers:  1,
 		}
-		rt := New(&cfg, mock)
+		rt := New(&cfg, mockStakeLevel)
 
 		for qNum := 0; qNum < cfg.QuestionNum; qNum++ {
 			err := rt.RegisterQuestionSendingEvent(qNum)
