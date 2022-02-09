@@ -13,5 +13,5 @@ type StakeLevels interface {
 type StaticStakeLevel struct{}
 
 func (mock *StaticStakeLevel) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
-	return 1, nil
+	return 0, nil
 }

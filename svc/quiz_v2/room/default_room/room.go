@@ -1,6 +1,7 @@
 package default_room
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
@@ -18,6 +19,8 @@ import (
 
 const (
 	defaultChanBuffSize = 10
+
+	RelationTypeQuizzes = "quizzes"
 )
 
 type questionWrapper struct {
@@ -45,6 +48,7 @@ type defaultRoom struct {
 	st                  *status_transactor.StatusTransactor
 
 	quizEngine quiz_engine.QuizEngine
+	rewards    interfaces.RewardsService
 
 	done chan struct{}
 }
@@ -53,6 +57,7 @@ func New(
 	challengeID string,
 	challenges interfaces.ChallengesService,
 	stakeLevels interfaces.StakeLevels,
+	rewards interfaces.RewardsService,
 	shuffleQuestions bool,
 ) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
@@ -76,6 +81,7 @@ func New(
 		st:                  status_transactor.New(statusIsUpdatedChan),
 
 		quizEngine: quizEngine,
+		rewards:    rewards,
 
 		done: make(chan struct{}),
 	}, nil
@@ -141,6 +147,11 @@ LOOP:
 				go r.sendWinnersTable()
 
 			case status_transactor.WinnersTableAreSent:
+				if err := r.sendRewards(); err != nil {
+					log.Printf("can't send rewards: %v\n", err)
+				}
+
+			case status_transactor.RewardsAreSent:
 				r.st.SetStatus(status_transactor.RoomIsFinished)
 
 			case status_transactor.RoomIsFinished:
@@ -302,7 +313,11 @@ LOOP:
 func (r *defaultRoom) sendWinnersTable() {
 	challenge := r.quizEngine.GetChallenge()
 
-	userIDToPrize := r.quizEngine.GetPrizePoolDistribution()
+	userIDToPrize, err := r.quizEngine.GetPrizePoolDistribution()
+	if err != nil {
+		log.Printf("can't get prize pool distribution: %v\n", err)
+		return
+	}
 	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
 
 	r.playersMutex.Lock()
@@ -353,6 +368,33 @@ func (r *defaultRoom) sendWinnersTable() {
 	r.sendMessageToRoom(msg)
 
 	r.st.SetStatus(status_transactor.WinnersTableAreSent)
+}
+
+func (r *defaultRoom) sendRewards() error {
+	userIDToPrize, err := r.quizEngine.GetPrizePoolDistribution()
+	if err != nil {
+		return errors.Wrapf(err, "can't get prize pool distribution")
+	}
+	challengeID, err := uuid.Parse(r.ChallengeID())
+	if err != nil {
+		return errors.Wrapf(err, "can't parse challenge ID")
+	}
+
+	for userID, prize := range userIDToPrize {
+		err := r.rewards.AddDepositTransaction(
+			context.Background(),
+			userID,
+			challengeID,
+			RelationTypeQuizzes,
+			prize,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "can't add deposit transaction")
+		}
+	}
+
+	r.st.SetStatus(status_transactor.RewardsAreSent)
+	return nil
 }
 
 func (r *defaultRoom) sendMessagesForNewPlayers(p player.Player) {

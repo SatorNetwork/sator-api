@@ -18,7 +18,7 @@ type ResultTable interface {
 	RegisterQuestionSendingEvent(questionNum int) error
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
-	GetPrizePoolDistribution() map[uuid.UUID]float64
+	GetPrizePoolDistribution() (map[uuid.UUID]float64, error)
 	GetWinners() ([]*Winner, error)
 
 	calcWinnersMap() map[uuid.UUID]uint32
@@ -109,7 +109,7 @@ func (rt *resultTable) GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error) 
 	return rt.getCell(userID, qNum)
 }
 
-func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
+func (rt *resultTable) GetPrizePoolDistribution() (map[uuid.UUID]float64, error) {
 	rt.tableMutex.Lock()
 	defer rt.tableMutex.Unlock()
 
@@ -125,21 +125,38 @@ func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 		distribution[userID] = rt.cfg.PrizePool / float64(totalPTS) * float64(pts)
 	}
 
-	return distribution
+	distribution, err := rt.applyStakeLevels(distribution)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't apply stake levels")
+	}
+
+	return distribution, nil
 }
 
-func (rt *resultTable) GetWinners() ([]*Winner, error) {
-	userIDToPrize := rt.GetPrizePoolDistribution()
+func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (map[uuid.UUID]float64, error) {
+	prizeMapWithStakeLevels := make(map[uuid.UUID]float64, len(userIDToPrize))
 
-	winners := make([]*Winner, 0, len(userIDToPrize))
 	for userID, prize := range userIDToPrize {
 		multiplier, err := rt.stakeLevels.GetMultiplier(context.Background(), userID)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get user's multiplier")
 		}
-
 		prize = prize + (prize / 100 * float64(multiplier))
 
+		prizeMapWithStakeLevels[userID] = prize
+	}
+
+	return prizeMapWithStakeLevels, nil
+}
+
+func (rt *resultTable) GetWinners() ([]*Winner, error) {
+	userIDToPrize, err := rt.GetPrizePoolDistribution()
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get prize pool distribution")
+	}
+
+	winners := make([]*Winner, 0, len(userIDToPrize))
+	for userID, prize := range userIDToPrize {
 		winners = append(winners, &Winner{
 			UserID: userID.String(),
 			Prize:  fmt.Sprintf("%v", prize),

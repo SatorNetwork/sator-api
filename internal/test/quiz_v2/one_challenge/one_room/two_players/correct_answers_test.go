@@ -26,6 +26,7 @@ func TestCorrectAnswers(t *testing.T) {
 	c := client.NewClient()
 	defaultChallengeID, err := c.DB.ChallengeDB().DefaultChallengeID(context.Background())
 	require.NoError(t, err)
+	totalRewards := float64(250)
 
 	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	user2 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
@@ -125,4 +126,30 @@ func TestCorrectAnswers(t *testing.T) {
 		err = user1MessageVerifier.Verify()
 		require.NoError(t, err)
 	}
+
+	var user1RewardsAmount float64
+	{
+		rewardsWallet, err := c.Wallet.GetWalletByType(user1.AccessToken(), "rewards")
+		require.NoError(t, err)
+		rewardsWalletDetails, err := c.Wallet.GetWalletByID(user1.AccessToken(), rewardsWallet.GetDetailsUrl)
+		require.NoError(t, err)
+		unclaimedCurrency, err := rewardsWalletDetails.FindUnclaimedCurrency()
+		require.NoError(t, err)
+
+		user1RewardsAmount = unclaimedCurrency.Amount
+	}
+
+	var user2RewardsAmount float64
+	{
+		rewardsWallet, err := c.Wallet.GetWalletByType(user2.AccessToken(), "rewards")
+		require.NoError(t, err)
+		rewardsWalletDetails, err := c.Wallet.GetWalletByID(user2.AccessToken(), rewardsWallet.GetDetailsUrl)
+		require.NoError(t, err)
+		unclaimedCurrency, err := rewardsWalletDetails.FindUnclaimedCurrency()
+		require.NoError(t, err)
+
+		user2RewardsAmount = unclaimedCurrency.Amount
+	}
+
+	require.Equal(t, totalRewards, user1RewardsAmount+user2RewardsAmount)
 }

@@ -569,6 +569,7 @@ func main() {
 			natsWSURL,
 			challengeSvcClient,
 			walletSvcClient,
+			rewardsSvcClient,
 			authClient,
 			serverRSAPrivateKey,
 			quizV2ShuffleQuestions,

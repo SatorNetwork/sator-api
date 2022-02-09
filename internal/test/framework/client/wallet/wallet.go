@@ -60,19 +60,35 @@ type GetWalletByIDResponse struct {
 }
 
 type WalletDetails struct {
-	Id                     string `json:"id"`
-	Order                  int    `json:"order"`
-	SolanaAccountAddress   string `json:"solana_account_address"`
-	EthereumAccountAddress string `json:"ethereum_account_address"`
-	Balance                []struct {
-		Currency string  `json:"currency"`
-		Amount   float64 `json:"amount"`
-	} `json:"balance"`
-	Actions []struct {
+	Id                     string            `json:"id"`
+	Order                  int               `json:"order"`
+	SolanaAccountAddress   string            `json:"solana_account_address"`
+	EthereumAccountAddress string            `json:"ethereum_account_address"`
+	Balance                []CurrencyBalance `json:"balance"`
+	Actions                []struct {
 		Type string `json:"type"`
 		Name string `json:"name"`
 		Url  string `json:"url"`
 	} `json:"actions"`
+}
+
+type CurrencyBalance struct {
+	Currency string  `json:"currency"`
+	Amount   float64 `json:"amount"`
+}
+
+func (w *WalletDetails) FindUnclaimedCurrency() (*CurrencyBalance, error) {
+	return w.findCurrencyByName("UNCLAIMED")
+}
+
+func (w *WalletDetails) findCurrencyByName(currencyName string) (*CurrencyBalance, error) {
+	for _, balance := range w.Balance {
+		if balance.Currency == currencyName {
+			return &balance, nil
+		}
+	}
+
+	return nil, errors.Errorf("currency with %v name not found", currencyName)
 }
 
 type GetWalletTxs struct {

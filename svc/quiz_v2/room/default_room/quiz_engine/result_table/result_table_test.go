@@ -38,7 +38,8 @@ func TestResultTable(t *testing.T) {
 			}
 		}
 
-		userIDToPrice := rt.GetPrizePoolDistribution()
+		userIDToPrice, err := rt.GetPrizePoolDistribution()
+		require.NoError(t, err)
 		require.NotNil(t, userIDToPrice)
 	}
 
@@ -73,7 +74,9 @@ func TestResultTable(t *testing.T) {
 			userID1: 150,
 			userID2: 100,
 		}
-		require.Equal(t, userIDToPrice, rt.GetPrizePoolDistribution())
+		actualUserIDToPrice, err := rt.GetPrizePoolDistribution()
+		require.NoError(t, err)
+		require.Equal(t, userIDToPrice, actualUserIDToPrice)
 	}
 
 	{
@@ -114,6 +117,8 @@ func TestResultTable(t *testing.T) {
 			userID1: 150,
 			userID2: 100,
 		}
-		require.Equal(t, userIDToPrice, rt.GetPrizePoolDistribution())
+		actualUserIDToPrice, err := rt.GetPrizePoolDistribution()
+		require.NoError(t, err)
+		require.Equal(t, userIDToPrice, actualUserIDToPrice)
 	}
 }
