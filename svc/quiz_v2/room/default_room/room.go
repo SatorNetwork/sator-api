@@ -1,7 +1,7 @@
 package default_room
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"log"
 	"sync"
 	"time"
