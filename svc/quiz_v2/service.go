@@ -8,16 +8,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 )
 
 type (
 	Service struct {
-		engine *engine.Engine
+		engine             *engine.Engine
+		restrictionManager restriction_manager.RestrictionManager
 
 		natsURL    string
 		natsWSURL  string
@@ -42,8 +43,11 @@ func NewService(
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
 ) *Service {
+	restrictionManager := restriction_manager.New(challenges)
+
 	s := &Service{
-		engine:              engine.New(challenges, stakeLevels, rewards, shuffleQuestions),
+		engine:              engine.New(challenges, stakeLevels, rewards, restrictionManager, shuffleQuestions),
+		restrictionManager:  restrictionManager,
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,
@@ -55,24 +59,12 @@ func NewService(
 }
 
 func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error) {
-	receivedReward, err := s.challenges.GetChallengeReceivedRewardAmountByUserID(ctx, challengeID, uid)
-	if err != nil && !db.IsNotFoundError(err) {
-		return nil, fmt.Errorf("could not get received reward amount: %w", err)
-	}
-	if receivedReward > 0 {
-		return nil, errors.New("reward has been already received for this challenge")
-	}
-
-	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
+	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid)
 	if err != nil {
-		return nil, fmt.Errorf("could not found challenge: %w", err)
+		return nil, errors.Wrap(err, "can't check if user is restricted")
 	}
-	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
-	if err != nil {
-		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
-	}
-	if attempts >= int64(challengeByID.UserMaxAttempts) {
-		return nil, errors.New("no more attempts left")
+	if restricted {
+		return nil, errors.Errorf("user is restricted for this challenge reason: %v", restrictionReason.String())
 	}
 
 	prefix := uid.String()

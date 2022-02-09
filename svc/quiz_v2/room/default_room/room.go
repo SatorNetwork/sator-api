@@ -2,6 +2,7 @@ package default_room
 
 import (
 	"context"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"log"
 	"sync"
 	"time"
@@ -49,6 +50,7 @@ type defaultRoom struct {
 
 	quizEngine quiz_engine.QuizEngine
 	rewards    interfaces.RewardsService
+	restrictionManager restriction_manager.RestrictionManager
 
 	done chan struct{}
 }
@@ -58,6 +60,7 @@ func New(
 	challenges interfaces.ChallengesService,
 	stakeLevels interfaces.StakeLevels,
 	rewards interfaces.RewardsService,
+	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
 ) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
@@ -82,6 +85,7 @@ func New(
 
 		quizEngine: quizEngine,
 		rewards:    rewards,
+		restrictionManager: restrictionManager,
 
 		done: make(chan struct{}),
 	}, nil
@@ -390,6 +394,13 @@ func (r *defaultRoom) sendRewards() error {
 		)
 		if err != nil {
 			return errors.Wrapf(err, "can't add deposit transaction")
+		}
+	}
+
+	for userID, prize := range userIDToPrize {
+		err := r.restrictionManager.RegisterEarnedReward(context.Background(), challengeID, userID, prize)
+		if err != nil {
+			return errors.Wrapf(err, "can't register earned reward")
 		}
 	}
 
