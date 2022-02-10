@@ -582,8 +582,9 @@ func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return Stake{}, fmt.Errorf("you do not have stake: %w", err)
+			return Stake{}, nil
 		}
+
 		return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
 	}
 
@@ -592,29 +593,37 @@ func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 		return Stake{}, fmt.Errorf("could not get total stake by user id: %w", err)
 	}
 
-	var userStakeLevel repository.StakeLevel
-
-	stakeLevel, err := s.wr.GetAllStakeLevels(ctx)
+	multiplier, err := s.GetMultiplier(ctx, userID)
 	if err != nil {
-		return Stake{}, fmt.Errorf("could not get stake levels list: %w", err)
+		return Stake{}, fmt.Errorf("could not get miltiplier: %w", err)
 	}
 
-	for i := 0; i < len(stakeLevel); i++ {
-		if stakeLevel[i].MinStakeAmount.Float64 < stake.StakeAmount {
-			userStakeLevel = stakeLevel[i]
-			break
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get sao wallet: %w", err)
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Stake{}, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
 		}
+		return Stake{}, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get sao balance: %w", err)
 	}
 
 	return Stake{
-		Staking: Staking{
-			TotalStaked: totalStake,
-			Staked:      stake.StakeAmount,
-		},
-		Loyalty: Loyalty{
-			LevelTitle:    userStakeLevel.Title,
-			LevelSubtitle: userStakeLevel.Subtitle,
-		},
+		TotalLocked:       totalStake,
+		LockedByYou:       stake.StakeAmount,
+		CurrentMultiplier: multiplier,
+		AvailableToLock:   bal,
 	}, nil
 }
 
@@ -665,25 +674,26 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 				UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
 			})
 			if err != nil {
-				return false, fmt.Errorf("could not add stake for user= %v, %w", userID, err)
+				return true, fmt.Errorf("could not add stake to db for user= %v, %w", userID, err)
 			}
 
 			return true, nil
 		}
-		err := s.wr.UpdateStake(ctx, repository.UpdateStakeParams{
-			UserID:      userID,
-			StakeAmount: staked.StakeAmount + amount,
-			StakeDuration: sql.NullInt32{
-				Int32: int32(duration),
-				Valid: true,
-			},
-			UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
-		})
-		if err != nil {
-			return false, fmt.Errorf("could not update stake for user= %v, %w", userID, err)
-		}
 
-		return false, fmt.Errorf("could not get stake for user= %v, %w", userID, err)
+		return true, fmt.Errorf("could not get stake from db for user= %v, %w", userID, err)
+	}
+
+	err = s.wr.UpdateStake(ctx, repository.UpdateStakeParams{
+		UserID:      userID,
+		StakeAmount: staked.StakeAmount + amount,
+		StakeDuration: sql.NullInt32{
+			Int32: int32(duration),
+			Valid: true,
+		},
+		UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+	})
+	if err != nil {
+		return true, fmt.Errorf("could not update stake in db for user= %v, %w", userID, err)
 	}
 
 	return true, nil
@@ -897,6 +907,41 @@ func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32,
 		}
 
 		if stakeLevels[i].MinStakeAmount.Float64 < stake.StakeAmount && stakeLevels[i].MinDaysAmount.Int32 < stake.StakeDuration.Int32 {
+			return stakeLevels[i].Multiplier.Int32, nil
+		}
+	}
+
+	return 0, nil
+}
+
+// PossibleMultiplier returns multiplier that will be applied to user in stake will be increased on additionalAmount value.
+func (s *Service) PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error) {
+	stakeLevels, err := s.wr.GetAllStakeLevels(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("could not get stake levels: %w", err)
+	}
+
+	var amount float64
+
+	staked, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			amount = 0
+		} else {
+			return 0, fmt.Errorf("could not get staked amount: %w", err)
+		}
+	} else {
+		amount = staked.StakeAmount
+	}
+
+	amount = amount + additionalAmount
+
+	for i := 0; i < len(stakeLevels); i++ {
+		if stakeLevels[i].Disabled.Bool {
+			continue
+		}
+
+		if stakeLevels[i].MinStakeAmount.Float64 < amount {
 			return stakeLevels[i].Multiplier.Int32, nil
 		}
 	}

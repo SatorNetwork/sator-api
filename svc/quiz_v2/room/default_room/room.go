@@ -310,6 +310,13 @@ func (r *defaultRoom) runQuestions() {
 	challenge := r.quizEngine.GetChallenge()
 	questions := r.quizEngine.GetQuestions()
 
+	// if there are no questions - return from the function with correct status and move on
+	// it should NOT happen - just precautionary measure to avoid panics (in case challenge isn't properly setup)
+	if len(questions) == 0 {
+		r.st.SetStatus(status_transactor.QuestionAreSentStatus)
+		return
+	}
+
 	// first question should be sent without ticker delay
 	r.questionChan <- &questionWrapper{
 		question:    questions[0],
