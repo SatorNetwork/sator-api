@@ -1245,21 +1245,12 @@ paths:
                     staking:
                       type: object
                       properties:
-                        asset_name:
-                          type: string
-                          example: "SAO"
-                        apy:
-                          type: number
-                          example: 123
                         total_staked:
                           type: number
                           example: 12345
                         staked:
                           type: number
                           example: 100000
-                        your_share:
-                          type: number
-                          example: 1000
                     loyalty:
                       type: object
                       properties:
@@ -1290,16 +1281,6 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                amount:
-                  type: number
-                  example: 1000
       responses:
         "200":
           description: staked successfully.

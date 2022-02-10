@@ -121,23 +121,9 @@ type (
 )
 
 // Stake details
-type (
-	// Stake struct
-	Stake struct {
-		Staking Staking `json:"staking"`
-		Loyalty Loyalty `json:"loyalty"`
-	}
-
-	// Staking struct
-	Staking struct {
-		TotalStaked float64 `json:"total_staked"`
-		Staked      float64 `json:"staked"`
-		YourShare   float64 `json:",omitempty"`
-	}
-
-	// Loyalty struct
-	Loyalty struct {
-		LevelTitle    string `json:"level_title"`
-		LevelSubtitle string `json:"level_subtitle"`
-	}
-)
+type Stake struct {
+	TotalLocked       float64
+	LockedByYou       float64
+	CurrentMultiplier int32
+	AvailableToLock   float64
+}

@@ -94,6 +94,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/{wallet_id}/possible-multiplier", httptransport.NewServer(
+		e.PossibleMultiplier,
+		decodePossibleMultiplierRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -181,4 +188,14 @@ func decodeUnstakeRequest(_ context.Context, r *http.Request) (interface{}, erro
 		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
 	}
 	return id, nil
+}
+
+func decodePossibleMultiplierRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req PossibleMultiplierRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	req.WalletID = chi.URLParam(r, "wallet_id")
+
+	return req, nil
 }

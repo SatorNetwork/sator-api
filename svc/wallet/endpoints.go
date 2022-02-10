@@ -25,6 +25,7 @@ type (
 		GetStake                      endpoint.Endpoint
 		SetStake                      endpoint.Endpoint
 		Unstake                       endpoint.Endpoint
+		PossibleMultiplier            endpoint.Endpoint
 	}
 
 	service interface {
@@ -36,6 +37,7 @@ type (
 		GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
+		PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error)
 	}
 
 	CreateTransferRequest struct {
@@ -67,6 +69,12 @@ type (
 	UnstakeRequest struct {
 		WalletID string `json:"wallet_id" validate:"required,uuid"`
 	}
+
+	// PossibleMultiplierRequest struct
+	PossibleMultiplierRequest struct {
+		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
+		WalletID string  `json:"wallet_id" validate:"required,uuid"`
+	}
 )
 
 var StakeDuration = env.GetInt("SMART_CONTRACT_STAKE_DURATION", 0)
@@ -83,6 +91,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
 		Unstake:                       MakeUnstakeEndpoint(s, validateFunc),
+		PossibleMultiplier:            MakePossibleMultiplierEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -96,6 +105,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.SetStake = mdw(e.SetStake)
 			e.GetStake = mdw(e.GetStake)
 			e.Unstake = mdw(e.Unstake)
+			e.PossibleMultiplier = mdw(e.PossibleMultiplier)
 		}
 	}
 
@@ -302,5 +312,35 @@ func MakeUnstakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 		}
 
 		return nil, nil
+	}
+}
+
+func MakePossibleMultiplierEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(SetStakeRequest)
+		if err := v(req); err != nil {
+			return false, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		walletID, err := uuid.Parse(req.WalletID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid wallet id: %w", err)
+		}
+
+		multiplier, err := s.PossibleMultiplier(ctx, req.Amount, uid, walletID)
+		if err != nil {
+			return nil, err
+		}
+
+		return multiplier, nil
 	}
 }
