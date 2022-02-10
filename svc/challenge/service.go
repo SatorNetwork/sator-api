@@ -15,6 +15,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	defaultQuestionsPerGame = 5
+)
+
 type (
 	// Service struct
 	Service struct {
@@ -487,6 +491,10 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		return Challenge{}, fmt.Errorf("min correct answers should be less or equal to questings per game")
 	}
 
+	if ch.QuestionsPerGame == 0 {
+		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+
 	params := repository.AddChallengeParams{
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
@@ -539,6 +547,10 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
 		return fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
+	if ch.QuestionsPerGame == 0 {
+		ch.QuestionsPerGame = defaultQuestionsPerGame
 	}
 
 	params := repository.UpdateChallengeParams{
