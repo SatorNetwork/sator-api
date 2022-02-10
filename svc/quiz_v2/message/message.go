@@ -224,6 +224,7 @@ type WinnersTableMessage struct {
 	PrizePool             string             `json:"prize_pool"`
 	ShowTransactionURL    string             `json:"show_transaction_url"`
 	Winners               []*Winner          `json:"winners"`
+	Losers                []*Loser           `json:"losers"`
 	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
 }
 
@@ -231,6 +232,12 @@ type Winner struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	Prize    string `json:"prize"`
+}
+
+type Loser struct {
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	PTS      uint32 `json:"pts"`
 }
 
 func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {
