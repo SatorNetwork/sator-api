@@ -152,6 +152,19 @@ func (q *Queries) GetEpisodeByID(ctx context.Context, id uuid.UUID) (GetEpisodeB
 	return i, err
 }
 
+const getEpisodeIDByQuizChallengeID = `-- name: GetEpisodeIDByQuizChallengeID :one
+SELECT id
+FROM episodes
+WHERE challenge_id = $1
+`
+
+func (q *Queries) GetEpisodeIDByQuizChallengeID(ctx context.Context, challengeID uuid.NullUUID) (uuid.UUID, error) {
+	row := q.queryRow(ctx, q.getEpisodeIDByQuizChallengeIDStmt, getEpisodeIDByQuizChallengeID, challengeID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getEpisodeIDByVerificationChallengeID = `-- name: GetEpisodeIDByVerificationChallengeID :one
 SELECT id
 FROM episodes

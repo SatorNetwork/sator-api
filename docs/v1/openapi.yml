@@ -2860,6 +2860,12 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3123"
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3124"
                   title:
                     type: string
                     example: "Challenge name"
@@ -2893,6 +2899,9 @@ paths:
                   received_reward:
                     type: number
                     example: 123.456
+                  is_realm_activated:
+                    type: boolean
+                    example: true
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

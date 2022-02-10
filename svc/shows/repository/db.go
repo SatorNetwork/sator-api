@@ -73,6 +73,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEpisodeByIDStmt, err = db.PrepareContext(ctx, getEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeByID: %w", err)
 	}
+	if q.getEpisodeIDByQuizChallengeIDStmt, err = db.PrepareContext(ctx, getEpisodeIDByQuizChallengeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEpisodeIDByQuizChallengeID: %w", err)
+	}
 	if q.getEpisodeIDByVerificationChallengeIDStmt, err = db.PrepareContext(ctx, getEpisodeIDByVerificationChallengeID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeIDByVerificationChallengeID: %w", err)
 	}
@@ -236,6 +239,11 @@ func (q *Queries) Close() error {
 	if q.getEpisodeByIDStmt != nil {
 		if cerr := q.getEpisodeByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEpisodeByIDStmt: %w", cerr)
+		}
+	}
+	if q.getEpisodeIDByQuizChallengeIDStmt != nil {
+		if cerr := q.getEpisodeIDByQuizChallengeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEpisodeIDByQuizChallengeIDStmt: %w", cerr)
 		}
 	}
 	if q.getEpisodeIDByVerificationChallengeIDStmt != nil {
@@ -419,6 +427,7 @@ type Queries struct {
 	didUserReviewEpisodeStmt                  *sql.Stmt
 	getCategoriesByShowIDStmt                 *sql.Stmt
 	getEpisodeByIDStmt                        *sql.Stmt
+	getEpisodeIDByQuizChallengeIDStmt         *sql.Stmt
 	getEpisodeIDByVerificationChallengeIDStmt *sql.Stmt
 	getEpisodeRatingByIDStmt                  *sql.Stmt
 	getEpisodesByShowIDStmt                   *sql.Stmt
@@ -448,25 +457,26 @@ type Queries struct {
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                               tx,
-		tx:                               tx,
-		addClapForShowStmt:               q.addClapForShowStmt,
-		addEpisodeStmt:                   q.addEpisodeStmt,
-		addSeasonStmt:                    q.addSeasonStmt,
-		addShowStmt:                      q.addShowStmt,
-		addShowCategoryStmt:              q.addShowCategoryStmt,
-		addShowToCategoryStmt:            q.addShowToCategoryStmt,
-		countUserClapsStmt:               q.countUserClapsStmt,
-		deleteEpisodeByIDStmt:            q.deleteEpisodeByIDStmt,
-		deleteReviewStmt:                 q.deleteReviewStmt,
-		deleteSeasonByIDStmt:             q.deleteSeasonByIDStmt,
-		deleteShowByIDStmt:               q.deleteShowByIDStmt,
-		deleteShowCategoryByIDStmt:       q.deleteShowCategoryByIDStmt,
-		deleteShowToCategoryByShowIDStmt: q.deleteShowToCategoryByShowIDStmt,
-		didUserRateEpisodeStmt:           q.didUserRateEpisodeStmt,
-		didUserReviewEpisodeStmt:         q.didUserReviewEpisodeStmt,
-		getCategoriesByShowIDStmt:        q.getCategoriesByShowIDStmt,
-		getEpisodeByIDStmt:               q.getEpisodeByIDStmt,
+		db:                                tx,
+		tx:                                tx,
+		addClapForShowStmt:                q.addClapForShowStmt,
+		addEpisodeStmt:                    q.addEpisodeStmt,
+		addSeasonStmt:                     q.addSeasonStmt,
+		addShowStmt:                       q.addShowStmt,
+		addShowCategoryStmt:               q.addShowCategoryStmt,
+		addShowToCategoryStmt:             q.addShowToCategoryStmt,
+		countUserClapsStmt:                q.countUserClapsStmt,
+		deleteEpisodeByIDStmt:             q.deleteEpisodeByIDStmt,
+		deleteReviewStmt:                  q.deleteReviewStmt,
+		deleteSeasonByIDStmt:              q.deleteSeasonByIDStmt,
+		deleteShowByIDStmt:                q.deleteShowByIDStmt,
+		deleteShowCategoryByIDStmt:        q.deleteShowCategoryByIDStmt,
+		deleteShowToCategoryByShowIDStmt:  q.deleteShowToCategoryByShowIDStmt,
+		didUserRateEpisodeStmt:            q.didUserRateEpisodeStmt,
+		didUserReviewEpisodeStmt:          q.didUserReviewEpisodeStmt,
+		getCategoriesByShowIDStmt:         q.getCategoriesByShowIDStmt,
+		getEpisodeByIDStmt:                q.getEpisodeByIDStmt,
+		getEpisodeIDByQuizChallengeIDStmt: q.getEpisodeIDByQuizChallengeIDStmt,
 		getEpisodeIDByVerificationChallengeIDStmt: q.getEpisodeIDByVerificationChallengeIDStmt,
 		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,

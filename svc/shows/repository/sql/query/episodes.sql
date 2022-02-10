@@ -80,6 +80,11 @@ SELECT id
 FROM episodes
 WHERE verification_challenge_id = $1;
 
+-- name: GetEpisodeIDByQuizChallengeID :one
+SELECT id
+FROM episodes
+WHERE challenge_id = $1;
+
 -- name: GetListEpisodesByIDs :many
 SELECT
     episodes.*,
