@@ -15,6 +15,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	defaultMaxWinners        = 1
+	defaultQuestionsPerGame  = 5
+	defaultMinCorrectAnswers = 1
+)
+
 type (
 	// Service struct
 	Service struct {
@@ -449,6 +455,10 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		MinCorrectAnswers:  c.MinCorrectAnswers,
 	}
 
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
+
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
 		ch.EpisodeID = &c.EpisodeID.UUID
 	}
@@ -485,6 +495,16 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, error) {
 	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
 		return Challenge{}, fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
+	if ch.QuestionsPerGame == 0 {
+		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+	if ch.MinCorrectAnswers == 0 {
+		ch.MinCorrectAnswers = defaultMinCorrectAnswers
 	}
 
 	params := repository.AddChallengeParams{
@@ -539,6 +559,16 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
 		return fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
+	if ch.QuestionsPerGame == 0 {
+		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+	if ch.MinCorrectAnswers == 0 {
+		ch.MinCorrectAnswers = defaultMinCorrectAnswers
 	}
 
 	params := repository.UpdateChallengeParams{
