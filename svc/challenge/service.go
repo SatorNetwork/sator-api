@@ -16,7 +16,9 @@ import (
 )
 
 const (
-	defaultQuestionsPerGame = 5
+	defaultMaxWinners        = 1
+	defaultQuestionsPerGame  = 5
+	defaultMinCorrectAnswers = 1
 )
 
 type (
@@ -491,8 +493,14 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		return Challenge{}, fmt.Errorf("min correct answers should be less or equal to questings per game")
 	}
 
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
 	if ch.QuestionsPerGame == 0 {
 		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+	if ch.MinCorrectAnswers == 0 {
+		ch.MinCorrectAnswers = defaultMinCorrectAnswers
 	}
 
 	params := repository.AddChallengeParams{
@@ -549,8 +557,14 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		return fmt.Errorf("min correct answers should be less or equal to questings per game")
 	}
 
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
 	if ch.QuestionsPerGame == 0 {
 		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+	if ch.MinCorrectAnswers == 0 {
+		ch.MinCorrectAnswers = defaultMinCorrectAnswers
 	}
 
 	params := repository.UpdateChallengeParams{
