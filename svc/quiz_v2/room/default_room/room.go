@@ -48,8 +48,8 @@ type defaultRoom struct {
 	statusIsUpdatedChan chan struct{}
 	st                  *status_transactor.StatusTransactor
 
-	quizEngine quiz_engine.QuizEngine
-	rewards    interfaces.RewardsService
+	quizEngine         quiz_engine.QuizEngine
+	rewards            interfaces.RewardsService
 	restrictionManager restriction_manager.RestrictionManager
 
 	done chan struct{}
@@ -83,8 +83,8 @@ func New(
 		statusIsUpdatedChan: statusIsUpdatedChan,
 		st:                  status_transactor.New(statusIsUpdatedChan),
 
-		quizEngine: quizEngine,
-		rewards:    rewards,
+		quizEngine:         quizEngine,
+		rewards:            rewards,
 		restrictionManager: restrictionManager,
 
 		done: make(chan struct{}),
@@ -145,12 +145,14 @@ LOOP:
 				go r.runCountdown()
 
 			case status_transactor.CountdownFinishedStatus:
+				go r.registerAttempts()
 				go r.runQuestions()
 
 			case status_transactor.QuestionAreSentStatus:
 				go r.sendWinnersTable()
 
 			case status_transactor.WinnersTableAreSent:
+				// TODO(evg): run as a goroutine?
 				if err := r.sendRewards(); err != nil {
 					log.Printf("can't send rewards: %v\n", err)
 				}
@@ -280,6 +282,31 @@ LOOP:
 	time.Sleep(time.Second)
 
 	r.st.SetStatus(status_transactor.CountdownFinishedStatus)
+}
+
+func (r *defaultRoom) registerAttempts() {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	challengeID, err := uuid.Parse(r.ChallengeID())
+	if err != nil {
+		log.Printf("can't parse challenge ID: %v\n", err)
+		return
+	}
+
+	for _, p := range r.players {
+		playerID, err := uuid.Parse(p.ID())
+		if err != nil {
+			log.Printf("can't parse player ID: %v\n", err)
+			return
+		}
+
+		err = r.restrictionManager.RegisterAttempt(context.Background(), challengeID, playerID)
+		if err != nil {
+			log.Printf("can't register challenge attempt: %v\n", err)
+			return
+		}
+	}
 }
 
 func (r *defaultRoom) runQuestions() {

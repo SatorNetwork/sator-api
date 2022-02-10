@@ -35,6 +35,7 @@ type (
 	RestrictionManager interface {
 		IsUserRestricted(ctx context.Context, challengeID, userID uuid.UUID) (bool, restrictionReason, error)
 		RegisterEarnedReward(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
+		RegisterAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
 	}
 
 	restrictionManager struct {
@@ -46,6 +47,7 @@ type (
 		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
 		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
+		StoreChallengeAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
 	}
 )
 
@@ -81,4 +83,8 @@ func (m *restrictionManager) IsUserRestricted(ctx context.Context, challengeID, 
 
 func (m *restrictionManager) RegisterEarnedReward(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error {
 	return m.challenge.StoreChallengeReceivedRewardAmount(ctx, challengeID, userID, rewardAmount)
+}
+
+func (m *restrictionManager) RegisterAttempt(ctx context.Context, challengeID, userID uuid.UUID) error {
+	return m.challenge.StoreChallengeAttempt(ctx, challengeID, userID)
 }
