@@ -241,12 +241,8 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 		}
 	}
 
-	epID, err := s.showRepo.GetEpisodeIDByQuizChallengeID(ctx, uuid.NullUUID{UUID: challengeID, Valid: true})
-	if err != nil {
-		return Challenge{}, fmt.Errorf("could not get realm for this quiz")
-	}
-
 	// Check if a user has access to the challenge
+	epID, _ := s.showRepo.GetEpisodeIDByQuizChallengeID(ctx, uuid.NullUUID{UUID: challengeID, Valid: true})
 	res, _ := s.VerifyUserAccessToEpisode(ctx, userID, epID)
 
 	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward, &epID, res.Result), nil
