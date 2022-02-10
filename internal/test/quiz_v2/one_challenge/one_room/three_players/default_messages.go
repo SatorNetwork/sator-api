@@ -35,6 +35,12 @@ var (
 			},
 		},
 		{
+			MessageType: message.CountdownMessageType,
+			CountdownMessage: &message.CountdownMessage{
+				SecondsLeft: 0,
+			},
+		},
+		{
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "Joey played Dr. Drake Ramoray on which soap opera show?",
