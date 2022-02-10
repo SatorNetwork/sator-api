@@ -19,6 +19,7 @@ type ResultTable interface {
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
 	GetPrizePoolDistribution() (map[uuid.UUID]float64, error)
+	GetWinnersAndLosers() ([]*Winner, []*Loser, error)
 	GetWinners() ([]*Winner, error)
 
 	calcWinnersMap() map[uuid.UUID]uint32
@@ -34,6 +35,11 @@ type user struct {
 type Winner struct {
 	UserID string
 	Prize  string
+}
+
+type Loser struct {
+	UserID string
+	PTS    uint32
 }
 
 type Config struct {
@@ -147,6 +153,38 @@ func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (ma
 	}
 
 	return prizeMapWithStakeLevels, nil
+}
+
+func (rt *resultTable) GetWinnersAndLosers() ([]*Winner, []*Loser, error) {
+	winners, err := rt.GetWinners()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "can't get winners")
+	}
+
+	losers := make([]*Loser, 0)
+	ptsMap := rt.calcPTSMap()
+	for userID, pts := range ptsMap {
+		if isWinner(winners, userID) {
+			continue
+		}
+
+		losers = append(losers, &Loser{
+			UserID: userID.String(),
+			PTS:    pts,
+		})
+	}
+
+	return winners, losers, nil
+}
+
+func isWinner(winners []*Winner, userID uuid.UUID) bool {
+	for _, w := range winners {
+		if w.UserID == userID.String() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (rt *resultTable) GetWinners() ([]*Winner, error) {
