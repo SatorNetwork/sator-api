@@ -152,10 +152,7 @@ LOOP:
 				go r.sendWinnersTable()
 
 			case status_transactor.WinnersTableAreSent:
-				// TODO(evg): run as a goroutine?
-				if err := r.sendRewards(); err != nil {
-					log.Printf("can't send rewards: %v\n", err)
-				}
+				go r.sendRewards()
 
 			case status_transactor.RewardsAreSent:
 				r.st.SetStatus(status_transactor.RoomIsFinished)
@@ -401,14 +398,16 @@ func (r *defaultRoom) sendWinnersTable() {
 	r.st.SetStatus(status_transactor.WinnersTableAreSent)
 }
 
-func (r *defaultRoom) sendRewards() error {
+func (r *defaultRoom) sendRewards() {
 	userIDToPrize, err := r.quizEngine.GetPrizePoolDistribution()
 	if err != nil {
-		return errors.Wrapf(err, "can't get prize pool distribution")
+		log.Printf("can't get prize pool distribution: %v\n", err)
+		return
 	}
 	challengeID, err := uuid.Parse(r.ChallengeID())
 	if err != nil {
-		return errors.Wrapf(err, "can't parse challenge ID")
+		log.Printf("can't parse challenge ID: %v\n", err)
+		return
 	}
 
 	for userID, prize := range userIDToPrize {
@@ -420,19 +419,20 @@ func (r *defaultRoom) sendRewards() error {
 			prize,
 		)
 		if err != nil {
-			return errors.Wrapf(err, "can't add deposit transaction")
+			log.Printf("can't add deposit transaction: %v\n", err)
+			continue
 		}
 	}
 
 	for userID, prize := range userIDToPrize {
 		err := r.restrictionManager.RegisterEarnedReward(context.Background(), challengeID, userID, prize)
 		if err != nil {
-			return errors.Wrapf(err, "can't register earned reward")
+			log.Printf("can't register earned reward: %v\n", err)
+			return
 		}
 	}
 
 	r.st.SetStatus(status_transactor.RewardsAreSent)
-	return nil
 }
 
 func (r *defaultRoom) sendMessagesForNewPlayers(p player.Player) {
