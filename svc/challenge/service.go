@@ -455,6 +455,10 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		MinCorrectAnswers:  c.MinCorrectAnswers,
 	}
 
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
+
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
 		ch.EpisodeID = &c.EpisodeID.UUID
 	}
