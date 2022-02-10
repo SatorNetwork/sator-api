@@ -333,7 +333,7 @@ func (r *defaultRoom) sendWinnersTable() {
 		usernameIDToPrize[username] = prize
 	}
 
-	winners, err := r.quizEngine.GetWinners()
+	winners, losers, err := r.quizEngine.GetWinnersAndLosers()
 	if err != nil {
 		log.Printf("can't get winners: %v\n", err)
 		return
@@ -357,6 +357,18 @@ func (r *defaultRoom) sendWinnersTable() {
 			Prize:    w.Prize,
 		})
 	}
+
+	msgLosers := make([]*message.Loser, 0, len(losers))
+	for _, loser := range losers {
+		username := r.players[loser.UserID].Username()
+
+		msgLosers = append(msgLosers, &message.Loser{
+			UserID:   loser.UserID,
+			Username: username,
+			PTS:      loser.PTS,
+		})
+	}
+
 	r.playersMutex.Unlock()
 
 	payload := message.WinnersTableMessage{
@@ -364,6 +376,7 @@ func (r *defaultRoom) sendWinnersTable() {
 		PrizePool:             challenge.PrizePool,
 		ShowTransactionURL:    "TODO",
 		Winners:               msgWinners,
+		Losers:                msgLosers,
 		PrizePoolDistribution: usernameIDToPrize,
 	}
 	msg, err := message.NewWinnersTableMessage(&payload)
