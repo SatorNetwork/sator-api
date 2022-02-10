@@ -298,13 +298,13 @@ func (r *defaultRoom) registerAttempts() {
 		playerID, err := uuid.Parse(p.ID())
 		if err != nil {
 			log.Printf("can't parse player ID: %v\n", err)
-			return
+			continue
 		}
 
 		err = r.restrictionManager.RegisterAttempt(context.Background(), challengeID, playerID)
 		if err != nil {
 			log.Printf("can't register challenge attempt: %v\n", err)
-			return
+			continue
 		}
 	}
 }
