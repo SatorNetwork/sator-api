@@ -42,6 +42,7 @@ type (
 	showsRepository interface {
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetEpisodeByIDRow, error)
 		GetEpisodeIDByVerificationChallengeID(ctx context.Context, verificationChallengeID uuid.NullUUID) (uuid.UUID, error)
+		GetEpisodeIDByQuizChallengeID(ctx context.Context, quizChallengeID uuid.NullUUID) (uuid.UUID, error)
 	}
 
 	challengesRepository interface {
@@ -118,6 +119,7 @@ type (
 		MaxWinners         int32      `json:"max_winners"`
 		QuestionsPerGame   int32      `json:"questions_per_game"`
 		MinCorrectAnswers  int32      `json:"min_correct_answers"`
+		IsRealmActivated   bool       `json:"is_realm_activated"`
 	}
 
 	RawChallenge struct {
@@ -239,7 +241,11 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 		}
 	}
 
-	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward), nil
+	// Check if a user has access to the challenge
+	epID, _ := s.showRepo.GetEpisodeIDByQuizChallengeID(ctx, uuid.NullUUID{UUID: challengeID, Valid: true})
+	res, _ := s.VerifyUserAccessToEpisode(ctx, userID, epID)
+
+	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward, &epID, res.Result), nil
 }
 
 func (s *Service) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (RawChallenge, error) {
@@ -369,20 +375,20 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 }
 
 // VerifyUserAccessToEpisode ...
-func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
+func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (EpisodeAccess, error) {
 	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
 		EpisodeID: eid,
 		UserID:    uid,
 	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return false, nil
+			return EpisodeAccess{Result: false}, nil
 		}
-		return false, fmt.Errorf("could not get episode access data: %w", err)
+		return EpisodeAccess{Result: false}, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
 	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid || data.ActivatedBefore.Time.Before(time.Now()) {
-		return false, nil
+		return EpisodeAccess{Result: false}, nil
 	}
 
 	return EpisodeAccess{
@@ -427,16 +433,17 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 				attemptsLeft = 0
 			}
 		}
-		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward))
+		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward, nil, false))
 	}
 
 	return result, nil
 }
 
-func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64) Challenge {
+func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64, epID *uuid.UUID, isActivated bool) Challenge {
 	ch := Challenge{
 		ID:                 c.ID,
 		ShowID:             c.ShowID,
+		EpisodeID:          epID,
 		Title:              c.Title,
 		Description:        c.Description.String,
 		PrizePool:          fmt.Sprintf("%.2f SAO", c.PrizePool),
@@ -453,6 +460,7 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		MaxWinners:         c.MaxWinners.Int32,
 		QuestionsPerGame:   c.QuestionsPerGame,
 		MinCorrectAnswers:  c.MinCorrectAnswers,
+		IsRealmActivated:   isActivated,
 	}
 
 	if ch.MaxWinners == 0 {
@@ -543,7 +551,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
 
-	return castToChallenge(challenge, s.playUrlFn, 0, 0), nil
+	return castToChallenge(challenge, s.playUrlFn, 0, 0, nil, false), nil
 }
 
 // DeleteChallengeByID ...
