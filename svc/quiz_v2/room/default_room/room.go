@@ -2,6 +2,7 @@ package default_room
 
 import (
 	"context"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"log"
 	"sync"
 	"time"
@@ -47,8 +48,9 @@ type defaultRoom struct {
 	statusIsUpdatedChan chan struct{}
 	st                  *status_transactor.StatusTransactor
 
-	quizEngine quiz_engine.QuizEngine
-	rewards    interfaces.RewardsService
+	quizEngine         quiz_engine.QuizEngine
+	rewards            interfaces.RewardsService
+	restrictionManager restriction_manager.RestrictionManager
 
 	done chan struct{}
 }
@@ -58,6 +60,7 @@ func New(
 	challenges interfaces.ChallengesService,
 	stakeLevels interfaces.StakeLevels,
 	rewards interfaces.RewardsService,
+	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
 ) (*defaultRoom, error) {
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
@@ -80,8 +83,9 @@ func New(
 		statusIsUpdatedChan: statusIsUpdatedChan,
 		st:                  status_transactor.New(statusIsUpdatedChan),
 
-		quizEngine: quizEngine,
-		rewards:    rewards,
+		quizEngine:         quizEngine,
+		rewards:            rewards,
+		restrictionManager: restrictionManager,
 
 		done: make(chan struct{}),
 	}, nil
@@ -141,15 +145,14 @@ LOOP:
 				go r.runCountdown()
 
 			case status_transactor.CountdownFinishedStatus:
+				go r.registerAttempts()
 				go r.runQuestions()
 
 			case status_transactor.QuestionAreSentStatus:
 				go r.sendWinnersTable()
 
 			case status_transactor.WinnersTableAreSent:
-				if err := r.sendRewards(); err != nil {
-					log.Printf("can't send rewards: %v\n", err)
-				}
+				go r.sendRewards()
 
 			case status_transactor.RewardsAreSent:
 				r.st.SetStatus(status_transactor.RoomIsFinished)
@@ -278,6 +281,31 @@ LOOP:
 	r.st.SetStatus(status_transactor.CountdownFinishedStatus)
 }
 
+func (r *defaultRoom) registerAttempts() {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	challengeID, err := uuid.Parse(r.ChallengeID())
+	if err != nil {
+		log.Printf("can't parse challenge ID: %v\n", err)
+		return
+	}
+
+	for _, p := range r.players {
+		playerID, err := uuid.Parse(p.ID())
+		if err != nil {
+			log.Printf("can't parse player ID: %v\n", err)
+			continue
+		}
+
+		err = r.restrictionManager.RegisterAttempt(context.Background(), challengeID, playerID)
+		if err != nil {
+			log.Printf("can't register challenge attempt: %v\n", err)
+			continue
+		}
+	}
+}
+
 func (r *defaultRoom) runQuestions() {
 	challenge := r.quizEngine.GetChallenge()
 	questions := r.quizEngine.GetQuestions()
@@ -390,14 +418,16 @@ func (r *defaultRoom) sendWinnersTable() {
 	r.st.SetStatus(status_transactor.WinnersTableAreSent)
 }
 
-func (r *defaultRoom) sendRewards() error {
+func (r *defaultRoom) sendRewards() {
 	userIDToPrize, err := r.quizEngine.GetPrizePoolDistribution()
 	if err != nil {
-		return errors.Wrapf(err, "can't get prize pool distribution")
+		log.Printf("can't get prize pool distribution: %v\n", err)
+		return
 	}
 	challengeID, err := uuid.Parse(r.ChallengeID())
 	if err != nil {
-		return errors.Wrapf(err, "can't parse challenge ID")
+		log.Printf("can't parse challenge ID: %v\n", err)
+		return
 	}
 
 	for userID, prize := range userIDToPrize {
@@ -409,12 +439,20 @@ func (r *defaultRoom) sendRewards() error {
 			prize,
 		)
 		if err != nil {
-			return errors.Wrapf(err, "can't add deposit transaction")
+			log.Printf("can't add deposit transaction: %v\n", err)
+			continue
+		}
+	}
+
+	for userID, prize := range userIDToPrize {
+		err := r.restrictionManager.RegisterEarnedReward(context.Background(), challengeID, userID, prize)
+		if err != nil {
+			log.Printf("can't register earned reward: %v\n", err)
+			return
 		}
 	}
 
 	r.st.SetStatus(status_transactor.RewardsAreSent)
-	return nil
 }
 
 func (r *defaultRoom) sendMessagesForNewPlayers(p player.Player) {

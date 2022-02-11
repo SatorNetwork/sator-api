@@ -152,4 +152,14 @@ func TestCorrectAnswers(t *testing.T) {
 	}
 
 	require.Equal(t, totalRewards, user1RewardsAmount+user2RewardsAmount)
+
+	{
+		_, err := c.QuizV2Client.GetQuizLink(user1.AccessToken(), defaultChallengeID.String())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "reward has been already received for this challenge")
+
+		_, err = c.QuizV2Client.GetQuizLink(user2.AccessToken(), defaultChallengeID.String())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "reward has been already received for this challenge")
+	}
 }
