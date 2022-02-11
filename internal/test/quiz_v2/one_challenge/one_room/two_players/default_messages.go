@@ -40,7 +40,7 @@ var (
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "Joey played Dr. Drake Ramoray on which soap opera show?",
-				TimeForAnswer:  0,
+				TimeForAnswer:  1,
 				QuestionNumber: 0,
 				AnswerOptions: []message.AnswerOption{
 					{
@@ -69,7 +69,7 @@ var (
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "What store does Phoebe hate?",
-				TimeForAnswer:  0,
+				TimeForAnswer:  1,
 				QuestionNumber: 1,
 				AnswerOptions: []message.AnswerOption{
 					{
@@ -98,7 +98,7 @@ var (
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "Rachel got a job with which company in Paris?",
-				TimeForAnswer:  0,
+				TimeForAnswer:  1,
 				QuestionNumber: 2,
 				AnswerOptions: []message.AnswerOption{
 					{
@@ -127,7 +127,7 @@ var (
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "Phoebe’s scientist boyfriend David worked in what city?",
-				TimeForAnswer:  0,
+				TimeForAnswer:  1,
 				QuestionNumber: 3,
 				AnswerOptions: []message.AnswerOption{
 					{
@@ -156,7 +156,7 @@ var (
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "Monica dated an ophthalmologist named?",
-				TimeForAnswer:  0,
+				TimeForAnswer:  1,
 				QuestionNumber: 4,
 				AnswerOptions: []message.AnswerOption{
 					{
