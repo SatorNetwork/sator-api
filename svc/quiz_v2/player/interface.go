@@ -8,6 +8,7 @@ import (
 type Player interface {
 	ID() string
 	Username() string
+	Avatar() string
 	ChallengeID() string
 	Start() error
 	SendMessage(msg *message.Message) error

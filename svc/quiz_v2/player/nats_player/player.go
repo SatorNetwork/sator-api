@@ -25,6 +25,7 @@ const (
 type natsPlayer struct {
 	id          string
 	username    string
+	avatar      string
 	challengeID string
 
 	sendMessageSubj           string
@@ -54,6 +55,7 @@ func NewNatsPlayer(
 	userID string,
 	challengeID string,
 	username string,
+	avatar string,
 	natsURL string,
 	sendMessageSubj string,
 	recvMessageSubj string,
@@ -70,6 +72,7 @@ func NewNatsPlayer(
 	return &natsPlayer{
 		id:          userID,
 		username:    username,
+		avatar:      avatar,
 		challengeID: challengeID,
 
 		sendMessageSubj:           sendMessageSubj,
@@ -99,6 +102,10 @@ func (p *natsPlayer) ID() string {
 
 func (p *natsPlayer) Username() string {
 	return p.username
+}
+
+func (p *natsPlayer) Avatar() string {
+	return p.avatar
 }
 
 func (p *natsPlayer) ChallengeID() string {

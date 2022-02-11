@@ -377,23 +377,25 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	msgWinners := make([]*message.Winner, 0, len(winners))
 	for _, w := range winners {
-		username := r.players[w.UserID].Username()
+		p := r.players[w.UserID]
 
 		msgWinners = append(msgWinners, &message.Winner{
 			UserID:   w.UserID,
-			Username: username,
+			Username: p.Username(),
 			Prize:    w.Prize,
+			Avatar:   p.Avatar(),
 		})
 	}
 
 	msgLosers := make([]*message.Loser, 0, len(losers))
 	for _, loser := range losers {
-		username := r.players[loser.UserID].Username()
+		p := r.players[loser.UserID]
 
 		msgLosers = append(msgLosers, &message.Loser{
 			UserID:   loser.UserID,
-			Username: username,
+			Username: p.Username(),
 			PTS:      loser.PTS,
+			Avatar:   p.Avatar(),
 		})
 	}
 
@@ -467,6 +469,7 @@ func (r *defaultRoom) sendPlayerIsJoinedMessage(p player.Player) {
 	payload := message.PlayerIsJoinedMessage{
 		PlayerID: p.ID(),
 		Username: p.Username(),
+		Avatar:   p.Avatar(),
 	}
 	msg, err := message.NewPlayerIsJoinedMessage(&payload)
 	if err != nil {

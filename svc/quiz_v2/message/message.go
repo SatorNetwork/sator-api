@@ -123,6 +123,7 @@ func (m *Message) isConsistent() bool {
 type PlayerIsJoinedMessage struct {
 	PlayerID string `json:"user_id"`
 	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
 }
 
 func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) {
@@ -233,12 +234,14 @@ type Winner struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	Prize    string `json:"prize"`
+	Avatar   string `json:"avatar"`
 }
 
 type Loser struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	PTS      uint32 `json:"pts"`
+	Avatar   string `json:"avatar"`
 }
 
 func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {
