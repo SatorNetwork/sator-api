@@ -1176,7 +1176,7 @@ paths:
     post:
       tags:
         - "Wallet"
-      summary: set stake.
+      summary: Set/update wallet's lock amount.
       security:
         - bearerAuth: []
       parameters:
@@ -1222,7 +1222,7 @@ paths:
     get:
       tags:
         - "Wallet"
-      summary: Get wallet transactions.
+      summary: Get wallet's locked amount.
       security:
         - bearerAuth: []
       parameters:
@@ -1271,7 +1271,7 @@ paths:
     post:
       tags:
         - "Wallet"
-      summary: set stake.
+      summary: Unlock wallet's total locked.
       security:
         - bearerAuth: []
       parameters:

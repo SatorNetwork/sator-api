@@ -47,7 +47,7 @@ func (at ActionType) Name() string {
 	case ActionReceiveTokens:
 		return "Receive"
 	case ActionStakeTokens:
-		return "Stake"
+		return "Lock"
 	}
 	return "Undefined"
 }
