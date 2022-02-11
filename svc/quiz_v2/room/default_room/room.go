@@ -503,6 +503,8 @@ func (r *defaultRoom) sendCountdownMessage(secondsLeft int) {
 }
 
 func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
+	challenge := r.quizEngine.GetChallenge()
+
 	answerOptions := make([]message.AnswerOption, 0, len(q.question.AnswerOptions))
 	for _, answer := range q.question.AnswerOptions {
 		answerOptions = append(answerOptions, message.AnswerOption{
@@ -514,7 +516,7 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 	payload := message.QuestionMessage{
 		QuestionID:     q.question.ID.String(),
 		QuestionText:   q.question.Question,
-		TimeForAnswer:  q.question.TimeForAnswer,
+		TimeForAnswer:  int(challenge.TimePerQuestionSec),
 		QuestionNumber: q.questionNum,
 		AnswerOptions:  answerOptions,
 	}
