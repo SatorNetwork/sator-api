@@ -579,18 +579,19 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 
 // GetStake Mocked method for stake
 func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error) {
+	var stake repository.Stake
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
-		if db.IsNotFoundError(err) {
-			return Stake{}, nil
+		if !db.IsNotFoundError(err) {
+			return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
 		}
 
-		return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
+		stake.StakeAmount = 0
 	}
 
 	totalStake, err := s.wr.GetTotalStake(ctx)
 	if err != nil {
-		return Stake{}, fmt.Errorf("could not get total stake by user id: %w", err)
+		return Stake{}, fmt.Errorf("could not get total stake: %w", err)
 	}
 
 	multiplier, err := s.GetMultiplier(ctx, userID)
@@ -646,14 +647,18 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
 
 	for i := 0; i < 5; i++ {
-		if tx, err := s.sc.Stake(ctx, feePayer, userWallet, stakePool, asset, duration, uint64(amount)); err != nil {
+		newCtx, cancel := context.WithCancel(context.Background())
+		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, uint64(amount)); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {
+				cancel()
 				return false, fmt.Errorf("transaction: %w", err)
 			}
+			cancel()
 			time.Sleep(time.Second * 10)
 		} else {
+			cancel()
 			log.Printf("successful transaction: %s", tx)
 			break
 		}
@@ -717,15 +722,28 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 
 	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
 
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet stake: %w", err)
+	}
+
+	if time.Now().After(stake.UnstakeDate) {
+		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", stake.UnstakeDate.String())
+	}
+
 	for i := 0; i < 5; i++ {
-		if tx, err := s.sc.Unstake(ctx, feePayer, userWallet, stakePool, asset); err != nil {
+		newCtx, cancel := context.WithCancel(context.Background())
+		if tx, err := s.sc.Unstake(newCtx, feePayer, userWallet, stakePool, asset); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {
+				cancel()
 				return fmt.Errorf("transaction: %w", err)
 			}
+			cancel()
 			time.Sleep(time.Second * 10)
 		} else {
+			cancel()
 			log.Printf("successful transaction: %s", tx)
 			break
 		}

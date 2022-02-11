@@ -293,25 +293,25 @@ func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 func MakeUnstakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
+			return false, err
 		}
 
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("could not get user profile id: %w", err)
+			return false, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
 		walletID, err := uuid.Parse(request.(string))
 		if err != nil {
-			return nil, fmt.Errorf("could not get wallet id: %w", err)
+			return false, fmt.Errorf("could not get wallet id: %w", err)
 		}
 
 		err = s.Unstake(ctx, uid, walletID)
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 
-		return nil, nil
+		return true, nil
 	}
 }
 
