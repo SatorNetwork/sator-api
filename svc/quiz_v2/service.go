@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/svc/profile"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/svc/profile"
+	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
@@ -125,4 +126,23 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 
 func (s *Service) StartEngine() {
 	s.engine.Start()
+}
+
+func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error) {
+	challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, userID)
+	if err != nil {
+		return challenge_service.Challenge{}, errors.Wrap(err, "can't get challenge by ID")
+	}
+
+	roomDetails, err := s.engine.GetRoomDetails(challengeID.String())
+	if err != nil {
+		if _, ok := err.(*engine.ErrRoomNotFound); !ok {
+			return challenge_service.Challenge{}, errors.Wrap(err, "can't get room details")
+		} else {
+			return challenge, nil
+		}
+	}
+
+	challenge.Players = roomDetails.PlayersToStart
+	return challenge, nil
 }
