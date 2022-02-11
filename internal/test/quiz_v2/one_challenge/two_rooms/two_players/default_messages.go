@@ -42,6 +42,7 @@ var (
 				QuestionText:   "Joey played Dr. Drake Ramoray on which soap opera show?",
 				TimeForAnswer:  1,
 				QuestionNumber: 0,
+				TotalQuestions: 5,
 				AnswerOptions: []message.AnswerOption{
 					{
 						AnswerText: "Santa Barbara",
@@ -71,6 +72,7 @@ var (
 				QuestionText:   "What store does Phoebe hate?",
 				TimeForAnswer:  1,
 				QuestionNumber: 1,
+				TotalQuestions: 5,
 				AnswerOptions: []message.AnswerOption{
 					{
 						AnswerText: "Amazon",
@@ -100,6 +102,7 @@ var (
 				QuestionText:   "Rachel got a job with which company in Paris?",
 				TimeForAnswer:  1,
 				QuestionNumber: 2,
+				TotalQuestions: 5,
 				AnswerOptions: []message.AnswerOption{
 					{
 						AnswerText: "Cartier",
@@ -129,6 +132,7 @@ var (
 				QuestionText:   "Phoebe’s scientist boyfriend David worked in what city?",
 				TimeForAnswer:  1,
 				QuestionNumber: 3,
+				TotalQuestions: 5,
 				AnswerOptions: []message.AnswerOption{
 					{
 						AnswerText: "Minsk",
@@ -158,6 +162,7 @@ var (
 				QuestionText:   "Monica dated an ophthalmologist named?",
 				TimeForAnswer:  1,
 				QuestionNumber: 4,
+				TotalQuestions: 5,
 				AnswerOptions: []message.AnswerOption{
 					{
 						AnswerText: "Chandler",
