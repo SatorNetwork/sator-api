@@ -158,6 +158,7 @@ type QuestionMessage struct {
 	QuestionText   string         `json:"question_text"`
 	TimeForAnswer  int            `json:"time_for_answer"`
 	QuestionNumber int            `json:"question_number"`
+	TotalQuestions int            `json:"total_questions"`
 	AnswerOptions  []AnswerOption `json:"answer_options"`
 }
 

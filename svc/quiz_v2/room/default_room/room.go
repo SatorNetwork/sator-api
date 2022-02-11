@@ -518,6 +518,7 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 		QuestionText:   q.question.Question,
 		TimeForAnswer:  int(challenge.TimePerQuestionSec),
 		QuestionNumber: q.questionNum,
+		TotalQuestions: r.quizEngine.GetNumberOfQuestions(),
 		AnswerOptions:  answerOptions,
 	}
 	msg, err := message.NewQuestionMessage(&payload)
