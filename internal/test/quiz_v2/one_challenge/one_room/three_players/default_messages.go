@@ -44,7 +44,7 @@ var (
 			MessageType: message.QuestionMessageType,
 			QuestionMessage: &message.QuestionMessage{
 				QuestionText:   "Joey played Dr. Drake Ramoray on which soap opera show?",
-				TimeForAnswer:  0,
+				TimeForAnswer:  1,
 				QuestionNumber: 0,
 				AnswerOptions: []message.AnswerOption{
 					{

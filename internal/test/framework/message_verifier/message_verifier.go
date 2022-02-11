@@ -149,6 +149,7 @@ func (v *MessageVerifier) compareQuestionMessages(emsg, rmsg *message.Message) {
 	require.Equal(v.t, emsg.QuestionMessage.QuestionText, rmsg.QuestionMessage.QuestionText)
 	require.Equal(v.t, emsg.QuestionMessage.TimeForAnswer, rmsg.QuestionMessage.TimeForAnswer)
 	require.Equal(v.t, emsg.QuestionMessage.QuestionNumber, rmsg.QuestionMessage.QuestionNumber)
+	require.Equal(v.t, emsg.QuestionMessage.TotalQuestions, rmsg.QuestionMessage.TotalQuestions)
 	require.Equal(v.t, len(emsg.QuestionMessage.AnswerOptions), len(rmsg.QuestionMessage.AnswerOptions))
 
 	eOptions := emsg.QuestionMessage.AnswerOptions
