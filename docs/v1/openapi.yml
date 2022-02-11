@@ -2902,6 +2902,15 @@ paths:
                   is_realm_activated:
                     type: boolean
                     example: true
+                  max_winners:
+                    type: integer
+                    example: 1
+                  questions_per_game:
+                    type: integer
+                    example: 1
+                  min_correct_answers:
+                    type: integer
+                    example: 1
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -2955,6 +2964,15 @@ paths:
                   type: integer
                   example: 3
                   default: 2
+                max_winners:
+                  type: integer
+                  example: 1
+                questions_per_game:
+                  type: integer
+                  example: 1
+                min_correct_answers:
+                  type: integer
+                  example: 1
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -3025,6 +3043,15 @@ paths:
                   type: integer
                   example: 3
                   default: 2
+                max_winners:
+                  type: integer
+                  example: 1
+                questions_per_game:
+                  type: integer
+                  example: 1
+                min_correct_answers:
+                  type: integer
+                  example: 1
       responses:
         "200":
           description: Returns challenge details.
@@ -3071,6 +3098,15 @@ paths:
                   received_reward:
                     type: number
                     example: 123.456
+                  max_winners:
+                    type: integer
+                    example: 1
+                  questions_per_game:
+                    type: integer
+                    example: 1
+                  min_correct_answers:
+                    type: integer
+                    example: 1
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":
