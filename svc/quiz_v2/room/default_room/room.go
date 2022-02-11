@@ -266,7 +266,7 @@ func (r *defaultRoom) runCountdown() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 LOOP:
-	for ; secondsLeft >= 1; secondsLeft-- {
+	for ; secondsLeft >= 0; secondsLeft-- {
 		select {
 		case <-ticker.C:
 			r.countdownChan <- secondsLeft
