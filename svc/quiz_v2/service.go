@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
+	"github.com/SatorNetwork/sator-api/svc/profile"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -24,12 +25,17 @@ type (
 		natsWSURL  string
 		challenges interfaces.ChallengesService
 		ac         authClient
+		pc         profileClient
 
 		serverRSAPrivateKey *rsa.PrivateKey
 	}
 
 	authClient interface {
 		GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error)
+	}
+
+	profileClient interface {
+		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (*profile.Profile, error)
 	}
 )
 
@@ -40,6 +46,7 @@ func NewService(
 	stakeLevels interfaces.StakeLevels,
 	rewards interfaces.RewardsService,
 	ac authClient,
+	pc profileClient,
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
 ) *Service {
@@ -52,6 +59,7 @@ func NewService(
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,
 		ac:                  ac,
+		pc:                  pc,
 		serverRSAPrivateKey: serverRSAPrivateKey,
 	}
 
@@ -76,10 +84,16 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, err
 	}
 
+	profile, err := s.pc.GetProfileByUserID(ctx, uid, username)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get profile by user id")
+	}
+
 	player, err := nats_player.NewNatsPlayer(
 		uid.String(),
 		challengeID.String(),
 		username,
+		profile.Avatar,
 		s.natsURL,
 		recvMessageSubj,
 		sendMessageSubj,

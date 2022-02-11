@@ -571,6 +571,7 @@ func main() {
 			walletSvcClient,
 			rewardsSvcClient,
 			authClient,
+			profileSvc,
 			serverRSAPrivateKey,
 			quizV2ShuffleQuestions,
 		)
