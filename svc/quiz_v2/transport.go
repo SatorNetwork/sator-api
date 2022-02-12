@@ -40,7 +40,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{challenge_id}", httptransport.NewServer(
+	r.Get("/challenges/{challenge_id}", httptransport.NewServer(
 		e.GetChallengeById,
 		decodeGetChallengeByIdRequest,
 		httpencoder.EncodeResponse,

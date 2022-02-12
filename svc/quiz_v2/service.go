@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/svc/profile"
-	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
+	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
+	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"

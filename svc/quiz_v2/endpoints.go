@@ -3,13 +3,11 @@ package quiz_v2
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 )
 
@@ -45,6 +43,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	if len(m) > 0 {
 		for _, mdw := range m {
 			e.GetQuizLink = mdw(e.GetQuizLink)
+			e.GetChallengeById = mdw(e.GetChallengeById)
 		}
 	}
 
@@ -54,9 +53,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetQuizLinkEndpoint ...
 func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		//		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-		//			return nil, err
-		//		}
+		//if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//	return nil, err
+		//}
 
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -85,9 +84,9 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 // MakeGetChallengeByIdEndpoint ...
 func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
+		//if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//	return nil, err
+		//}
 
 		userID, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
