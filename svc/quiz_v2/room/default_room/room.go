@@ -2,8 +2,6 @@ package default_room
 
 import (
 	"context"
-	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
-	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"log"
 	"sync"
 	"time"
@@ -15,6 +13,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/status_transactor"
 )

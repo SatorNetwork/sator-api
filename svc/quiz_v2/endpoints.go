@@ -3,12 +3,14 @@ package quiz_v2
 import (
 	"context"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/internal/rbac"
+	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 )
 
 type (
