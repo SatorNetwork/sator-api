@@ -2,7 +2,6 @@ package default_room
 
 import (
 	"context"
-	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"log"
 	"sync"
 	"time"
@@ -14,6 +13,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/status_transactor"
 )
@@ -188,6 +189,14 @@ LOOP:
 	}
 
 	log.Println("room is gracefully closed")
+}
+
+func (r *defaultRoom) GetRoomDetails() *room.RoomDetails {
+	challenge := r.quizEngine.GetChallenge()
+
+	return &room.RoomDetails{
+		PlayersToStart: challenge.PlayersToStart,
+	}
 }
 
 func (r *defaultRoom) Close() {

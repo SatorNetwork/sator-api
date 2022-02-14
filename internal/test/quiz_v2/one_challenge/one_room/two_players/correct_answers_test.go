@@ -31,6 +31,17 @@ func TestCorrectAnswers(t *testing.T) {
 	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	user2 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 
+	{
+		challenge, err := c.ChallengesClient.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
+		require.NoError(t, err)
+		require.Equal(t, 2, challenge.Players)
+	}
+	{
+		challenge, err := c.QuizV2Client.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
+		require.NoError(t, err)
+		require.Equal(t, 2, challenge.Players)
+	}
+
 	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
 		Modify(
 			message_container.PFuncIndex(0),

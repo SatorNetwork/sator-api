@@ -76,6 +76,15 @@ func (e *Engine) AddPlayer(p player.Player) {
 	e.newPlayersChan <- p
 }
 
+func (e *Engine) GetRoomDetails(challengeID string) (*room.RoomDetails, error) {
+	room, ok := e.challengeIDToRoom[challengeID]
+	if !ok {
+		return nil, NewErrRoomNotFound(challengeID)
+	}
+
+	return room.GetRoomDetails(), nil
+}
+
 func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
 	if _, ok := e.challengeIDToRoom[challengeID]; !ok {
 		room, err := default_room.New(challengeID, e.challenges, e.stakeLevels, e.rewards, e.restrictionManager, e.shuffleQuestions)
