@@ -323,7 +323,7 @@ func MakePossibleMultiplierEndpoint(s service, v validator.ValidateFunc) endpoin
 
 		req := request.(PossibleMultiplierRequest)
 		if err := v(req); err != nil {
-			return false, err
+			return nil, err
 		}
 
 		uid, err := jwt.UserIDFromContext(ctx)
