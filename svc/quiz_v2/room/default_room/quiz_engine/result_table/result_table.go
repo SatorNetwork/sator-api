@@ -147,7 +147,9 @@ func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (ma
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get user's multiplier")
 		}
-		prize = prize + (prize / 100 * float64(multiplier))
+		// TODO: add bonus to the winners message
+		bonus := (prize / 100) * float64(multiplier)
+		prize = prize + bonus
 
 		prizeMapWithStakeLevels[userID] = prize
 	}
@@ -217,7 +219,7 @@ func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
 }
 
 func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
-	ptsMap := make(map[uuid.UUID]uint32, 0)
+	ptsMap := make(map[uuid.UUID]uint32)
 	for userID, row := range rt.table {
 		for _, cell := range row {
 			ptsMap[userID] += cell.PTS()

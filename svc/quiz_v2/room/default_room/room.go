@@ -171,13 +171,13 @@ LOOP:
 		case answer := <-r.answersChan:
 			if err := r.processAnswerMessage(answer); err != nil {
 				log.Printf("can't process answer message: %v\n", err)
-				break
 			}
 
 		case secondsLeft := <-r.countdownChan:
 			r.sendCountdownMessage(secondsLeft)
 
 		case q := <-r.questionChan:
+			time.Sleep(2 * time.Second) // FIXME: needs refactoring
 			r.sendQuestionMessage(q)
 			if err := r.quizEngine.RegisterQuestionSendingEvent(q.questionNum); err != nil {
 				log.Println(err)
