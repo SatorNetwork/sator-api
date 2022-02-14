@@ -94,7 +94,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Get("/{wallet_id}/possible-multiplier", httptransport.NewServer(
+	r.Post("/{wallet_id}/possible-multiplier", httptransport.NewServer(
 		e.PossibleMultiplier,
 		decodePossibleMultiplierRequest,
 		httpencoder.EncodeResponse,

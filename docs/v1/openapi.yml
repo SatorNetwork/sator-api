@@ -1301,6 +1301,50 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /wallets/{wallet_id}/possible-multiplier:
+    post:
+      tags:
+        - "Wallet"
+      summary: Returns possible multiplier after adding amount to lock.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 123.45
+      responses:
+        "200":
+          description: amount of expected multiplier.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    multiplier:
+                      type: number
+                      example: 15
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows:
     get:
       tags:
