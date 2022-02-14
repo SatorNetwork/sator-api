@@ -1335,7 +1335,7 @@ paths:
                 items:
                   type: object
                   properties:
-                    multiplier:
+                    data:
                       type: number
                       example: 15
         "400":
