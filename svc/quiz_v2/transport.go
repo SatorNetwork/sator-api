@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/SatorNetwork/sator-api/internal/utils"
+
 	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
@@ -40,6 +42,20 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/challenges", httptransport.NewServer(
+		e.GetChallenges,
+		decodeGetChallengesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/quizzes", httptransport.NewServer(
+		e.GetFillingQuizzes,
+		decodeGetFillingQuizzesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -49,6 +65,19 @@ func decodeGetQuizLinkRequest(_ context.Context, r *http.Request) (interface{}, 
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}
 	return id, nil
+}
+
+func decodeGetChallengesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetChallengesRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
+	}, nil
+}
+
+func decodeGetFillingQuizzesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
 }
 
 // returns http error code by error type

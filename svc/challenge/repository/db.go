@@ -97,6 +97,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getChallengesStmt, err = db.PrepareContext(ctx, getChallenges); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChallenges: %w", err)
 	}
+	if q.getChallengesByShowIDStmt, err = db.PrepareContext(ctx, getChallengesByShowID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetChallengesByShowID: %w", err)
+	}
 	if q.getEpisodeAccessDataStmt, err = db.PrepareContext(ctx, getEpisodeAccessData); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEpisodeAccessData: %w", err)
 	}
@@ -266,6 +269,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getChallengesStmt: %w", cerr)
 		}
 	}
+	if q.getChallengesByShowIDStmt != nil {
+		if cerr := q.getChallengesByShowIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getChallengesByShowIDStmt: %w", cerr)
+		}
+	}
 	if q.getEpisodeAccessDataStmt != nil {
 		if cerr := q.getEpisodeAccessDataStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEpisodeAccessDataStmt: %w", cerr)
@@ -395,6 +403,7 @@ type Queries struct {
 	getChallengeReceivedRewardAmountStmt         *sql.Stmt
 	getChallengeReceivedRewardAmountByUserIDStmt *sql.Stmt
 	getChallengesStmt                            *sql.Stmt
+	getChallengesByShowIDStmt                    *sql.Stmt
 	getEpisodeAccessDataStmt                     *sql.Stmt
 	getEpisodeIDByQuestionIDStmt                 *sql.Stmt
 	getQuestionByIDStmt                          *sql.Stmt
@@ -439,6 +448,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getChallengeReceivedRewardAmountStmt:         q.getChallengeReceivedRewardAmountStmt,
 		getChallengeReceivedRewardAmountByUserIDStmt: q.getChallengeReceivedRewardAmountByUserIDStmt,
 		getChallengesStmt:                            q.getChallengesStmt,
+		getChallengesByShowIDStmt:                    q.getChallengesByShowIDStmt,
 		getEpisodeAccessDataStmt:                     q.getEpisodeAccessDataStmt,
 		getEpisodeIDByQuestionIDStmt:                 q.getEpisodeIDByQuestionIDStmt,
 		getQuestionByIDStmt:                          q.getQuestionByIDStmt,

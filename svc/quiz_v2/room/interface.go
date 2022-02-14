@@ -6,5 +6,6 @@ type Room interface {
 	ChallengeID() string
 	AddPlayer(p player.Player)
 	IsFull() bool
+	GetPlayersNeededToStart() int32
 	Start()
 }

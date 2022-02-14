@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
+
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
+
 	"github.com/SatorNetwork/sator-api/svc/profile"
 
 	"github.com/google/uuid"
@@ -121,6 +124,27 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		UserID:          uid.String(),
 		ServerPublicKey: string(publicKeyBytes),
 	}, nil
+}
+
+func (s *Service) GetChallenges(ctx context.Context, limit, offset int32) (*GetChallengesResponse, error) {
+	challenges, err := s.challenges.GetChallenges(ctx, limit, offset)
+	if err != nil {
+		return &GetChallengesResponse{}, err
+	}
+
+	return &GetChallengesResponse{Challenges: challenges}, nil
+}
+
+func (s *Service) GetFillingQuizzes(ctx context.Context) (*GetFillingQuizzes, error) {
+	playersInRooms := make(map[int32]room.Room)
+
+	for _, v := range s.engine.ChallengeIDToRoom {
+		if !v.IsFull() {
+			playersInRooms[v.GetPlayersNeededToStart()] = v
+		}
+	}
+
+	return &GetFillingQuizzes{playersInRooms: playersInRooms}, nil
 }
 
 func (s *Service) StartEngine() {

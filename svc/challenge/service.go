@@ -47,9 +47,10 @@ type (
 
 	challengesRepository interface {
 		AddChallenge(ctx context.Context, arg repository.AddChallengeParams) (repository.Challenge, error)
-		GetChallenges(ctx context.Context, arg repository.GetChallengesParams) ([]repository.Challenge, error)
+		GetChallengesByShowID(ctx context.Context, arg repository.GetChallengesByShowIDParams) ([]repository.Challenge, error)
 		GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.NullUUID) (repository.Challenge, error)
 		GetChallengeByID(ctx context.Context, id uuid.UUID) (repository.Challenge, error)
+		GetChallenges(ctx context.Context, arg repository.GetChallengesParams) ([]repository.Challenge, error)
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
 		UpdateChallenge(ctx context.Context, arg repository.UpdateChallengeParams) error
 
@@ -400,7 +401,7 @@ func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.U
 
 // GetChallengesByShowID ...
 func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error) {
-	list, err := s.cr.GetChallenges(ctx, repository.GetChallengesParams{
+	list, err := s.cr.GetChallengesByShowID(ctx, repository.GetChallengesByShowIDParams{
 		ShowID: showID,
 		Limit:  limit,
 		Offset: offset,
@@ -1073,4 +1074,25 @@ func (s *Service) GetAttemptsLeftForVerificationQuestion(ctx context.Context, ep
 	}
 
 	return int64(challenge.UserMaxAttempts) - numberAttempts, nil
+}
+
+// GetChallenges ...
+func (s *Service) GetChallenges(ctx context.Context, limit, offset int32) (result []Challenge, err error) {
+	challenges, err := s.cr.GetChallenges(ctx, repository.GetChallengesParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return []Challenge{}, nil
+		}
+
+		return nil, fmt.Errorf("could not get empty challenges: %w", err)
+	}
+
+	for i := 0; i < len(challenges); i++ {
+		result = append(result, castToChallenge(challenges[i], s.playUrlFn, 0, 0, nil, false))
+	}
+
+	return result, nil
 }

@@ -12,7 +12,7 @@ import (
 
 type Engine struct {
 	newPlayersChan    chan player.Player
-	challengeIDToRoom map[string]room.Room
+	ChallengeIDToRoom map[string]room.Room
 
 	challenges         interfaces.ChallengesService
 	stakeLevels        interfaces.StakeLevels
@@ -33,7 +33,7 @@ func New(
 ) *Engine {
 	return &Engine{
 		newPlayersChan:    make(chan player.Player),
-		challengeIDToRoom: make(map[string]room.Room, 0),
+		ChallengeIDToRoom: make(map[string]room.Room, 0),
 
 		challenges:         challenges,
 		stakeLevels:        stakeLevels,
@@ -77,18 +77,18 @@ func (e *Engine) AddPlayer(p player.Player) {
 }
 
 func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
-	if _, ok := e.challengeIDToRoom[challengeID]; !ok {
+	if _, ok := e.ChallengeIDToRoom[challengeID]; !ok {
 		room, err := default_room.New(challengeID, e.challenges, e.stakeLevels, e.rewards, e.restrictionManager, e.shuffleQuestions)
 		if err != nil {
 			return nil, err
 		}
-		e.challengeIDToRoom[challengeID] = room
+		e.ChallengeIDToRoom[challengeID] = room
 		go room.Start()
 	}
 
-	return e.challengeIDToRoom[challengeID], nil
+	return e.ChallengeIDToRoom[challengeID], nil
 }
 
 func (e *Engine) deleteRoom(challengeID string) {
-	delete(e.challengeIDToRoom, challengeID)
+	delete(e.ChallengeIDToRoom, challengeID)
 }

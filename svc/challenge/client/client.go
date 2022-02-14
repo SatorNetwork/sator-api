@@ -18,6 +18,7 @@ type (
 		GetByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge.Challenge, error)
 		GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.RawChallenge, error)
 		GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetChallenges(ctx context.Context, limit, offset int32) ([]challenge.Challenge, error)
 
 		GetQuestionsByChallengeID(ctx context.Context, id uuid.UUID) (interface{}, error)
 		GetOneRandomQuestionByChallengeID(ctx context.Context, id uuid.UUID, excludeIDs ...uuid.UUID) (*challenge.Question, error)
@@ -54,6 +55,10 @@ func (c *Client) GetChallengeByID(ctx context.Context, challengeID, userID uuid.
 
 func (c *Client) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.RawChallenge, error) {
 	return c.s.GetRawChallengeByID(ctx, challengeID)
+}
+
+func (c *Client) GetChallenges(ctx context.Context, limit, offset int32) ([]challenge.Challenge, error) {
+	return c.s.GetChallenges(ctx, limit, offset)
 }
 
 // GetQuestionsByChallengeID returns questions list filtered by challenge id

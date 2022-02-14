@@ -3,6 +3,14 @@ package quiz_v2
 import (
 	"context"
 	"fmt"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
+
+	"github.com/SatorNetwork/sator-api/internal/validator"
+
+	"github.com/SatorNetwork/sator-api/internal/utils"
+
+	"github.com/SatorNetwork/sator-api/svc/challenge"
+
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
@@ -11,11 +19,15 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		GetQuizLink endpoint.Endpoint
+		GetQuizLink       endpoint.Endpoint
+		GetChallenges     endpoint.Endpoint
+		GetFillingQuizzes endpoint.Endpoint
 	}
 
 	service interface {
 		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error)
+		GetChallenges(ctx context.Context, limit, offset int32) (*GetChallengesResponse, error)
+		GetFillingQuizzes(ctx context.Context) (*GetFillingQuizzes, error)
 	}
 
 	GetQuizLinkResponse struct {
@@ -26,17 +38,35 @@ type (
 		UserID          string `json:"user_id"`
 		ServerPublicKey string `json:"server_public_key"`
 	}
+
+	GetChallengesRequest struct {
+		utils.PaginationRequest
+	}
+
+	GetChallengesResponse struct {
+		Challenges []challenge.Challenge
+	}
+
+	GetFillingQuizzes struct {
+		playersInRooms map[int32]room.Room
+	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
+	validateFunc := validator.ValidateStruct()
+
 	e := Endpoints{
-		GetQuizLink: MakeGetQuizLinkEndpoint(s),
+		GetQuizLink:       MakeGetQuizLinkEndpoint(s),
+		GetChallenges:     MakeGetChallengesEndpoint(s, validateFunc),
+		GetFillingQuizzes: MakeGetFillingQuizzesEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
 	if len(m) > 0 {
 		for _, mdw := range m {
 			e.GetQuizLink = mdw(e.GetQuizLink)
+			e.GetChallenges = mdw(e.GetChallenges)
+			e.GetFillingQuizzes = mdw(e.GetFillingQuizzes)
 		}
 	}
 
@@ -66,6 +96,43 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 		}
 
 		resp, err := s.GetQuizLink(ctx, uid, username, challengeID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetChallengesEndpoint ...
+func MakeGetChallengesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		//		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//			return nil, err
+		//		}
+
+		req := request.(GetChallengesRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetChallenges(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetFillingQuizzesEndpoint ...
+func MakeGetFillingQuizzesEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		//		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//			return nil, err
+		//		}
+
+		resp, err := s.GetFillingQuizzes(ctx)
 		if err != nil {
 			return nil, err
 		}

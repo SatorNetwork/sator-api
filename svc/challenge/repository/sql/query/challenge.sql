@@ -1,4 +1,4 @@
--- name: GetChallenges :many
+-- name: GetChallengesByShowID :many
 SELECT *
 FROM challenges
 WHERE show_id = $1
@@ -73,3 +73,8 @@ FROM challenges
 WHERE title = $1
 ORDER BY created_at DESC
     LIMIT 1;
+-- name: GetChallenges :many
+SELECT *
+FROM challenges
+ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2;

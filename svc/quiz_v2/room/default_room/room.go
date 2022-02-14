@@ -2,10 +2,11 @@ package default_room
 
 import (
 	"context"
-	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -110,6 +111,15 @@ func (r *defaultRoom) IsFull() bool {
 	defer r.playersMutex.Unlock()
 
 	return len(r.players) >= int(challenge.PlayersToStart)
+}
+
+func (r *defaultRoom) GetPlayersNeededToStart() int32 {
+	challenge := r.quizEngine.GetChallenge()
+
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	return challenge.PlayersToStart - int32(len(r.players))
 }
 
 // NOTE: should be run as a goroutine

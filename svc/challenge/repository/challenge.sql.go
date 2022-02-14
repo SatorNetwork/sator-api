@@ -202,20 +202,71 @@ func (q *Queries) GetChallengeByTitle(ctx context.Context, title string) (Challe
 const getChallenges = `-- name: GetChallenges :many
 SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
 FROM challenges
+ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2
+`
+
+type GetChallengesParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([]Challenge, error) {
+	rows, err := q.query(ctx, q.getChallengesStmt, getChallenges, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Challenge
+	for rows.Next() {
+		var i Challenge
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.Title,
+			&i.Description,
+			&i.PrizePool,
+			&i.PlayersToStart,
+			&i.TimePerQuestion,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.EpisodeID,
+			&i.Kind,
+			&i.UserMaxAttempts,
+			&i.MaxWinners,
+			&i.QuestionsPerGame,
+			&i.MinCorrectAnswers,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChallengesByShowID = `-- name: GetChallengesByShowID :many
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
+FROM challenges
 WHERE show_id = $1
 ORDER BY updated_at DESC,
     created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-type GetChallengesParams struct {
+type GetChallengesByShowIDParams struct {
 	ShowID uuid.UUID `json:"show_id"`
 	Limit  int32     `json:"limit"`
 	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([]Challenge, error) {
-	rows, err := q.query(ctx, q.getChallengesStmt, getChallenges, arg.ShowID, arg.Limit, arg.Offset)
+func (q *Queries) GetChallengesByShowID(ctx context.Context, arg GetChallengesByShowIDParams) ([]Challenge, error) {
+	rows, err := q.query(ctx, q.getChallengesByShowIDStmt, getChallengesByShowID, arg.ShowID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

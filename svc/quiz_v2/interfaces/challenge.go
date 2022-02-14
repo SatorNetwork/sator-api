@@ -10,6 +10,7 @@ import (
 
 type ChallengesService interface {
 	GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge.Challenge, error)
+	GetChallenges(ctx context.Context, limit, offset int32) ([]challenge.Challenge, error)
 	GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.RawChallenge, error)
 	GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
 	GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
