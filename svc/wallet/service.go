@@ -184,42 +184,42 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
 	}
 
-	if w.EthereumAccountID.Valid {
-		ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID.UUID)
-		if err != nil {
-			if db.IsNotFoundError(err) {
-				return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
-			}
-			return Wallet{}, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
-		}
-		return Wallet{
-			ID:                     w.ID.String(),
-			Order:                  w.Sort,
-			EthereumAccountAddress: ea.Address,
-			Actions: []Action{
-				{
-					Type: ActionSendTokens.String(),
-					Name: ActionSendTokens.Name(),
-					URL:  "",
-				},
-				{
-					Type: ActionReceiveTokens.String(),
-					Name: ActionReceiveTokens.Name(),
-					URL:  "",
-				},
-			},
-			Balance: []Balance{
-				{
-					Currency: "SAOE",
-					Amount:   0,
-				},
-				// {
-				// 	Currency: "USD",
-				// 	Amount:   0,
-				// },
-			},
-		}, nil
-	}
+	// if w.EthereumAccountID.UUID != uuid.Nil {
+	// 	ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID.UUID)
+	// 	if err != nil {
+	// 		if db.IsNotFoundError(err) {
+	// 			return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
+	// 		}
+	// 		return Wallet{}, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
+	// 	}
+	// 	return Wallet{
+	// 		ID:                     w.ID.String(),
+	// 		Order:                  w.Sort,
+	// 		EthereumAccountAddress: ea.Address,
+	// 		Actions: []Action{
+	// 			{
+	// 				Type: ActionSendTokens.String(),
+	// 				Name: ActionSendTokens.Name(),
+	// 				URL:  "",
+	// 			},
+	// 			{
+	// 				Type: ActionReceiveTokens.String(),
+	// 				Name: ActionReceiveTokens.Name(),
+	// 				URL:  "",
+	// 			},
+	// 		},
+	// 		Balance: []Balance{
+	// 			{
+	// 				Currency: "SAOE",
+	// 				Amount:   0,
+	// 			},
+	// 			// {
+	// 			// 	Currency: "USD",
+	// 			// 	Amount:   0,
+	// 			// },
+	// 		},
+	// 	}, nil
+	// }
 
 	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
 	if err != nil {
