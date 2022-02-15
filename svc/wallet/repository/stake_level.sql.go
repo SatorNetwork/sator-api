@@ -97,6 +97,58 @@ func (q *Queries) GetAllStakeLevels(ctx context.Context) ([]StakeLevel, error) {
 	return items, nil
 }
 
+const getStakeLevelByAmount = `-- name: GetStakeLevelByAmount :one
+WITH lvls AS (
+	SELECT
+		id,
+		(lag(min_stake_amount,
+				1) OVER (ORDER BY min_stake_amount DESC)) AS max_stake_amount
+	FROM
+		stake_levels
+	WHERE
+		disabled = FALSE ORDER BY
+			min_stake_amount ASC
+)
+SELECT
+	stake_levels.id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled, lvls.id, max_stake_amount
+FROM
+	stake_levels
+	JOIN lvls ON stake_levels.id = lvls.id
+WHERE
+	$1::DOUBLE PRECISION >= min_stake_amount
+	AND($1::DOUBLE PRECISION <= max_stake_amount
+	OR max_stake_amount IS NULL)
+`
+
+type GetStakeLevelByAmountRow struct {
+	ID             uuid.UUID       `json:"id"`
+	MinStakeAmount sql.NullFloat64 `json:"min_stake_amount"`
+	MinDaysAmount  sql.NullInt32   `json:"min_days_amount"`
+	Title          string          `json:"title"`
+	Subtitle       string          `json:"subtitle"`
+	Multiplier     sql.NullInt32   `json:"multiplier"`
+	Disabled       sql.NullBool    `json:"disabled"`
+	ID_2           uuid.UUID       `json:"id_2"`
+	MaxStakeAmount interface{}     `json:"max_stake_amount"`
+}
+
+func (q *Queries) GetStakeLevelByAmount(ctx context.Context, amount float64) (GetStakeLevelByAmountRow, error) {
+	row := q.queryRow(ctx, q.getStakeLevelByAmountStmt, getStakeLevelByAmount, amount)
+	var i GetStakeLevelByAmountRow
+	err := row.Scan(
+		&i.ID,
+		&i.MinStakeAmount,
+		&i.MinDaysAmount,
+		&i.Title,
+		&i.Subtitle,
+		&i.Multiplier,
+		&i.Disabled,
+		&i.ID_2,
+		&i.MaxStakeAmount,
+	)
+	return i, err
+}
+
 const getStakeLevelByID = `-- name: GetStakeLevelByID :one
 SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
 FROM stake_levels

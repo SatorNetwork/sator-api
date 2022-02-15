@@ -67,6 +67,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getStakeByUserIDStmt, err = db.PrepareContext(ctx, getStakeByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStakeByUserID: %w", err)
 	}
+	if q.getStakeLevelByAmountStmt, err = db.PrepareContext(ctx, getStakeLevelByAmount); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStakeLevelByAmount: %w", err)
+	}
 	if q.getStakeLevelByIDStmt, err = db.PrepareContext(ctx, getStakeLevelByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStakeLevelByID: %w", err)
 	}
@@ -174,6 +177,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getStakeByUserIDStmt: %w", cerr)
 		}
 	}
+	if q.getStakeLevelByAmountStmt != nil {
+		if cerr := q.getStakeLevelByAmountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStakeLevelByAmountStmt: %w", cerr)
+		}
+	}
 	if q.getStakeLevelByIDStmt != nil {
 		if cerr := q.getStakeLevelByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getStakeLevelByIDStmt: %w", cerr)
@@ -273,6 +281,7 @@ type Queries struct {
 	getSolanaAccountByUserIDAndTypeStmt   *sql.Stmt
 	getSolanaAccountTypeByPublicKeyStmt   *sql.Stmt
 	getStakeByUserIDStmt                  *sql.Stmt
+	getStakeLevelByAmountStmt             *sql.Stmt
 	getStakeLevelByIDStmt                 *sql.Stmt
 	getTotalStakeStmt                     *sql.Stmt
 	getWalletByEthereumAccountIDStmt      *sql.Stmt
@@ -303,6 +312,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getSolanaAccountByUserIDAndTypeStmt:   q.getSolanaAccountByUserIDAndTypeStmt,
 		getSolanaAccountTypeByPublicKeyStmt:   q.getSolanaAccountTypeByPublicKeyStmt,
 		getStakeByUserIDStmt:                  q.getStakeByUserIDStmt,
+		getStakeLevelByAmountStmt:             q.getStakeLevelByAmountStmt,
 		getStakeLevelByIDStmt:                 q.getStakeLevelByIDStmt,
 		getTotalStakeStmt:                     q.getTotalStakeStmt,
 		getWalletByEthereumAccountIDStmt:      q.getWalletByEthereumAccountIDStmt,

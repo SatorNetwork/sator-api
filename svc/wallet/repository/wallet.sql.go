@@ -21,11 +21,11 @@ VALUES (
 `
 
 type CreateWalletParams struct {
-	UserID            uuid.UUID `json:"user_id"`
-	SolanaAccountID   uuid.UUID `json:"solana_account_id"`
-	EthereumAccountID uuid.UUID `json:"ethereum_account_id"`
-	WalletType        string    `json:"wallet_type"`
-	Sort              int32     `json:"sort"`
+	UserID            uuid.UUID     `json:"user_id"`
+	SolanaAccountID   uuid.UUID     `json:"solana_account_id"`
+	EthereumAccountID uuid.NullUUID `json:"ethereum_account_id"`
+	WalletType        string        `json:"wallet_type"`
+	Sort              int32         `json:"sort"`
 }
 
 func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error) {
@@ -68,7 +68,7 @@ WHERE ethereum_account_id = $1
     LIMIT 1
 `
 
-func (q *Queries) GetWalletByEthereumAccountID(ctx context.Context, ethereumAccountID uuid.UUID) (Wallet, error) {
+func (q *Queries) GetWalletByEthereumAccountID(ctx context.Context, ethereumAccountID uuid.NullUUID) (Wallet, error) {
 	row := q.queryRow(ctx, q.getWalletByEthereumAccountIDStmt, getWalletByEthereumAccountID, ethereumAccountID)
 	var i Wallet
 	err := row.Scan(
