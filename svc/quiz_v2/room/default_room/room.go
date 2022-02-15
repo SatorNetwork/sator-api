@@ -177,7 +177,6 @@ LOOP:
 			r.sendCountdownMessage(secondsLeft)
 
 		case q := <-r.questionChan:
-			time.Sleep(2 * time.Second) // FIXME: needs refactoring
 			r.sendQuestionMessage(q)
 			if err := r.quizEngine.RegisterQuestionSendingEvent(q.questionNum); err != nil {
 				log.Println(err)
@@ -224,6 +223,10 @@ func (r *defaultRoom) getPlayerByID(id string) player.Player {
 	r.playersMutex.Lock()
 	defer r.playersMutex.Unlock()
 
+	return r.players[id]
+}
+
+func (r *defaultRoom) getPlayerByIDNoLock(id string) player.Player {
 	return r.players[id]
 }
 
@@ -332,13 +335,19 @@ func (r *defaultRoom) runQuestions() {
 		questionNum: 0,
 	}
 
+	afterAnswerReplyDelay := 2 * time.Second
 	delayBetweenQuestions := time.Duration(challenge.TimePerQuestionSec) * time.Second
-	ticker := time.NewTicker(delayBetweenQuestions)
+	ticker := time.NewTicker(delayBetweenQuestions + afterAnswerReplyDelay)
 	defer ticker.Stop()
 LOOP:
 	for i := 1; i < len(questions); i++ {
 		select {
 		case <-ticker.C:
+			if err := r.sendAnswerReplyMessages(questions[i-1].ID); err != nil {
+				log.Printf("can't send answer reply messages: %v\n", err)
+			}
+			time.Sleep(afterAnswerReplyDelay)
+
 			r.questionChan <- &questionWrapper{
 				question:    questions[i],
 				questionNum: i,
@@ -350,6 +359,11 @@ LOOP:
 	}
 	// wait `delayBetweenQuestions` time to collect answers on last question
 	time.Sleep(delayBetweenQuestions)
+	qNum := len(questions)
+	if err := r.sendAnswerReplyMessages(questions[qNum-1].ID); err != nil {
+		log.Printf("can't send answer reply messages: %v\n", err)
+	}
+	time.Sleep(afterAnswerReplyDelay)
 
 	r.st.SetStatus(status_transactor.QuestionAreSentStatus)
 }
@@ -566,16 +580,42 @@ func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
 		return errors.Wrapf(err, "can't parse answer's UID(%v)", answer.message.AnswerID)
 	}
 
-	ok, err := r.quizEngine.CheckAndRegisterAnswer(questionID, answerID, userID, answer.receivedAt)
+	_, err = r.quizEngine.CheckAndRegisterAnswer(questionID, answerID, userID, answer.receivedAt)
 	if err != nil {
 		return errors.Wrapf(err, "can't check answer, question UID(%v), answer's UID(%v)", questionID, answerID)
 	}
+
+	return nil
+}
+
+func (r *defaultRoom) sendAnswerReplyMessages(questionID uuid.UUID) error {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
+	for _, p := range r.players {
+		playerID, err := uuid.Parse(p.ID())
+		if err != nil {
+			log.Printf("can't parse player uid: %v\n", err)
+			continue
+		}
+
+		err = r.sendAnswerReplyMessage(playerID, questionID)
+		if err != nil {
+			log.Printf("can't sendAnswerReplyMessage: %v\n", err)
+			continue
+		}
+	}
+
+	return nil
+}
+
+func (r *defaultRoom) sendAnswerReplyMessage(userID, questionID uuid.UUID) error {
 	cell, err := r.quizEngine.GetAnswer(userID, questionID)
 	if err != nil {
 		return err
 	}
 
-	answerID, err = r.quizEngine.GetCorrectAnswerID(questionID)
+	answerID, err := r.quizEngine.GetCorrectAnswerID(questionID)
 	if err != nil {
 		return err
 	}
@@ -587,7 +627,7 @@ func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
 
 	payload := message.AnswerReplyMessage{
 		QuestionID:      questionID.String(),
-		Success:         ok,
+		Success:         cell.IsCorrect(),
 		Rate:            cell.Rate(),
 		CorrectAnswerID: answerID.String(),
 		QuestionsLeft:   questionsLeft,
@@ -600,9 +640,9 @@ func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
 		return err
 	}
 
-	p := r.getPlayerByID(answer.userID)
+	p := r.getPlayerByIDNoLock(userID.String())
 	if err := p.SendMessage(msg); err != nil {
-		return errors.Wrapf(err, "can't send message to player with %v uid", answer.userID)
+		return errors.Wrapf(err, "can't send message to player with %v uid", userID.String())
 	}
 
 	return nil
