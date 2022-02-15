@@ -73,6 +73,7 @@ type (
 		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
 
 		GetAllStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
+		GetStakeLevelByAmount(ctx context.Context, amount float64) (repository.GetStakeLevelByAmountRow, error)
 	}
 
 	solanaClient interface {
@@ -107,16 +108,6 @@ type (
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
 func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, opt ...ServiceOption) *Service {
-	if wr == nil {
-		log.Fatalln("wallet repository is not set")
-	}
-	if sc == nil {
-		log.Fatalln("solana client is not set")
-	}
-	if ec == nil {
-		log.Fatalln("ethereum client in not set")
-	}
-
 	s := &Service{
 		wr: wr,
 		sc: sc,
@@ -193,8 +184,8 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
 	}
 
-	if w.EthereumAccountID != uuid.Nil {
-		ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID)
+	if w.EthereumAccountID.Valid {
+		ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID.UUID)
 		if err != nil {
 			if db.IsNotFoundError(err) {
 				return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
@@ -914,55 +905,39 @@ func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32,
 		return 0, fmt.Errorf("could not get stake by user id: %w", err)
 	}
 
-	stakeLevels, err := s.wr.GetAllStakeLevels(ctx)
+	lvl, err := s.wr.GetStakeLevelByAmount(ctx, stake.StakeAmount)
 	if err != nil {
-		return 0, fmt.Errorf("could not get stake levels: %w", err)
-	}
-
-	for i := 0; i < len(stakeLevels); i++ {
-		if stakeLevels[i].Disabled.Bool {
-			continue
+		if db.IsNotFoundError(err) {
+			return 0, nil
 		}
 
-		if stakeLevels[i].MinStakeAmount.Float64 < stake.StakeAmount && stakeLevels[i].MinDaysAmount.Int32 < stake.StakeDuration.Int32 {
-			return stakeLevels[i].Multiplier.Int32, nil
-		}
+		return 0, fmt.Errorf("could not get user's stake level: %w", err)
 	}
 
-	return 0, nil
+	return lvl.Multiplier.Int32, nil
 }
 
 // PossibleMultiplier returns multiplier that will be applied to user in stake will be increased on additionalAmount value.
 func (s *Service) PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error) {
-	stakeLevels, err := s.wr.GetAllStakeLevels(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("could not get stake levels: %w", err)
-	}
-
-	var amount float64
+	amount := additionalAmount
 
 	staked, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
-		if db.IsNotFoundError(err) {
-			amount = 0
-		} else {
+		if !db.IsNotFoundError(err) {
 			return 0, fmt.Errorf("could not get staked amount: %w", err)
 		}
 	} else {
-		amount = staked.StakeAmount
+		amount += staked.StakeAmount
 	}
 
-	amount = amount + additionalAmount
-
-	for i := 0; i < len(stakeLevels); i++ {
-		if stakeLevels[i].Disabled.Bool {
-			continue
+	lvl, err := s.wr.GetStakeLevelByAmount(ctx, amount)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
 		}
 
-		if stakeLevels[i].MinStakeAmount.Float64 < amount {
-			return stakeLevels[i].Multiplier.Int32, nil
-		}
+		return 0, fmt.Errorf("could not get user's stake level: %w", err)
 	}
 
-	return 0, nil
+	return lvl.Multiplier.Int32, nil
 }
