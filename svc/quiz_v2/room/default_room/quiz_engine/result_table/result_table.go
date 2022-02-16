@@ -14,11 +14,16 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
 )
 
+type UserReward struct {
+	Prize float64
+	Bonus float64
+}
+
 type ResultTable interface {
 	RegisterQuestionSendingEvent(questionNum int) error
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
-	GetPrizePoolDistribution() (map[uuid.UUID]float64, error)
+	GetPrizePoolDistribution() (map[uuid.UUID]UserReward, error)
 	GetWinnersAndLosers() ([]*Winner, []*Loser, error)
 	GetWinners() ([]*Winner, error)
 
@@ -35,6 +40,7 @@ type user struct {
 type Winner struct {
 	UserID string
 	Prize  string
+	Bonus  string
 }
 
 type Loser struct {
@@ -115,7 +121,7 @@ func (rt *resultTable) GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error) 
 	return rt.getCell(userID, qNum)
 }
 
-func (rt *resultTable) GetPrizePoolDistribution() (map[uuid.UUID]float64, error) {
+func (rt *resultTable) GetPrizePoolDistribution() (map[uuid.UUID]UserReward, error) {
 	rt.tableMutex.Lock()
 	defer rt.tableMutex.Unlock()
 
@@ -131,16 +137,16 @@ func (rt *resultTable) GetPrizePoolDistribution() (map[uuid.UUID]float64, error)
 		distribution[userID] = rt.cfg.PrizePool / float64(totalPTS) * float64(pts)
 	}
 
-	distribution, err := rt.applyStakeLevels(distribution)
+	prizeMapWithStakeLevels, err := rt.applyStakeLevels(distribution)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't apply stake levels")
 	}
 
-	return distribution, nil
+	return prizeMapWithStakeLevels, nil
 }
 
-func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (map[uuid.UUID]float64, error) {
-	prizeMapWithStakeLevels := make(map[uuid.UUID]float64, len(userIDToPrize))
+func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (map[uuid.UUID]UserReward, error) {
+	prizeMapWithStakeLevels := make(map[uuid.UUID]UserReward, len(userIDToPrize))
 
 	for userID, prize := range userIDToPrize {
 		multiplier, err := rt.stakeLevels.GetMultiplier(context.Background(), userID)
@@ -151,7 +157,10 @@ func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (ma
 		bonus := (prize / 100) * float64(multiplier)
 		prize = prize + bonus
 
-		prizeMapWithStakeLevels[userID] = prize
+		prizeMapWithStakeLevels[userID] = UserReward{
+			Prize: prize,
+			Bonus: bonus,
+		}
 	}
 
 	return prizeMapWithStakeLevels, nil
@@ -190,16 +199,17 @@ func isWinner(winners []*Winner, userID uuid.UUID) bool {
 }
 
 func (rt *resultTable) GetWinners() ([]*Winner, error) {
-	userIDToPrize, err := rt.GetPrizePoolDistribution()
+	userIDToReward, err := rt.GetPrizePoolDistribution()
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get prize pool distribution")
 	}
 
-	winners := make([]*Winner, 0, len(userIDToPrize))
-	for userID, prize := range userIDToPrize {
+	winners := make([]*Winner, 0, len(userIDToReward))
+	for userID, reward := range userIDToReward {
 		winners = append(winners, &Winner{
 			UserID: userID.String(),
-			Prize:  fmt.Sprintf("%v", prize),
+			Prize:  fmt.Sprintf("%v", reward.Prize),
+			Bonus:  fmt.Sprintf("%v", reward.Bonus),
 		})
 	}
 
