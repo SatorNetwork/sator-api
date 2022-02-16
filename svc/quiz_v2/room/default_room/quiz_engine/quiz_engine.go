@@ -21,7 +21,7 @@ type QuizEngine interface {
 	CheckAndRegisterAnswer(questionID, answerID, userID uuid.UUID, answeredAt time.Time) (bool, error)
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
 	RegisterQuestionSendingEvent(questionNum int) error
-	GetPrizePoolDistribution() (map[uuid.UUID]float64, error)
+	GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error)
 	GetWinnersAndLosers() ([]*result_table.Winner, []*result_table.Loser, error)
 	GetWinners() ([]*result_table.Winner, error)
 }
@@ -108,7 +108,7 @@ func (e *quizEngine) RegisterQuestionSendingEvent(questionNum int) error {
 	return e.resultTable.RegisterQuestionSendingEvent(questionNum)
 }
 
-func (e *quizEngine) GetPrizePoolDistribution() (map[uuid.UUID]float64, error) {
+func (e *quizEngine) GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error) {
 	return e.resultTable.GetPrizePoolDistribution()
 }
 

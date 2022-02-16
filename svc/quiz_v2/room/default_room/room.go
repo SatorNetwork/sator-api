@@ -371,17 +371,17 @@ LOOP:
 func (r *defaultRoom) sendWinnersTable() {
 	challenge := r.quizEngine.GetChallenge()
 
-	userIDToPrize, err := r.quizEngine.GetPrizePoolDistribution()
+	userIDToReward, err := r.quizEngine.GetPrizePoolDistribution()
 	if err != nil {
 		log.Printf("can't get prize pool distribution: %v\n", err)
 		return
 	}
-	usernameIDToPrize := make(map[string]float64, len(userIDToPrize))
+	usernameIDToPrize := make(map[string]float64, len(userIDToReward))
 
 	r.playersMutex.Lock()
-	for userID, prize := range userIDToPrize {
+	for userID, reward := range userIDToReward {
 		username := r.players[userID.String()].Username()
-		usernameIDToPrize[username] = prize
+		usernameIDToPrize[username] = reward.Prize
 	}
 
 	winners, losers, err := r.quizEngine.GetWinnersAndLosers()
@@ -406,6 +406,7 @@ func (r *defaultRoom) sendWinnersTable() {
 			UserID:   w.UserID,
 			Username: p.Username(),
 			Prize:    w.Prize,
+			Bonus:    w.Bonus,
 			Avatar:   p.Avatar(),
 		})
 	}
@@ -444,7 +445,7 @@ func (r *defaultRoom) sendWinnersTable() {
 }
 
 func (r *defaultRoom) sendRewards() {
-	userIDToPrize, err := r.quizEngine.GetPrizePoolDistribution()
+	userIDToReward, err := r.quizEngine.GetPrizePoolDistribution()
 	if err != nil {
 		log.Printf("can't get prize pool distribution: %v\n", err)
 		return
@@ -455,13 +456,13 @@ func (r *defaultRoom) sendRewards() {
 		return
 	}
 
-	for userID, prize := range userIDToPrize {
+	for userID, reward := range userIDToReward {
 		err := r.rewards.AddDepositTransaction(
 			context.Background(),
 			userID,
 			challengeID,
 			RelationTypeQuizzes,
-			prize,
+			reward.Prize,
 		)
 		if err != nil {
 			log.Printf("can't add deposit transaction: %v\n", err)
@@ -469,8 +470,8 @@ func (r *defaultRoom) sendRewards() {
 		}
 	}
 
-	for userID, prize := range userIDToPrize {
-		err := r.restrictionManager.RegisterEarnedReward(context.Background(), challengeID, userID, prize)
+	for userID, reward := range userIDToReward {
+		err := r.restrictionManager.RegisterEarnedReward(context.Background(), challengeID, userID, reward.Prize)
 		if err != nil {
 			log.Printf("can't register earned reward: %v\n", err)
 			return
