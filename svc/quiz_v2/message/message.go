@@ -1,6 +1,15 @@
 package message
 
-import "github.com/pkg/errors"
+import (
+	"time"
+
+	"github.com/pkg/errors"
+)
+
+const (
+	defaultTTLInMilliseconds   = 5000
+	countdownTTLInMilliseconds = 3000
+)
 
 type MessageType uint8
 
@@ -71,6 +80,8 @@ type Message struct {
 	WinnersTableMessage         *WinnersTableMessage         `json:"winners_table_message,omitempty"`
 	PlayerIsActiveMessage       *PlayerIsActiveMessage       `json:"player_is_active_message,omitempty"`
 	PlayerIsDisconnectedMessage *PlayerIsDisconnectedMessage `json:"player_is_disconnected_message,omitempty"`
+	Date                        string                       `json:"date,omitempty"`
+	TTL                         int                          `json:"ttl,omitempty"`
 }
 
 func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
@@ -130,6 +141,8 @@ func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) 
 	msg := &Message{
 		MessageType:           PlayerIsJoinedMessageType,
 		PlayerIsJoinedMessage: payload,
+		Date:                  time.Now().Format(time.RFC3339),
+		TTL:                   defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -146,6 +159,8 @@ func NewCountdownMessage(payload *CountdownMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:      CountdownMessageType,
 		CountdownMessage: payload,
+		Date:             time.Now().Format(time.RFC3339),
+		TTL:              countdownTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -168,10 +183,12 @@ type AnswerOption struct {
 	AnswerText string `json:"answer_text"`
 }
 
-func NewQuestionMessage(payload *QuestionMessage) (*Message, error) {
+func NewQuestionMessage(payload *QuestionMessage, ttl int) (*Message, error) {
 	msg := &Message{
 		MessageType:     QuestionMessageType,
 		QuestionMessage: payload,
+		Date:            time.Now().Format(time.RFC3339),
+		TTL:             ttl,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -190,6 +207,8 @@ func NewAnswerMessage(payload *AnswerMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:   AnswerMessageType,
 		AnswerMessage: payload,
+		Date:          time.Now().Format(time.RFC3339),
+		TTL:           defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -213,6 +232,8 @@ func NewAnswerReplyMessage(payload *AnswerReplyMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:        AnswerReplyMessageType,
 		AnswerReplyMessage: payload,
+		Date:               time.Now().Format(time.RFC3339),
+		TTL:                defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -249,6 +270,8 @@ func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:         WinnersTableMessageType,
 		WinnersTableMessage: payload,
+		Date:                time.Now().Format(time.RFC3339),
+		TTL:                 defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -263,6 +286,8 @@ func NewPlayerIsActiveMessage(payload *PlayerIsActiveMessage) (*Message, error) 
 	msg := &Message{
 		MessageType:           PlayerIsActiveMessageType,
 		PlayerIsActiveMessage: payload,
+		Date:                  time.Now().Format(time.RFC3339),
+		TTL:                   defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -280,6 +305,8 @@ func NewPlayerIsDisconnectedMessage(payload *PlayerIsDisconnectedMessage) (*Mess
 	msg := &Message{
 		MessageType:                 PlayerIsDisconnectedMessageType,
 		PlayerIsDisconnectedMessage: payload,
+		Date:                        time.Now().Format(time.RFC3339),
+		TTL:                         defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
