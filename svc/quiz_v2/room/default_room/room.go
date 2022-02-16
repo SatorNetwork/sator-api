@@ -601,7 +601,7 @@ func (r *defaultRoom) sendAnswerReplyMessages(questionID uuid.UUID) error {
 
 		err = r.sendAnswerReplyMessage(playerID, questionID)
 		if err != nil {
-			log.Printf("can't sendAnswerReplyMessage: %v\n", err)
+			log.Printf("can't send answer reply messages: %v\n", err)
 			continue
 		}
 	}
