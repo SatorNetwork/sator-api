@@ -76,7 +76,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, errors.Errorf("user is restricted for this challenge reason: %v", restrictionReason.String())
 	}
 
-	prefix := uid.String()
+	prefix := fmt.Sprintf("%v/%v", uuid.New().String(), uid.String())
 	recvMessageSubj := fmt.Sprintf("%v/%v", prefix, "recv")
 	sendMessageSubj := fmt.Sprintf("%v/%v", prefix, "send")
 
