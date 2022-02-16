@@ -3,8 +3,9 @@ package engine
 import (
 	"log"
 
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room"
 )
@@ -13,17 +14,33 @@ type Engine struct {
 	newPlayersChan    chan player.Player
 	challengeIDToRoom map[string]room.Room
 
-	challenges quiz_v2_challenge.ChallengesService
+	challenges         interfaces.ChallengesService
+	stakeLevels        interfaces.StakeLevels
+	rewards            interfaces.RewardsService
+	restrictionManager restriction_manager.RestrictionManager
+
+	shuffleQuestions bool
 
 	done chan struct{}
 }
 
-func New(challenges quiz_v2_challenge.ChallengesService) *Engine {
+func New(
+	challenges interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
+	rewards interfaces.RewardsService,
+	restrictionManager restriction_manager.RestrictionManager,
+	shuffleQuestions bool,
+) *Engine {
 	return &Engine{
 		newPlayersChan:    make(chan player.Player),
 		challengeIDToRoom: make(map[string]room.Room, 0),
 
-		challenges: challenges,
+		challenges:         challenges,
+		stakeLevels:        stakeLevels,
+		rewards:            rewards,
+		restrictionManager: restrictionManager,
+
+		shuffleQuestions: shuffleQuestions,
 
 		done: make(chan struct{}),
 	}
@@ -59,9 +76,18 @@ func (e *Engine) AddPlayer(p player.Player) {
 	e.newPlayersChan <- p
 }
 
+func (e *Engine) GetRoomDetails(challengeID string) (*room.RoomDetails, error) {
+	room, ok := e.challengeIDToRoom[challengeID]
+	if !ok {
+		return nil, NewErrRoomNotFound(challengeID)
+	}
+
+	return room.GetRoomDetails(), nil
+}
+
 func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
 	if _, ok := e.challengeIDToRoom[challengeID]; !ok {
-		room, err := default_room.New(challengeID, e.challenges)
+		room, err := default_room.New(challengeID, e.challenges, e.stakeLevels, e.rewards, e.restrictionManager, e.shuffleQuestions)
 		if err != nil {
 			return nil, err
 		}

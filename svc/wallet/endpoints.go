@@ -9,6 +9,7 @@ import (
 	"github.com/SatorNetwork/sator-api/internal/utils"
 	"github.com/SatorNetwork/sator-api/internal/validator"
 
+	"github.com/dmitrymomot/go-env"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
@@ -23,6 +24,8 @@ type (
 		GetListTransactionsByWalletID endpoint.Endpoint
 		GetStake                      endpoint.Endpoint
 		SetStake                      endpoint.Endpoint
+		Unstake                       endpoint.Endpoint
+		PossibleMultiplier            endpoint.Endpoint
 	}
 
 	service interface {
@@ -31,8 +34,10 @@ type (
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
 		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
-		GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error)
-		SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error)
+		GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
+		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
+		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
+		PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error)
 	}
 
 	CreateTransferRequest struct {
@@ -57,8 +62,22 @@ type (
 	SetStakeRequest struct {
 		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
 		WalletID string  `json:"wallet_id" validate:"required,uuid"`
+		Duration int64   `json:"duration"`
+	}
+
+	// UnstakeRequest struct
+	UnstakeRequest struct {
+		WalletID string `json:"wallet_id" validate:"required,uuid"`
+	}
+
+	// PossibleMultiplierRequest struct
+	PossibleMultiplierRequest struct {
+		Amount   float64 `json:"amount" validate:"required,number,gt=0"`
+		WalletID string  `json:"wallet_id" validate:"required,uuid"`
 	}
 )
+
+var StakeDuration = env.GetInt("SMART_CONTRACT_STAKE_DURATION", 0)
 
 func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
@@ -71,6 +90,8 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 		ConfirmTransfer:               kycMdw(MakeConfirmTransferRequestEndpoint(s, validateFunc)),
 		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
+		Unstake:                       MakeUnstakeEndpoint(s, validateFunc),
+		PossibleMultiplier:            MakePossibleMultiplierEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -83,6 +104,8 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.ConfirmTransfer = mdw(e.ConfirmTransfer)
 			e.SetStake = mdw(e.SetStake)
 			e.GetStake = mdw(e.GetStake)
+			e.Unstake = mdw(e.Unstake)
+			e.PossibleMultiplier = mdw(e.PossibleMultiplier)
 		}
 	}
 
@@ -219,6 +242,11 @@ func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, err
 		}
 
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		req := request.(SetStakeRequest)
 		if err := v(req); err != nil {
 			return false, err
@@ -229,7 +257,11 @@ func MakeSetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, fmt.Errorf("invalid wallet id: %w", err)
 		}
 
-		result, err := s.SetStake(ctx, walletID, req.Amount)
+		if req.Duration == 0 {
+			req.Duration = int64(StakeDuration)
+		}
+
+		result, err := s.SetStake(ctx, uid, walletID, req.Duration, req.Amount)
 		if err != nil {
 			return false, err
 		}
@@ -244,16 +276,71 @@ func MakeGetStakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 			return nil, err
 		}
 
-		walletID, err := uuid.Parse(request.(string))
+		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("could not get wallet id: %w", err)
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		stake, err := s.GetStake(ctx, walletID)
+		stake, err := s.GetStake(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
 
 		return stake, nil
+	}
+}
+
+func MakeUnstakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return false, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return false, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		walletID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return false, fmt.Errorf("could not get wallet id: %w", err)
+		}
+
+		err = s.Unstake(ctx, uid, walletID)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+}
+
+func MakePossibleMultiplierEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(PossibleMultiplierRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		walletID, err := uuid.Parse(req.WalletID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid wallet id: %w", err)
+		}
+
+		multiplier, err := s.PossibleMultiplier(ctx, req.Amount, uid, walletID)
+		if err != nil {
+			return nil, err
+		}
+
+		return multiplier, nil
 	}
 }

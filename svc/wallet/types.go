@@ -12,10 +12,11 @@ const (
 const (
 	TokenAccount       SolanaAccountType = "token_account"   // custom token account with sator tokens
 	GeneralAccount     SolanaAccountType = "general_account" // general account with SOL
-	FeePayerAccount    SolanaAccountType = "fee_payer"       // general account with SOL to pay transaction comission
+	FeePayerAccount    SolanaAccountType = "fee_payer"       // general account with SOL to pay transaction commission
 	IssuerAccount      SolanaAccountType = "issuer"          // sator tokens issuer
 	DistributorAccount SolanaAccountType = "distributor"     // sator tokens distributor
 	AssetAccount       SolanaAccountType = "asset"           // sator token account
+	StakePoolAccount   SolanaAccountType = "stake_pool"      // sator stake pool account
 )
 
 // SolanaAccountType solana account type
@@ -46,7 +47,7 @@ func (at ActionType) Name() string {
 	case ActionReceiveTokens:
 		return "Receive"
 	case ActionStakeTokens:
-		return "Stake"
+		return "Lock"
 	}
 	return "Undefined"
 }
@@ -120,25 +121,9 @@ type (
 )
 
 // Stake details
-type (
-	// Stake struct
-	Stake struct {
-		Staking Staking `json:"staking"`
-		Loyalty Loyalty `json:"loyalty"`
-	}
-
-	// Staking struct
-	Staking struct {
-		AssetName   string  `json:"asset_name"`
-		APY         float64 `json:"apy"`
-		TotalStaked float64 `json:"total_staked"`
-		Staked      float64 `json:"staked"`
-		YourShare   float64 `json:"your_share"`
-	}
-
-	// Loyalty struct
-	Loyalty struct {
-		LevelTitle    string `json:"level_title"`
-		LevelSubtitle string `json:"level_subtitle"`
-	}
-)
+type Stake struct {
+	TotalLocked       float64
+	LockedByYou       float64
+	CurrentMultiplier int32
+	AvailableToLock   float64
+}

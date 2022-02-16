@@ -66,9 +66,21 @@ type Show struct {
 	Archived       bool           `json:"archived"`
 }
 
+type ShowCategory struct {
+	ID       uuid.UUID    `json:"id"`
+	Title    string       `json:"title"`
+	Disabled sql.NullBool `json:"disabled"`
+	Sort     int32        `json:"sort"`
+}
+
 type ShowClap struct {
 	ID        uuid.UUID `json:"id"`
 	ShowID    uuid.UUID `json:"show_id"`
 	UserID    uuid.UUID `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type ShowsToCategory struct {
+	CategoryID uuid.UUID `json:"category_id"`
+	ShowID     uuid.UUID `json:"show_id"`
 }

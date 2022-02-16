@@ -3,19 +3,24 @@ package quiz_v2
 import (
 	"context"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
+
+	"github.com/SatorNetwork/sator-api/internal/jwt"
+	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 )
 
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		GetQuizLink endpoint.Endpoint
+		GetQuizLink      endpoint.Endpoint
+		GetChallengeById endpoint.Endpoint
 	}
 
 	service interface {
 		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error)
 	}
 
 	GetQuizLinkResponse struct {
@@ -30,13 +35,15 @@ type (
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
-		GetQuizLink: MakeGetQuizLinkEndpoint(s),
+		GetQuizLink:      MakeGetQuizLinkEndpoint(s),
+		GetChallengeById: MakeGetChallengeByIdEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
 	if len(m) > 0 {
 		for _, mdw := range m {
 			e.GetQuizLink = mdw(e.GetQuizLink)
+			e.GetChallengeById = mdw(e.GetChallengeById)
 		}
 	}
 
@@ -46,9 +53,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 // MakeGetQuizLinkEndpoint ...
 func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		//		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-		//			return nil, err
-		//		}
+		//if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//	return nil, err
+		//}
 
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -66,6 +73,32 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 		}
 
 		resp, err := s.GetQuizLink(ctx, uid, username, challengeID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetChallengeByIdEndpoint ...
+func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		//if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//	return nil, err
+		//}
+
+		userID, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't get userid from context")
+		}
+
+		challengeID, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't parse challenge id")
+		}
+
+		resp, err := s.GetChallengeByID(ctx, challengeID, userID)
 		if err != nil {
 			return nil, err
 		}

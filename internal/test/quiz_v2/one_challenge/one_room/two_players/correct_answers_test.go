@@ -26,9 +26,21 @@ func TestCorrectAnswers(t *testing.T) {
 	c := client.NewClient()
 	defaultChallengeID, err := c.DB.ChallengeDB().DefaultChallengeID(context.Background())
 	require.NoError(t, err)
+	totalRewards := float64(250)
 
 	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	user2 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
+
+	{
+		challenge, err := c.ChallengesClient.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
+		require.NoError(t, err)
+		require.Equal(t, 2, challenge.Players)
+	}
+	{
+		challenge, err := c.QuizV2Client.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
+		require.NoError(t, err)
+		require.Equal(t, 2, challenge.Players)
+	}
 
 	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
 		Modify(
@@ -113,7 +125,7 @@ func TestCorrectAnswers(t *testing.T) {
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
-		time.Sleep(time.Second * 15)
+		time.Sleep(time.Second * 25)
 
 		err = messageVerifier.Verify()
 		require.NoError(t, err)
@@ -124,5 +136,41 @@ func TestCorrectAnswers(t *testing.T) {
 
 		err = user1MessageVerifier.Verify()
 		require.NoError(t, err)
+	}
+
+	var user1RewardsAmount float64
+	{
+		rewardsWallet, err := c.Wallet.GetWalletByType(user1.AccessToken(), "rewards")
+		require.NoError(t, err)
+		rewardsWalletDetails, err := c.Wallet.GetWalletByID(user1.AccessToken(), rewardsWallet.GetDetailsUrl)
+		require.NoError(t, err)
+		unclaimedCurrency, err := rewardsWalletDetails.FindUnclaimedCurrency()
+		require.NoError(t, err)
+
+		user1RewardsAmount = unclaimedCurrency.Amount
+	}
+
+	var user2RewardsAmount float64
+	{
+		rewardsWallet, err := c.Wallet.GetWalletByType(user2.AccessToken(), "rewards")
+		require.NoError(t, err)
+		rewardsWalletDetails, err := c.Wallet.GetWalletByID(user2.AccessToken(), rewardsWallet.GetDetailsUrl)
+		require.NoError(t, err)
+		unclaimedCurrency, err := rewardsWalletDetails.FindUnclaimedCurrency()
+		require.NoError(t, err)
+
+		user2RewardsAmount = unclaimedCurrency.Amount
+	}
+
+	require.Equal(t, totalRewards * 1.01, user1RewardsAmount+user2RewardsAmount)
+
+	{
+		_, err := c.QuizV2Client.GetQuizLink(user1.AccessToken(), defaultChallengeID.String())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "reward has been already received for this challenge")
+
+		_, err = c.QuizV2Client.GetQuizLink(user2.AccessToken(), defaultChallengeID.String())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "reward has been already received for this challenge")
 	}
 }

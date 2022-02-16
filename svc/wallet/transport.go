@@ -81,8 +81,8 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Post("/{wallet_id}/unstake", httptransport.NewServer(
-		e.SetStake,
-		decodeSetStakeRequest,
+		e.Unstake,
+		decodeUnstakeRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -90,6 +90,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Get("/{wallet_id}/stake", httptransport.NewServer(
 		e.GetStake,
 		decodeGetStakeRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/{wallet_id}/possible-multiplier", httptransport.NewServer(
+		e.PossibleMultiplier,
+		decodePossibleMultiplierRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -162,6 +169,20 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 }
 
 func decodeGetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
+func decodeSetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req SetStakeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+	req.WalletID = chi.URLParam(r, "wallet_id")
+
+	return req, nil
+}
+
+func decodeUnstakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "wallet_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed wallet_id id", ErrInvalidParameter)
@@ -169,8 +190,8 @@ func decodeGetStakeRequest(_ context.Context, r *http.Request) (interface{}, err
 	return id, nil
 }
 
-func decodeSetStakeRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req SetStakeRequest
+func decodePossibleMultiplierRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req PossibleMultiplierRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}

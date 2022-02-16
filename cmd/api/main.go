@@ -46,6 +46,7 @@ import (
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
 	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -104,10 +105,16 @@ var (
 	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
 	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
 	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
+	solanaStakePoolAddr         = env.MustString("SOLANA_STAKE_POOL_ADDR")
 	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
 	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
+	solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
+	solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
+	solanaSplToken              = env.MustString("SOLANA_SPL_TOKEN")
+	solanaStakeProgramID        = env.MustString("SOLANA_STAKE_PROGRAM_ID")
 	tokenCirculatingSupply      = env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844)
 
 	// Mailer
@@ -161,10 +168,12 @@ var (
 	kycSkip       = env.GetBool("KYC_SKIP", false)
 
 	// NATS
-	// natsURL   = env.MustString("NATS_URL")
-	// natsWSURL = env.MustString("NATS_WS_URL")
+	natsURL   = env.MustString("NATS_URL")
+	natsWSURL = env.MustString("NATS_WS_URL")
 
-	// serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
+	quizV2ShuffleQuestions = env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true)
+
+	serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
 )
 
 var circulatingSupply float64 = 0
@@ -235,11 +244,10 @@ func main() {
 		r.Get("/ws", testWsHandler)
 	}
 
-	// TODO: enable when it will be ready
-	// serverRSAPrivateKey, err := internal_rsa.BytesToPrivateKey([]byte(serverRSAPrivateKey))
-	// if err != nil {
-	// 	log.Fatalf("can't decode server's RSA private key")
-	// }
+	serverRSAPrivateKey, err := internal_rsa.BytesToPrivateKey([]byte(serverRSAPrivateKey))
+	if err != nil {
+		log.Fatalf("can't decode server's RSA private key")
+	}
 
 	// auth repo
 	authRepository, err := authRepo.Prepare(ctx, db)
@@ -279,7 +287,13 @@ func main() {
 			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
 		}
 
-		solanaClient := solana.New(solanaApiBaseUrl)
+		solanaClient := solana.New(solanaApiBaseUrl, solana.Config{
+			SystemProgram:  solanaSystemProgram,
+			SysvarRent:     solanaSysvarRent,
+			SysvarClock:    solanaSysvarClock,
+			SplToken:       solanaSplToken,
+			StakeProgramID: solanaStakeProgramID,
+		})
 		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
 		}
@@ -295,6 +309,7 @@ func main() {
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
 			wallet.WithMinAmountToTransfer(minAmountToTransfer),
+			wallet.WithStakePoolSolanaAddress(solanaStakePoolAddr),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -548,17 +563,26 @@ func main() {
 		})
 	}
 
-	// TODO: enable when it will be ready
-	// {
-	// 	quizV2Svc := quiz_v2.NewService(natsURL, natsWSURL, challengeSvcClient, authClient, serverRSAPrivateKey)
-	// 	r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
-	// 		quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
-	// 		logger,
-	// 	))
+	{
+		quizV2Svc := quiz_v2.NewService(
+			natsURL,
+			natsWSURL,
+			challengeSvcClient,
+			walletSvcClient,
+			rewardsSvcClient,
+			authClient,
+			profileSvc,
+			serverRSAPrivateKey,
+			quizV2ShuffleQuestions,
+		)
+		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
+			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
+			logger,
+		))
 
-	// 	go quizV2Svc.StartEngine()
-	// 	// TODO(evg): gracefully shutdown the engine
-	// }
+		go quizV2Svc.StartEngine()
+		// TODO(evg): gracefully shutdown the engine
+	}
 
 	{
 		// Init and run http server

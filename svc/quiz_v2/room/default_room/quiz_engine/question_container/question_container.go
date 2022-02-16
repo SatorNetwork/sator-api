@@ -2,12 +2,14 @@ package question_container
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 )
 
 type QuestionContainer interface {
@@ -25,7 +27,7 @@ type questionContainer struct {
 	questions []challenge.Question
 }
 
-func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) (*questionContainer, error) {
+func New(challengeID string, challengesSvc interfaces.ChallengesService, shuffle bool) (*questionContainer, error) {
 	challenge, err := loadChallenge(challengeID, challengesSvc)
 	if err != nil {
 		return nil, err
@@ -34,6 +36,13 @@ func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) 
 	if err != nil {
 		return nil, err
 	}
+	questions, err = chooseNRandomQuestions(questions, int(challenge.QuestionsPerGame), shuffle)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't choose %v random questions", challenge.QuestionsPerGame)
+	}
+	for idx := 0; idx < len(questions); idx++ {
+		questions[idx].Order = int32(idx + 1)
+	}
 
 	return &questionContainer{
 		challenge: challenge,
@@ -41,7 +50,7 @@ func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) 
 	}, nil
 }
 
-func loadChallenge(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) (*challenge.RawChallenge, error) {
+func loadChallenge(challengeID string, challengesSvc interfaces.ChallengesService) (*challenge.RawChallenge, error) {
 	ctx := context.Background()
 	challengeUID, err := uuid.Parse(challengeID)
 	if err != nil {
@@ -55,7 +64,7 @@ func loadChallenge(challengeID string, challengesSvc quiz_v2_challenge.Challenge
 	return &challenge, nil
 }
 
-func loadQuestions(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) ([]challenge.Question, error) {
+func loadQuestions(challengeID string, challengesSvc interfaces.ChallengesService) ([]challenge.Question, error) {
 	ctx := context.Background()
 	challengeUID, err := uuid.Parse(challengeID)
 	if err != nil {
@@ -67,6 +76,22 @@ func loadQuestions(challengeID string, challengesSvc quiz_v2_challenge.Challenge
 	}
 
 	return questions, nil
+}
+
+func chooseNRandomQuestions(qs []challenge.Question, n int, shuffle bool) ([]challenge.Question, error) {
+	if len(qs) < n {
+		return nil, errors.Errorf("can't choose %v questions out of %v", n, len(qs))
+	}
+
+	if shuffle {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(
+			len(qs),
+			func(i, j int) { qs[i], qs[j] = qs[j], qs[i] },
+		)
+	}
+
+	return qs[:n], nil
 }
 
 func (e *questionContainer) GetChallenge() *challenge.RawChallenge {
@@ -95,6 +120,9 @@ func (e *questionContainer) GetQuestionNumByID(questionID uuid.UUID) (int, error
 	question, err := e.GetQuestionByID(questionID)
 	if err != nil {
 		return 0, err
+	}
+	if question.Order < 1 {
+		return 0, errors.Errorf("questions should be enumerated from 1")
 	}
 
 	return int(question.Order) - 1, nil

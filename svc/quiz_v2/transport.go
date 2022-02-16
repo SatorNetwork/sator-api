@@ -40,6 +40,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/challenges/{challenge_id}", httptransport.NewServer(
+		e.GetChallengeById,
+		decodeGetChallengeByIdRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -48,6 +55,15 @@ func decodeGetQuizLinkRequest(_ context.Context, r *http.Request) (interface{}, 
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
 	}
+	return id, nil
+}
+
+func decodeGetChallengeByIdRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "challenge_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed challenge id", ErrInvalidParameter)
+	}
+
 	return id, nil
 }
 

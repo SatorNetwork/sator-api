@@ -1,6 +1,15 @@
 package message
 
-import "github.com/pkg/errors"
+import (
+	"time"
+
+	"github.com/pkg/errors"
+)
+
+const (
+	defaultTTLInMilliseconds   = 5000
+	countdownTTLInMilliseconds = 3000
+)
 
 type MessageType uint8
 
@@ -71,6 +80,8 @@ type Message struct {
 	WinnersTableMessage         *WinnersTableMessage         `json:"winners_table_message,omitempty"`
 	PlayerIsActiveMessage       *PlayerIsActiveMessage       `json:"player_is_active_message,omitempty"`
 	PlayerIsDisconnectedMessage *PlayerIsDisconnectedMessage `json:"player_is_disconnected_message,omitempty"`
+	Date                        string                       `json:"date,omitempty"`
+	TTL                         int                          `json:"ttl,omitempty"`
 }
 
 func (m *Message) GetAnswerMessage() (*AnswerMessage, error) {
@@ -104,7 +115,6 @@ func (m *Message) isConsistent() bool {
 		return m.QuestionMessage != nil
 	case AnswerMessageType:
 		ok := m.AnswerMessage != nil &&
-			m.AnswerMessage.UserID != "" &&
 			m.AnswerMessage.QuestionID != "" &&
 			m.AnswerMessage.AnswerID != ""
 		return ok
@@ -124,12 +134,15 @@ func (m *Message) isConsistent() bool {
 type PlayerIsJoinedMessage struct {
 	PlayerID string `json:"user_id"`
 	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
 }
 
 func NewPlayerIsJoinedMessage(payload *PlayerIsJoinedMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:           PlayerIsJoinedMessageType,
 		PlayerIsJoinedMessage: payload,
+		Date:                  time.Now().Format(time.RFC3339),
+		TTL:                   defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -146,6 +159,8 @@ func NewCountdownMessage(payload *CountdownMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:      CountdownMessageType,
 		CountdownMessage: payload,
+		Date:             time.Now().Format(time.RFC3339),
+		TTL:              countdownTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -159,6 +174,7 @@ type QuestionMessage struct {
 	QuestionText   string         `json:"question_text"`
 	TimeForAnswer  int            `json:"time_for_answer"`
 	QuestionNumber int            `json:"question_number"`
+	TotalQuestions int            `json:"total_questions"`
 	AnswerOptions  []AnswerOption `json:"answer_options"`
 }
 
@@ -167,10 +183,12 @@ type AnswerOption struct {
 	AnswerText string `json:"answer_text"`
 }
 
-func NewQuestionMessage(payload *QuestionMessage) (*Message, error) {
+func NewQuestionMessage(payload *QuestionMessage, ttl int) (*Message, error) {
 	msg := &Message{
 		MessageType:     QuestionMessageType,
 		QuestionMessage: payload,
+		Date:            time.Now().Format(time.RFC3339),
+		TTL:             ttl,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -180,7 +198,6 @@ func NewQuestionMessage(payload *QuestionMessage) (*Message, error) {
 }
 
 type AnswerMessage struct {
-	UserID string `json:"user_id"`
 	// TODO(evg): check that QuestionID is correct
 	QuestionID string `json:"question_id"`
 	AnswerID   string `json:"answer_id"`
@@ -190,6 +207,8 @@ func NewAnswerMessage(payload *AnswerMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:   AnswerMessageType,
 		AnswerMessage: payload,
+		Date:          time.Now().Format(time.RFC3339),
+		TTL:           defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -213,6 +232,8 @@ func NewAnswerReplyMessage(payload *AnswerReplyMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:        AnswerReplyMessageType,
 		AnswerReplyMessage: payload,
+		Date:               time.Now().Format(time.RFC3339),
+		TTL:                defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -226,6 +247,7 @@ type WinnersTableMessage struct {
 	PrizePool             string             `json:"prize_pool"`
 	ShowTransactionURL    string             `json:"show_transaction_url"`
 	Winners               []*Winner          `json:"winners"`
+	Losers                []*Loser           `json:"losers"`
 	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
 }
 
@@ -233,12 +255,23 @@ type Winner struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	Prize    string `json:"prize"`
+	Bonus    string `json:"bonus"`
+	Avatar   string `json:"avatar"`
+}
+
+type Loser struct {
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	PTS      uint32 `json:"pts"`
+	Avatar   string `json:"avatar"`
 }
 
 func NewWinnersTableMessage(payload *WinnersTableMessage) (*Message, error) {
 	msg := &Message{
 		MessageType:         WinnersTableMessageType,
 		WinnersTableMessage: payload,
+		Date:                time.Now().Format(time.RFC3339),
+		TTL:                 defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -253,6 +286,8 @@ func NewPlayerIsActiveMessage(payload *PlayerIsActiveMessage) (*Message, error) 
 	msg := &Message{
 		MessageType:           PlayerIsActiveMessageType,
 		PlayerIsActiveMessage: payload,
+		Date:                  time.Now().Format(time.RFC3339),
+		TTL:                   defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
@@ -270,6 +305,8 @@ func NewPlayerIsDisconnectedMessage(payload *PlayerIsDisconnectedMessage) (*Mess
 	msg := &Message{
 		MessageType:                 PlayerIsDisconnectedMessageType,
 		PlayerIsDisconnectedMessage: payload,
+		Date:                        time.Now().Format(time.RFC3339),
+		TTL:                         defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err

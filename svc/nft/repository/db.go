@@ -49,6 +49,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.doesUserOwnNFTStmt, err = db.PrepareContext(ctx, doesUserOwnNFT); err != nil {
 		return nil, fmt.Errorf("error preparing query DoesUserOwnNFT: %w", err)
 	}
+	if q.getAllNFTItemsStmt, err = db.PrepareContext(ctx, getAllNFTItems); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllNFTItems: %w", err)
+	}
 	if q.getMainNFTCategoryStmt, err = db.PrepareContext(ctx, getMainNFTCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query GetMainNFTCategory: %w", err)
 	}
@@ -127,6 +130,11 @@ func (q *Queries) Close() error {
 	if q.doesUserOwnNFTStmt != nil {
 		if cerr := q.doesUserOwnNFTStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing doesUserOwnNFTStmt: %w", cerr)
+		}
+	}
+	if q.getAllNFTItemsStmt != nil {
+		if cerr := q.getAllNFTItemsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllNFTItemsStmt: %w", cerr)
 		}
 	}
 	if q.getMainNFTCategoryStmt != nil {
@@ -227,6 +235,7 @@ type Queries struct {
 	deleteNFTRelationStmt            *sql.Stmt
 	doesRelationIDHasRelationNFTStmt *sql.Stmt
 	doesUserOwnNFTStmt               *sql.Stmt
+	getAllNFTItemsStmt               *sql.Stmt
 	getMainNFTCategoryStmt           *sql.Stmt
 	getNFTCategoriesListStmt         *sql.Stmt
 	getNFTCategoryByIDStmt           *sql.Stmt
@@ -252,6 +261,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteNFTRelationStmt:            q.deleteNFTRelationStmt,
 		doesRelationIDHasRelationNFTStmt: q.doesRelationIDHasRelationNFTStmt,
 		doesUserOwnNFTStmt:               q.doesUserOwnNFTStmt,
+		getAllNFTItemsStmt:               q.getAllNFTItemsStmt,
 		getMainNFTCategoryStmt:           q.getMainNFTCategoryStmt,
 		getNFTCategoriesListStmt:         q.getNFTCategoriesListStmt,
 		getNFTCategoryByIDStmt:           q.getNFTCategoryByIDStmt,

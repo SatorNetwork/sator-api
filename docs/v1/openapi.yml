@@ -1176,7 +1176,7 @@ paths:
     post:
       tags:
         - "Wallet"
-      summary: set stake.
+      summary: Set/update wallet's lock amount.
       security:
         - bearerAuth: []
       parameters:
@@ -1196,6 +1196,9 @@ paths:
                 amount:
                   type: number
                   example: 1000
+                duration:
+                  type: number
+                  example: 10
       responses:
         "200":
           description: staked successfully.
@@ -1219,7 +1222,7 @@ paths:
     get:
       tags:
         - "Wallet"
-      summary: Get wallet transactions.
+      summary: Get wallet's locked amount.
       security:
         - bearerAuth: []
       parameters:
@@ -1242,21 +1245,12 @@ paths:
                     staking:
                       type: object
                       properties:
-                        asset_name:
-                          type: string
-                          example: "SAO"
-                        apy:
-                          type: number
-                          example: 123
                         total_staked:
                           type: number
                           example: 12345
                         staked:
                           type: number
                           example: 100000
-                        your_share:
-                          type: number
-                          example: 1000
                     loyalty:
                       type: object
                       properties:
@@ -1277,9 +1271,43 @@ paths:
     post:
       tags:
         - "Wallet"
-      summary: set stake.
+      summary: Unlock wallet's total locked.
       security:
         - bearerAuth: []
+      parameters:
+        - name: wallet_id
+          in: path
+          description: Wallet ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: staked successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    result:
+                      type: boolean
+                      example: true
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /wallets/{wallet_id}/possible-multiplier:
+    post:
+      tags:
+        - "Wallet"
+      summary: Returns possible multiplier after adding amount to lock.
+      security:
+        - bearerAuth: [ ]
       parameters:
         - name: wallet_id
           in: path
@@ -1296,10 +1324,10 @@ paths:
               properties:
                 amount:
                   type: number
-                  example: 1000
+                  example: 123.45
       responses:
         "200":
-          description: staked successfully.
+          description: amount of expected multiplier.
           content:
             application/json:
               schema:
@@ -1307,9 +1335,9 @@ paths:
                 items:
                   type: object
                   properties:
-                    result:
-                      type: boolean
-                      example: true
+                    data:
+                      type: number
+                      example: 15
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -1413,9 +1441,6 @@ paths:
                 has_new_episode:
                   type: boolean
                   example: true
-                category:
-                  type: string
-                  example: "category"
                 description:
                   type: string
                   example: "description"
@@ -1428,6 +1453,11 @@ paths:
                 watch:
                   type: string
                   example: "https://youtube.com/ERGbevesrf"
+                categories:
+                  type: array
+                  items:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
       responses:
         "200":
           description: Returns shows data.
@@ -1451,9 +1481,6 @@ paths:
                   has_new_episode:
                     type: boolean
                     example: true
-                  category:
-                    type: string
-                    example: "category"
                   description:
                     type: string
                     example: "description"
@@ -1466,6 +1493,11 @@ paths:
                   watch:
                     type: string
                     example: "https://youtube.com/ERGbevesrf"
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -1577,6 +1609,12 @@ paths:
                     example: "https://youtube.com/ERGbevesrf"
                   has_nft:
                     type: boolean
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -1614,9 +1652,11 @@ paths:
                 has_new_episode:
                   type: boolean
                   example: true
-                category:
-                  type: string
-                  example: "category"
+                categories:
+                  type: array
+                  items:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
                 description:
                   type: string
                   example: "description"
@@ -1664,6 +1704,225 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /shows/categories:
+    get:
+      tags:
+        - "Category"
+      summary: Get categories list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+        - name: with_disabled
+          in: query
+          description: Set true or 1 to get all categories with disabled ones. Skip to get only enabled categories.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Returns categories list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "title"
+                    disabled:
+                      type: string
+                      example: "false"
+                    sort:
+                      type: number
+                      example: 123
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - "Category"
+      summary: Used for create new category.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "title"
+                - "disabled"
+                - "sort"
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                disabled:
+                  type: string
+                  example: "false"
+                sort:
+                  type: number
+                  example: 123
+      responses:
+        "200":
+          description: Returns category data.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - "title"
+                  - "disabled"
+                  - "sort"
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  disabled:
+                    type: string
+                    example: "false"
+                  sort:
+                    type: number
+                    example: 123
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/categories/{category_id}:
+    get:
+      tags:
+        - "Category"
+      summary: Get category by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns show details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  title:
+                    type: string
+                    example: "title"
+                  disabled:
+                    type: string
+                    example: "false"
+                  sort:
+                    type: number
+                    example: 123
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    put:
+      tags:
+        - "Category"
+      summary: Used for update category by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "title"
+                - "disabled"
+                - "sort"
+              properties:
+                title:
+                  type: string
+                  example: "title"
+                disabled:
+                  type: string
+                  example: "false"
+                sort:
+                  type: number
+                  example: 123
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Category"
+      summary: Used for delete category by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/filter/{category}:
     get:
       tags:
@@ -1674,7 +1933,7 @@ paths:
       parameters:
         - name: category
           in: path
-          description: Category.
+          description: Category id.
           required: true
           schema:
             type: string
@@ -2507,7 +2766,7 @@ paths:
         - "Reviews"
       summary: Used to send tips to episode review author.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: review_id
           in: path
@@ -2645,6 +2904,12 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3123"
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3124"
                   title:
                     type: string
                     example: "Challenge name"
@@ -2678,6 +2943,18 @@ paths:
                   received_reward:
                     type: number
                     example: 123.456
+                  is_realm_activated:
+                    type: boolean
+                    example: true
+                  max_winners:
+                    type: integer
+                    example: 1
+                  questions_per_game:
+                    type: integer
+                    example: 1
+                  min_correct_answers:
+                    type: integer
+                    example: 1
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -2731,6 +3008,15 @@ paths:
                   type: integer
                   example: 3
                   default: 2
+                max_winners:
+                  type: integer
+                  example: 1
+                questions_per_game:
+                  type: integer
+                  example: 1
+                min_correct_answers:
+                  type: integer
+                  example: 1
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -2801,6 +3087,15 @@ paths:
                   type: integer
                   example: 3
                   default: 2
+                max_winners:
+                  type: integer
+                  example: 1
+                questions_per_game:
+                  type: integer
+                  example: 1
+                min_correct_answers:
+                  type: integer
+                  example: 1
       responses:
         "200":
           description: Returns challenge details.
@@ -2847,6 +3142,15 @@ paths:
                   received_reward:
                     type: number
                     example: 123.456
+                  max_winners:
+                    type: integer
+                    example: 1
+                  questions_per_game:
+                    type: integer
+                    example: 1
+                  min_correct_answers:
+                    type: integer
+                    example: 1
         "400":
           $ref: "#/components/responses/DefaultError"
         "422":

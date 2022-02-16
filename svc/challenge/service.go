@@ -15,6 +15,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	defaultMaxWinners        = 1
+	defaultQuestionsPerGame  = 5
+	defaultMinCorrectAnswers = 1
+)
+
 type (
 	// Service struct
 	Service struct {
@@ -36,6 +42,7 @@ type (
 	showsRepository interface {
 		GetEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetEpisodeByIDRow, error)
 		GetEpisodeIDByVerificationChallengeID(ctx context.Context, verificationChallengeID uuid.NullUUID) (uuid.UUID, error)
+		GetEpisodeIDByQuizChallengeID(ctx context.Context, quizChallengeID uuid.NullUUID) (uuid.UUID, error)
 	}
 
 	challengesRepository interface {
@@ -109,6 +116,10 @@ type (
 		AttemptsLeft       int32      `json:"attempts_left"`
 		ReceivedReward     float64    `json:"received_reward"`
 		ReceivedRewardStr  string     `json:"received_reward_str"`
+		MaxWinners         int32      `json:"max_winners"`
+		QuestionsPerGame   int32      `json:"questions_per_game"`
+		MinCorrectAnswers  int32      `json:"min_correct_answers"`
+		IsRealmActivated   bool       `json:"is_realm_activated"`
 	}
 
 	RawChallenge struct {
@@ -124,6 +135,9 @@ type (
 		EpisodeID          *uuid.UUID `json:"episode_id"`
 		Kind               int32      `json:"kind"`
 		UserMaxAttempts    int32      `json:"user_max_attempts"`
+		MaxWinners         int32      `json:"max_winners"`
+		QuestionsPerGame   int32      `json:"questions_per_game"`
+		MinCorrectAnswers  int32      `json:"min_correct_answers"`
 	}
 
 	// Question struct
@@ -227,7 +241,11 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 		}
 	}
 
-	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward), nil
+	// Check if a user has access to the challenge
+	epID, _ := s.showRepo.GetEpisodeIDByQuizChallengeID(ctx, uuid.NullUUID{UUID: challengeID, Valid: true})
+	res, _ := s.VerifyUserAccessToEpisode(ctx, userID, epID)
+
+	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward, &epID, res.Result), nil
 }
 
 func (s *Service) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (RawChallenge, error) {
@@ -357,20 +375,20 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 }
 
 // VerifyUserAccessToEpisode ...
-func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (interface{}, error) {
+func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (EpisodeAccess, error) {
 	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
 		EpisodeID: eid,
 		UserID:    uid,
 	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return false, nil
+			return EpisodeAccess{Result: false}, nil
 		}
-		return false, fmt.Errorf("could not get episode access data: %w", err)
+		return EpisodeAccess{Result: false}, fmt.Errorf("could not get episode access data: %w", err)
 	}
 
 	if !data.ActivatedAt.Valid || !data.ActivatedBefore.Valid || data.ActivatedBefore.Time.Before(time.Now()) {
-		return false, nil
+		return EpisodeAccess{Result: false}, nil
 	}
 
 	return EpisodeAccess{
@@ -415,16 +433,17 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 				attemptsLeft = 0
 			}
 		}
-		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward))
+		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward, nil, false))
 	}
 
 	return result, nil
 }
 
-func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64) Challenge {
+func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64, epID *uuid.UUID, isActivated bool) Challenge {
 	ch := Challenge{
 		ID:                 c.ID,
 		ShowID:             c.ShowID,
+		EpisodeID:          epID,
 		Title:              c.Title,
 		Description:        c.Description.String,
 		PrizePool:          fmt.Sprintf("%.2f SAO", c.PrizePool),
@@ -438,6 +457,14 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		AttemptsLeft:       attemptsLeft,
 		ReceivedReward:     receivedReward,
 		ReceivedRewardStr:  fmt.Sprintf("%.2f SAO", receivedReward),
+		MaxWinners:         c.MaxWinners.Int32,
+		QuestionsPerGame:   c.QuestionsPerGame,
+		MinCorrectAnswers:  c.MinCorrectAnswers,
+		IsRealmActivated:   isActivated,
+	}
+
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
@@ -460,6 +487,9 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 		TimePerQuestionSec: c.TimePerQuestion.Int32,
 		Kind:               c.Kind,
 		UserMaxAttempts:    c.UserMaxAttempts,
+		MaxWinners:         c.MaxWinners.Int32,
+		QuestionsPerGame:   c.QuestionsPerGame,
+		MinCorrectAnswers:  c.MinCorrectAnswers,
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
@@ -471,6 +501,20 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 
 // AddChallenge ..
 func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, error) {
+	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
+		return Challenge{}, fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
+	if ch.QuestionsPerGame == 0 {
+		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+	if ch.MinCorrectAnswers == 0 {
+		ch.MinCorrectAnswers = defaultMinCorrectAnswers
+	}
+
 	params := repository.AddChallengeParams{
 		ShowID: ch.ShowID,
 		Title:  ch.Title,
@@ -481,7 +525,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		PrizePool:      ch.PrizePoolAmount,
 		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
-			Int32: int32(ch.TimePerQuestionSec),
+			Int32: ch.TimePerQuestionSec,
 			Valid: true,
 		},
 		UpdatedAt: sql.NullTime{
@@ -490,6 +534,12 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
+		MaxWinners: sql.NullInt32{
+			Int32: ch.MaxWinners,
+			Valid: true,
+		},
+		QuestionsPerGame:  ch.QuestionsPerGame,
+		MinCorrectAnswers: ch.MinCorrectAnswers,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
@@ -501,7 +551,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
 
-	return castToChallenge(challenge, s.playUrlFn, 0, 0), nil
+	return castToChallenge(challenge, s.playUrlFn, 0, 0, nil, false), nil
 }
 
 // DeleteChallengeByID ...
@@ -515,6 +565,20 @@ func (s *Service) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 
 // UpdateChallenge ..
 func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
+	if ch.MinCorrectAnswers > ch.QuestionsPerGame {
+		return fmt.Errorf("min correct answers should be less or equal to questings per game")
+	}
+
+	if ch.MaxWinners == 0 {
+		ch.MaxWinners = defaultMaxWinners
+	}
+	if ch.QuestionsPerGame == 0 {
+		ch.QuestionsPerGame = defaultQuestionsPerGame
+	}
+	if ch.MinCorrectAnswers == 0 {
+		ch.MinCorrectAnswers = defaultMinCorrectAnswers
+	}
+
 	params := repository.UpdateChallengeParams{
 		ID:     ch.ID,
 		ShowID: ch.ShowID,
@@ -526,11 +590,17 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		PrizePool:      ch.PrizePoolAmount,
 		PlayersToStart: ch.Players,
 		TimePerQuestion: sql.NullInt32{
-			Int32: int32(ch.TimePerQuestionSec),
+			Int32: ch.TimePerQuestionSec,
 			Valid: ch.TimePerQuestionSec > 0,
 		},
 		Kind:            ch.Kind,
 		UserMaxAttempts: ch.UserMaxAttempts,
+		MaxWinners: sql.NullInt32{
+			Int32: ch.MaxWinners,
+			Valid: true,
+		},
+		QuestionsPerGame:  ch.QuestionsPerGame,
+		MinCorrectAnswers: ch.MinCorrectAnswers,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {

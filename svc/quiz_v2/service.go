@@ -8,21 +8,25 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
+	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 )
 
 type (
 	Service struct {
-		engine *engine.Engine
+		engine             *engine.Engine
+		restrictionManager restriction_manager.RestrictionManager
 
 		natsURL    string
 		natsWSURL  string
-		challenges quiz_v2_challenge.ChallengesService
+		challenges interfaces.ChallengesService
 		ac         authClient
+		pc         profileClient
 
 		serverRSAPrivateKey *rsa.PrivateKey
 	}
@@ -30,21 +34,33 @@ type (
 	authClient interface {
 		GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error)
 	}
+
+	profileClient interface {
+		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (*profile.Profile, error)
+	}
 )
 
 func NewService(
 	natsURL,
 	natsWSURL string,
-	challenges quiz_v2_challenge.ChallengesService,
+	challenges interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
+	rewards interfaces.RewardsService,
 	ac authClient,
+	pc profileClient,
 	serverRSAPrivateKey *rsa.PrivateKey,
+	shuffleQuestions bool,
 ) *Service {
+	restrictionManager := restriction_manager.New(challenges)
+
 	s := &Service{
-		engine:              engine.New(challenges),
+		engine:              engine.New(challenges, stakeLevels, rewards, restrictionManager, shuffleQuestions),
+		restrictionManager:  restrictionManager,
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,
 		ac:                  ac,
+		pc:                  pc,
 		serverRSAPrivateKey: serverRSAPrivateKey,
 	}
 
@@ -52,27 +68,15 @@ func NewService(
 }
 
 func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error) {
-	receivedReward, err := s.challenges.GetChallengeReceivedRewardAmountByUserID(ctx, challengeID, uid)
-	if err != nil && !db.IsNotFoundError(err) {
-		return nil, fmt.Errorf("could not get received reward amount: %w", err)
+	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't check if user is restricted")
 	}
-	if receivedReward > 0 {
-		return nil, errors.New("reward has been already received for this challenge")
+	if restricted {
+		return nil, errors.Errorf("user is restricted for this challenge reason: %v", restrictionReason.String())
 	}
 
-	challengeByID, err := s.challenges.GetChallengeByID(ctx, challengeID, uid)
-	if err != nil {
-		return nil, fmt.Errorf("could not found challenge: %w", err)
-	}
-	attempts, err := s.challenges.GetPassedChallengeAttempts(ctx, challengeID, uid)
-	if err != nil {
-		return nil, fmt.Errorf("could not get passed challenge attempts: %w", err)
-	}
-	if attempts >= int64(challengeByID.UserMaxAttempts) {
-		return nil, errors.New("no more attempts left")
-	}
-
-	prefix := uid.String()
+	prefix := fmt.Sprintf("%v/%v", uuid.New().String(), uid.String())
 	recvMessageSubj := fmt.Sprintf("%v/%v", prefix, "recv")
 	sendMessageSubj := fmt.Sprintf("%v/%v", prefix, "send")
 
@@ -81,10 +85,16 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, err
 	}
 
+	profile, err := s.pc.GetProfileByUserID(ctx, uid, username)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get profile by user id")
+	}
+
 	player, err := nats_player.NewNatsPlayer(
 		uid.String(),
 		challengeID.String(),
 		username,
+		profile.Avatar,
 		s.natsURL,
 		recvMessageSubj,
 		sendMessageSubj,
@@ -116,4 +126,23 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 
 func (s *Service) StartEngine() {
 	s.engine.Start()
+}
+
+func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error) {
+	challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, userID)
+	if err != nil {
+		return challenge_service.Challenge{}, errors.Wrap(err, "can't get challenge by ID")
+	}
+
+	roomDetails, err := s.engine.GetRoomDetails(challengeID.String())
+	if err != nil {
+		if _, ok := err.(*engine.ErrRoomNotFound); !ok {
+			return challenge_service.Challenge{}, errors.Wrap(err, "can't get room details")
+		} else {
+			return challenge, nil
+		}
+	}
+
+	challenge.Players = roomDetails.PlayersToStart
+	return challenge, nil
 }

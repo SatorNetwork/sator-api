@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/common"
 
 	"github.com/SatorNetwork/sator-api/internal/solana"
 	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
@@ -20,7 +21,13 @@ type WalletClient struct {
 
 func New() *WalletClient {
 	return &WalletClient{
-		solanaClient: solana.New("http://localhost:8899"),
+		solanaClient: solana.New("http://localhost:8899", solana.Config{
+			SystemProgram:  common.SystemProgramID.ToBase58(),
+			SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+			SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+			SplToken:       common.TokenProgramID.ToBase58(),
+			StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		}),
 	}
 }
 
@@ -53,19 +60,35 @@ type GetWalletByIDResponse struct {
 }
 
 type WalletDetails struct {
-	Id                     string `json:"id"`
-	Order                  int    `json:"order"`
-	SolanaAccountAddress   string `json:"solana_account_address"`
-	EthereumAccountAddress string `json:"ethereum_account_address"`
-	Balance                []struct {
-		Currency string  `json:"currency"`
-		Amount   float64 `json:"amount"`
-	} `json:"balance"`
-	Actions []struct {
+	Id                     string            `json:"id"`
+	Order                  int               `json:"order"`
+	SolanaAccountAddress   string            `json:"solana_account_address"`
+	EthereumAccountAddress string            `json:"ethereum_account_address"`
+	Balance                []CurrencyBalance `json:"balance"`
+	Actions                []struct {
 		Type string `json:"type"`
 		Name string `json:"name"`
 		Url  string `json:"url"`
 	} `json:"actions"`
+}
+
+type CurrencyBalance struct {
+	Currency string  `json:"currency"`
+	Amount   float64 `json:"amount"`
+}
+
+func (w *WalletDetails) FindUnclaimedCurrency() (*CurrencyBalance, error) {
+	return w.findCurrencyByName("UNCLAIMED")
+}
+
+func (w *WalletDetails) findCurrencyByName(currencyName string) (*CurrencyBalance, error) {
+	for _, balance := range w.Balance {
+		if balance.Currency == currencyName {
+			return &balance, nil
+		}
+	}
+
+	return nil, errors.Errorf("currency with %v name not found", currencyName)
 }
 
 type GetWalletTxs struct {
@@ -73,11 +96,11 @@ type GetWalletTxs struct {
 }
 
 type Tx struct {
-	Id        string    `json:"id"`
-	WalletId  string    `json:"wallet_id"`
-	TxHash    string    `json:"tx_hash"`
-	Amount    float64   `json:"amount"`
-	CreatedAt string `json:"created_at"`
+	Id        string  `json:"id"`
+	WalletId  string  `json:"wallet_id"`
+	TxHash    string  `json:"tx_hash"`
+	Amount    float64 `json:"amount"`
+	CreatedAt string  `json:"created_at"`
 }
 
 func (w *WalletClient) GetWallets(accessToken string) ([]*Wallet, error) {
@@ -160,7 +183,6 @@ func (w *WalletClient) GetWalletTxs(accessToken string, walletTransactionsUrl st
 
 	return resp.Data, nil
 }
-
 
 func (w *WalletClient) CreateTransfer(accessToken string, req *wallet.CreateTransferRequest) (*CreateTransferResponse, error) {
 	url := fmt.Sprintf("http://localhost:8080/wallets/%v/create-transfer", req.SenderWalletID)

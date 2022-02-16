@@ -97,6 +97,79 @@ func (q *Queries) DoesUserOwnNFT(ctx context.Context, arg DoesUserOwnNFTParams) 
 	return column_1, err
 }
 
+const getAllNFTItems = `-- name: GetAllNFTItems :many
+WITH minted_nfts AS (
+    SELECT nft_item_id, COUNT(user_id)::INT AS minted
+    FROM nft_owners
+    GROUP BY nft_item_id
+)
+SELECT nft_items.id, nft_items.owner_id, nft_items.name, nft_items.description, nft_items.cover, nft_items.supply, nft_items.buy_now_price, nft_items.token_uri, nft_items.updated_at, nft_items.created_at, nft_items.creator_address, nft_items.creator_share, minted_nfts.minted as minted
+FROM nft_items
+    LEFT JOIN minted_nfts ON minted_nfts.nft_item_id = nft_items.id
+WHERE nft_items.supply > COALESCE(minted_nfts.minted, 0) 
+AND nft_items.supply > 0
+ORDER BY nft_items.created_at DESC
+LIMIT $2 OFFSET $1
+`
+
+type GetAllNFTItemsParams struct {
+	Offset int32 `json:"offset_val"`
+	Limit  int32 `json:"limit_val"`
+}
+
+type GetAllNFTItemsRow struct {
+	ID             uuid.UUID      `json:"id"`
+	OwnerID        uuid.NullUUID  `json:"owner_id"`
+	Name           string         `json:"name"`
+	Description    sql.NullString `json:"description"`
+	Cover          string         `json:"cover"`
+	Supply         int64          `json:"supply"`
+	BuyNowPrice    float64        `json:"buy_now_price"`
+	TokenURI       string         `json:"token_uri"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CreatorAddress sql.NullString `json:"creator_address"`
+	CreatorShare   sql.NullInt32  `json:"creator_share"`
+	Minted         sql.NullInt32  `json:"minted"`
+}
+
+func (q *Queries) GetAllNFTItems(ctx context.Context, arg GetAllNFTItemsParams) ([]GetAllNFTItemsRow, error) {
+	rows, err := q.query(ctx, q.getAllNFTItemsStmt, getAllNFTItems, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllNFTItemsRow
+	for rows.Next() {
+		var i GetAllNFTItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Name,
+			&i.Description,
+			&i.Cover,
+			&i.Supply,
+			&i.BuyNowPrice,
+			&i.TokenURI,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.CreatorAddress,
+			&i.CreatorShare,
+			&i.Minted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getNFTItemByID = `-- name: GetNFTItemByID :one
 WITH minted_nft_items AS (
     SELECT COUNT(user_id)::INT as minted, nft_item_id

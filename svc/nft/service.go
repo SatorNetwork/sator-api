@@ -61,6 +61,7 @@ type (
 		AddNFTItemOwner(ctx context.Context, arg repository.AddNFTItemOwnerParams) error
 		GetNFTItemByID(ctx context.Context, nftItemID uuid.UUID) (repository.GetNFTItemByIDRow, error)
 		GetNFTItemsList(ctx context.Context, arg repository.GetNFTItemsListParams) ([]repository.GetNFTItemsListRow, error)
+		GetAllNFTItems(ctx context.Context, arg repository.GetAllNFTItemsParams) ([]repository.GetAllNFTItemsRow, error)
 		GetNFTItemsListByRelationID(ctx context.Context, arg repository.GetNFTItemsListByRelationIDParams) ([]repository.GetNFTItemsListByRelationIDRow, error)
 		GetNFTItemsListByOwnerID(ctx context.Context, arg repository.GetNFTItemsListByOwnerIDParams) ([]repository.NFTItem, error)
 		GetNFTCategoriesList(ctx context.Context) ([]repository.NFTCategory, error)
@@ -168,21 +169,41 @@ func (s *Service) BuyNFT(ctx context.Context, userID uuid.UUID, nftID uuid.UUID)
 	return nil
 }
 
-func (s *Service) GetNFTs(ctx context.Context, limit, offset int32) ([]*NFT, error) {
-	nftList, err := s.nftRepo.GetNFTItemsList(ctx, repository.GetNFTItemsListParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		if db.IsNotFoundError(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
+func (s *Service) GetNFTs(ctx context.Context, limit, offset int32, withMinted bool) ([]*NFT, error) {
+	var ls []NFTItemRow
 
-	ls := make([]NFTItemRow, 0, len(nftList))
-	for _, v := range nftList {
-		ls = append(ls, NFTItemRow(v))
+	if withMinted {
+		nftList, err := s.nftRepo.GetNFTItemsList(ctx, repository.GetNFTItemsListParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			if db.IsNotFoundError(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+
+		ls = make([]NFTItemRow, 0, len(nftList))
+		for _, v := range nftList {
+			ls = append(ls, NFTItemRow(v))
+		}
+	} else {
+		nftList, err := s.nftRepo.GetAllNFTItems(ctx, repository.GetAllNFTItemsParams{
+			Limit:  limit,
+			Offset: offset,
+		})
+		if err != nil {
+			if db.IsNotFoundError(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+
+		ls = make([]NFTItemRow, 0, len(nftList))
+		for _, v := range nftList {
+			ls = append(ls, NFTItemRow(v))
+		}
 	}
 
 	return castNFTRawListToNFTList(ls), nil

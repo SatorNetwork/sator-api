@@ -6,13 +6,11 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
-	quiz_v2_challenge "github.com/SatorNetwork/sator-api/svc/quiz_v2/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/question_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
 )
-
-const defaultWinnersNum = 2
 
 type QuizEngine interface {
 	GetChallenge() *challenge.RawChallenge
@@ -23,8 +21,9 @@ type QuizEngine interface {
 	CheckAndRegisterAnswer(questionID, answerID, userID uuid.UUID, answeredAt time.Time) (bool, error)
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
 	RegisterQuestionSendingEvent(questionNum int) error
-	GetPrizePoolDistribution() map[uuid.UUID]float64
-	GetWinners() []*result_table.Winner
+	GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error)
+	GetWinnersAndLosers() ([]*result_table.Winner, []*result_table.Loser, error)
+	GetWinners() ([]*result_table.Winner, error)
 }
 
 type quizEngine struct {
@@ -32,19 +31,26 @@ type quizEngine struct {
 	resultTable       result_table.ResultTable
 }
 
-func New(challengeID string, challengesSvc quiz_v2_challenge.ChallengesService) (*quizEngine, error) {
-	qc, err := question_container.New(challengeID, challengesSvc)
+func New(
+	challengeID string,
+	challengesSvc interfaces.ChallengesService,
+	stakeLevels interfaces.StakeLevels,
+	shuffleQuestions bool,
+) (*quizEngine, error) {
+	qc, err := question_container.New(challengeID, challengesSvc, shuffleQuestions)
 	if err != nil {
 		return nil, err
 	}
+	challenge := qc.GetChallenge()
 
 	cfg := result_table.Config{
 		QuestionNum:        qc.GetNumberOfQuestions(),
-		WinnersNum:         defaultWinnersNum,
-		PrizePool:          qc.GetChallenge().PrizePoolAmount,
-		TimePerQuestionSec: int(qc.GetChallenge().TimePerQuestionSec),
+		WinnersNum:         int(challenge.MaxWinners),
+		PrizePool:          challenge.PrizePoolAmount,
+		TimePerQuestionSec: int(challenge.TimePerQuestionSec),
+		MinCorrectAnswers:  challenge.MinCorrectAnswers,
 	}
-	rt := result_table.New(&cfg)
+	rt := result_table.New(&cfg, stakeLevels)
 
 	return &quizEngine{
 		questionContainer: qc,
@@ -102,10 +108,14 @@ func (e *quizEngine) RegisterQuestionSendingEvent(questionNum int) error {
 	return e.resultTable.RegisterQuestionSendingEvent(questionNum)
 }
 
-func (e *quizEngine) GetPrizePoolDistribution() map[uuid.UUID]float64 {
+func (e *quizEngine) GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error) {
 	return e.resultTable.GetPrizePoolDistribution()
 }
 
-func (e *quizEngine) GetWinners() []*result_table.Winner {
+func (e *quizEngine) GetWinnersAndLosers() ([]*result_table.Winner, []*result_table.Loser, error) {
+	return e.resultTable.GetWinnersAndLosers()
+}
+
+func (e *quizEngine) GetWinners() ([]*result_table.Winner, error) {
 	return e.resultTable.GetWinners()
 }

@@ -12,6 +12,7 @@ import (
 	userRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
+
 	"github.com/dmitrymomot/go-env"
 	"github.com/google/uuid"
 	"github.com/zeebo/errs"
@@ -32,6 +33,11 @@ var (
 	solanaFeePayerPrivateKey = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	// solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
+	solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
+	solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
+	solanaSplToken              = env.MustString("SOLANA_SPL_TOKEN")
+	solanaStakeProgramID        = env.MustString("SOLANA_STAKE_PROGRAM_ID")
 
 	userEmail = env.MustString("USER_EMAIL")
 )
@@ -92,7 +98,13 @@ func main() {
 		return createSolanaWalletIfNotExists(
 			ctx,
 			repository.New(tx),
-			solana.New(solanaApiBaseUrl),
+			solana.New(solanaApiBaseUrl, solana.Config{
+				SystemProgram:  solanaSystemProgram,
+				SysvarRent:     solanaSysvarRent,
+				SysvarClock:    solanaSysvarClock,
+				SplToken:       solanaSplToken,
+				StakeProgramID: solanaStakeProgramID,
+			}),
 			user.ID,
 			feePayerPk,
 			tokenHolderPk,

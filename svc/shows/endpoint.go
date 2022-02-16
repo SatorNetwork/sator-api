@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/SatorNetwork/sator-api/internal/jwt"
 	"github.com/SatorNetwork/sator-api/internal/rbac"
@@ -25,6 +26,12 @@ type (
 		GetShowByID        endpoint.Endpoint
 		GetShowsByCategory endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
+
+		AddShowCategory        endpoint.Endpoint
+		DeleteShowCategoryByID endpoint.Endpoint
+		UpdateShowCategory     endpoint.Endpoint
+		GetShowCategoryByID    endpoint.Endpoint
+		GetShowCategories      endpoint.Endpoint
 
 		AddSeason        endpoint.Endpoint
 		DeleteSeasonByID endpoint.Endpoint
@@ -54,9 +61,17 @@ type (
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowsWithNFT(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetShowByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-		GetShowsByCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
+		GetShowByID(ctx context.Context, id uuid.UUID) (Show, error)
+		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
+		GetShowsByOldCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		UpdateShow(ctx context.Context, sh Show) error
+
+		AddShowCategory(ctx context.Context, sc ShowCategory) (ShowCategory, error)
+		DeleteShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) error
+		UpdateShowCategory(ctx context.Context, sc ShowCategory) error
+		GetShowCategoryByID(ctx context.Context, showCategoryID uuid.UUID) (ShowCategory, error)
+		GetShowCategories(ctx context.Context, limit, offset int32) ([]ShowCategory, error)
+		GetShowCategoriesWithDisabled(ctx context.Context, limit, offset int32) ([]ShowCategory, error)
 
 		AddSeason(ctx context.Context, ss Season) (Season, error)
 		DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error
@@ -94,27 +109,27 @@ type (
 
 	// AddShowRequest struct
 	AddShowRequest struct {
-		Title          string `json:"title,omitempty" validate:"required,gt=0"`
-		Cover          string `json:"cover,omitempty" validate:"required,gt=0"`
-		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
-		Category       string `json:"category,omitempty"`
-		Description    string `json:"description,omitempty"`
-		RealmsTitle    string `json:"realms_title,omitempty"`
-		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
-		Watch          string `json:"watch,omitempty"`
+		Title          string   `json:"title,omitempty" validate:"required,gt=0"`
+		Cover          string   `json:"cover,omitempty" validate:"required,gt=0"`
+		HasNewEpisode  bool     `json:"has_new_episode,omitempty"`
+		Categories     []string `json:"categories,omitempty"`
+		Description    string   `json:"description,omitempty"`
+		RealmsTitle    string   `json:"realms_title,omitempty"`
+		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
+		Watch          string   `json:"watch,omitempty"`
 	}
 
 	// UpdateShowRequest struct
 	UpdateShowRequest struct {
-		ID             string `json:"id,omitempty" validate:"required,uuid"`
-		Title          string `json:"title,omitempty" validate:"required"`
-		Cover          string `json:"cover,omitempty" validate:"required"`
-		HasNewEpisode  bool   `json:"has_new_episode,omitempty"`
-		Category       string `json:"category,omitempty"`
-		Description    string `json:"description,omitempty"`
-		RealmsTitle    string `json:"realms_title,omitempty"`
-		RealmsSubtitle string `json:"realms_subtitle,omitempty"`
-		Watch          string `json:"watch,omitempty"`
+		ID             string   `json:"id,omitempty" validate:"required,uuid"`
+		Title          string   `json:"title,omitempty" validate:"required"`
+		Cover          string   `json:"cover,omitempty" validate:"required"`
+		HasNewEpisode  bool     `json:"has_new_episode,omitempty"`
+		Categories     []string `json:"categories,omitempty"`
+		Description    string   `json:"description,omitempty"`
+		RealmsTitle    string   `json:"realms_title,omitempty"`
+		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
+		Watch          string   `json:"watch,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -215,6 +230,26 @@ type (
 		WithNFT string `json:"with_nft"`
 		utils.PaginationRequest
 	}
+
+	// AddShowsCategoryRequest struct
+	AddShowsCategoryRequest struct {
+		Title    string `json:"title" validate:"required,gt=0"`
+		Disabled string `json:"disabled" validate:"required"`
+		Sort     int32  `json:"sort" validate:"required"`
+	}
+
+	// UpdateShowCategoryRequest struct
+	UpdateShowCategoryRequest struct {
+		ID       string `json:"id" validate:"required,uuid"`
+		Title    string `json:"title" validate:"required,gt=0"`
+		Disabled string `json:"disabled"`
+		Sort     int32  `json:"sort" validate:"required"`
+	}
+
+	GetShowCategoriesRequest struct {
+		WithDisabled string `json:"with_disabled,omitempty"`
+		utils.PaginationRequest
+	}
 )
 
 // MakeEndpoints ...
@@ -230,6 +265,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowByID:        MakeGetShowByIDEndpoint(s),
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
+
+		AddShowCategory:        MakeAddShowCategoryEndpoint(s, validateFunc),
+		DeleteShowCategoryByID: MakeDeleteShowCategoryByIDEndpoint(s),
+		UpdateShowCategory:     MakeUpdateShowCategoryEndpoint(s, validateFunc),
+		GetShowCategoryByID:    MakeGetShowCategoryByIDEndpoint(s),
+		GetShowCategories:      MakeGetShowCategoriesEndpoint(s, validateFunc),
 
 		AddSeason:        MakeAddSeasonEndpoint(s, validateFunc),
 		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
@@ -264,6 +305,12 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowByID = mdw(e.GetShowByID)
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
+
+			e.AddShowCategory = mdw(e.AddShowCategory)
+			e.DeleteShowCategoryByID = mdw(e.DeleteShowCategoryByID)
+			e.UpdateShowCategory = mdw(e.UpdateShowCategory)
+			e.GetShowCategoryByID = mdw(e.GetShowCategoryByID)
+			e.GetShowCategories = mdw(e.GetShowCategories)
 
 			e.AddSeason = mdw(e.AddSeason)
 			e.DeleteSeasonByID = mdw(e.DeleteSeasonByID)
@@ -385,12 +432,19 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 			return nil, err
 		}
 
-		if req.Category != "" {
-			resp, err := s.GetShowsByCategory(ctx, req.Category, req.Limit(), req.Offset())
+		id, _ := uuid.Parse(req.Category)
+		if id != uuid.Nil {
+			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
 			if err != nil {
 				return nil, err
 			}
-
+			return resp, nil
+		} else if req.Category != "" && id == uuid.Nil {
+			// FIXME: remove after all shows will be migrated to the new categories
+			resp, err := s.GetShowsByCategory(ctx, id, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
 			return resp, nil
 		}
 
@@ -415,11 +469,20 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return nil, err
 		}
 
+		categories := make([]uuid.UUID, 0, len(req.Categories))
+		for _, cat := range req.Categories {
+			id, err := uuid.Parse(cat)
+			if err != nil {
+				return nil, fmt.Errorf("could not get show id: %w", err)
+			}
+			categories = append(categories, id)
+		}
+
 		resp, err := s.AddShow(ctx, Show{
 			Title:          req.Title,
 			Cover:          req.Cover,
 			HasNewEpisode:  req.HasNewEpisode,
-			Category:       req.Category,
+			Categories:     categories,
 			Description:    req.Description,
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
@@ -447,12 +510,21 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get show id: %w", err)
 		}
 
+		categories := make([]uuid.UUID, 0, len(req.Categories))
+		for _, cat := range req.Categories {
+			idc, err := uuid.Parse(cat)
+			if err != nil {
+				return nil, fmt.Errorf("could not get show id: %w", err)
+			}
+			categories = append(categories, idc)
+		}
+
 		err = s.UpdateShow(ctx, Show{
 			ID:             id,
 			Title:          req.Title,
 			Cover:          req.Cover,
 			HasNewEpisode:  req.HasNewEpisode,
-			Category:       req.Category,
+			Categories:     categories,
 			Description:    req.Description,
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
@@ -1039,5 +1111,143 @@ func MakeSendTipsToReviewAuthorEndpoint(s service, v validator.ValidateFunc) end
 		}
 
 		return true, nil
+	}
+}
+
+// MakeAddShowCategoryEndpoint ...
+func MakeAddShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(AddShowsCategoryRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		parseBool, err := strconv.ParseBool(req.Disabled)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse bool from string: %w", err)
+		}
+
+		resp, err := s.AddShowCategory(ctx, ShowCategory{
+			Title:    req.Title,
+			Disabled: parseBool,
+			Sort:     req.Sort,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeUpdateShowCategoryEndpoint ...
+func MakeUpdateShowCategoryEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(UpdateShowCategoryRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(req.ID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		parseBool, err := strconv.ParseBool(req.Disabled)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse bool from string: %w", err)
+		}
+
+		err = s.UpdateShowCategory(ctx, ShowCategory{
+			ID:       id,
+			Sort:     req.Sort,
+			Title:    req.Title,
+			Disabled: parseBool,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeDeleteShowCategoryByIDEndpoint ...
+func MakeDeleteShowCategoryByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get id: %w", err)
+		}
+
+		err = s.DeleteShowCategoryByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetShowCategoryByIDEndpoint ...
+func MakeGetShowCategoryByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get id: %w", err)
+		}
+
+		resp, err := s.GetShowCategoryByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetShowCategoriesEndpoint ...
+func MakeGetShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetShowCategoriesRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		if withDisabled, _ := strconv.ParseBool(req.WithDisabled); withDisabled {
+			resp, err := s.GetShowCategoriesWithDisabled(ctx, req.Limit(), req.Offset())
+			if err != nil {
+				return nil, err
+			}
+
+			return resp, nil
+		}
+
+		resp, err := s.GetShowCategories(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

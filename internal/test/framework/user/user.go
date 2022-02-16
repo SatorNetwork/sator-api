@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"crypto/rsa"
 	"testing"
 
@@ -41,6 +42,7 @@ func NewInitializedUser(signUpRequest *auth.SignUpRequest, t *testing.T) *User {
 	user.SignUp()
 	user.VerifyAccount()
 	user.RegisterPublicKey()
+	user.CreateEmptyStake()
 
 	return user
 }
@@ -82,5 +84,15 @@ func (u *User) RegisterPublicKey() {
 	err = u.c.Auth.RegisterPublicKey(u.accessToken, &auth.RegisterPublicKeyRequest{
 		PublicKey: string(publcKeyBytes),
 	})
+	require.NoError(u.t, err)
+}
+
+func (u *User) CreateEmptyStake() {
+	var err error
+
+	id, err := u.c.DB.AuthDB().GetUserIDByEmail(context.Background(), u.email)
+	require.NoError(u.t, err)
+
+	err = u.c.DB.WalletDB().SetEmptyStake(id)
 	require.NoError(u.t, err)
 }

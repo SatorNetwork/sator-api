@@ -1,22 +1,31 @@
 package result_table
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table/cell"
 )
+
+type UserReward struct {
+	Prize float64
+	Bonus float64
+}
 
 type ResultTable interface {
 	RegisterQuestionSendingEvent(questionNum int) error
 	RegisterAnswer(userID uuid.UUID, qNum int, isCorrect bool, answeredAt time.Time) error
 	GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error)
-	GetPrizePoolDistribution() map[uuid.UUID]float64
-	GetWinners() []*Winner
+	GetPrizePoolDistribution() (map[uuid.UUID]UserReward, error)
+	GetWinnersAndLosers() ([]*Winner, []*Loser, error)
+	GetWinners() ([]*Winner, error)
 
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
@@ -31,6 +40,12 @@ type user struct {
 type Winner struct {
 	UserID string
 	Prize  string
+	Bonus  string
+}
+
+type Loser struct {
+	UserID string
+	PTS    uint32
 }
 
 type Config struct {
@@ -38,6 +53,7 @@ type Config struct {
 	WinnersNum         int
 	PrizePool          float64
 	TimePerQuestionSec int
+	MinCorrectAnswers  int32
 }
 
 type resultTable struct {
@@ -45,14 +61,18 @@ type resultTable struct {
 	tableMutex     *sync.Mutex
 	questionSentAt []time.Time
 
+	stakeLevels interfaces.StakeLevels
+
 	cfg *Config
 }
 
-func New(cfg *Config) ResultTable {
+func New(cfg *Config, stakeLevels interfaces.StakeLevels) ResultTable {
 	return &resultTable{
 		table:          make(map[uuid.UUID][]cell.Cell),
 		tableMutex:     &sync.Mutex{},
 		questionSentAt: make([]time.Time, cfg.QuestionNum),
+
+		stakeLevels: stakeLevels,
 
 		cfg: cfg,
 	}
@@ -101,7 +121,7 @@ func (rt *resultTable) GetAnswer(userID uuid.UUID, qNum int) (cell.Cell, error) 
 	return rt.getCell(userID, qNum)
 }
 
-func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
+func (rt *resultTable) GetPrizePoolDistribution() (map[uuid.UUID]UserReward, error) {
 	rt.tableMutex.Lock()
 	defer rt.tableMutex.Unlock()
 
@@ -117,21 +137,83 @@ func (rt *resultTable) GetPrizePoolDistribution() map[uuid.UUID]float64 {
 		distribution[userID] = rt.cfg.PrizePool / float64(totalPTS) * float64(pts)
 	}
 
-	return distribution
+	prizeMapWithStakeLevels, err := rt.applyStakeLevels(distribution)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't apply stake levels")
+	}
+
+	return prizeMapWithStakeLevels, nil
 }
 
-func (rt *resultTable) GetWinners() []*Winner {
-	userIDToPrize := rt.GetPrizePoolDistribution()
+func (rt *resultTable) applyStakeLevels(userIDToPrize map[uuid.UUID]float64) (map[uuid.UUID]UserReward, error) {
+	prizeMapWithStakeLevels := make(map[uuid.UUID]UserReward, len(userIDToPrize))
 
-	winners := make([]*Winner, 0, len(userIDToPrize))
 	for userID, prize := range userIDToPrize {
-		winners = append(winners, &Winner{
+		multiplier, err := rt.stakeLevels.GetMultiplier(context.Background(), userID)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get user's multiplier")
+		}
+		// TODO: add bonus to the winners message
+		bonus := (prize / 100) * float64(multiplier)
+		prize = prize + bonus
+
+		prizeMapWithStakeLevels[userID] = UserReward{
+			Prize: prize,
+			Bonus: bonus,
+		}
+	}
+
+	return prizeMapWithStakeLevels, nil
+}
+
+func (rt *resultTable) GetWinnersAndLosers() ([]*Winner, []*Loser, error) {
+	winners, err := rt.GetWinners()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "can't get winners")
+	}
+
+	losers := make([]*Loser, 0)
+	ptsMap := rt.calcPTSMap()
+	for userID, pts := range ptsMap {
+		if isWinner(winners, userID) {
+			continue
+		}
+
+		losers = append(losers, &Loser{
 			UserID: userID.String(),
-			Prize:  fmt.Sprintf("%v", prize),
+			PTS:    pts,
 		})
 	}
 
-	return winners
+	return winners, losers, nil
+}
+
+func isWinner(winners []*Winner, userID uuid.UUID) bool {
+	for _, w := range winners {
+		if w.UserID == userID.String() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (rt *resultTable) GetWinners() ([]*Winner, error) {
+	userIDToReward, err := rt.GetPrizePoolDistribution()
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get prize pool distribution")
+	}
+
+	winners := make([]*Winner, 0, len(userIDToReward))
+	for userID, reward := range userIDToReward {
+		winners = append(winners, &Winner{
+			UserID: userID.String(),
+			Prize:  fmt.Sprintf("%v", reward.Prize),
+			Bonus:  fmt.Sprintf("%v", reward.Bonus),
+		})
+	}
+
+	return winners, nil
 }
 
 func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
@@ -147,7 +229,7 @@ func (rt *resultTable) calcWinnersMap() map[uuid.UUID]uint32 {
 }
 
 func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
-	ptsMap := make(map[uuid.UUID]uint32, 0)
+	ptsMap := make(map[uuid.UUID]uint32)
 	for userID, row := range rt.table {
 		for _, cell := range row {
 			ptsMap[userID] += cell.PTS()
@@ -159,6 +241,8 @@ func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
 
 func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	users := rt.getUsersSortedByPTS()
+	users = rt.filterUsersByCANum(users)
+
 	winnersNum := minInt(rt.cfg.WinnersNum, len(users))
 	winners := users[:winnersNum]
 
@@ -168,6 +252,18 @@ func (rt *resultTable) getWinnerIDs() []uuid.UUID {
 	}
 
 	return winnerIDs
+}
+
+func (rt *resultTable) filterUsersByCANum(users []*user) []*user {
+	filteredUsers := make([]*user, 0)
+	for _, u := range users {
+		caNum := rt.GetNumOfCorrectAnswersForUser(u.id)
+		if caNum >= rt.cfg.MinCorrectAnswers {
+			filteredUsers = append(filteredUsers, u)
+		}
+	}
+
+	return filteredUsers
 }
 
 func (rt *resultTable) getUsersSortedByPTS() []*user {
@@ -226,7 +322,7 @@ func (rt *resultTable) createRowIfNecessary(userID uuid.UUID) {
 }
 
 func (rt *resultTable) getQuestionSentAt(qNum int) (time.Time, error) {
-	if qNum >= len(rt.questionSentAt) {
+	if qNum < 0 || qNum >= len(rt.questionSentAt) {
 		return time.Time{}, NewErrIndexOutOfRange(len(rt.questionSentAt), qNum)
 	}
 
@@ -248,4 +344,20 @@ func minInt(a int, b int) int {
 	}
 
 	return b
+}
+
+func (rt *resultTable) GetNumOfCorrectAnswersForUser(userID uuid.UUID) int32 {
+	row, ok := rt.table[userID]
+	if !ok {
+		// means no answer is registered for this user
+		return 0
+	}
+	var caNum int32
+	for _, cell := range row {
+		if cell.IsCorrect() {
+			caNum++
+		}
+	}
+
+	return caNum
 }

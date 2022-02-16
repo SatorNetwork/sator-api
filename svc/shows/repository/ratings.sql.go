@@ -6,6 +6,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -191,11 +192,28 @@ func (q *Queries) ReviewEpisode(ctx context.Context, arg ReviewEpisodeParams) er
 }
 
 const reviewsList = `-- name: ReviewsList :many
-SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
+WITH likes_numbers AS (
+    SELECT count(*) AS likes_number, review_id
+    FROM reviews_rating
+    WHERE rating_type = 1
+    GROUP BY review_id
+), dislikes_numbers AS (
+    SELECT count(*) AS dislikes_number, review_id
+    FROM reviews_rating
+    WHERE rating_type = 2
+    GROUP BY review_id
+)
+SELECT
+    ratings.episode_id, ratings.user_id, ratings.rating, ratings.created_at, ratings.id, ratings.title, ratings.review, ratings.username,
+    coalesce(likes_numbers.likes_number, 0) as likes_number,
+    coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
+FROM ratings
+    LEFT JOIN likes_numbers ON ratings.id = likes_numbers.review_id
+    LEFT JOIN dislikes_numbers ON ratings.id = dislikes_numbers.review_id
 WHERE episode_id = $1
 AND title IS NOT NULL
 AND review IS NOT NULL
-ORDER BY created_at DESC
+ORDER BY likes_number DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -205,15 +223,28 @@ type ReviewsListParams struct {
 	Offset    int32     `json:"offset"`
 }
 
-func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rating, error) {
+type ReviewsListRow struct {
+	EpisodeID      uuid.UUID      `json:"episode_id"`
+	UserID         uuid.UUID      `json:"user_id"`
+	Rating         int32          `json:"rating"`
+	CreatedAt      time.Time      `json:"created_at"`
+	ID             uuid.UUID      `json:"id"`
+	Title          sql.NullString `json:"title"`
+	Review         sql.NullString `json:"review"`
+	Username       sql.NullString `json:"username"`
+	LikesNumber    int64          `json:"likes_number"`
+	DislikesNumber int64          `json:"dislikes_number"`
+}
+
+func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]ReviewsListRow, error) {
 	rows, err := q.query(ctx, q.reviewsListStmt, reviewsList, arg.EpisodeID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Rating
+	var items []ReviewsListRow
 	for rows.Next() {
-		var i Rating
+		var i ReviewsListRow
 		if err := rows.Scan(
 			&i.EpisodeID,
 			&i.UserID,
@@ -223,6 +254,8 @@ func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rat
 			&i.Title,
 			&i.Review,
 			&i.Username,
+			&i.LikesNumber,
+			&i.DislikesNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -238,11 +271,27 @@ func (q *Queries) ReviewsList(ctx context.Context, arg ReviewsListParams) ([]Rat
 }
 
 const reviewsListByUserID = `-- name: ReviewsListByUserID :many
-SELECT episode_id, user_id, rating, created_at, id, title, review, username FROM ratings
-WHERE user_id = $1
-  AND title IS NOT NULL
-  AND review IS NOT NULL
-ORDER BY created_at DESC
+WITH likes_numbers AS (
+    SELECT count(*) AS likes_number, review_id
+    FROM reviews_rating
+    WHERE rating_type = 1
+    GROUP BY review_id
+), dislikes_numbers AS (
+    SELECT count(*) AS dislikes_number, review_id
+    FROM reviews_rating
+    WHERE rating_type = 2
+    GROUP BY review_id
+)
+SELECT ratings.episode_id, ratings.user_id, ratings.rating, ratings.created_at, ratings.id, ratings.title, ratings.review, ratings.username,
+    coalesce(likes_numbers.likes_number, 0) as likes_number,
+    coalesce(dislikes_numbers.dislikes_number, 0) as dislikes_number
+FROM ratings
+    LEFT JOIN likes_numbers ON ratings.id = likes_numbers.review_id
+    LEFT JOIN dislikes_numbers ON ratings.id = dislikes_numbers.review_id
+WHERE ratings.user_id = $1
+    AND title IS NOT NULL
+    AND review IS NOT NULL
+ORDER BY likes_number DESC
     LIMIT $2 OFFSET $3
 `
 
@@ -252,15 +301,28 @@ type ReviewsListByUserIDParams struct {
 	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) ReviewsListByUserID(ctx context.Context, arg ReviewsListByUserIDParams) ([]Rating, error) {
+type ReviewsListByUserIDRow struct {
+	EpisodeID      uuid.UUID      `json:"episode_id"`
+	UserID         uuid.UUID      `json:"user_id"`
+	Rating         int32          `json:"rating"`
+	CreatedAt      time.Time      `json:"created_at"`
+	ID             uuid.UUID      `json:"id"`
+	Title          sql.NullString `json:"title"`
+	Review         sql.NullString `json:"review"`
+	Username       sql.NullString `json:"username"`
+	LikesNumber    int64          `json:"likes_number"`
+	DislikesNumber int64          `json:"dislikes_number"`
+}
+
+func (q *Queries) ReviewsListByUserID(ctx context.Context, arg ReviewsListByUserIDParams) ([]ReviewsListByUserIDRow, error) {
 	rows, err := q.query(ctx, q.reviewsListByUserIDStmt, reviewsListByUserID, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Rating
+	var items []ReviewsListByUserIDRow
 	for rows.Next() {
-		var i Rating
+		var i ReviewsListByUserIDRow
 		if err := rows.Scan(
 			&i.EpisodeID,
 			&i.UserID,
@@ -270,6 +332,8 @@ func (q *Queries) ReviewsListByUserID(ctx context.Context, arg ReviewsListByUser
 			&i.Title,
 			&i.Review,
 			&i.Username,
+			&i.LikesNumber,
+			&i.DislikesNumber,
 		); err != nil {
 			return nil, err
 		}

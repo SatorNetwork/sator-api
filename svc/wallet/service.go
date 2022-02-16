@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -31,6 +33,7 @@ type (
 		satorAssetSolanaAddr        string
 		feePayerSolanaAddr          string
 		feePayerSolanaPrivateKey    []byte
+		stakePoolSolanaPublicKey    string
 		tokenHolderSolanaAddr       string
 		tokenHolderSolanaPrivateKey []byte
 
@@ -62,6 +65,15 @@ type (
 		AddEthereumAccount(ctx context.Context, arg repository.AddEthereumAccountParams) (repository.EthereumAccount, error)
 		GetEthereumAccountByID(ctx context.Context, id uuid.UUID) (repository.EthereumAccount, error)
 		GetEthereumAccountByUserIDAndType(ctx context.Context, arg repository.GetEthereumAccountByUserIDAndTypeParams) (repository.EthereumAccount, error)
+
+		AddStake(ctx context.Context, arg repository.AddStakeParams) (repository.Stake, error)
+		DeleteStakeByUserID(ctx context.Context, userID uuid.UUID) error
+		GetStakeByUserID(ctx context.Context, userID uuid.UUID) (repository.Stake, error)
+		GetTotalStake(ctx context.Context) (float64, error)
+		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
+
+		GetAllStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
+		GetStakeLevelByAmount(ctx context.Context, amount float64) (repository.GetStakeLevelByAmountRow, error)
 	}
 
 	solanaClient interface {
@@ -72,6 +84,10 @@ type (
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]solana.ConfirmedTransactionResponse, error)
+
+		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
+		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
+		Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 	}
 
 	ethereumClient interface {
@@ -92,16 +108,6 @@ type (
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
 func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, opt ...ServiceOption) *Service {
-	if wr == nil {
-		log.Fatalln("wallet repository is not set")
-	}
-	if sc == nil {
-		log.Fatalln("solana client is not set")
-	}
-	if ec == nil {
-		log.Fatalln("ethereum client in not set")
-	}
-
 	s := &Service{
 		wr: wr,
 		sc: sc,
@@ -178,42 +184,42 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 		return Wallet{}, fmt.Errorf("%w: you have no permissions to get this wallet", ErrForbidden)
 	}
 
-	if w.EthereumAccountID != uuid.Nil {
-		ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID)
-		if err != nil {
-			if db.IsNotFoundError(err) {
-				return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
-			}
-			return Wallet{}, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
-		}
-		return Wallet{
-			ID:                     w.ID.String(),
-			Order:                  w.Sort,
-			EthereumAccountAddress: ea.Address,
-			Actions: []Action{
-				{
-					Type: ActionSendTokens.String(),
-					Name: ActionSendTokens.Name(),
-					URL:  "",
-				},
-				{
-					Type: ActionReceiveTokens.String(),
-					Name: ActionReceiveTokens.Name(),
-					URL:  "",
-				},
-			},
-			Balance: []Balance{
-				{
-					Currency: "SAOE",
-					Amount:   0,
-				},
-				// {
-				// 	Currency: "USD",
-				// 	Amount:   0,
-				// },
-			},
-		}, nil
-	}
+	// if w.EthereumAccountID.UUID != uuid.Nil {
+	// 	ea, err := s.wr.GetEthereumAccountByID(ctx, w.EthereumAccountID.UUID)
+	// 	if err != nil {
+	// 		if db.IsNotFoundError(err) {
+	// 			return Wallet{}, fmt.Errorf("%w ethereum account for this wallet", ErrNotFound)
+	// 		}
+	// 		return Wallet{}, fmt.Errorf("could not get ethereum account for this wallet: %w", err)
+	// 	}
+	// 	return Wallet{
+	// 		ID:                     w.ID.String(),
+	// 		Order:                  w.Sort,
+	// 		EthereumAccountAddress: ea.Address,
+	// 		Actions: []Action{
+	// 			{
+	// 				Type: ActionSendTokens.String(),
+	// 				Name: ActionSendTokens.Name(),
+	// 				URL:  "",
+	// 			},
+	// 			{
+	// 				Type: ActionReceiveTokens.String(),
+	// 				Name: ActionReceiveTokens.Name(),
+	// 				URL:  "",
+	// 			},
+	// 		},
+	// 		Balance: []Balance{
+	// 			{
+	// 				Currency: "SAOE",
+	// 				Amount:   0,
+	// 			},
+	// 			// {
+	// 			// 	Currency: "USD",
+	// 			// 	Amount:   0,
+	// 			// },
+	// 		},
+	// 	}, nil
+	// }
 
 	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
 	if err != nil {
@@ -239,19 +245,19 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				// },
 			}
 		}
-	case GeneralAccount.String():
-		if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
-			balance = []Balance{
-				{
-					Currency: s.solanaAssetName,
-					Amount:   bal,
-				},
-				// {
-				// 	Currency: "USD",
-				// 	Amount:   bal * 70, // FIXME: setup currency rate
-				// },
-			}
-		}
+		// case GeneralAccount.String():
+		// 	if bal, err := s.sc.GetAccountBalanceSOL(ctx, sa.PublicKey); err == nil {
+		// 		balance = []Balance{
+		// 			{
+		// 				Currency: s.solanaAssetName,
+		// 				Amount:   bal,
+		// 			},
+		// 			// {
+		// 			// 	Currency: "USD",
+		// 			// 	Amount:   bal * 70, // FIXME: setup currency rate
+		// 			// },
+		// 		}
+		// 	}
 	}
 
 	return Wallet{
@@ -269,11 +275,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
-			// {
-			// 	Type: ActionStakeTokens.String(),
-			// 	Name: ActionStakeTokens.Name(),
-			// 	URL:  "",
-			// },
+			{
+				Type: ActionStakeTokens.String(),
+				Name: ActionStakeTokens.Name(),
+				URL:  "",
+			},
 		},
 		Balance: balance,
 	}, nil
@@ -466,6 +472,10 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 		return PreparedTransferTransaction{}, fmt.Errorf("%w: %.2f", ErrMinimalAmountToSend, s.minAmountToTransfer)
 	}
 
+	if bal < amount {
+		return PreparedTransferTransaction{}, fmt.Errorf("balance is lower then requested amount: %.2f", bal)
+	}
+
 	var toEncode struct {
 		Amount        float64
 		Asset         string
@@ -559,25 +569,183 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 }
 
 // GetStake Mocked method for stake
-func (s *Service) GetStake(ctx context.Context, walletID uuid.UUID) (Stake, error) {
+func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error) {
+	var stake repository.Stake
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
+		}
+
+		stake.StakeAmount = 0
+	}
+
+	totalStake, err := s.wr.GetTotalStake(ctx)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get total stake: %w", err)
+	}
+
+	multiplier, err := s.GetMultiplier(ctx, userID)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get miltiplier: %w", err)
+	}
+
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get sao wallet: %w", err)
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return Stake{}, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return Stake{}, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	bal, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
+	if err != nil {
+		return Stake{}, fmt.Errorf("could not get sao balance: %w", err)
+	}
+
 	return Stake{
-		Staking: Staking{
-			AssetName:   "SAO",
-			APY:         138.9,
-			TotalStaked: 23423454567,
-			Staked:      345.75,
-			YourShare:   0.021,
-		},
-		Loyalty: Loyalty{
-			LevelTitle:    "Genin",
-			LevelSubtitle: "25% rewards multiplier",
-		},
+		TotalLocked:       totalStake,
+		LockedByYou:       stake.StakeAmount,
+		CurrentMultiplier: multiplier,
+		AvailableToLock:   bal,
 	}, nil
 }
 
-// SetStake Mocked method for stake
-func (s *Service) SetStake(ctx context.Context, walletID uuid.UUID, amount float64) (bool, error) {
+// SetStake method for set stake
+func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
+	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
+	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return false, fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAccount, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return false, fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+
+	for i := 0; i < 5; i++ {
+		newCtx, cancel := context.WithCancel(context.Background())
+		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, uint64(amount)); err != nil {
+			if i < 4 {
+				log.Println(err)
+			} else {
+				cancel()
+				return false, fmt.Errorf("transaction: %w", err)
+			}
+			cancel()
+			time.Sleep(time.Second * 10)
+		} else {
+			cancel()
+			log.Printf("successful transaction: %s", tx)
+			break
+		}
+	}
+
+	// Store stake data in our db.
+	staked, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			_, err := s.wr.AddStake(ctx, repository.AddStakeParams{
+				UserID:      userID,
+				WalletID:    walletID,
+				StakeAmount: amount,
+				StakeDuration: sql.NullInt32{
+					Int32: int32(duration),
+					Valid: true,
+				},
+				UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+			})
+			if err != nil {
+				return true, fmt.Errorf("could not add stake to db for user= %v, %w", userID, err)
+			}
+
+			return true, nil
+		}
+
+		return true, fmt.Errorf("could not get stake from db for user= %v, %w", userID, err)
+	}
+
+	err = s.wr.UpdateStake(ctx, repository.UpdateStakeParams{
+		UserID:      userID,
+		StakeAmount: staked.StakeAmount + amount,
+		StakeDuration: sql.NullInt32{
+			Int32: int32(duration),
+			Valid: true,
+		},
+		UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+	})
+	if err != nil {
+		return true, fmt.Errorf("could not update stake in db for user= %v, %w", userID, err)
+	}
+
 	return true, nil
+}
+
+// Unstake method for unstake
+func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error {
+	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
+	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
+
+	wallet, err := s.wr.GetWalletByID(ctx, walletID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	solanaAccount, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet: %w", err)
+	}
+
+	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not get wallet stake: %w", err)
+	}
+
+	if time.Now().After(stake.UnstakeDate) {
+		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", stake.UnstakeDate.String())
+	}
+
+	for i := 0; i < 5; i++ {
+		newCtx, cancel := context.WithCancel(context.Background())
+		if tx, err := s.sc.Unstake(newCtx, feePayer, userWallet, stakePool, asset); err != nil {
+			if i < 4 {
+				log.Println(err)
+			} else {
+				cancel()
+				return fmt.Errorf("transaction: %w", err)
+			}
+			cancel()
+			time.Sleep(time.Second * 10)
+		} else {
+			cancel()
+			log.Printf("successful transaction: %s", tx)
+			break
+		}
+	}
+
+	err = s.wr.DeleteStakeByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("could not delete stake by user id: %w", err)
+	}
+
+	return nil
 }
 
 func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
@@ -724,4 +892,52 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 	}
 
 	return nil
+}
+
+// GetMultiplier returns multiplier according to wallet's stake level.
+func (s *Service) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
+	stake, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+
+		return 0, fmt.Errorf("could not get stake by user id: %w", err)
+	}
+
+	lvl, err := s.wr.GetStakeLevelByAmount(ctx, stake.StakeAmount)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+
+		return 0, fmt.Errorf("could not get user's stake level: %w", err)
+	}
+
+	return lvl.Multiplier.Int32, nil
+}
+
+// PossibleMultiplier returns multiplier that will be applied to user in stake will be increased on additionalAmount value.
+func (s *Service) PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error) {
+	amount := additionalAmount
+
+	staked, err := s.wr.GetStakeByUserID(ctx, userID)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return 0, fmt.Errorf("could not get staked amount: %w", err)
+		}
+	} else {
+		amount += staked.StakeAmount
+	}
+
+	lvl, err := s.wr.GetStakeLevelByAmount(ctx, amount)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, nil
+		}
+
+		return 0, fmt.Errorf("could not get user's stake level: %w", err)
+	}
+
+	return lvl.Multiplier.Int32, nil
 }

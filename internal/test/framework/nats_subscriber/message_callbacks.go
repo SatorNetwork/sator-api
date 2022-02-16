@@ -18,7 +18,6 @@ var defaultAnswerMap = map[string]string{
 
 func ReplyWithCorrectAnswerCallback(s *natsSubscriber, msg *message.Message) {
 	payload := message.AnswerMessage{
-		UserID:     s.userID,
 		QuestionID: msg.QuestionMessage.QuestionID,
 		AnswerID:   findCorrectAnswerID(defaultAnswerMap, msg),
 	}
@@ -34,7 +33,6 @@ func ReplyWithCorrectAnswerCallback(s *natsSubscriber, msg *message.Message) {
 
 func ReplyWithWrongAnswerCallback(s *natsSubscriber, msg *message.Message) {
 	payload := message.AnswerMessage{
-		UserID:     s.userID,
 		QuestionID: msg.QuestionMessage.QuestionID,
 		AnswerID:   findWrongAnswerID(defaultAnswerMap, msg),
 	}

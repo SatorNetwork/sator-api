@@ -32,7 +32,7 @@ type (
 
 	service interface {
 		CreateNFT(ctx context.Context, userUid uuid.UUID, nft *NFT) (string, error)
-		GetNFTs(ctx context.Context, limit, offset int32) ([]*NFT, error)
+		GetNFTs(ctx context.Context, limit, offset int32, withMinted bool) ([]*NFT, error)
 		GetNFTsByCategory(ctx context.Context, uid, categoryID uuid.UUID, limit, offset int32) ([]*NFT, error)
 		GetNFTsByShowID(ctx context.Context, uid, showID uuid.UUID, limit, offset int32) ([]*NFT, error)
 		GetNFTsByEpisodeID(ctx context.Context, uid, episodeID uuid.UUID, limit, offset int32) ([]*NFT, error)
@@ -271,7 +271,7 @@ func MakeCreateNFTEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 
 func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
 		}
 
@@ -298,7 +298,7 @@ func MakeGetNFTsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return FromServiceNFTs(nfts), nil
 		}
 
-		nfts, err := s.GetNFTs(ctx, req.Limit(), req.Offset())
+		nfts, err := s.GetNFTs(ctx, req.Limit(), req.Offset(), rbac.IsCurrentUserHasRole(ctx, rbac.RoleAdmin, rbac.RoleContentManager))
 		if err != nil {
 			return nil, fmt.Errorf("can't get NFTs: %v", err)
 		}
