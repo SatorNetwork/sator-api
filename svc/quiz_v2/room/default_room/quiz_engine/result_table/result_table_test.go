@@ -70,12 +70,19 @@ func TestResultTable(t *testing.T) {
 		require.Equal(t, []uuid.UUID{userID1, userID2}, rt.getWinnerIDs())
 		require.Equal(t, ptsMap, rt.calcWinnersMap())
 
-		userIDToPrice := map[uuid.UUID]float64{
-			userID1: 150,
-			userID2: 100,
+		userIDToPrice := map[uuid.UUID]UserReward{
+			userID1: {
+				Prize: 150,
+				Bonus: 0,
+			},
+			userID2: {
+				Prize: 100,
+				Bonus: 0,
+			},
 		}
 		actualUserIDToPrice, err := rt.GetPrizePoolDistribution()
 		require.NoError(t, err)
+
 		require.Equal(t, userIDToPrice, actualUserIDToPrice)
 	}
 
@@ -113,9 +120,13 @@ func TestResultTable(t *testing.T) {
 		}
 		require.Equal(t, winnersMap, rt.calcWinnersMap())
 
-		userIDToPrice := map[uuid.UUID]float64{
-			userID1: 150,
-			userID2: 100,
+		userIDToPrice := map[uuid.UUID]UserReward{
+			userID1: {
+				Prize: 150,
+			},
+			userID2: {
+				Prize: 100,
+			},
 		}
 		actualUserIDToPrice, err := rt.GetPrizePoolDistribution()
 		require.NoError(t, err)
