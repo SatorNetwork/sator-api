@@ -174,8 +174,7 @@ var (
 	natsWSURL = env.MustString("NATS_WS_URL")
 
 	quizV2ShuffleQuestions = env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true)
-
-	serverRSAPrivateKey = env.MustString("SERVER_RSA_PRIVATE_KEY")
+	serverRSAPrivateKey    = env.MustString("SERVER_RSA_PRIVATE_KEY")
 )
 
 var circulatingSupply float64 = 0
