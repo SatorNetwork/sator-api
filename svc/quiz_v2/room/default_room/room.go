@@ -191,10 +191,14 @@ LOOP:
 }
 
 func (r *defaultRoom) GetRoomDetails() *room.RoomDetails {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
 	challenge := r.quizEngine.GetChallenge()
 
 	return &room.RoomDetails{
-		PlayersToStart: challenge.PlayersToStart,
+		PlayersToStart:    challenge.PlayersToStart,
+		RegisteredPlayers: len(r.players),
 	}
 }
 

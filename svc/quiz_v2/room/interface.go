@@ -3,7 +3,8 @@ package room
 import "github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 
 type RoomDetails struct {
-	PlayersToStart int32
+	PlayersToStart    int32
+	RegisteredPlayers int
 }
 
 type Room interface {

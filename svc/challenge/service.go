@@ -120,6 +120,7 @@ type (
 		QuestionsPerGame   int32      `json:"questions_per_game"`
 		MinCorrectAnswers  int32      `json:"min_correct_answers"`
 		IsRealmActivated   bool       `json:"is_realm_activated"`
+		RegisteredPlayers  int        `json:"registered_players"`
 	}
 
 	RawChallenge struct {
