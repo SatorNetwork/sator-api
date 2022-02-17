@@ -102,6 +102,7 @@ var (
 	quizBotsTimeout = env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second)
 
 	// Solana
+	tokenCirculatingSupply      = env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844)
 	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
 	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
 	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
@@ -110,12 +111,13 @@ var (
 	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
-	solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
-	solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
-	solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
-	solanaSplToken              = env.MustString("SOLANA_SPL_TOKEN")
-	solanaStakeProgramID        = env.MustString("SOLANA_STAKE_PROGRAM_ID")
-	tokenCirculatingSupply      = env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844)
+
+	// TODO: enable when lock contract will be deployed on mainnet
+	// solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	// solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
+	// solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
+	// solanaSplToken              = env.MustString("SOLANA_SPL_TOKEN")
+	// solanaStakeProgramID        = env.MustString("SOLANA_STAKE_PROGRAM_ID")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -288,11 +290,12 @@ func main() {
 		}
 
 		solanaClient := solana.New(solanaApiBaseUrl, solana.Config{
-			SystemProgram:  solanaSystemProgram,
-			SysvarRent:     solanaSysvarRent,
-			SysvarClock:    solanaSysvarClock,
-			SplToken:       solanaSplToken,
-			StakeProgramID: solanaStakeProgramID,
+			// TODO: enable when lock contract will be deployed on mainnet
+			// SystemProgram:  solanaSystemProgram,
+			// SysvarRent:     solanaSysvarRent,
+			// SysvarClock:    solanaSysvarClock,
+			// SplToken:       solanaSplToken,
+			// StakeProgramID: solanaStakeProgramID,
 		})
 		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
