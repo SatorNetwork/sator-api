@@ -3560,7 +3560,7 @@ paths:
   /quiz_v2/challenges/{challenge_id}:
     get:
       tags:
-        - "Challenges"
+        - "QuizV2"
       summary: Get challenge details by id.
       security:
         - bearerAuth: [ ]
