@@ -124,6 +124,8 @@ func (v *MessageVerifier) compareMessages(emsg, rmsg *message.Message) {
 	case message.PlayerIsActiveMessageType:
 	case message.PlayerIsDisconnectedMessageType:
 		v.comparePlayerIsDisconnectedMessages(emsg, rmsg)
+	case message.TimeOutMessageType:
+		v.compareTimeOutMessages(emsg, rmsg)
 
 	default:
 		v.t.Fatalf("<unknown message type>")
@@ -183,4 +185,10 @@ func (v *MessageVerifier) comparePlayerIsDisconnectedMessages(emsg, rmsg *messag
 	require.NotNil(v.t, emsg.PlayerIsDisconnectedMessage)
 	require.NotNil(v.t, rmsg.PlayerIsDisconnectedMessage)
 	require.Equal(v.t, emsg.PlayerIsDisconnectedMessage.Username, rmsg.PlayerIsDisconnectedMessage.Username)
+}
+
+func (v *MessageVerifier) compareTimeOutMessages(emsg, rmsg *message.Message) {
+	require.NotNil(v.t, emsg.TimeOutMessage)
+	require.NotNil(v.t, rmsg.TimeOutMessage)
+	require.Equal(v.t, emsg.TimeOutMessage.Message, rmsg.TimeOutMessage.Message)
 }

@@ -35,6 +35,8 @@ func (m *Message) getPayload() (interface{}, error) {
 		return m.PlayerIsActiveMessage, nil
 	case PlayerIsDisconnectedMessageType:
 		return m.PlayerIsDisconnectedMessage, nil
+	case TimeOutMessageType:
+		return m.TimeOutMessage, nil
 	default:
 		return nil, NewErrInconsistentMessage(m)
 	}
@@ -103,6 +105,10 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 		}
 	case PlayerIsDisconnectedMessageType:
 		if err := json.Unmarshal(legacyMsg.Payload, &m.PlayerIsDisconnectedMessage); err != nil {
+			return err
+		}
+	case TimeOutMessageType:
+		if err := json.Unmarshal(legacyMsg.Payload, &m.TimeOutMessage); err != nil {
 			return err
 		}
 	default:
