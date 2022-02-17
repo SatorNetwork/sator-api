@@ -3557,6 +3557,90 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /quiz_v2/challenges/{challenge_id}:
+    get:
+      tags:
+        - "QuizV2"
+      summary: Get challenge details by id.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          description: Сhallenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns challenge details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3123"
+                  episode_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3124"
+                  title:
+                    type: string
+                    example: "Challenge name"
+                  description:
+                    type: string
+                    example: "Fast Questions! More detailed description about this challenge here. We can use couple senteces."
+                  prize_pool:
+                    type: string
+                    example: "250 SAO"
+                  players:
+                    type: integer
+                    example: 10
+                  winners:
+                    type: string
+                    example: "you + 7 more"
+                  time_per_question:
+                    type: string
+                    example: "8 sec"
+                  play:
+                    type: string
+                    description: "Absolute URL to start quiz. In the future it will be URL to connect websocket."
+                    example: "http://localhost:8080/challenges/{challenge_id}/play"
+                  user_max_attempts:
+                    type: integer
+                    example: 3
+                    default: 2
+                  attempts_left:
+                    type: integer
+                    example: 1
+                    default: 0
+                  received_reward:
+                    type: number
+                    example: 123.456
+                  is_realm_activated:
+                    type: boolean
+                    example: true
+                  max_winners:
+                    type: integer
+                    example: 1
+                  questions_per_game:
+                    type: integer
+                    example: 1
+                  min_correct_answers:
+                    type: integer
+                    example: 1
+                  registered_players:
+                    type: integer
+                    example: 1
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /rewards/claim:
     get:
       tags:

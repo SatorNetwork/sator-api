@@ -144,5 +144,6 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 	}
 
 	challenge.Players = roomDetails.PlayersToStart
+	challenge.RegisteredPlayers = roomDetails.RegisteredPlayers
 	return challenge, nil
 }

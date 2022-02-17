@@ -191,10 +191,14 @@ LOOP:
 }
 
 func (r *defaultRoom) GetRoomDetails() *room.RoomDetails {
+	r.playersMutex.Lock()
+	defer r.playersMutex.Unlock()
+
 	challenge := r.quizEngine.GetChallenge()
 
 	return &room.RoomDetails{
-		PlayersToStart: challenge.PlayersToStart,
+		PlayersToStart:    challenge.PlayersToStart,
+		RegisteredPlayers: len(r.players),
 	}
 }
 
@@ -544,7 +548,7 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 		QuestionID:     q.question.ID.String(),
 		QuestionText:   q.question.Question,
 		TimeForAnswer:  int(challenge.TimePerQuestionSec),
-		QuestionNumber: q.questionNum,
+		QuestionNumber: q.questionNum + 1, // start from 1 not from 0
 		TotalQuestions: r.quizEngine.GetNumberOfQuestions(),
 		AnswerOptions:  answerOptions,
 	}
