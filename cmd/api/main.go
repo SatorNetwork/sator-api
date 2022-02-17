@@ -106,13 +106,13 @@ var (
 	solanaEnv                   = env.GetString("SOLANA_ENV", "devnet")
 	solanaApiBaseUrl            = env.MustString("SOLANA_API_BASE_URL")
 	solanaAssetAddr             = env.MustString("SOLANA_ASSET_ADDR")
-	solanaStakePoolAddr         = env.MustString("SOLANA_STAKE_POOL_ADDR")
 	solanaFeePayerAddr          = env.MustString("SOLANA_FEE_PAYER_ADDR")
 	solanaFeePayerPrivateKey    = env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY")
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 
 	// TODO: enable when lock contract will be deployed on mainnet
+	// solanaStakePoolAddr         = env.MustString("SOLANA_STAKE_POOL_ADDR")
 	// solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
 	// solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
 	// solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
@@ -311,7 +311,8 @@ func main() {
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
 			wallet.WithMinAmountToTransfer(minAmountToTransfer),
-			wallet.WithStakePoolSolanaAddress(solanaStakePoolAddr),
+			// TODO: enable when lock contract will be deployed on mainnet
+			// wallet.WithStakePoolSolanaAddress(solanaStakePoolAddr),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
