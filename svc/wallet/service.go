@@ -275,12 +275,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
-			// TODO: enable when lock contract will be deployed on mainnet
-			// {
-			// 	Type: ActionStakeTokens.String(),
-			// 	Name: ActionStakeTokens.Name(),
-			// 	URL:  "",
-			// },
+			{
+				Type: ActionStakeTokens.String(),
+				Name: ActionStakeTokens.Name(),
+				URL:  "",
+			},
 		},
 		Balance: balance,
 	}, nil
