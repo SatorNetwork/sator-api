@@ -552,7 +552,7 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 		TotalQuestions: r.quizEngine.GetNumberOfQuestions(),
 		AnswerOptions:  answerOptions,
 	}
-	msg, err := message.NewQuestionMessage(&payload, int(challenge.TimePerQuestionSec))
+	msg, err := message.NewQuestionMessage(&payload, int(challenge.TimePerQuestionSec)*1000)
 	if err != nil {
 		log.Println(err)
 		return
