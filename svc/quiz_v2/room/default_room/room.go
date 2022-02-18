@@ -16,6 +16,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/status_transactor"
 )
 
@@ -617,6 +618,13 @@ func (r *defaultRoom) sendAnswerReplyMessages(questionID uuid.UUID) error {
 func (r *defaultRoom) sendAnswerReplyMessage(userID, questionID uuid.UUID) error {
 	cell, err := r.quizEngine.GetAnswer(userID, questionID)
 	if err != nil {
+		_, ok1 := err.(*result_table.ErrRowNotFound)
+		_, ok2 := err.(*result_table.ErrCellNotFound)
+		if ok1 || ok2 {
+			return r.sendTimeOutMessage(userID)
+		}
+
+		log.Printf("can't get answer from quiz engine: %v\n", err)
 		return err
 	}
 
@@ -641,6 +649,22 @@ func (r *defaultRoom) sendAnswerReplyMessage(userID, questionID uuid.UUID) error
 		IsFastestAnswer: cell.IsFirstCorrectAnswer(),
 	}
 	msg, err := message.NewAnswerReplyMessage(&payload)
+	if err != nil {
+		return err
+	}
+
+	p := r.getPlayerByIDNoLock(userID.String())
+	if err := p.SendMessage(msg); err != nil {
+		return errors.Wrapf(err, "can't send message to player with %v uid", userID.String())
+	}
+
+	return nil
+}
+
+func (r *defaultRoom) sendTimeOutMessage(userID uuid.UUID) error {
+	msg, err := message.NewTimeOutMessage(&message.TimeOutMessage{
+		Message: "time is over",
+	})
 	if err != nil {
 		return err
 	}

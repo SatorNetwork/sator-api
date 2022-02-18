@@ -108,9 +108,15 @@ func TestNoAnswers(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
+		timeOutMessage, err := message.NewTimeOutMessage(&message.TimeOutMessage{
+			Message: "time is over",
+		})
+		require.NoError(t, err)
+
 		user2ExpectedMessages := message_container.New(userExpectedMessages).
-			FilterOut(
+			Replace(
 				message_container.PFuncMessageType(message.AnswerReplyMessageType),
+				timeOutMessage,
 			).
 			Messages()
 

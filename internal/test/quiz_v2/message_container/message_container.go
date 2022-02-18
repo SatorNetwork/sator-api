@@ -55,6 +55,21 @@ func (mc *messageContainer) FilterOut(p predicateFunc) *messageContainer {
 	return mc
 }
 
+func (mc *messageContainer) Replace(p predicateFunc, replaceWith *message.Message) *messageContainer {
+	replaced := make([]*message.Message, 0)
+	for idx, msg := range mc.messages {
+		if p(idx, msg) {
+			replaced = append(replaced, replaceWith)
+			continue
+		}
+
+		replaced = append(replaced, msg)
+	}
+	mc.messages = replaced
+
+	return mc
+}
+
 func PFuncMessageType(messageType message.MessageType) predicateFunc {
 	return func(idx int, msg *message.Message) bool {
 		return msg.MessageType == messageType
