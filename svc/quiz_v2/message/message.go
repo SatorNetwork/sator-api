@@ -183,12 +183,12 @@ type AnswerOption struct {
 	AnswerText string `json:"answer_text"`
 }
 
-func NewQuestionMessage(payload *QuestionMessage, ttl int) (*Message, error) {
+func NewQuestionMessage(payload *QuestionMessage, ttlInMilliseconds int) (*Message, error) {
 	msg := &Message{
 		MessageType:     QuestionMessageType,
 		QuestionMessage: payload,
 		Date:            time.Now().Format(time.RFC3339),
-		TTL:             ttl,
+		TTL:             ttlInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err
