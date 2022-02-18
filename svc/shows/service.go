@@ -1016,7 +1016,31 @@ func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, 
 
 // LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
 func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uuid.UUID, ratingType ReviewRatingType) error {
-	err := s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
+	isRated, err := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
+		UserID:   uid,
+		ReviewID: reviewID,
+		RatingType: sql.NullInt32{
+			Int32: int32(ratingType),
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("could not check is review episode rated, %w", err)
+	}
+	if isRated {
+		err = s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
+			ReviewID: reviewID,
+			UserID:   uid,
+			RatingType: sql.NullInt32{
+				Int32: 0,
+				Valid: true,
+			}})
+		if err != nil {
+			return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", reviewID, err)
+		}
+	}
+
+	err = s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
 		ReviewID: reviewID,
 		UserID:   uid,
 		RatingType: sql.NullInt32{
@@ -1024,7 +1048,7 @@ func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uu
 			Valid: true,
 		}})
 	if err != nil {
-		return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", uid, err)
+		return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", reviewID, err)
 	}
 
 	return nil
