@@ -28,5 +28,5 @@ WHERE user_id = @user_id;
 DELETE FROM stake
 WHERE user_id = $1;
 -- name: GetTotalStake :one
-SELECT SUM(stake_amount)::DOUBLE PRECISION
+SELECT coalesce(SUM(coalesce(stake_amount, 0)), 0)::DOUBLE PRECISION
 FROM stake;
