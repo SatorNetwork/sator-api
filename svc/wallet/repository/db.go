@@ -52,6 +52,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getEthereumAccountByUserIDAndTypeStmt, err = db.PrepareContext(ctx, getEthereumAccountByUserIDAndType); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEthereumAccountByUserIDAndType: %w", err)
 	}
+	if q.getMinimalStakeLevelStmt, err = db.PrepareContext(ctx, getMinimalStakeLevel); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMinimalStakeLevel: %w", err)
+	}
 	if q.getSolanaAccountByIDStmt, err = db.PrepareContext(ctx, getSolanaAccountByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSolanaAccountByID: %w", err)
 	}
@@ -150,6 +153,11 @@ func (q *Queries) Close() error {
 	if q.getEthereumAccountByUserIDAndTypeStmt != nil {
 		if cerr := q.getEthereumAccountByUserIDAndTypeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getEthereumAccountByUserIDAndTypeStmt: %w", cerr)
+		}
+	}
+	if q.getMinimalStakeLevelStmt != nil {
+		if cerr := q.getMinimalStakeLevelStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMinimalStakeLevelStmt: %w", cerr)
 		}
 	}
 	if q.getSolanaAccountByIDStmt != nil {
@@ -276,6 +284,7 @@ type Queries struct {
 	getAllStakeLevelsStmt                 *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
 	getEthereumAccountByUserIDAndTypeStmt *sql.Stmt
+	getMinimalStakeLevelStmt              *sql.Stmt
 	getSolanaAccountByIDStmt              *sql.Stmt
 	getSolanaAccountByTypeStmt            *sql.Stmt
 	getSolanaAccountByUserIDAndTypeStmt   *sql.Stmt
@@ -307,6 +316,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAllStakeLevelsStmt:                 q.getAllStakeLevelsStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,
 		getEthereumAccountByUserIDAndTypeStmt: q.getEthereumAccountByUserIDAndTypeStmt,
+		getMinimalStakeLevelStmt:              q.getMinimalStakeLevelStmt,
 		getSolanaAccountByIDStmt:              q.getSolanaAccountByIDStmt,
 		getSolanaAccountByTypeStmt:            q.getSolanaAccountByTypeStmt,
 		getSolanaAccountByUserIDAndTypeStmt:   q.getSolanaAccountByUserIDAndTypeStmt,
