@@ -47,6 +47,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz"
 	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
+	quizV2Repo "github.com/SatorNetwork/sator-api/svc/quiz_v2/repository"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
 	referralsRepo "github.com/SatorNetwork/sator-api/svc/referrals/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards"
@@ -567,6 +568,11 @@ func main() {
 	}
 
 	{
+		quizV2Repository, err := quizV2Repo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare Quiz V2 repository: %v", err)
+		}
+
 		quizV2Svc := quiz_v2.NewService(
 			natsURL,
 			natsWSURL,
@@ -575,6 +581,8 @@ func main() {
 			rewardsSvcClient,
 			authClient,
 			profileSvc,
+			db,
+			quizV2Repository,
 			serverRSAPrivateKey,
 			quizV2ShuffleQuestions,
 		)

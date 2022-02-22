@@ -81,6 +81,19 @@ func TestCorrectAnswers(t *testing.T) {
 
 		// TODO(evg): investigate and remove
 		time.Sleep(time.Second * 2)
+
+		if i+1 != playersNum {
+			challenge, err := c.QuizV2Client.GetChallengeById(users[0].AccessToken(), challengeID.String())
+			require.NoError(t, err)
+			require.Equal(t, 10, challenge.Players)
+			require.Equal(t, i+1, challenge.RegisteredPlayersInDB)
+		}
+		{
+			challengesWithPlayer, err := c.QuizV2Client.GetChallengesSortedByPlayers(users[0].AccessToken())
+			require.NoError(t, err)
+			require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
+			require.Equal(t, i+1, challengesWithPlayer[0].PlayersNum)
+		}
 	}
 
 	time.Sleep(time.Second * 20)
