@@ -111,13 +111,13 @@ var (
 	solanaTokenHolderAddr       = env.MustString("SOLANA_TOKEN_HOLDER_ADDR")
 	solanaTokenHolderPrivateKey = env.MustString("SOLANA_TOKEN_HOLDER_PRIVATE_KEY")
 
-	// TODO: enable when lock contract will be deployed on mainnet
-	// solanaStakePoolAddr         = env.MustString("SOLANA_STAKE_POOL_ADDR")
-	// solanaSystemProgram         = env.MustString("SOLANA_SYSTEM_PROGRAM")
-	// solanaSysvarRent            = env.MustString("SOLANA_SYSVAR_RENT")
-	// solanaSysvarClock           = env.MustString("SOLANA_SYSVAR_CLOCK")
-	// solanaSplToken              = env.MustString("SOLANA_SPL_TOKEN")
-	// solanaStakeProgramID        = env.MustString("SOLANA_STAKE_PROGRAM_ID")
+	// Tokens lock pool
+	solanaStakePoolAddr  = env.MustString("SOLANA_STAKE_POOL_ADDR")
+	solanaSystemProgram  = env.MustString("SOLANA_SYSTEM_PROGRAM")
+	solanaSysvarRent     = env.MustString("SOLANA_SYSVAR_RENT")
+	solanaSysvarClock    = env.MustString("SOLANA_SYSVAR_CLOCK")
+	solanaSplToken       = env.MustString("SOLANA_SPL_TOKEN")
+	solanaStakeProgramID = env.MustString("SOLANA_STAKE_PROGRAM_ID")
 
 	// Mailer
 	postmarkServerToken   = env.MustString("POSTMARK_SERVER_TOKEN")
@@ -289,12 +289,11 @@ func main() {
 		}
 
 		solanaClient := solana.New(solanaApiBaseUrl, solana.Config{
-			// TODO: enable when lock contract will be deployed on mainnet
-			// SystemProgram:  solanaSystemProgram,
-			// SysvarRent:     solanaSysvarRent,
-			// SysvarClock:    solanaSysvarClock,
-			// SplToken:       solanaSplToken,
-			// StakeProgramID: solanaStakeProgramID,
+			SystemProgram:  solanaSystemProgram,
+			SysvarRent:     solanaSysvarRent,
+			SysvarClock:    solanaSysvarClock,
+			SplToken:       solanaSplToken,
+			StakeProgramID: solanaStakeProgramID,
 		})
 		if err := solanaClient.CheckPrivateKey(solanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
@@ -311,8 +310,7 @@ func main() {
 			wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayerPk),
 			wallet.WithSolanaTokenHolder(solanaTokenHolderAddr, tokenHolderPk),
 			wallet.WithMinAmountToTransfer(minAmountToTransfer),
-			// TODO: enable when lock contract will be deployed on mainnet
-			// wallet.WithStakePoolSolanaAddress(solanaStakePoolAddr),
+			wallet.WithStakePoolSolanaAddress(solanaStakePoolAddr),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
