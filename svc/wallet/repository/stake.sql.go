@@ -92,7 +92,7 @@ func (q *Queries) GetStakeByUserID(ctx context.Context, userID uuid.UUID) (Stake
 }
 
 const getTotalStake = `-- name: GetTotalStake :one
-SELECT SUM(stake_amount)::DOUBLE PRECISION
+SELECT coalesce(SUM(coalesce(stake_amount, 0)), 0)::DOUBLE PRECISION
 FROM stake
 `
 
