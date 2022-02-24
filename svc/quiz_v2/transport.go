@@ -6,11 +6,18 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/SatorNetwork/sator-api/internal/httpencoder"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+
+	"github.com/SatorNetwork/sator-api/internal/httpencoder"
+	"github.com/SatorNetwork/sator-api/internal/utils"
+)
+
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -47,6 +54,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/challenges/sorted_by_players", httptransport.NewServer(
+		e.GetChallengesSortedByPlayers,
+		decodeGetChallengesSortedByPlayersRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -65,6 +79,13 @@ func decodeGetChallengeByIdRequest(_ context.Context, r *http.Request) (interfac
 	}
 
 	return id, nil
+}
+
+func decodeGetChallengesSortedByPlayersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return utils.PaginationRequest{
+		Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+	}, nil
 }
 
 // returns http error code by error type

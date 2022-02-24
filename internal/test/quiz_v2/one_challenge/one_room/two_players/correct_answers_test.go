@@ -40,6 +40,7 @@ func TestCorrectAnswers(t *testing.T) {
 		challenge, err := c.QuizV2Client.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
 		require.NoError(t, err)
 		require.Equal(t, 2, challenge.Players)
+		require.Equal(t, 0, challenge.RegisteredPlayersInDB)
 	}
 
 	userExpectedMessages := message_container.New(defaultUserExpectedMessages).
@@ -97,6 +98,19 @@ func TestCorrectAnswers(t *testing.T) {
 		require.NoError(t, err)
 
 		user1MessageVerifier = messageVerifier
+
+		{
+			challenge, err := c.QuizV2Client.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
+			require.NoError(t, err)
+			require.Equal(t, 2, challenge.Players)
+			require.Equal(t, 1, challenge.RegisteredPlayersInDB)
+		}
+		{
+			challengesWithPlayer, err := c.QuizV2Client.GetChallengesSortedByPlayers(user1.AccessToken())
+			require.NoError(t, err)
+			require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
+			require.Equal(t, 1, challengesWithPlayer[0].PlayersNum)
+		}
 	}
 
 	{

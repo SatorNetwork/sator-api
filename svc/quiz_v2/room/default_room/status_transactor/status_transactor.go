@@ -18,6 +18,29 @@ const (
 	RoomIsClosed
 )
 
+func (s Status) String() string {
+	switch s {
+	case GatheringPlayersStatus:
+		return "gathering_players_status"
+	case RoomIsFullStatus:
+		return "room_is_full_status"
+	case CountdownFinishedStatus:
+		return "countdown_finished_status"
+	case QuestionAreSentStatus:
+		return "question_are_sent_status"
+	case WinnersTableAreSent:
+		return "winners_table_are_sent"
+	case RewardsAreSent:
+		return "rewards_are_sent"
+	case RoomIsFinished:
+		return "room_is_finished"
+	case RoomIsClosed:
+		return "room_is_closed"
+	default:
+		return "gathering_players_status"
+	}
+}
+
 var allowedTransitionsMap = map[Status][]Status{
 	GatheringPlayersStatus:  {RoomIsFullStatus},
 	RoomIsFullStatus:        {CountdownFinishedStatus},

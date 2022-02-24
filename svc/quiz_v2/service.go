@@ -3,6 +3,7 @@ package quiz_v2
 import (
 	"context"
 	"crypto/rsa"
+	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -11,6 +12,8 @@ import (
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/SatorNetwork/sator-api/svc/profile"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/db/sql_builder"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/db/sql_executor"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player"
@@ -27,6 +30,7 @@ type (
 		challenges interfaces.ChallengesService
 		ac         authClient
 		pc         profileClient
+		dbClient   *sql.DB
 
 		serverRSAPrivateKey *rsa.PrivateKey
 	}
@@ -38,6 +42,11 @@ type (
 	profileClient interface {
 		GetProfileByUserID(ctx context.Context, userID uuid.UUID, username string) (*profile.Profile, error)
 	}
+
+	Challenge struct {
+		ID         string
+		PlayersNum int
+	}
 )
 
 func NewService(
@@ -48,19 +57,22 @@ func NewService(
 	rewards interfaces.RewardsService,
 	ac authClient,
 	pc profileClient,
+	dbClient *sql.DB,
+	qr interfaces.QuizV2Repository,
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
 ) *Service {
 	restrictionManager := restriction_manager.New(challenges)
 
 	s := &Service{
-		engine:              engine.New(challenges, stakeLevels, rewards, restrictionManager, shuffleQuestions),
+		engine:              engine.New(challenges, stakeLevels, rewards, qr, restrictionManager, shuffleQuestions),
 		restrictionManager:  restrictionManager,
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
 		challenges:          challenges,
 		ac:                  ac,
 		pc:                  pc,
+		dbClient:            dbClient,
 		serverRSAPrivateKey: serverRSAPrivateKey,
 	}
 
@@ -145,5 +157,34 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 	challenge.Players = roomDetails.PlayersToStart
 	challenge.RegisteredPlayers = roomDetails.RegisteredPlayers
+	challenge.RegisteredPlayersInDB = roomDetails.RegisteredPlayersInDB
 	return challenge, nil
+}
+
+func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, limit, offset int32) ([]*Challenge, error) {
+	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(limit, offset)
+	sqlExecutor := sql_executor.New(s.dbClient)
+	sqlChallenges, err := sqlExecutor.ExecuteGetChallengesSortedByPlayersQuery(query, nil)
+	if err != nil {
+		return nil, err
+	}
+	challenges := NewChallengesFromSQL(sqlChallenges)
+
+	return challenges, nil
+}
+
+func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
+	return &Challenge{
+		ID:         c.ID,
+		PlayersNum: c.PlayersNum,
+	}
+}
+
+func NewChallengesFromSQL(sqlChallenges []*sql_executor.Challenge) []*Challenge {
+	challenges := make([]*Challenge, 0)
+	for _, c := range sqlChallenges {
+		challenges = append(challenges, NewChallengeFromSQL(c))
+	}
+
+	return challenges
 }
