@@ -2,7 +2,7 @@ package wallet
 
 import (
 	"context"
-	
+
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 

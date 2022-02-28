@@ -2,7 +2,7 @@ package sql_executor
 
 import (
 	"database/sql"
-	
+
 	"github.com/pkg/errors"
 )
 
