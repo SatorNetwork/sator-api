@@ -176,7 +176,7 @@ func TestCorrectAnswers(t *testing.T) {
 		user2RewardsAmount = unclaimedCurrency.Amount
 	}
 
-	require.Equal(t, totalRewards * 1.01, user1RewardsAmount+user2RewardsAmount)
+	require.Equal(t, totalRewards*1.01, user1RewardsAmount+user2RewardsAmount)
 
 	{
 		_, err := c.QuizV2Client.GetQuizLink(user1.AccessToken(), defaultChallengeID.String())

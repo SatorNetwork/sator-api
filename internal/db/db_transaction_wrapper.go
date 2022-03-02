@@ -26,7 +26,7 @@ func Transaction(db *sql.DB) TransactionFunc {
 		if err != nil {
 			return err
 		}
-		
+
 		defer func() {
 			if p := recover(); p != nil {
 				tx.Rollback()

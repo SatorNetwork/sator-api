@@ -6,6 +6,7 @@ import (
 	kitjwt "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/golang-jwt/jwt"
+	"github.com/pkg/errors"
 )
 
 // ClaimsFactory is a factory for jwt.Claims.
@@ -88,4 +89,22 @@ func NewParser(signingKey string, checkUser checkUserFunc) endpoint.Middleware {
 	return newParser(func(token *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
 	}, defaultSigningMethod, ClaimsFactory, checkUser)
+}
+
+func NewAPIKeyMdw(apiKey string) endpoint.Middleware {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			// API_KEY is stored in the context from the transport handlers.
+			ctxAPIKey, ok := ctx.Value(kitjwt.JWTTokenContextKey).(string)
+			if !ok {
+				return nil, kitjwt.ErrTokenContextMissing
+			}
+
+			if ctxAPIKey != apiKey {
+				return nil, errors.Errorf("invalid api key")
+			}
+
+			return next(ctx, request)
+		}
+	}
 }

@@ -15,6 +15,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dmitrymomot/distlock"
+	"github.com/dmitrymomot/distlock/inmem"
+	"github.com/dmitrymomot/go-env"
+	signature "github.com/dmitrymomot/go-signature"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	kitlog "github.com/go-kit/kit/log"
+	"github.com/keighl/postmark"
+	_ "github.com/lib/pq" // init pg driver
+	"github.com/oklog/run"
+	"github.com/rs/cors"
+	"github.com/zeebo/errs"
+
 	db_internal "github.com/SatorNetwork/sator-api/internal/db"
 	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/internal/ethereum"
@@ -54,23 +67,11 @@ import (
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
+	"github.com/SatorNetwork/sator-api/svc/shows/private"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
-
-	"github.com/dmitrymomot/distlock"
-	"github.com/dmitrymomot/distlock/inmem"
-	"github.com/dmitrymomot/go-env"
-	signature "github.com/dmitrymomot/go-signature"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	kitlog "github.com/go-kit/kit/log"
-	"github.com/keighl/postmark"
-	_ "github.com/lib/pq" // init pg driver
-	"github.com/oklog/run"
-	"github.com/rs/cors"
-	"github.com/zeebo/errs"
 )
 
 var buildTag string
@@ -176,6 +177,8 @@ var (
 
 	quizV2ShuffleQuestions = env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true)
 	serverRSAPrivateKey    = env.MustString("SERVER_RSA_PRIVATE_KEY")
+
+	satorAPIKey = env.MustString("SATOR_API_KEY")
 )
 
 var circulatingSupply float64 = 0
@@ -478,9 +481,13 @@ func main() {
 			logger,
 		))
 
-		// Shows service
+		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient)
 		r.Mount("/shows", shows.MakeHTTPHandler(
-			shows.MakeEndpoints(shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient), jwtMdw),
+			shows.MakeEndpoints(showsService, jwtMdw),
+			logger,
+		))
+		r.Mount("/nft-marketplace/shows", private.MakeHTTPHandler(
+			private.MakeEndpoints(showsService, jwt.NewAPIKeyMdw(satorAPIKey)),
 			logger,
 		))
 	}
