@@ -2,6 +2,8 @@ package jwt
 
 import (
 	"context"
+	"database/sql"
+	"github.com/google/uuid"
 
 	kitjwt "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/endpoint"
@@ -15,11 +17,21 @@ type claimsFactory func() jwt.Claims
 
 type checkUserFunc func(ctx context.Context) error
 
+type userRepository interface {
+	GetPublicKey(ctx context.Context, id uuid.UUID) (sql.NullString, error)
+}
+
 // NewParser creates a new JWT token parsing middleware, specifying a
 // jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
 // adds the resulting claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
-func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims claimsFactory, checkUser checkUserFunc) endpoint.Middleware {
+func newParser(
+	keyFunc jwt.Keyfunc,
+	method jwt.SigningMethod,
+	newClaims claimsFactory,
+	checkUser checkUserFunc,
+	ur userRepository,
+) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers.
@@ -79,16 +91,26 @@ func newParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims claimsFa
 				}
 			}
 
+			userID, err := UserIDFromContext(ctx)
+			if err != nil {
+				return nil, errors.Wrap(err, "can't get user id")
+			}
+
+			_, err = ur.GetPublicKey(ctx, userID)
+			if err != nil {
+				return nil, errors.Wrap(err, "can't get public key")
+			}
+
 			return next(ctx, request)
 		}
 	}
 }
 
 // NewParser returns go-kit parser middleware
-func NewParser(signingKey string, checkUser checkUserFunc) endpoint.Middleware {
+func NewParser(signingKey string, checkUser checkUserFunc, ur userRepository) endpoint.Middleware {
 	return newParser(func(token *jwt.Token) (interface{}, error) {
 		return []byte(signingKey), nil
-	}, defaultSigningMethod, ClaimsFactory, checkUser)
+	}, defaultSigningMethod, ClaimsFactory, checkUser, ur)
 }
 
 func NewAPIKeyMdw(apiKey string) endpoint.Middleware {
