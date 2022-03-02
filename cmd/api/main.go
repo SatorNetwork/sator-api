@@ -262,7 +262,7 @@ func main() {
 
 	// Init JWT parser middleware
 	// not depends on transport
-	jwtMdw := jwt.NewParser(jwtSigningKey, jwt.CheckUser(authRepository.IsUserDisabled))
+	jwtMdw := jwt.NewParser(jwtSigningKey, jwt.CheckUser(authRepository.IsUserDisabled), authRepository)
 	jwtInteractor := jwt.NewInteractor(jwtSigningKey, jwtTTL)
 
 	ethereumClient, err := ethereum.NewClient()
