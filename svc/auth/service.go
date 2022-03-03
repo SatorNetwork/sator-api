@@ -181,6 +181,10 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		return Token{}, fmt.Errorf("could not log in: %w", err)
 	}
 
+	if user.Disabled {
+		return Token{}, ErrUserIsDisabled
+	}
+
 	if deviceID == "" {
 		return Token{}, ErrEmptyDeviceID
 	}
@@ -208,10 +212,6 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
 		}
-	}
-
-	if user.Disabled {
-		return Token{}, ErrUserIsDisabled
 	}
 
 	if !strings.HasSuffix(email, "@sator.io") {
@@ -255,16 +255,20 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return Token{}, ErrEmptyDeviceID
 	}
 
+	u, err := s.ur.GetUserByID(ctx, uid)
+	if err != nil {
+		return Token{}, fmt.Errorf("could not refresh access token: %w", err)
+	}
+
+	if u.Disabled {
+		return Token{}, ErrUserIsDisabled
+	}
+
 	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
 		UserID:   uid,
 		DeviceID: deviceID,
 	}); err != nil {
 		log.Printf("could not link device to user: %v", err)
-	}
-
-	u, err := s.ur.GetUserByID(ctx, uid)
-	if err != nil {
-		return Token{}, fmt.Errorf("could not refresh access token: %w", err)
 	}
 
 	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
@@ -281,10 +285,6 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
 		}
-	}
-
-	if u.Disabled {
-		return Token{}, ErrUserIsDisabled
 	}
 
 	if !strings.HasSuffix(u.Email, "@sator.io") {
