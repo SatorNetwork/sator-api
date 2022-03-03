@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	showRepository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 

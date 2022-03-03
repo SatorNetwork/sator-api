@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 )
 

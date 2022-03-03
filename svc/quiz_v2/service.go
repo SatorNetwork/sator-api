@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
+	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/db/sql_builder"

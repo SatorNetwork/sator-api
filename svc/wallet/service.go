@@ -8,15 +8,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	"github.com/SatorNetwork/sator-api/internal/ethereum"
-	"github.com/SatorNetwork/sator-api/internal/solana"
-	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
-
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
+
+	"github.com/SatorNetwork/sator-api/lib/db"
+	"github.com/SatorNetwork/sator-api/lib/ethereum"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 )
 
 type (
@@ -83,7 +83,7 @@ type (
 		AccountFromPrivateKeyBytes(pk []byte) types.Account
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
-		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]solana.ConfirmedTransactionResponse, error)
+		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
@@ -748,7 +748,7 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 	return nil
 }
 
-func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
+func castSolanaTxToTransaction(tx lib_solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
 	return Transaction{
 		ID:        tx.TxHash,
 		WalletID:  walletID.String(),

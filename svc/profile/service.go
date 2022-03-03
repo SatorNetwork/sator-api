@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/profile/repository"
 	"github.com/google/uuid"
 )

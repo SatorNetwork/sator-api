@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/SatorNetwork/sator-api/internal/validator"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+	"github.com/SatorNetwork/sator-api/lib/validator"
 )
 
 type (

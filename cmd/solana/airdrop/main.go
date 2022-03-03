@@ -6,9 +6,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/solana"
-
 	"github.com/dmitrymomot/go-env"
+
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 )
 
 func main() {
-	c := solana.New(solanaApiBaseUrl, solana.Config{
+	c := solana_client.New(solanaApiBaseUrl, solana_client.Config{
 		SystemProgram:  solanaSystemProgram,
 		SysvarRent:     solanaSysvarRent,
 		SysvarClock:    solanaSysvarClock,

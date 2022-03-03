@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	"github.com/SatorNetwork/sator-api/internal/httpencoder"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/lib/db"
+	"github.com/SatorNetwork/sator-api/lib/httpencoder"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 )
