@@ -92,7 +92,7 @@ func TestCorrectAnswers(t *testing.T) {
 			challengesWithPlayer, err := c.QuizV2Client.GetChallengesSortedByPlayers(users[0].AccessToken())
 			require.NoError(t, err)
 			require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
-			require.Equal(t, i+1, challengesWithPlayer[0].PlayersNum)
+			require.Equal(t, i+1, challengesWithPlayer[0].PlayersNumber)
 		}
 	}
 
