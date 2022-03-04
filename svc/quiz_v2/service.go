@@ -44,8 +44,12 @@ type (
 	}
 
 	Challenge struct {
-		ID         string
-		PlayersNum int
+		ID               string `json:"id"`
+		Title            string `json:"title"`
+		PlayersToStart   int    `json:"players_to_start"`
+		PlayersNumber    int    `json:"players_number"`
+		PrizePool        string `json:"prize_pool"`
+		IsRealmActivated bool   `json:"is_realm_activated"`
 	}
 )
 
@@ -175,8 +179,11 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, limit, offse
 
 func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
 	return &Challenge{
-		ID:         c.ID,
-		PlayersNum: c.PlayersNum,
+		ID:             c.ID,
+		Title:          c.Title,
+		PlayersToStart: c.PlayersToStart,
+		PlayersNumber:  c.PlayersNum,
+		PrizePool:      fmt.Sprintf("%.2f SAO", c.PrizePool),
 	}
 }
 

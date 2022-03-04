@@ -17,8 +17,11 @@ func New(db *sql.DB) *SQLExecutor {
 }
 
 type Challenge struct {
-	ID         string
-	PlayersNum int
+	ID             string
+	Title          string
+	PlayersToStart int
+	PlayersNum     int
+	PrizePool      float64
 }
 
 func (e *SQLExecutor) ExecuteGetChallengesSortedByPlayersQuery(sql string, args []interface{}) ([]*Challenge, error) {
@@ -30,7 +33,13 @@ func (e *SQLExecutor) ExecuteGetChallengesSortedByPlayersQuery(sql string, args 
 	defer rows.Close()
 	for rows.Next() {
 		challenge := new(Challenge)
-		err := rows.Scan(&challenge.ID, &challenge.PlayersNum)
+		err := rows.Scan(
+			&challenge.ID,
+			&challenge.Title,
+			&challenge.PlayersToStart,
+			&challenge.PlayersNum,
+			&challenge.PrizePool,
+		)
 		if err != nil {
 			return nil, err
 		}
