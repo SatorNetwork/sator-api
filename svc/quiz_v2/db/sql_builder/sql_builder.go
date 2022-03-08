@@ -1,6 +1,10 @@
 package sql_builder
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 const queryTemplate = `
 WITH sorted_challenges AS (
@@ -16,18 +20,27 @@ ORDER BY
 	players_num DESC
 )
 SELECT
-	challenges.id as id,
-	challenges.title as title,
-	challenges.players_to_start as players_to_start,
+	challenges.id AS id,
+	challenges.title AS title,
+	challenges.players_to_start AS players_to_start,
 	sorted_challenges.players_num AS players_num,
-	challenges.prize_pool as prize_pool
+	challenges.prize_pool AS prize_pool
 FROM
 	challenges
 	JOIN sorted_challenges ON sorted_challenges.id = challenges.id
 		AND challenges.kind = 0
+	LEFT JOIN passed_challenges_data ON passed_challenges_data.challenge_id = challenges.id
+		AND passed_challenges_data.user_id = '%v'
+WHERE
+	passed_challenges_data.reward_amount = 0
+	OR passed_challenges_data.reward_amount IS NULL
+ORDER BY
+	(challenges.players_to_start - sorted_challenges.players_num) ASC,
+	sorted_challenges.players_num DESC,
+	challenges.updated_at DESC
 LIMIT %v OFFSET %v;
 `
 
-func ConstructGetChallengesSortedByPlayersQuery(limit, offset int32) string {
-	return fmt.Sprintf(queryTemplate, limit, offset)
+func ConstructGetChallengesSortedByPlayersQuery(userID uuid.UUID, limit, offset int32) string {
+	return fmt.Sprintf(queryTemplate, userID, limit, offset)
 }

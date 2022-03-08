@@ -24,7 +24,7 @@ type (
 	service interface {
 		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error)
 		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error)
-		GetChallengesSortedByPlayers(ctx context.Context, limit, offset int32) ([]*Challenge, error)
+		GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error)
 	}
 
 	GetQuizLinkResponse struct {
@@ -119,7 +119,7 @@ func MakeGetChallengesSortedByPlayersEndpoint(s service) endpoint.Endpoint {
 		//	return nil, err
 		//}
 
-		_, err := jwt.UserIDFromContext(ctx)
+		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "can't get userid from context")
 		}
@@ -129,7 +129,7 @@ func MakeGetChallengesSortedByPlayersEndpoint(s service) endpoint.Endpoint {
 			return nil, errors.Errorf("can't cast request to pagination request")
 		}
 
-		challenges, err := s.GetChallengesSortedByPlayers(ctx, req.Limit(), req.Offset())
+		challenges, err := s.GetChallengesSortedByPlayers(ctx, uid, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}

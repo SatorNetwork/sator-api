@@ -165,8 +165,8 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 	return challenge, nil
 }
 
-func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, limit, offset int32) ([]*Challenge, error) {
-	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(limit, offset)
+func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error) {
+	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(userID, limit, offset)
 	sqlExecutor := sql_executor.New(s.dbClient)
 	sqlChallenges, err := sqlExecutor.ExecuteGetChallengesSortedByPlayersQuery(query, nil)
 	if err != nil {
