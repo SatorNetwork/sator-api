@@ -55,8 +55,8 @@ type Challenge struct {
 }
 
 type ChallengeWithPlayer struct {
-	ID         string
-	PlayersNum int
+	ID            string
+	PlayersNumber int
 }
 
 type ChallengesWithPlayerWrapper struct {
@@ -118,7 +118,7 @@ func (a *QuizClient) GetChallengeById(accessToken, challengeID string) (*Challen
 }
 
 func (a *QuizClient) GetChallengesSortedByPlayers(accessToken string) ([]*ChallengeWithPlayer, error) {
-	url := fmt.Sprintf("http://localhost:8080/quiz_v2/challenges/sorted_by_players")
+	url := "http://localhost:8080/quiz_v2/challenges/sorted_by_players"
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")

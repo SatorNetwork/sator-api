@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 
@@ -15,7 +16,7 @@ func TestGetChallengesSortedByPlayers(t *testing.T) {
 	dbClient, err := sql.Open("postgres", dbConnString)
 	require.NoError(t, err)
 
-	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(1, 0)
+	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(uuid.New(), 1, 0)
 	sqlExecutor := New(dbClient)
 	_, err = sqlExecutor.ExecuteGetChallengesSortedByPlayersQuery(query, nil)
 	require.NoError(t, err)
