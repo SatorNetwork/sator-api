@@ -5,12 +5,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/SatorNetwork/sator-api/internal/test/framework/accounts"
-	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
-	"github.com/SatorNetwork/sator-api/internal/test/framework/solana"
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/stretchr/testify/require"
+
+	"github.com/SatorNetwork/sator-api/internal/solana"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/accounts"
+	"github.com/SatorNetwork/sator-api/internal/test/framework/client"
 )
 
 var bootstrapLock = &sync.Mutex{}
@@ -19,17 +20,17 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 	bootstrapLock.Lock()
 	defer bootstrapLock.Unlock()
 
-	// needed, err := CheckIfBootstrapNeeded(ctx)
-	// if err != nil {
-	// 	return err
-	// }
-	// if !needed {
-	// 	return nil
-	// }
+	needed, err := CheckIfBootstrapNeeded(ctx)
+	if err != nil {
+		return err
+	}
+	if !needed {
+		return nil
+	}
 
-	// if err := Bootstrap(ctx, t); err != nil {
-	// 	return err
-	// }
+	if err := Bootstrap(ctx, t); err != nil {
+		return err
+	}
 
 	c := client.NewClient()
 	if err := c.DB.Bootstrap(ctx); err != nil {
@@ -40,7 +41,13 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 }
 
 func CheckIfBootstrapNeeded(ctx context.Context) (bool, error) {
-	sc := solana.New(100, 100, nil, nil)
+	sc := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	_, tokenHolder, asset := accounts.GetAccounts()
 
 	tokenHolderAta, _, err := common.FindAssociatedTokenAddress(tokenHolder.PublicKey, asset.PublicKey)
@@ -64,7 +71,13 @@ func Bootstrap(ctx context.Context, t *testing.T) error {
 }
 
 func airdropSolToFeePayer(ctx context.Context, t *testing.T) {
-	solanaClient := solana.New(100, 100, nil, nil)
+	solanaClient := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	feePayer := accounts.GetFeePayer()
 	const solToAirdrop = 1
 
@@ -85,7 +98,13 @@ func airdropSolToFeePayer(ctx context.Context, t *testing.T) {
 }
 
 func createAsset(ctx context.Context, t *testing.T) {
-	solanaClient := solana.New(100, 100, nil, nil)
+	solanaClient := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	feePayer, tokenHolder, asset := accounts.GetAccounts()
 
 	_, err := solanaClient.CreateAsset(
@@ -98,7 +117,13 @@ func createAsset(ctx context.Context, t *testing.T) {
 }
 
 func issueTokensToTokenHolder(ctx context.Context, t *testing.T) {
-	solanaClient := solana.New(100, 100, nil, nil)
+	solanaClient := solana.New("http://localhost:8899", solana.Config{
+		SystemProgram:  common.SystemProgramID.ToBase58(),
+		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+		SplToken:       common.TokenProgramID.ToBase58(),
+		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+	})
 	feePayer, tokenHolder, asset := accounts.GetAccounts()
 	const tokensToIssue = 500000000
 

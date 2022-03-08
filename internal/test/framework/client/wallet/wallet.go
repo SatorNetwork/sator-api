@@ -2,33 +2,32 @@ package wallet
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
-	"github.com/SatorNetwork/sator-api/internal/test/framework/solana"
-	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/pkg/errors"
-	"github.com/portto/solana-go-sdk/types"
+	"github.com/portto/solana-go-sdk/common"
+
+	"github.com/SatorNetwork/sator-api/internal/solana"
+	client_utils "github.com/SatorNetwork/sator-api/internal/test/framework/client/utils"
+	"github.com/SatorNetwork/sator-api/svc/wallet"
 )
 
-type (
-	WalletClient struct {
-		solanaClient solanaClient
-	}
-
-	solanaClient interface {
-		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-		GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
-	}
-)
+type WalletClient struct {
+	solanaClient *solana.Client
+}
 
 func New() *WalletClient {
 	return &WalletClient{
-		solanaClient: solana.New(100, 100, nil, nil),
+		solanaClient: solana.New("http://localhost:8899", solana.Config{
+			SystemProgram:  common.SystemProgramID.ToBase58(),
+			SysvarRent:     common.SysVarRentPubkey.ToBase58(),
+			SysvarClock:    common.SysVarClockPubkey.ToBase58(),
+			SplToken:       common.TokenProgramID.ToBase58(),
+			StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		}),
 	}
 }
 
