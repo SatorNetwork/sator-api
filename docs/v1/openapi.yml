@@ -1307,7 +1307,7 @@ paths:
         - "Wallet"
       summary: Returns possible multiplier after adding amount to lock.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
@@ -3563,7 +3563,7 @@ paths:
         - "QuizV2"
       summary: Get challenge details by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: challenge_id
           in: path
@@ -3636,6 +3636,64 @@ paths:
                   registered_players:
                     type: integer
                     example: 1
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /quiz_v2/challenges/sorted_by_players:
+    get:
+      tags:
+        - "QuizV2"
+      summary: Get get quizzes list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Get get quizzes list sorted by players number.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Challenge name"
+                    players_to_start:
+                      type: number
+                      example: 10
+                    players_number:
+                      type: number
+                      example: 2
+                      description: number of players who wait on a quiz lobby
+                    prize_pool:
+                      type: string
+                      example: "250 SAO"
+                    is_realm_activated:
+                      type: boolean
+                      example: true
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

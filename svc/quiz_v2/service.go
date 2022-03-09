@@ -44,8 +44,12 @@ type (
 	}
 
 	Challenge struct {
-		ID         string
-		PlayersNum int
+		ID               string `json:"id"`
+		Title            string `json:"title"`
+		PlayersToStart   int    `json:"players_to_start"`
+		PlayersNumber    int    `json:"players_number"`
+		PrizePool        string `json:"prize_pool"`
+		IsRealmActivated bool   `json:"is_realm_activated"`
 	}
 )
 
@@ -161,8 +165,8 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 	return challenge, nil
 }
 
-func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, limit, offset int32) ([]*Challenge, error) {
-	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(limit, offset)
+func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error) {
+	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(userID, limit, offset)
 	sqlExecutor := sql_executor.New(s.dbClient)
 	sqlChallenges, err := sqlExecutor.ExecuteGetChallengesSortedByPlayersQuery(query, nil)
 	if err != nil {
@@ -175,8 +179,11 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, limit, offse
 
 func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
 	return &Challenge{
-		ID:         c.ID,
-		PlayersNum: c.PlayersNum,
+		ID:             c.ID,
+		Title:          c.Title,
+		PlayersToStart: c.PlayersToStart,
+		PlayersNumber:  c.PlayersNum,
+		PrizePool:      fmt.Sprintf("%.2f SAO", c.PrizePool),
 	}
 }
 
