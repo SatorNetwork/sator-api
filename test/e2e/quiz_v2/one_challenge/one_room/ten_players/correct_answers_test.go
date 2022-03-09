@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/SatorNetwork/sator-api/lib/encryption/envelope"
@@ -14,6 +16,7 @@ import (
 	"github.com/SatorNetwork/sator-api/test/e2e/quiz_v2/message_container"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
+	"github.com/SatorNetwork/sator-api/test/framework/client/quiz_v2"
 	"github.com/SatorNetwork/sator-api/test/framework/message_verifier"
 	"github.com/SatorNetwork/sator-api/test/framework/nats_subscriber"
 	"github.com/SatorNetwork/sator-api/test/framework/user"
@@ -95,7 +98,10 @@ func TestCorrectAnswers(t *testing.T) {
 			challengesWithPlayer, err := c.QuizV2Client.GetChallengesSortedByPlayers(users[0].AccessToken())
 			require.NoError(t, err)
 			require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
-			require.Equal(t, i+1, challengesWithPlayer[0].PlayersNumber)
+
+			challengeWithPlayer, err := findChallengeByID(challengesWithPlayer, challengeID)
+			require.NoError(t, err)
+			require.Equal(t, i+1, challengeWithPlayer.PlayersNumber)
 		}
 	}
 
@@ -105,4 +111,14 @@ func TestCorrectAnswers(t *testing.T) {
 		err := mv.NonStrictVerify()
 		require.NoError(t, err)
 	}
+}
+
+func findChallengeByID(challenges []*quiz_v2.ChallengeWithPlayer, challengeID uuid.UUID) (*quiz_v2.ChallengeWithPlayer, error) {
+	for _, c := range challenges {
+		if c.ID == challengeID.String() {
+			return c, nil
+		}
+	}
+
+	return nil, errors.Errorf("can't find challenge by id: %v", challengeID)
 }
