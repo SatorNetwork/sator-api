@@ -55,8 +55,12 @@ type Challenge struct {
 }
 
 type ChallengeWithPlayer struct {
-	ID            string
-	PlayersNumber int
+	ID               string `json:"id"`
+	Title            string `json:"title"`
+	PlayersToStart   int    `json:"players_to_start"`
+	PlayersNumber    int    `json:"players_number"`
+	PrizePool        string `json:"prize_pool"`
+	IsRealmActivated bool   `json:"is_realm_activated"`
 }
 
 type ChallengesWithPlayerWrapper struct {
