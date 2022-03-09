@@ -262,6 +262,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	return Wallet{
 		ID:                   w.ID.String(),
+		Type:                 w.WalletType,
 		Order:                w.Sort,
 		SolanaAccountAddress: sa.PublicKey,
 		Actions: []Action{
