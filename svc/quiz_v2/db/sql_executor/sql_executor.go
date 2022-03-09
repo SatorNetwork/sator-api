@@ -22,6 +22,7 @@ type Challenge struct {
 	PlayersToStart int
 	PlayersNum     int
 	PrizePool      float64
+	IsActivated    bool
 }
 
 func (e *SQLExecutor) ExecuteGetChallengesSortedByPlayersQuery(sql string, args []interface{}) ([]*Challenge, error) {
@@ -39,6 +40,7 @@ func (e *SQLExecutor) ExecuteGetChallengesSortedByPlayersQuery(sql string, args 
 			&challenge.PlayersToStart,
 			&challenge.PlayersNum,
 			&challenge.PrizePool,
+			&challenge.IsActivated,
 		)
 		if err != nil {
 			return nil, err

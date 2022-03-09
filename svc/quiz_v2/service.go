@@ -179,11 +179,12 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 
 func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
 	return &Challenge{
-		ID:             c.ID,
-		Title:          c.Title,
-		PlayersToStart: c.PlayersToStart,
-		PlayersNumber:  c.PlayersNum,
-		PrizePool:      fmt.Sprintf("%.2f SAO", c.PrizePool),
+		ID:               c.ID,
+		Title:            c.Title,
+		PlayersToStart:   c.PlayersToStart,
+		PlayersNumber:    c.PlayersNum,
+		PrizePool:        fmt.Sprintf("%.2f SAO", c.PrizePool),
+		IsRealmActivated: c.IsActivated,
 	}
 }
 
