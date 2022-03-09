@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
 
 	"github.com/google/uuid"

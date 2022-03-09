@@ -11,8 +11,8 @@ import (
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
 
-	"github.com/SatorNetwork/sator-api/internal/httpencoder"
-	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/lib/httpencoder"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 )
 
 const (

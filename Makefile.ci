@@ -89,5 +89,7 @@ migrate-local: ## Run all migrations on local environment
 	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	go run ./cmd/migrate/main.go
-test:
-	go test -p 1 -count=1 -race ./internal/... ./svc/...
+e2e-tests:
+	go test -p 1 -count=1 -race ./test/e2e/... ./lib/... ./svc/...
+integration-tests:
+	go test -p 1 -count=1 -race -tags=mock_solana ./test/integration-tests/...

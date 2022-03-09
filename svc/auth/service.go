@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	"github.com/SatorNetwork/sator-api/internal/sumsub"
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/SatorNetwork/sator-api/internal/validator"
+	"github.com/SatorNetwork/sator-api/lib/db"
+	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/sumsub"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
 
 	"github.com/dmitrymomot/random"
