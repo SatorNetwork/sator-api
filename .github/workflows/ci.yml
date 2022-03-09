@@ -2,10 +2,10 @@ name: Go
 
 on:
   push:
-    branches: [main, develop, SAT-719-cannot-unlock-tokens]
+    branches: [main, develop]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [main, develop, SAT-719-cannot-unlock-tokens]
+    branches: [main, develop]
 
 jobs:
   build:
