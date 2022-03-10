@@ -1361,6 +1361,47 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /wallets/stake-levels:
+    post:
+      tags:
+        - "Wallet"
+      summary: Returns available stake levels.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: amount of expected multiplier.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    min_amount:
+                      type: number
+                      example: 100
+                      description: Min stake amount to reach this level
+                    min_days_to_stake:
+                      type: number
+                      example: 30
+                      description: Min stake days number to reach this level
+                    title:
+                      type: string
+                      example: "Level title"
+                    sub_title:
+                      type: string
+                      example: "Level subtitle"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows:
     get:
       tags:

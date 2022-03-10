@@ -73,6 +73,7 @@ type (
 		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
 
 		GetAllStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
+		GetAllEnabledStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
 		GetStakeLevelByAmount(ctx context.Context, amount float64) (repository.GetStakeLevelByAmountRow, error)
 	}
 
@@ -102,6 +103,15 @@ type (
 		Fee             float64 `json:"fee,omitempty"`
 		TransactionHash string  `json:"tx_hash,omitempty"`
 		SenderWalletID  string  `json:"sender_wallet_id,omitempty"`
+	}
+
+	StakeLevel struct {
+		ID             string  `json:"id"`
+		MinAmount      float64 `json:"min_amount"`
+		MinDaysToStake int     `json:"min_days_to_stake"`
+		Title          string  `json:"title"`
+		SubTitle       string  `json:"sub_title"`
+		Rewards        string  `json:"rewards"`
 	}
 )
 
@@ -941,4 +951,27 @@ func (s *Service) PossibleMultiplier(ctx context.Context, additionalAmount float
 	}
 
 	return lvl.Multiplier.Int32, nil
+}
+
+// GetEnabledStakeLevelsList returns enabled stake levels list
+func (s *Service) GetEnabledStakeLevelsList(ctx context.Context) ([]StakeLevel, error) {
+	lvls, err := s.wr.GetAllEnabledStakeLevels(ctx)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, err
+		}
+	}
+
+	levels := make([]StakeLevel, 0, len(lvls))
+	for _, l := range lvls {
+		levels = append(levels, StakeLevel{
+			ID:             l.ID.String(),
+			MinAmount:      l.MinStakeAmount.Float64,
+			MinDaysToStake: int(l.MinDaysAmount.Int32),
+			Title:          l.Title,
+			SubTitle:       l.Subtitle,
+		})
+	}
+
+	return levels, nil
 }
