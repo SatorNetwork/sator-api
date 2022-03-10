@@ -59,24 +59,20 @@ func (w *WalletClient) GetStake(accessToken, walletID string) (*SetStakeResponse
 	return resp.Data, nil
 }
 
-func (w *WalletClient) SetStake(accessToken, walletID string) error {
-	url := fmt.Sprintf("http://localhost:8080/wallets/%v/stake", walletID)
+func (w *WalletClient) SetStake(accessToken string, req *SetStakeRequest) error {
+	url := fmt.Sprintf("http://localhost:8080/wallets/%v/stake", req.WalletID)
 
-	body, err := json.Marshal(&SetStakeRequest{
-		Amount:   100,
-		WalletID: walletID,
-		Duration: 100,
-	})
+	body, err := json.Marshal(req)
 	if err != nil {
 		return errors.Wrap(err, "can't marshal create transfer request")
 	}
 	reader := bytes.NewReader(body)
-	req, err := http.NewRequest(http.MethodPost, url, reader)
+	httpReq, err := http.NewRequest(http.MethodPost, url, reader)
 	if err != nil {
 		return errors.Wrap(err, "can't create http request")
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
-	httpResp, err := http.DefaultClient.Do(req)
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return errors.Wrap(err, "can't make http request")
 	}

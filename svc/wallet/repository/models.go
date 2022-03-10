@@ -29,14 +29,15 @@ type SolanaAccount struct {
 }
 
 type Stake struct {
-	ID            uuid.UUID     `json:"id"`
-	UserID        uuid.UUID     `json:"user_id"`
-	WalletID      uuid.UUID     `json:"wallet_id"`
-	StakeAmount   float64       `json:"stake_amount"`
-	StakeDuration sql.NullInt32 `json:"stake_duration"`
-	UnstakeDate   time.Time     `json:"unstake_date"`
-	UpdatedAt     sql.NullTime  `json:"updated_at"`
-	CreatedAt     time.Time     `json:"created_at"`
+	ID               uuid.UUID     `json:"id"`
+	UserID           uuid.UUID     `json:"user_id"`
+	WalletID         uuid.UUID     `json:"wallet_id"`
+	StakeAmount      float64       `json:"stake_amount"`
+	StakeDuration    sql.NullInt32 `json:"stake_duration"`
+	UnstakeDate      time.Time     `json:"unstake_date"`
+	UpdatedAt        sql.NullTime  `json:"updated_at"`
+	CreatedAt        time.Time     `json:"created_at"`
+	UnstakeTimestamp int64         `json:"unstake_timestamp"`
 }
 
 type StakeLevel struct {

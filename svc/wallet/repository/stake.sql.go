@@ -17,23 +17,26 @@ INSERT INTO stake (
     wallet_id,
     stake_amount,
     stake_duration,
-    unstake_date
+    unstake_date,
+    unstake_timestamp
 )
 VALUES (
-           $1,
-           $2,
-           $3,
-           $4,
-           $5
-       ) RETURNING id, user_id, wallet_id, stake_amount, stake_duration, unstake_date, updated_at, created_at
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6
+) RETURNING id, user_id, wallet_id, stake_amount, stake_duration, unstake_date, updated_at, created_at, unstake_timestamp
 `
 
 type AddStakeParams struct {
-	UserID        uuid.UUID     `json:"user_id"`
-	WalletID      uuid.UUID     `json:"wallet_id"`
-	StakeAmount   float64       `json:"stake_amount"`
-	StakeDuration sql.NullInt32 `json:"stake_duration"`
-	UnstakeDate   time.Time     `json:"unstake_date"`
+	UserID           uuid.UUID     `json:"user_id"`
+	WalletID         uuid.UUID     `json:"wallet_id"`
+	StakeAmount      float64       `json:"stake_amount"`
+	StakeDuration    sql.NullInt32 `json:"stake_duration"`
+	UnstakeDate      time.Time     `json:"unstake_date"`
+	UnstakeTimestamp int64         `json:"unstake_timestamp"`
 }
 
 func (q *Queries) AddStake(ctx context.Context, arg AddStakeParams) (Stake, error) {
@@ -43,6 +46,7 @@ func (q *Queries) AddStake(ctx context.Context, arg AddStakeParams) (Stake, erro
 		arg.StakeAmount,
 		arg.StakeDuration,
 		arg.UnstakeDate,
+		arg.UnstakeTimestamp,
 	)
 	var i Stake
 	err := row.Scan(
@@ -54,6 +58,7 @@ func (q *Queries) AddStake(ctx context.Context, arg AddStakeParams) (Stake, erro
 		&i.UnstakeDate,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.UnstakeTimestamp,
 	)
 	return i, err
 }
@@ -69,7 +74,7 @@ func (q *Queries) DeleteStakeByUserID(ctx context.Context, userID uuid.UUID) err
 }
 
 const getStakeByUserID = `-- name: GetStakeByUserID :one
-SELECT id, user_id, wallet_id, stake_amount, stake_duration, unstake_date, updated_at, created_at
+SELECT id, user_id, wallet_id, stake_amount, stake_duration, unstake_date, updated_at, created_at, unstake_timestamp
 FROM stake
 WHERE user_id = $1
     LIMIT 1
@@ -87,6 +92,7 @@ func (q *Queries) GetStakeByUserID(ctx context.Context, userID uuid.UUID) (Stake
 		&i.UnstakeDate,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.UnstakeTimestamp,
 	)
 	return i, err
 }
@@ -107,15 +113,17 @@ const updateStake = `-- name: UpdateStake :exec
 UPDATE stake
 SET stake_amount = $1,
     stake_duration = $2,
-    unstake_date = $3
-WHERE user_id = $4
+    unstake_date = $3,
+    unstake_timestamp = $4
+WHERE user_id = $5
 `
 
 type UpdateStakeParams struct {
-	StakeAmount   float64       `json:"stake_amount"`
-	StakeDuration sql.NullInt32 `json:"stake_duration"`
-	UnstakeDate   time.Time     `json:"unstake_date"`
-	UserID        uuid.UUID     `json:"user_id"`
+	StakeAmount      float64       `json:"stake_amount"`
+	StakeDuration    sql.NullInt32 `json:"stake_duration"`
+	UnstakeDate      time.Time     `json:"unstake_date"`
+	UnstakeTimestamp int64         `json:"unstake_timestamp"`
+	UserID           uuid.UUID     `json:"user_id"`
 }
 
 func (q *Queries) UpdateStake(ctx context.Context, arg UpdateStakeParams) error {
@@ -123,6 +131,7 @@ func (q *Queries) UpdateStake(ctx context.Context, arg UpdateStakeParams) error 
 		arg.StakeAmount,
 		arg.StakeDuration,
 		arg.UnstakeDate,
+		arg.UnstakeTimestamp,
 		arg.UserID,
 	)
 	return err
