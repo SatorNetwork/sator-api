@@ -3757,6 +3757,9 @@ paths:
                     is_realm_activated:
                       type: boolean
                       example: true
+                    cover:
+                      type: string
+                      example: "https://nyc3.digitaloceanspaces.com/sator-staging-storage/uploads/507621a0-ab34-4502-9273-778f965562ce.jpeg"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

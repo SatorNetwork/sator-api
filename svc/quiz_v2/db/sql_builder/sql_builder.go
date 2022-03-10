@@ -25,7 +25,8 @@ SELECT
 	challenges.players_to_start AS players_to_start,
 	sorted_challenges.players_num AS players_num,
 	challenges.prize_pool AS prize_pool,
-	COALESCE((episode_access.activated_before > NOW())::BOOLEAN, FALSE) AS is_activated
+	COALESCE((episode_access.activated_before > NOW())::BOOLEAN, FALSE) AS is_activated,
+	episodes.cover AS cover
 FROM
 	challenges
 	JOIN sorted_challenges ON sorted_challenges.id = challenges.id

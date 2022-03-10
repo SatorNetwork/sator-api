@@ -50,6 +50,7 @@ type (
 		PlayersNumber    int    `json:"players_number"`
 		PrizePool        string `json:"prize_pool"`
 		IsRealmActivated bool   `json:"is_realm_activated"`
+		Cover            string `json:"cover"`
 	}
 )
 
@@ -185,6 +186,7 @@ func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
 		PlayersNumber:    c.PlayersNum,
 		PrizePool:        fmt.Sprintf("%.2f SAO", c.PrizePool),
 		IsRealmActivated: c.IsActivated,
+		Cover:            c.Cover,
 	}
 }
 
