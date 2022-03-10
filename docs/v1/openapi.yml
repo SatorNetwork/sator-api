@@ -1362,7 +1362,7 @@ paths:
           $ref: "#/components/responses/DefaultError"
 
   /wallets/stake-levels:
-    post:
+    get:
       tags:
         - "Wallet"
       summary: Returns available stake levels.
