@@ -109,6 +109,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.GetStake = mdw(e.GetStake)
 			e.Unstake = mdw(e.Unstake)
 			e.PossibleMultiplier = mdw(e.PossibleMultiplier)
+			e.GetStakeLevels = mdw(e.GetStakeLevels)
 		}
 	}
 
