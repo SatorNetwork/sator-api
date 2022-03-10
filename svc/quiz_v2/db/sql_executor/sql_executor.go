@@ -23,7 +23,7 @@ type Challenge struct {
 	PlayersNum     int
 	PrizePool      float64
 	IsActivated    bool
-	Cover          string
+	Cover          sql.NullString
 }
 
 func (e *SQLExecutor) ExecuteGetChallengesSortedByPlayersQuery(sql string, args []interface{}) ([]*Challenge, error) {

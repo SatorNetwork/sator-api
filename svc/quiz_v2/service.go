@@ -186,7 +186,7 @@ func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
 		PlayersNumber:    c.PlayersNum,
 		PrizePool:        fmt.Sprintf("%.2f SAO", c.PrizePool),
 		IsRealmActivated: c.IsActivated,
-		Cover:            c.Cover,
+		Cover:            c.Cover.String,
 	}
 }
 
