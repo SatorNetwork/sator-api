@@ -1395,6 +1395,12 @@ paths:
                     sub_title:
                       type: string
                       example: "Level subtitle"
+                    is_current:
+                      type: boolean
+                      example: true
+                      enum:
+                        - true
+                        - false
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

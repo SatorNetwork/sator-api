@@ -39,7 +39,7 @@ type (
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error)
-		GetEnabledStakeLevelsList(ctx context.Context) ([]StakeLevel, error)
+		GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUID) ([]StakeLevel, error)
 	}
 
 	CreateTransferRequest struct {
@@ -350,7 +350,12 @@ func MakePossibleMultiplierEndpoint(s service, v validator.ValidateFunc) endpoin
 
 func MakeGetStakeLevelsEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		levels, err := s.GetEnabledStakeLevelsList(ctx)
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		levels, err := s.GetEnabledStakeLevelsList(ctx, uid)
 		if err != nil {
 			return nil, err
 		}

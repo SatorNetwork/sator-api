@@ -112,6 +112,7 @@ type (
 		Title          string  `json:"title"`
 		SubTitle       string  `json:"sub_title"`
 		Rewards        string  `json:"rewards"`
+		IsCurrent      bool    `json:"is_current"`
 	}
 )
 
@@ -954,11 +955,19 @@ func (s *Service) PossibleMultiplier(ctx context.Context, additionalAmount float
 }
 
 // GetEnabledStakeLevelsList returns enabled stake levels list
-func (s *Service) GetEnabledStakeLevelsList(ctx context.Context) ([]StakeLevel, error) {
+func (s *Service) GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUID) ([]StakeLevel, error) {
 	lvls, err := s.wr.GetAllEnabledStakeLevels(ctx)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
 			return nil, err
+		}
+	}
+
+	var currentStakeLvlID uuid.UUID
+	if stake, err := s.wr.GetStakeByUserID(ctx, userID); err == nil {
+		lvl, err := s.wr.GetStakeLevelByAmount(ctx, stake.StakeAmount)
+		if err == nil {
+			currentStakeLvlID = lvl.ID
 		}
 	}
 
@@ -970,6 +979,7 @@ func (s *Service) GetEnabledStakeLevelsList(ctx context.Context) ([]StakeLevel, 
 			MinDaysToStake: int(l.MinDaysAmount.Int32),
 			Title:          l.Title,
 			SubTitle:       l.Subtitle,
+			IsCurrent:      currentStakeLvlID == l.ID,
 		})
 	}
 
