@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/SatorNetwork/sator-api/internal/validator"
+	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+	"github.com/SatorNetwork/sator-api/lib/validator"
 
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-kit/kit/endpoint"
@@ -26,6 +26,7 @@ type (
 		SetStake                      endpoint.Endpoint
 		Unstake                       endpoint.Endpoint
 		PossibleMultiplier            endpoint.Endpoint
+		GetStakeLevels                endpoint.Endpoint
 	}
 
 	service interface {
@@ -38,6 +39,7 @@ type (
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error)
+		GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUID) ([]StakeLevel, error)
 	}
 
 	CreateTransferRequest struct {
@@ -92,6 +94,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
 		Unstake:                       MakeUnstakeEndpoint(s, validateFunc),
 		PossibleMultiplier:            MakePossibleMultiplierEndpoint(s, validateFunc),
+		GetStakeLevels:                MakeGetStakeLevelsEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -106,6 +109,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 			e.GetStake = mdw(e.GetStake)
 			e.Unstake = mdw(e.Unstake)
 			e.PossibleMultiplier = mdw(e.PossibleMultiplier)
+			e.GetStakeLevels = mdw(e.GetStakeLevels)
 		}
 	}
 
@@ -342,5 +346,21 @@ func MakePossibleMultiplierEndpoint(s service, v validator.ValidateFunc) endpoin
 		}
 
 		return multiplier, nil
+	}
+}
+
+func MakeGetStakeLevelsEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		levels, err := s.GetEnabledStakeLevelsList(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return levels, nil
 	}
 }

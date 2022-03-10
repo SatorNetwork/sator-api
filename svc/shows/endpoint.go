@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/SatorNetwork/sator-api/internal/validator"
+	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+	"github.com/SatorNetwork/sator-api/lib/validator"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"

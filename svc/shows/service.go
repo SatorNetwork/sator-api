@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	"github.com/SatorNetwork/sator-api/internal/utils"
+	"github.com/SatorNetwork/sator-api/lib/db"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
 

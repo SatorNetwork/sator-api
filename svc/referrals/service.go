@@ -8,8 +8,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	"github.com/SatorNetwork/sator-api/internal/firebase"
+	"github.com/SatorNetwork/sator-api/lib/db"
+	"github.com/SatorNetwork/sator-api/lib/firebase"
 	"github.com/SatorNetwork/sator-api/svc/referrals/repository"
 
 	"github.com/google/uuid"
@@ -32,7 +32,7 @@ type (
 		UserID       *uuid.UUID `json:"user_id"`
 		CreatedAt    time.Time  `json:"created_at"`
 	}
-  
+
 	Referral struct {
 		ReferralCodeID uuid.UUID `json:"referral_code_id"`
 		UserID         uuid.UUID `json:"user_id"`
