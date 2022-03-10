@@ -146,6 +146,8 @@ type (
 		GetReviewRating(ctx context.Context, arg repository.GetReviewRatingParams) (int64, error)
 		IsUserRatedReview(ctx context.Context, arg repository.IsUserRatedReviewParams) (bool, error)
 		GetReviewByID(ctx context.Context, id uuid.UUID) (repository.Rating, error)
+		GetUserEpisodeReview(ctx context.Context, arg repository.GetUserEpisodeReviewParams) (repository.ReviewsRating, error)
+		DeleteUserEpisodeReview(ctx context.Context, arg repository.DeleteUserEpisodeReviewParams) error
 
 		// Show claps
 		AddClapForShow(ctx context.Context, arg repository.AddClapForShowParams) error
@@ -1016,39 +1018,33 @@ func (s *Service) GetReviewsListByUserID(ctx context.Context, userID uuid.UUID, 
 
 // LikeDislikeEpisodeReview used to store users review episode assessment (like/dislike).
 func (s *Service) LikeDislikeEpisodeReview(ctx context.Context, reviewID, uid uuid.UUID, ratingType ReviewRatingType) error {
-	isRated, err := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
+	userReview, err := s.sr.GetUserEpisodeReview(ctx, repository.GetUserEpisodeReviewParams{
 		UserID:   uid,
 		ReviewID: reviewID,
-		RatingType: sql.NullInt32{
-			Int32: int32(ratingType),
-			Valid: true,
-		},
 	})
-	if err != nil {
-		return fmt.Errorf("could not check is review episode rated, %w", err)
-	}
-	if isRated {
-		err = s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
-			ReviewID: reviewID,
-			UserID:   uid,
-			RatingType: sql.NullInt32{
-				Int32: 0,
-				Valid: true,
-			}})
-		if err != nil {
-			return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", reviewID, err)
-		}
+	if err != nil && !db.IsNotFoundError(err) {
+		return fmt.Errorf("could not rate episode review: %w", err)
 	}
 
-	err = s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
+	if ReviewRatingType(userReview.RatingType.Int32) == ratingType {
+		if err := s.sr.DeleteUserEpisodeReview(ctx, repository.DeleteUserEpisodeReviewParams{
+			UserID:   uid,
+			ReviewID: reviewID,
+		}); err != nil && !db.IsNotFoundError(err) {
+			return fmt.Errorf("could not unrate episode review: %w", err)
+		}
+
+		return nil
+	}
+
+	if err := s.sr.LikeDislikeEpisodeReview(ctx, repository.LikeDislikeEpisodeReviewParams{
 		ReviewID: reviewID,
 		UserID:   uid,
 		RatingType: sql.NullInt32{
 			Int32: int32(ratingType),
 			Valid: true,
-		}})
-	if err != nil {
-		return fmt.Errorf("could not like/dislike review episode with id=:%v, %w", reviewID, err)
+		}}); err != nil {
+		return fmt.Errorf("could not rate episode review: %w", err)
 	}
 
 	return nil

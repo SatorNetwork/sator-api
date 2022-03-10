@@ -10,6 +10,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const deleteUserEpisodeReview = `-- name: DeleteUserEpisodeReview :exec
+DELETE FROM reviews_rating
+WHERE user_id = $1 
+AND review_id = $2
+`
+
+type DeleteUserEpisodeReviewParams struct {
+	UserID   uuid.UUID `json:"user_id"`
+	ReviewID uuid.UUID `json:"review_id"`
+}
+
+func (q *Queries) DeleteUserEpisodeReview(ctx context.Context, arg DeleteUserEpisodeReviewParams) error {
+	_, err := q.exec(ctx, q.deleteUserEpisodeReviewStmt, deleteUserEpisodeReview, arg.UserID, arg.ReviewID)
+	return err
+}
+
 const getReviewRating = `-- name: GetReviewRating :one
 SELECT count(*)
 FROM reviews_rating
@@ -27,6 +43,29 @@ func (q *Queries) GetReviewRating(ctx context.Context, arg GetReviewRatingParams
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getUserEpisodeReview = `-- name: GetUserEpisodeReview :one
+SELECT review_id, user_id, rating_type, created_at FROM reviews_rating
+WHERE user_id = $1 
+AND review_id = $2
+`
+
+type GetUserEpisodeReviewParams struct {
+	UserID   uuid.UUID `json:"user_id"`
+	ReviewID uuid.UUID `json:"review_id"`
+}
+
+func (q *Queries) GetUserEpisodeReview(ctx context.Context, arg GetUserEpisodeReviewParams) (ReviewsRating, error) {
+	row := q.queryRow(ctx, q.getUserEpisodeReviewStmt, getUserEpisodeReview, arg.UserID, arg.ReviewID)
+	var i ReviewsRating
+	err := row.Scan(
+		&i.ReviewID,
+		&i.UserID,
+		&i.RatingType,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const isUserRatedReview = `-- name: IsUserRatedReview :one
