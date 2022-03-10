@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -11,6 +12,7 @@ import (
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
+	wallet_client "github.com/SatorNetwork/sator-api/test/framework/client/wallet"
 	"github.com/SatorNetwork/sator-api/test/mock"
 )
 
@@ -56,10 +58,15 @@ func TestStake(t *testing.T) {
 
 	_, err = c.Wallet.GetStake(signUpResp.AccessToken, wallet.Id)
 	require.NoError(t, err)
-	err = c.Wallet.SetStake(signUpResp.AccessToken, wallet.Id)
+	err = c.Wallet.SetStake(signUpResp.AccessToken, &wallet_client.SetStakeRequest{
+		Amount:   100,
+		WalletID: wallet.Id,
+		Duration: 0,
+	})
 	require.NoError(t, err)
 	_, err = c.Wallet.GetStake(signUpResp.AccessToken, wallet.Id)
 	require.NoError(t, err)
+	time.Sleep(time.Second)
 	err = c.Wallet.Unstake(signUpResp.AccessToken, wallet.Id)
 	require.NoError(t, err)
 }

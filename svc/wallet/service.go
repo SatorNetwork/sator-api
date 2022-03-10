@@ -679,7 +679,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 					Int32: int32(duration),
 					Valid: true,
 				},
-				UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+				UnstakeDate:      time.Now().Add(time.Duration(duration) * time.Second),
+				UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
 			})
 			if err != nil {
 				return true, fmt.Errorf("could not add stake to db for user= %v, %w", userID, err)
@@ -698,7 +699,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 			Int32: int32(duration),
 			Valid: true,
 		},
-		UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+		UnstakeDate:      time.Now().Add(time.Duration(duration) * time.Second),
+		UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
 	})
 	if err != nil {
 		return true, fmt.Errorf("could not update stake in db for user= %v, %w", userID, err)
@@ -730,8 +732,9 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get wallet stake: %w", err)
 	}
 
-	if time.Now().After(stake.UnstakeDate) {
-		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", stake.UnstakeDate.String())
+	unstakeDate := time.Unix(stake.UnstakeTimestamp, 0)
+	if time.Now().Before(unstakeDate) {
+		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", unstakeDate.String())
 	}
 
 	for i := 0; i < 5; i++ {
