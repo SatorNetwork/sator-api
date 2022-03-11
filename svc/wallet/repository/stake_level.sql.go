@@ -135,6 +135,28 @@ func (q *Queries) GetAllStakeLevels(ctx context.Context) ([]StakeLevel, error) {
 	return items, nil
 }
 
+const getMinimalStakeLevel = `-- name: GetMinimalStakeLevel :one
+SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
+FROM stake_levels
+ORDER BY min_stake_amount ASC
+LIMIT 1
+`
+
+func (q *Queries) GetMinimalStakeLevel(ctx context.Context) (StakeLevel, error) {
+	row := q.queryRow(ctx, q.getMinimalStakeLevelStmt, getMinimalStakeLevel)
+	var i StakeLevel
+	err := row.Scan(
+		&i.ID,
+		&i.MinStakeAmount,
+		&i.MinDaysAmount,
+		&i.Title,
+		&i.Subtitle,
+		&i.Multiplier,
+		&i.Disabled,
+	)
+	return i, err
+}
+
 const getStakeLevelByAmount = `-- name: GetStakeLevelByAmount :one
 WITH lvls AS (
 	SELECT
