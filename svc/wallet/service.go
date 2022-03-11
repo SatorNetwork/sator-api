@@ -655,11 +655,11 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 
 	level, err := s.wr.GetMinimalStakeLevel(ctx)
 	if err != nil {
-		return false, fmt.Errorf("could not get minimal stake level")
+		return false, fmt.Errorf("could not get minimal tokens lock level")
 	}
 
 	if bal < amount || bal < level.MinStakeAmount.Float64 {
-		return false, fmt.Errorf("insufficient balance for a steak : %.2f", bal)
+		return false, fmt.Errorf("insufficient balance for a lock : %.2f", bal)
 	}
 
 	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
