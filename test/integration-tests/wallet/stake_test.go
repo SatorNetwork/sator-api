@@ -27,7 +27,7 @@ func TestStake(t *testing.T) {
 	solanaMock.ExpectAccountFromPrivateKeyBytesAny()
 	solanaMock.EXPECT().
 		GetTokenAccountBalanceWithAutoDerive(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(0.0, nil).
+		Return(100.0, nil).
 		AnyTimes()
 	solanaMock.EXPECT().
 		Stake(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -59,7 +59,7 @@ func TestStake(t *testing.T) {
 	_, err = c.Wallet.GetStake(signUpResp.AccessToken, wallet.Id)
 	require.NoError(t, err)
 	err = c.Wallet.SetStake(signUpResp.AccessToken, &wallet_client.SetStakeRequest{
-		Amount:   100,
+		Amount:   10,
 		WalletID: wallet.Id,
 		Duration: 0,
 	})
