@@ -82,11 +82,14 @@ run-local: ## Run api via `go run`
     SOLANA_SPL_TOKEN=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA \
     SOLANA_STAKE_PROGRAM_ID=CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u \
     QUIZ_V2_SHUFFLE_QUESTIONS=false \
+    SATOR_API_KEY=582e89d8-69ca-4206-8e7f-1fc822b41307 \
 	go run -ldflags "-X main.buildTag=`date -u +%Y%m%d.%H%M%S`-$(LATEST_COMMIT)" -race cmd/api/main.go &> sator-api.log &
 migrate-local: ## Run all migrations on local environment
 	@rm -Rvf migrations/*.sql && \
 	cp -Rvf ./svc/**/repository/sql/migrations/*.sql migrations/ && \
 	DATABASE_URL=postgresql://pguser:pgpass@127.0.0.1/pgdb?sslmode=disable \
 	go run ./cmd/migrate/main.go
-test:
-	go test -p 1 -count=1 -race ./internal/... ./svc/...
+e2e-tests:
+	go test -p 1 -count=1 -race ./test/e2e/... ./lib/... ./svc/...
+integration-tests:
+	go test -p 1 -count=1 -race -tags=mock_solana ./test/integration-tests/...

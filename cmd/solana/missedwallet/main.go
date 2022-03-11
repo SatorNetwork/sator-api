@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"log"
 
-	dbx "github.com/SatorNetwork/sator-api/internal/db"
-	"github.com/SatorNetwork/sator-api/internal/solana"
+	"github.com/dmitrymomot/go-env"
+	"github.com/google/uuid"
+	_ "github.com/lib/pq" // init pg driver
+	"github.com/zeebo/errs"
+
+	dbx "github.com/SatorNetwork/sator-api/lib/db"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	userRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
-
-	"github.com/dmitrymomot/go-env"
-	"github.com/google/uuid"
-	"github.com/zeebo/errs"
-
-	_ "github.com/lib/pq" // init pg driver
 )
 
 var (
@@ -98,7 +98,7 @@ func main() {
 		return createSolanaWalletIfNotExists(
 			ctx,
 			repository.New(tx),
-			solana.New(solanaApiBaseUrl, solana.Config{
+			solana_client.New(solanaApiBaseUrl, solana_client.Config{
 				SystemProgram:  solanaSystemProgram,
 				SysvarRent:     solanaSysvarRent,
 				SysvarClock:    solanaSysvarClock,
@@ -116,7 +116,7 @@ func main() {
 	fmt.Printf("finished")
 }
 
-func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc *solana.Client, userID uuid.UUID, feePayerPk, tokenHolderPk []byte) error {
+func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries, sc lib_solana.Interface, userID uuid.UUID, feePayerPk, tokenHolderPk []byte) error {
 	log.Println("Getting user SAO wallet")
 	userWallet, err := repo.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     userID,

@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/google/uuid"
 )

@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	internal_rsa "github.com/SatorNetwork/sator-api/internal/encryption/rsa"
-	"github.com/SatorNetwork/sator-api/internal/rbac"
-	"github.com/SatorNetwork/sator-api/internal/sumsub"
-	"github.com/SatorNetwork/sator-api/internal/utils"
-	"github.com/SatorNetwork/sator-api/internal/validator"
+	"github.com/SatorNetwork/sator-api/lib/db"
+	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/sumsub"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
 
 	"github.com/dmitrymomot/random"
@@ -214,7 +214,7 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		return Token{}, ErrUserIsDisabled
 	}
 
-	if !strings.Contains(email, "@sator.io") {
+	if !strings.HasSuffix(email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.Email); yes {
 			return Token{}, ErrUserIsDisabled
 		}
@@ -223,9 +223,9 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 				return Token{}, ErrUserIsDisabled
 			}
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
-			return Token{}, ErrUserIsDisabled
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
+		// 	return Token{}, ErrUserIsDisabled
+		// }
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
@@ -296,9 +296,9 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 				return Token{}, ErrUserIsDisabled
 			}
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-			return Token{}, ErrUserIsDisabled
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+		// 	return Token{}, ErrUserIsDisabled
+		// }
 	}
 
 	// TODO: add JWT id into the revoked tokens list
@@ -327,7 +327,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 		})
 	}
 
-	if !strings.Contains(email, "@sator.io") {
+	if !strings.HasSuffix(email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
 			return Token{}, validator.NewValidationError(url.Values{
 				"email": []string{ErrRestrictedEmailDomain.Error()},
@@ -338,11 +338,11 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 				"email": []string{ErrRestrictedEmailDomain.Error()},
 			})
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
-			return Token{}, validator.NewValidationError(url.Values{
-				"email": []string{ErrRestrictedEmailDomain.Error()},
-			})
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
+		// 	return Token{}, validator.NewValidationError(url.Values{
+		// 		"email": []string{ErrRestrictedEmailDomain.Error()},
+		// 	})
+		// }
 	}
 
 	// Check if the passed email address is not taken yet
@@ -477,7 +477,7 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 		return ErrUserIsDisabled
 	}
 
-	if !strings.Contains(u.Email, "@sator.io") {
+	if !strings.HasSuffix(u.Email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
 			return ErrUserIsDisabled
 		}
@@ -486,9 +486,9 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 				return ErrUserIsDisabled
 			}
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-			return ErrUserIsDisabled
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+		// 	return ErrUserIsDisabled
+		// }
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -646,7 +646,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 		return ErrUserIsDisabled
 	}
 
-	if !strings.Contains(u.Email, "@sator.io") {
+	if !strings.HasSuffix(u.Email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
 			return ErrUserIsDisabled
 		}
@@ -655,9 +655,9 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 				return ErrUserIsDisabled
 			}
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-			return ErrUserIsDisabled
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+		// 	return ErrUserIsDisabled
+		// }
 	}
 
 	uv, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
@@ -738,7 +738,7 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 		return ErrUserIsDisabled
 	}
 
-	if !strings.Contains(sanitizedEmail, "@sator.io") {
+	if !strings.HasSuffix(sanitizedEmail, "@sator.io") {
 		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
 			return ErrUserIsDisabled
 		}
@@ -747,9 +747,9 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 				return ErrUserIsDisabled
 			}
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
-			return ErrUserIsDisabled
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
+		// 	return ErrUserIsDisabled
+		// }
 	}
 
 	if _, err := s.ur.GetUserBySanitizedEmail(ctx, sanitizedEmail); err == nil {
@@ -877,7 +877,7 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 		return false, ErrUserIsDisabled
 	}
 
-	if !strings.Contains(u.Email, "@sator.io") {
+	if !strings.HasSuffix(u.Email, "@sator.io") {
 		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
 			return false, ErrUserIsDisabled
 		}
@@ -886,9 +886,9 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 				return false, ErrUserIsDisabled
 			}
 		}
-		if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-			return false, ErrUserIsDisabled
-		}
+		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
+		// 	return false, ErrUserIsDisabled
+		// }
 	}
 
 	return u.VerifiedAt.Valid, nil
@@ -1369,7 +1369,7 @@ func (s *Service) GetUsernameByID(ctx context.Context, uid uuid.UUID) (string, e
 func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publicKey *rsa.PublicKey) error {
 	publicKeyBytes, err := internal_rsa.PublicKeyToBytes(publicKey)
 	if err != nil {
-		return fmt.Errorf("can't serialize public key to bytes: %v\n", err)
+		return fmt.Errorf("can't serialize public key to bytes: %v", err)
 	}
 
 	err = s.ur.UpdatePublicKey(ctx, repository.UpdatePublicKeyParams{
@@ -1377,7 +1377,7 @@ func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publi
 		ID:        userID,
 	})
 	if err != nil {
-		return fmt.Errorf("can't update public key: %v\n", err)
+		return fmt.Errorf("can't update public key: %v", err)
 	}
 	// TODO(evg): check that caller is an owner of the private key?
 
@@ -1387,14 +1387,14 @@ func (s *Service) RegisterPublicKey(ctx context.Context, userID uuid.UUID, publi
 func (s *Service) GetPublicKey(ctx context.Context, userID uuid.UUID) (*rsa.PublicKey, error) {
 	encodedPublicKey, err := s.ur.GetPublicKey(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("can't get public key by user's uid(%v): %v\n", userID, err)
+		return nil, fmt.Errorf("can't get public key by user's uid(%v): %v", userID, err)
 	}
 	if !encodedPublicKey.Valid {
 		return nil, ErrPublicKeyIsNotRegistered
 	}
 	publicKey, err := internal_rsa.BytesToPublicKey([]byte(encodedPublicKey.String))
 	if err != nil {
-		return nil, fmt.Errorf("can't deserialize bytes to public key: %v\n", err)
+		return nil, fmt.Errorf("can't deserialize bytes to public key: %v", err)
 	}
 
 	return publicKey, nil

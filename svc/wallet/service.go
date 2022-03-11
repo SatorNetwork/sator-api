@@ -8,15 +8,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
-	"github.com/SatorNetwork/sator-api/internal/ethereum"
-	"github.com/SatorNetwork/sator-api/internal/solana"
-	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
-
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
+
+	"github.com/SatorNetwork/sator-api/lib/db"
+	"github.com/SatorNetwork/sator-api/lib/ethereum"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 )
 
 type (
@@ -73,6 +73,7 @@ type (
 		UpdateStake(ctx context.Context, arg repository.UpdateStakeParams) error
 
 		GetAllStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
+		GetAllEnabledStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
 		GetStakeLevelByAmount(ctx context.Context, amount float64) (repository.GetStakeLevelByAmountRow, error)
 		GetMinimalStakeLevel(ctx context.Context) ([]repository.StakeLevel, error)
 	}
@@ -84,7 +85,7 @@ type (
 		AccountFromPrivateKeyBytes(pk []byte) types.Account
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
-		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]solana.ConfirmedTransactionResponse, error)
+		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
@@ -103,6 +104,16 @@ type (
 		Fee             float64 `json:"fee,omitempty"`
 		TransactionHash string  `json:"tx_hash,omitempty"`
 		SenderWalletID  string  `json:"sender_wallet_id,omitempty"`
+	}
+
+	StakeLevel struct {
+		ID             string  `json:"id"`
+		MinAmount      float64 `json:"min_amount"`
+		MinDaysToStake int     `json:"min_days_to_stake"`
+		Title          string  `json:"title"`
+		SubTitle       string  `json:"sub_title"`
+		Rewards        string  `json:"rewards"`
+		IsCurrent      bool    `json:"is_current"`
 	}
 )
 
@@ -263,6 +274,7 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 
 	return Wallet{
 		ID:                   w.ID.String(),
+		Type:                 w.WalletType,
 		Order:                w.Sort,
 		SolanaAccountAddress: sa.PublicKey,
 		Actions: []Action{
@@ -682,7 +694,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 					Int32: int32(duration),
 					Valid: true,
 				},
-				UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+				UnstakeDate:      time.Now().Add(time.Duration(duration) * time.Second),
+				UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
 			})
 			if err != nil {
 				return true, fmt.Errorf("could not add stake to db for user= %v, %w", userID, err)
@@ -701,7 +714,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 			Int32: int32(duration),
 			Valid: true,
 		},
-		UnstakeDate: time.Now().Add(time.Duration(duration) * time.Second),
+		UnstakeDate:      time.Now().Add(time.Duration(duration) * time.Second),
+		UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
 	})
 	if err != nil {
 		return true, fmt.Errorf("could not update stake in db for user= %v, %w", userID, err)
@@ -733,8 +747,9 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get wallet stake: %w", err)
 	}
 
-	if time.Now().After(stake.UnstakeDate) {
-		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", stake.UnstakeDate.String())
+	unstakeDate := time.Unix(stake.UnstakeTimestamp, 0)
+	if time.Now().Before(unstakeDate) {
+		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", unstakeDate.String())
 	}
 
 	for i := 0; i < 5; i++ {
@@ -763,7 +778,7 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 	return nil
 }
 
-func castSolanaTxToTransaction(tx solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
+func castSolanaTxToTransaction(tx lib_solana.ConfirmedTransactionResponse, walletID uuid.UUID) Transaction {
 	return Transaction{
 		ID:        tx.TxHash,
 		WalletID:  walletID.String(),
@@ -955,4 +970,36 @@ func (s *Service) PossibleMultiplier(ctx context.Context, additionalAmount float
 	}
 
 	return lvl.Multiplier.Int32, nil
+}
+
+// GetEnabledStakeLevelsList returns enabled stake levels list
+func (s *Service) GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUID) ([]StakeLevel, error) {
+	lvls, err := s.wr.GetAllEnabledStakeLevels(ctx)
+	if err != nil {
+		if !db.IsNotFoundError(err) {
+			return nil, err
+		}
+	}
+
+	var currentStakeLvlID uuid.UUID
+	if stake, err := s.wr.GetStakeByUserID(ctx, userID); err == nil {
+		lvl, err := s.wr.GetStakeLevelByAmount(ctx, stake.StakeAmount)
+		if err == nil {
+			currentStakeLvlID = lvl.ID
+		}
+	}
+
+	levels := make([]StakeLevel, 0, len(lvls))
+	for _, l := range lvls {
+		levels = append(levels, StakeLevel{
+			ID:             l.ID.String(),
+			MinAmount:      l.MinStakeAmount.Float64,
+			MinDaysToStake: int(l.MinDaysAmount.Int32),
+			Title:          l.Title,
+			SubTitle:       l.Subtitle,
+			IsCurrent:      currentStakeLvlID == l.ID,
+		})
+	}
+
+	return levels, nil
 }

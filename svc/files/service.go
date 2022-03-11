@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/storage"
+	"github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/svc/files/repository"
 )
 

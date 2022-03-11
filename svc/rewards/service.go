@@ -8,7 +8,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 
-	"github.com/SatorNetwork/sator-api/internal/db"
+	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 

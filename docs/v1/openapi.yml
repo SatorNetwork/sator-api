@@ -935,6 +935,14 @@ paths:
                     id:
                       type: string
                       example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    type:
+                      type: string
+                      example: "sao"
+                      enum:
+                        - sol
+                        - sao
+                        - rewards
+                        - eth
                     get_details_url:
                       type: string
                       example: "/wallets/f4f78cac-5db6-4ecc-ad13-5877705f3126"
@@ -975,6 +983,14 @@ paths:
                   id:
                     type: string
                     example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  type:
+                    type: string
+                    example: "sao"
+                    enum:
+                      - sol
+                      - sao
+                      - rewards
+                      - eth
                   order:
                     type: number
                     example: 1
@@ -1307,7 +1323,7 @@ paths:
         - "Wallet"
       summary: Returns possible multiplier after adding amount to lock.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_id
           in: path
@@ -1338,6 +1354,53 @@ paths:
                     data:
                       type: number
                       example: 15
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /wallets/stake-levels:
+    get:
+      tags:
+        - "Wallet"
+      summary: Returns available stake levels.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: amount of expected multiplier.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    min_amount:
+                      type: number
+                      example: 100
+                      description: Min stake amount to reach this level
+                    min_days_to_stake:
+                      type: number
+                      example: 30
+                      description: Min stake days number to reach this level
+                    title:
+                      type: string
+                      example: "Level title"
+                    sub_title:
+                      type: string
+                      example: "Level subtitle"
+                    is_current:
+                      type: boolean
+                      example: true
+                      enum:
+                        - true
+                        - false
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -3563,7 +3626,7 @@ paths:
         - "QuizV2"
       summary: Get challenge details by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: challenge_id
           in: path
@@ -3636,6 +3699,67 @@ paths:
                   registered_players:
                     type: integer
                     example: 1
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /quiz_v2/challenges/sorted_by_players:
+    get:
+      tags:
+        - "QuizV2"
+      summary: Get get quizzes list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Get get quizzes list sorted by players number.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Challenge name"
+                    players_to_start:
+                      type: number
+                      example: 10
+                    players_number:
+                      type: number
+                      example: 2
+                      description: number of players who wait on a quiz lobby
+                    prize_pool:
+                      type: string
+                      example: "250 SAO"
+                    is_realm_activated:
+                      type: boolean
+                      example: true
+                    cover:
+                      type: string
+                      example: "https://nyc3.digitaloceanspaces.com/sator-staging-storage/uploads/507621a0-ab34-4502-9273-778f965562ce.jpeg"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":

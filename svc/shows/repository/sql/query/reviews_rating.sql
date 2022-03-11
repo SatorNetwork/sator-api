@@ -23,3 +23,13 @@ SELECT count(*)
 FROM reviews_rating
 WHERE review_id = @review_id
 AND rating_type = @rating_type;
+
+-- name: GetUserEpisodeReview :one
+SELECT * FROM reviews_rating
+WHERE user_id = @user_id 
+AND review_id = @review_id;
+
+-- name: DeleteUserEpisodeReview :exec
+DELETE FROM reviews_rating
+WHERE user_id = @user_id 
+AND review_id = @review_id;
