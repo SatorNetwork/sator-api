@@ -3,15 +3,18 @@ package wallet
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/url"
 
+	"filippo.io/edwards25519"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
-
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
+	"github.com/portto/solana-go-sdk/common"
 )
 
 type (
@@ -207,6 +210,10 @@ func MakeCreateTransferRequestEndpoint(s service, v validator.ValidateFunc) endp
 			return nil, fmt.Errorf("invalid sender wallet id: %w", err)
 		}
 
+		if err := validateSolanaWalletAddr("recipient_address", req.RecipientAddress); err != nil {
+			return nil, err
+		}
+
 		txInfo, err := s.CreateTransfer(ctx, walletID, req.RecipientAddress, req.Asset, req.Amount)
 		if err != nil {
 			return nil, err
@@ -363,4 +370,16 @@ func MakeGetStakeLevelsEndpoint(s service) endpoint.Endpoint {
 
 		return levels, nil
 	}
+}
+
+func validateSolanaWalletAddr(fieldName, addr string) error {
+	p := common.PublicKeyFromString(addr)
+	if _, err := new(edwards25519.Point).SetBytes(p.Bytes()); err != nil {
+		log.Printf("invalid solana wallet address: %v", err)
+		return validator.NewValidationError(url.Values{
+			fieldName: []string{"invalid solana wallet address"},
+		})
+	}
+
+	return nil
 }
