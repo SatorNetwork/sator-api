@@ -10,4 +10,5 @@ var (
 	ErrTokenHolderBalance  = errors.New("the rewards pool for this period is out. Come back next time to claim rewards")
 	ErrMinimalAmountToSend = errors.New("minimal amount to send")
 	ErrNotEnoughBalance    = errors.New("not enough balance amount")
+	ErrCouldNotLock        = errors.New("could not lock tokens, try again later")
 )

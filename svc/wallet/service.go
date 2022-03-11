@@ -586,7 +586,7 @@ func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
-			return Stake{}, fmt.Errorf("could not get stake by user id: %w", err)
+			return Stake{}, fmt.Errorf("could not get locked tokens by user id: %w", err)
 		}
 
 		stake.StakeAmount = 0
@@ -594,7 +594,7 @@ func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 
 	totalStake, err := s.wr.GetTotalStake(ctx)
 	if err != nil {
-		return Stake{}, fmt.Errorf("could not get total stake: %w", err)
+		return Stake{}, fmt.Errorf("could not get total locked tokens: %w", err)
 	}
 
 	multiplier, err := s.GetMultiplier(ctx, userID)
@@ -683,13 +683,15 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 				UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
 			})
 			if err != nil {
-				return true, fmt.Errorf("could not add stake to db for user= %v, %w", userID, err)
+				log.Printf("could not add stake to db for user= %v, %v", userID, err)
+				return false, ErrCouldNotLock
 			}
 
 			return true, nil
 		}
 
-		return true, fmt.Errorf("could not get stake from db for user= %v, %w", userID, err)
+		log.Printf("could not add stake to db for user= %v, %v", userID, err)
+		return false, ErrCouldNotLock
 	}
 
 	err = s.wr.UpdateStake(ctx, repository.UpdateStakeParams{
@@ -703,7 +705,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 		UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
 	})
 	if err != nil {
-		return true, fmt.Errorf("could not update stake in db for user= %v, %w", userID, err)
+		log.Printf("could not update stake in db for user= %v, %v", userID, err)
+		return true, ErrCouldNotLock
 	}
 
 	return true, nil
@@ -729,12 +732,12 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("could not get wallet stake: %w", err)
+		return fmt.Errorf("could not get wallet lock pool: %w", err)
 	}
 
 	unstakeDate := time.Unix(stake.UnstakeTimestamp, 0)
 	if time.Now().Before(unstakeDate) {
-		return fmt.Errorf("unstake time has not yet come, unstake will be availabe at: %s", unstakeDate.String())
+		return fmt.Errorf("unlock time has not yet come, unlock will be availabe at: %s", unstakeDate.String())
 	}
 
 	for i := 0; i < 5; i++ {
@@ -757,7 +760,8 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 
 	err = s.wr.DeleteStakeByUserID(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("could not delete stake by user id: %w", err)
+		log.Printf("could not delete stake by user id: %v", err)
+		return nil
 	}
 
 	return nil
