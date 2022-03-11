@@ -110,7 +110,7 @@ func (pm *PlayersMap) PlayersNum() int {
 func (pm *PlayersMap) PlayersNumInDB() (int, error) {
 	playersInRoom, err := pm.qr.CountPlayersInRoom(context.Background(), pm.challengeID)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "can't count players in room")
 	}
 
 	return int(playersInRoom), nil

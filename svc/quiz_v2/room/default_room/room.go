@@ -198,7 +198,7 @@ func (r *defaultRoom) GetRoomDetails() (*room.RoomDetails, error) {
 
 	playersNumInDB, err := r.pm.PlayersNumInDB()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "can't get players num in db")
 	}
 
 	return &room.RoomDetails{
