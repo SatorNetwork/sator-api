@@ -106,7 +106,7 @@ func (r *walletRepoMock) GetAllEnabledStakeLevels(ctx context.Context) ([]reposi
 	panic("not implemented") // TODO: Implement
 }
 
-func (r *walletRepoMock) GetMinimalStakeLevel(ctx context.Context) ([]repository.StakeLevel, error) {
+func (r *walletRepoMock) GetMinimalStakeLevel(ctx context.Context) (repository.StakeLevel, error) {
 	panic("not implemented") // TODO: Implement
 }
 

@@ -60,7 +60,8 @@ WHERE
 	AND(@amount::DOUBLE PRECISION <= max_stake_amount
 	OR max_stake_amount IS NULL);
 
--- name: GetMinimalStakeLevel :many
+-- name: GetMinimalStakeLevel :one
 SELECT *
 FROM stake_levels
-ORDER BY min_stake_amount ASC;
+ORDER BY min_stake_amount ASC
+LIMIT 1;

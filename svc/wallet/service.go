@@ -75,7 +75,7 @@ type (
 		GetAllStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
 		GetAllEnabledStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
 		GetStakeLevelByAmount(ctx context.Context, amount float64) (repository.GetStakeLevelByAmountRow, error)
-		GetMinimalStakeLevel(ctx context.Context) ([]repository.StakeLevel, error)
+		GetMinimalStakeLevel(ctx context.Context) (repository.StakeLevel, error)
 	}
 
 	solanaClient interface {
@@ -658,7 +658,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 		return false, fmt.Errorf("could not get minimal stake level")
 	}
 
-	if bal < amount || bal < level[0].MinStakeAmount.Float64 {
+	if bal < amount || bal < level.MinStakeAmount.Float64 {
 		return false, fmt.Errorf("insufficient balance for a steak : %.2f", bal)
 	}
 
