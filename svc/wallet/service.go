@@ -1002,7 +1002,7 @@ func (s *Service) GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUI
 			Title:          l.Title,
 			SubTitle:       l.Subtitle,
 			IsCurrent:      currentStakeLvlID == l.ID,
-			Rewards:        fmt.Sprintf("+%d%", l.Multiplier.Int32),
+			Rewards:        fmt.Sprintf("+%d", l.Multiplier.Int32) + "%",
 		})
 	}
 
