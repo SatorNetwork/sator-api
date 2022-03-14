@@ -27,6 +27,12 @@ SELECT *
 FROM stake_levels
 ORDER BY min_stake_amount DESC;
 
+-- name: GetAllEnabledStakeLevels :many
+SELECT *
+FROM stake_levels
+WHERE disabled = FALSE
+ORDER BY min_stake_amount ASC;
+
 -- name: UpdateStakeLevel :exec
 UPDATE stake_levels
 SET min_stake_amount = $2, min_days_amount= $3, title = $4, subtitle = $5, multiplier = $6, disabled = $7
@@ -52,4 +58,10 @@ FROM
 WHERE
 	@amount::DOUBLE PRECISION >= min_stake_amount
 	AND(@amount::DOUBLE PRECISION <= max_stake_amount
-	OR max_stake_amount IS NULL); 
+	OR max_stake_amount IS NULL);
+
+-- name: GetMinimalStakeLevel :one
+SELECT *
+FROM stake_levels
+ORDER BY min_stake_amount ASC
+LIMIT 1;

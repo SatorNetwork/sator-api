@@ -18,11 +18,17 @@ jobs:
         with:
           go-version: 1.17
 
+      - name: Compile source code
+        run: go build ./cmd/...
+
       - name: Set up application
-        run: make -f Makefile.ci up && sleep 10 && make -f Makefile.ci migrate-local run-local
+        run: make -f Makefile.ci up && sleep 10 && make -f Makefile.ci migrate-local
 
       - name: Run e2e tests
-        run: sleep 10 && make -f Makefile.ci test
+        run: sleep 10 && make -f Makefile.ci e2e-tests
+
+      - name: Run integration tests
+        run: sleep 10 && make -f Makefile.ci integration-tests
 
       - name: Archive sator-api log file
         if: always()

@@ -208,8 +208,8 @@ func (rt *resultTable) GetWinners() ([]*Winner, error) {
 	for userID, reward := range userIDToReward {
 		winners = append(winners, &Winner{
 			UserID: userID.String(),
-			Prize:  fmt.Sprintf("%v", reward.Prize),
-			Bonus:  fmt.Sprintf("%v", reward.Bonus),
+			Prize:  fmt.Sprintf("%.3f", reward.Prize),
+			Bonus:  fmt.Sprintf("%.3f", reward.Bonus),
 		})
 	}
 

@@ -60,6 +60,44 @@ func (q *Queries) AddStakeLevel(ctx context.Context, arg AddStakeLevelParams) (S
 	return i, err
 }
 
+const getAllEnabledStakeLevels = `-- name: GetAllEnabledStakeLevels :many
+SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
+FROM stake_levels
+WHERE disabled = FALSE
+ORDER BY min_stake_amount ASC
+`
+
+func (q *Queries) GetAllEnabledStakeLevels(ctx context.Context) ([]StakeLevel, error) {
+	rows, err := q.query(ctx, q.getAllEnabledStakeLevelsStmt, getAllEnabledStakeLevels)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StakeLevel
+	for rows.Next() {
+		var i StakeLevel
+		if err := rows.Scan(
+			&i.ID,
+			&i.MinStakeAmount,
+			&i.MinDaysAmount,
+			&i.Title,
+			&i.Subtitle,
+			&i.Multiplier,
+			&i.Disabled,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllStakeLevels = `-- name: GetAllStakeLevels :many
 SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
 FROM stake_levels
@@ -95,6 +133,28 @@ func (q *Queries) GetAllStakeLevels(ctx context.Context) ([]StakeLevel, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getMinimalStakeLevel = `-- name: GetMinimalStakeLevel :one
+SELECT id, min_stake_amount, min_days_amount, title, subtitle, multiplier, disabled
+FROM stake_levels
+ORDER BY min_stake_amount ASC
+LIMIT 1
+`
+
+func (q *Queries) GetMinimalStakeLevel(ctx context.Context) (StakeLevel, error) {
+	row := q.queryRow(ctx, q.getMinimalStakeLevelStmt, getMinimalStakeLevel)
+	var i StakeLevel
+	err := row.Scan(
+		&i.ID,
+		&i.MinStakeAmount,
+		&i.MinDaysAmount,
+		&i.Title,
+		&i.Subtitle,
+		&i.Multiplier,
+		&i.Disabled,
+	)
+	return i, err
 }
 
 const getStakeLevelByAmount = `-- name: GetStakeLevelByAmount :one

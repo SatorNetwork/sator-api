@@ -22,6 +22,7 @@ const (
 	WinnersTableMessageType
 	PlayerIsActiveMessageType
 	PlayerIsDisconnectedMessageType
+	TimeOutMessageType
 )
 
 func NewMessageTypeFromString(messageType string) (MessageType, error) {
@@ -42,6 +43,8 @@ func NewMessageTypeFromString(messageType string) (MessageType, error) {
 		return PlayerIsActiveMessageType, nil
 	case "player_is_disconnected":
 		return PlayerIsDisconnectedMessageType, nil
+	case "time_out":
+		return TimeOutMessageType, nil
 	default:
 		return 0, errors.Errorf("unknown message type: %v", messageType)
 	}
@@ -65,6 +68,8 @@ func (m MessageType) String() string {
 		return "player_is_active"
 	case PlayerIsDisconnectedMessageType:
 		return "player_is_disconnected"
+	case TimeOutMessageType:
+		return "time_out"
 	default:
 		return "<unknown message type>"
 	}
@@ -80,6 +85,7 @@ type Message struct {
 	WinnersTableMessage         *WinnersTableMessage         `json:"winners_table_message,omitempty"`
 	PlayerIsActiveMessage       *PlayerIsActiveMessage       `json:"player_is_active_message,omitempty"`
 	PlayerIsDisconnectedMessage *PlayerIsDisconnectedMessage `json:"player_is_disconnected_message,omitempty"`
+	TimeOutMessage              *TimeOutMessage              `json:"time_out_message,omitempty"`
 	Date                        string                       `json:"date,omitempty"`
 	TTL                         int                          `json:"ttl,omitempty"`
 }
@@ -126,6 +132,8 @@ func (m *Message) isConsistent() bool {
 		return m.PlayerIsActiveMessage != nil
 	case PlayerIsDisconnectedMessageType:
 		return m.PlayerIsDisconnectedMessage != nil
+	case TimeOutMessageType:
+		return m.TimeOutMessage != nil
 	default:
 		return false
 	}
@@ -307,6 +315,24 @@ func NewPlayerIsDisconnectedMessage(payload *PlayerIsDisconnectedMessage) (*Mess
 		PlayerIsDisconnectedMessage: payload,
 		Date:                        time.Now().Format(time.RFC3339),
 		TTL:                         defaultTTLInMilliseconds,
+	}
+	if err := msg.CheckConsistency(); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
+}
+
+type TimeOutMessage struct {
+	Message string `json:"message"`
+}
+
+func NewTimeOutMessage(payload *TimeOutMessage) (*Message, error) {
+	msg := &Message{
+		MessageType:    TimeOutMessageType,
+		TimeOutMessage: payload,
+		Date:           time.Now().Format(time.RFC3339),
+		TTL:            defaultTTLInMilliseconds,
 	}
 	if err := msg.CheckConsistency(); err != nil {
 		return nil, err

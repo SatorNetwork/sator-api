@@ -17,7 +17,7 @@ func TestResultTable(t *testing.T) {
 
 	mockStakeLevel := &interfaces.StaticStakeLevel{}
 
-	if false {
+	{
 		cfg := Config{
 			QuestionNum:        5,
 			WinnersNum:         2,

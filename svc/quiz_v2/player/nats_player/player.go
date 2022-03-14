@@ -11,7 +11,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/encryption/envelope"
+	"github.com/SatorNetwork/sator-api/lib/encryption/envelope"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player/nats_player/status_transactor"

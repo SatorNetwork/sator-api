@@ -3,24 +3,28 @@ package quiz_v2
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/internal/jwt"
+	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 )
 
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		GetQuizLink      endpoint.Endpoint
-		GetChallengeById endpoint.Endpoint
+		GetQuizLink                  endpoint.Endpoint
+		GetChallengeById             endpoint.Endpoint
+		GetChallengesSortedByPlayers endpoint.Endpoint
 	}
 
 	service interface {
 		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error)
 		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error)
+		GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error)
 	}
 
 	GetQuizLinkResponse struct {
@@ -35,8 +39,9 @@ type (
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	e := Endpoints{
-		GetQuizLink:      MakeGetQuizLinkEndpoint(s),
-		GetChallengeById: MakeGetChallengeByIdEndpoint(s),
+		GetQuizLink:                  MakeGetQuizLinkEndpoint(s),
+		GetChallengeById:             MakeGetChallengeByIdEndpoint(s),
+		GetChallengesSortedByPlayers: MakeGetChallengesSortedByPlayersEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
@@ -44,6 +49,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		for _, mdw := range m {
 			e.GetQuizLink = mdw(e.GetQuizLink)
 			e.GetChallengeById = mdw(e.GetChallengeById)
+			e.GetChallengesSortedByPlayers = mdw(e.GetChallengesSortedByPlayers)
 		}
 	}
 
@@ -104,5 +110,30 @@ func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 		}
 
 		return resp, nil
+	}
+}
+
+func MakeGetChallengesSortedByPlayersEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		//if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		//	return nil, err
+		//}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't get userid from context")
+		}
+
+		req, ok := request.(utils.PaginationRequest)
+		if !ok {
+			return nil, errors.Errorf("can't cast request to pagination request")
+		}
+
+		challenges, err := s.GetChallengesSortedByPlayers(ctx, uid, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return challenges, nil
 	}
 }

@@ -3,8 +3,9 @@ package room
 import "github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 
 type RoomDetails struct {
-	PlayersToStart    int32
-	RegisteredPlayers int
+	PlayersToStart        int32
+	RegisteredPlayers     int
+	RegisteredPlayersInDB int
 }
 
 type Room interface {
@@ -12,5 +13,5 @@ type Room interface {
 	AddPlayer(p player.Player)
 	IsFull() bool
 	Start()
-	GetRoomDetails() *RoomDetails
+	GetRoomDetails() (*RoomDetails, error)
 }

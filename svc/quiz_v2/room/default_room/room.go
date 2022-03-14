@@ -3,7 +3,6 @@ package default_room
 import (
 	"context"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,7 +14,9 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/players_map"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/status_transactor"
 )
 
@@ -37,9 +38,9 @@ type answerWrapper struct {
 }
 
 type defaultRoom struct {
+	roomID                uuid.UUID
 	challengeID           string
-	players               map[string]player.Player
-	playersMutex          *sync.Mutex
+	pm                    *players_map.PlayersMap
 	newPlayersChan        chan player.Player
 	countdownChan         chan int
 	questionChan          chan *questionWrapper
@@ -61,9 +62,16 @@ func New(
 	challenges interfaces.ChallengesService,
 	stakeLevels interfaces.StakeLevels,
 	rewards interfaces.RewardsService,
+	qr interfaces.QuizV2Repository,
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
 ) (*defaultRoom, error) {
+	roomID := uuid.New()
+	challengeUID, err := uuid.Parse(challengeID)
+	if err != nil {
+		return nil, err
+	}
+
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
 	quizEngine, err := quiz_engine.New(challengeID, challenges, stakeLevels, shuffleQuestions)
@@ -72,9 +80,9 @@ func New(
 	}
 
 	return &defaultRoom{
+		roomID:                roomID,
 		challengeID:           challengeID,
-		players:               make(map[string]player.Player, defaultChanBuffSize),
-		playersMutex:          &sync.Mutex{},
+		pm:                    players_map.New(roomID, challengeUID, qr),
 		newPlayersChan:        make(chan player.Player, defaultChanBuffSize),
 		countdownChan:         make(chan int, defaultChanBuffSize),
 		questionChan:          make(chan *questionWrapper, defaultChanBuffSize),
@@ -97,9 +105,7 @@ func (r *defaultRoom) ChallengeID() string {
 }
 
 func (r *defaultRoom) AddPlayer(p player.Player) {
-	r.playersMutex.Lock()
-	r.players[p.ID()] = p
-	r.playersMutex.Unlock()
+	r.pm.AddPlayer(p)
 
 	r.newPlayersChan <- p
 }
@@ -107,10 +113,7 @@ func (r *defaultRoom) AddPlayer(p player.Player) {
 func (r *defaultRoom) IsFull() bool {
 	challenge := r.quizEngine.GetChallenge()
 
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
-	return len(r.players) >= int(challenge.PlayersToStart)
+	return r.pm.PlayersNum() >= int(challenge.PlayersToStart)
 }
 
 // NOTE: should be run as a goroutine
@@ -163,8 +166,8 @@ LOOP:
 					// wait for some time to drain all messages from channels before closing the room
 					time.Sleep(time.Second)
 					r.Close()
-
 					r.closePlayers()
+					r.pm.UnregisterAllPlayersFromDB()
 				}()
 			}
 
@@ -190,16 +193,19 @@ LOOP:
 	log.Println("room is gracefully closed")
 }
 
-func (r *defaultRoom) GetRoomDetails() *room.RoomDetails {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
+func (r *defaultRoom) GetRoomDetails() (*room.RoomDetails, error) {
 	challenge := r.quizEngine.GetChallenge()
 
-	return &room.RoomDetails{
-		PlayersToStart:    challenge.PlayersToStart,
-		RegisteredPlayers: len(r.players),
+	playersNumInDB, err := r.pm.PlayersNumInDB()
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't get players num in db")
 	}
+
+	return &room.RoomDetails{
+		PlayersToStart:        challenge.PlayersToStart,
+		RegisteredPlayers:     r.pm.PlayersNum(),
+		RegisteredPlayersInDB: playersNumInDB,
+	}, nil
 }
 
 func (r *defaultRoom) Close() {
@@ -213,32 +219,11 @@ func (r *defaultRoom) Close() {
 }
 
 func (r *defaultRoom) closePlayers() {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
-	for _, p := range r.players {
+	r.pm.ExecuteCallback(func(p player.Player) {
 		if err := p.Close(); err != nil {
 			log.Printf("can't close player: %v\n", err)
 		}
-	}
-}
-
-func (r *defaultRoom) getPlayerByID(id string) player.Player {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
-	return r.players[id]
-}
-
-func (r *defaultRoom) getPlayerByIDNoLock(id string) player.Player {
-	return r.players[id]
-}
-
-func (r *defaultRoom) removePlayerByID(id string) {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
-	delete(r.players, id)
+	})
 }
 
 func (r *defaultRoom) watchPlayerMessages(p player.Player) {
@@ -257,7 +242,7 @@ LOOP:
 
 		case <-p.DisconnectChan():
 			if r.st.GetStatus() == status_transactor.GatheringPlayersStatus {
-				r.removePlayerByID(p.ID())
+				r.pm.RemovePlayerByID(p.ID())
 				if err := p.Close(); err != nil {
 					log.Printf("can't close player: %v\n", err)
 				}
@@ -298,28 +283,25 @@ LOOP:
 }
 
 func (r *defaultRoom) registerAttempts() {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
 	challengeID, err := uuid.Parse(r.ChallengeID())
 	if err != nil {
 		log.Printf("can't parse challenge ID: %v\n", err)
 		return
 	}
 
-	for _, p := range r.players {
+	r.pm.ExecuteCallback(func(p player.Player) {
 		playerID, err := uuid.Parse(p.ID())
 		if err != nil {
 			log.Printf("can't parse player ID: %v\n", err)
-			continue
+			return
 		}
 
 		err = r.restrictionManager.RegisterAttempt(context.Background(), challengeID, playerID)
 		if err != nil {
 			log.Printf("can't register challenge attempt: %v\n", err)
-			continue
+			return
 		}
-	}
+	})
 }
 
 func (r *defaultRoom) runQuestions() {
@@ -382,9 +364,8 @@ func (r *defaultRoom) sendWinnersTable() {
 	}
 	usernameIDToPrize := make(map[string]float64, len(userIDToReward))
 
-	r.playersMutex.Lock()
 	for userID, reward := range userIDToReward {
-		username := r.players[userID.String()].Username()
+		username := r.pm.GetPlayerByID(userID.String()).Username()
 		usernameIDToPrize[username] = reward.Prize
 	}
 
@@ -404,7 +385,7 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	msgWinners := make([]*message.Winner, 0, len(winners))
 	for _, w := range winners {
-		p := r.players[w.UserID]
+		p := r.pm.GetPlayerByID(w.UserID)
 
 		msgWinners = append(msgWinners, &message.Winner{
 			UserID:   w.UserID,
@@ -417,7 +398,7 @@ func (r *defaultRoom) sendWinnersTable() {
 
 	msgLosers := make([]*message.Loser, 0, len(losers))
 	for _, loser := range losers {
-		p := r.players[loser.UserID]
+		p := r.pm.GetPlayerByID(loser.UserID)
 
 		msgLosers = append(msgLosers, &message.Loser{
 			UserID:   loser.UserID,
@@ -426,8 +407,6 @@ func (r *defaultRoom) sendWinnersTable() {
 			Avatar:   p.Avatar(),
 		})
 	}
-
-	r.playersMutex.Unlock()
 
 	payload := message.WinnersTableMessage{
 		ChallengeID:           r.ChallengeID(),
@@ -561,14 +540,11 @@ func (r *defaultRoom) sendQuestionMessage(q *questionWrapper) {
 }
 
 func (r *defaultRoom) sendMessageToRoom(message *message.Message) {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
-	for _, p := range r.players {
+	r.pm.ExecuteCallback(func(p player.Player) {
 		if err := p.SendMessage(message); err != nil {
 			log.Printf("can't send message to player with %v uid: %v\n", p.ID(), err)
 		}
-	}
+	})
 }
 
 func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
@@ -594,22 +570,19 @@ func (r *defaultRoom) processAnswerMessage(answer *answerWrapper) error {
 }
 
 func (r *defaultRoom) sendAnswerReplyMessages(questionID uuid.UUID) error {
-	r.playersMutex.Lock()
-	defer r.playersMutex.Unlock()
-
-	for _, p := range r.players {
+	r.pm.ExecuteCallback(func(p player.Player) {
 		playerID, err := uuid.Parse(p.ID())
 		if err != nil {
 			log.Printf("can't parse player uid: %v\n", err)
-			continue
+			return
 		}
 
 		err = r.sendAnswerReplyMessage(playerID, questionID)
 		if err != nil {
 			log.Printf("can't send answer reply messages: %v\n", err)
-			continue
+			return
 		}
-	}
+	})
 
 	return nil
 }
@@ -617,6 +590,13 @@ func (r *defaultRoom) sendAnswerReplyMessages(questionID uuid.UUID) error {
 func (r *defaultRoom) sendAnswerReplyMessage(userID, questionID uuid.UUID) error {
 	cell, err := r.quizEngine.GetAnswer(userID, questionID)
 	if err != nil {
+		_, ok1 := err.(*result_table.ErrRowNotFound)
+		_, ok2 := err.(*result_table.ErrCellNotFound)
+		if ok1 || ok2 {
+			return r.sendTimeOutMessage(userID)
+		}
+
+		log.Printf("can't get answer from quiz engine: %v\n", err)
 		return err
 	}
 
@@ -645,7 +625,23 @@ func (r *defaultRoom) sendAnswerReplyMessage(userID, questionID uuid.UUID) error
 		return err
 	}
 
-	p := r.getPlayerByIDNoLock(userID.String())
+	p := r.pm.GetPlayerByIDNoLock(userID.String())
+	if err := p.SendMessage(msg); err != nil {
+		return errors.Wrapf(err, "can't send message to player with %v uid", userID.String())
+	}
+
+	return nil
+}
+
+func (r *defaultRoom) sendTimeOutMessage(userID uuid.UUID) error {
+	msg, err := message.NewTimeOutMessage(&message.TimeOutMessage{
+		Message: "time is over",
+	})
+	if err != nil {
+		return err
+	}
+
+	p := r.pm.GetPlayerByIDNoLock(userID.String())
 	if err := p.SendMessage(msg); err != nil {
 		return errors.Wrapf(err, "can't send message to player with %v uid", userID.String())
 	}
