@@ -33,13 +33,15 @@ FROM
 		AND challenges.kind = 0
 	LEFT JOIN passed_challenges_data ON passed_challenges_data.challenge_id = challenges.id
 		AND passed_challenges_data.user_id = '%v'
-	LEFT JOIN episodes ON episodes.challenge_id = challenges.id
+	JOIN episodes ON episodes.challenge_id = challenges.id
 	LEFT JOIN episode_access ON episode_access.episode_id = episodes.id
 		AND episode_access.user_id = '%v'
 		AND episode_access.activated_before > NOW()
-WHERE
-	passed_challenges_data.reward_amount = 0
-	OR passed_challenges_data.reward_amount IS NULL
+	JOIN shows ON episodes.show_id = shows.id
+WHERE (passed_challenges_data.reward_amount = 0
+	OR passed_challenges_data.reward_amount IS NULL)
+AND episodes.archived = FALSE
+AND shows.archived = FALSE
 ORDER BY
 	(challenges.players_to_start - sorted_challenges.players_num) ASC,
 	sorted_challenges.players_num DESC,
