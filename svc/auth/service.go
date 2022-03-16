@@ -36,6 +36,8 @@ type (
 		otpLen                int
 		masterCode            string
 		blacklistEmailDomains []string
+		whitelistEnabled      bool
+		blacklistEnabled      bool
 	}
 
 	Whitelist struct {
@@ -215,17 +217,22 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 	}
 
 	if !strings.HasSuffix(email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.Email); yes {
-			return Token{}, ErrUserIsDisabled
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.Email); yes {
+				return Token{}, ErrUserIsDisabled
+			}
+			if user.SanitizedEmail.Valid {
+				if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.SanitizedEmail.String); yes {
+					return Token{}, ErrUserIsDisabled
+				}
+			}
 		}
-		if user.SanitizedEmail.Valid {
-			if yes, _ := s.ur.IsEmailBlacklisted(ctx, user.SanitizedEmail.String); yes {
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
 				return Token{}, ErrUserIsDisabled
 			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, email); !yes {
-		// 	return Token{}, ErrUserIsDisabled
-		// }
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
@@ -288,17 +295,22 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 	}
 
 	if !strings.HasSuffix(u.Email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-			return Token{}, ErrUserIsDisabled
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+				return Token{}, ErrUserIsDisabled
+			}
+			if u.SanitizedEmail.Valid {
+				if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+					return Token{}, ErrUserIsDisabled
+				}
+			}
 		}
-		if u.SanitizedEmail.Valid {
-			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 				return Token{}, ErrUserIsDisabled
 			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		// 	return Token{}, ErrUserIsDisabled
-		// }
 	}
 
 	// TODO: add JWT id into the revoked tokens list
@@ -328,21 +340,26 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 	}
 
 	if !strings.HasSuffix(email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
-			return Token{}, validator.NewValidationError(url.Values{
-				"email": []string{ErrRestrictedEmailDomain.Error()},
-			})
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, email); yes {
+				return Token{}, validator.NewValidationError(url.Values{
+					"email": []string{ErrRestrictedEmailDomain.Error()},
+				})
+			}
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, sanitizedEmail); yes {
+				return Token{}, validator.NewValidationError(url.Values{
+					"email": []string{ErrRestrictedEmailDomain.Error()},
+				})
+			}
 		}
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, sanitizedEmail); yes {
-			return Token{}, validator.NewValidationError(url.Values{
-				"email": []string{ErrRestrictedEmailDomain.Error()},
-			})
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
+				return Token{}, validator.NewValidationError(url.Values{
+					"email": []string{ErrRestrictedEmailDomain.Error()},
+				})
+			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
-		// 	return Token{}, validator.NewValidationError(url.Values{
-		// 		"email": []string{ErrRestrictedEmailDomain.Error()},
-		// 	})
-		// }
 	}
 
 	// Check if the passed email address is not taken yet
@@ -478,17 +495,22 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	}
 
 	if !strings.HasSuffix(u.Email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-			return ErrUserIsDisabled
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+				return ErrUserIsDisabled
+			}
+			if u.SanitizedEmail.Valid {
+				if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+					return ErrUserIsDisabled
+				}
+			}
 		}
-		if u.SanitizedEmail.Valid {
-			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 				return ErrUserIsDisabled
 			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		// 	return ErrUserIsDisabled
-		// }
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)
@@ -647,17 +669,22 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 	}
 
 	if !strings.HasSuffix(u.Email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-			return ErrUserIsDisabled
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+				return ErrUserIsDisabled
+			}
+			if u.SanitizedEmail.Valid {
+				if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+					return ErrUserIsDisabled
+				}
+			}
 		}
-		if u.SanitizedEmail.Valid {
-			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 				return ErrUserIsDisabled
 			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		// 	return ErrUserIsDisabled
-		// }
 	}
 
 	uv, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
@@ -739,17 +766,22 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 	}
 
 	if !strings.HasSuffix(sanitizedEmail, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-			return ErrUserIsDisabled
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+				return ErrUserIsDisabled
+			}
+			if u.SanitizedEmail.Valid {
+				if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+					return ErrUserIsDisabled
+				}
+			}
 		}
-		if u.SanitizedEmail.Valid {
-			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
 				return ErrUserIsDisabled
 			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, sanitizedEmail); !yes {
-		// 	return ErrUserIsDisabled
-		// }
 	}
 
 	if _, err := s.ur.GetUserBySanitizedEmail(ctx, sanitizedEmail); err == nil {
@@ -878,17 +910,22 @@ func (s *Service) IsVerified(ctx context.Context, userID uuid.UUID) (bool, error
 	}
 
 	if !strings.HasSuffix(u.Email, "@sator.io") {
-		if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
-			return false, ErrUserIsDisabled
+		if s.blacklistEnabled {
+			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.Email); yes {
+				return false, ErrUserIsDisabled
+			}
+			if u.SanitizedEmail.Valid {
+				if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+					return false, ErrUserIsDisabled
+				}
+			}
 		}
-		if u.SanitizedEmail.Valid {
-			if yes, _ := s.ur.IsEmailBlacklisted(ctx, u.SanitizedEmail.String); yes {
+
+		if s.whitelistEnabled {
+			if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
 				return false, ErrUserIsDisabled
 			}
 		}
-		// if yes, _ := s.ur.IsEmailWhitelisted(ctx, u.Email); !yes {
-		// 	return false, ErrUserIsDisabled
-		// }
 	}
 
 	return u.VerifiedAt.Valid, nil

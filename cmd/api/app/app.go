@@ -141,6 +141,8 @@ type Config struct {
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
 	SatorAPIKey                 string
+	WhitelistMode               bool
+	BlacklistMode               bool
 }
 
 var buildTag string
@@ -161,13 +163,15 @@ func ConfigFromEnv() *Config {
 		DBMaxOpenConns: env.GetInt("DATABASE_MAX_OPEN_CONNS", 20),
 		DBMaxIdleConns: env.GetInt("DATABASE_IDLE_CONNS", 2),
 
-		// JWT
-		JwtSigningKey: env.MustString("JWT_SIGNING_KEY"),
-		JwtTTL:        env.GetDuration("JWT_TTL", 24*time.Hour),
-
 		// Auth
 		OtpLength:     env.GetInt("OTP_LENGTH", 5),
 		MasterOTPHash: env.GetString("MASTER_OTP_HASH", ""),
+		WhitelistMode: env.GetBool("WHITELIST_MODE", true),
+		BlacklistMode: env.GetBool("BLACKLIST_MODE", true),
+
+		// JWT
+		JwtSigningKey: env.MustString("JWT_SIGNING_KEY"),
+		JwtTTL:        env.GetDuration("JWT_TTL", 24*time.Hour),
 
 		// Quiz
 		QuizWsConnURL:   env.MustString("QUIZ_WS_CONN_URL"),
@@ -336,7 +340,7 @@ func (a *app) Run() {
 		r.Get("/", mkRootHandler(a.cfg.BuildTagDO))
 		r.Get("/health", healthCheckHandler)
 		r.Get("/supply", supplyHandler)
-		r.Get("/ws", testWsHandler)
+		// r.Get("/ws", testWsHandler)
 	}
 
 	serverRSAPrivateKey, err := internal_rsa.BytesToPrivateKey([]byte(a.cfg.ServerRSAPrivateKey))
@@ -465,6 +469,8 @@ func (a *app) Run() {
 			auth.WithMasterOTPCode(a.cfg.MasterOTPHash),
 			auth.WithCustomOTPLength(a.cfg.OtpLength),
 			auth.WithMailService(mailer),
+			auth.WithBlacklistMode(a.cfg.BlacklistMode),
+			auth.WithWhitelistMode(a.cfg.WhitelistMode),
 		)
 
 		// Auth service
@@ -773,13 +779,6 @@ func mkRootHandler(buildTagDO string) func(w http.ResponseWriter, _ *http.Reques
 	}
 }
 
-func rootHandler(w http.ResponseWriter, _ *http.Request, buildTagDO string) {
-	if buildTag == "" {
-		buildTag = buildTagDO
-	}
-	defaultResponse(w, http.StatusOK, map[string]interface{}{"build_tag": buildTag})
-}
-
 // returns token circulating supply
 func supplyHandler(w http.ResponseWriter, _ *http.Request) {
 	defaultResponse(w, http.StatusOK, map[string]interface{}{
@@ -788,9 +787,9 @@ func supplyHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // returns html page to test websocket
-func testWsHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./cmd/api/index.html")
-}
+// func testWsHandler(w http.ResponseWriter, r *http.Request) {
+// 	http.ServeFile(w, r, "./cmd/api/index.html")
+// }
 
 // returns 204 HTTP status without content
 func healthCheckHandler(w http.ResponseWriter, _ *http.Request) {

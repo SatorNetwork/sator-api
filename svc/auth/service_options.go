@@ -31,3 +31,19 @@ func WithBlacklistEmailDomains(domains ...string) ServiceOption {
 		s.blacklistEmailDomains = domains
 	}
 }
+
+// WithWhitelistMode option
+// Sets up whitelist mode
+func WithWhitelistMode(enabled bool) ServiceOption {
+	return func(s *Service) {
+		s.whitelistEnabled = enabled
+	}
+}
+
+// WithBlacklistMode option
+// Sets up blacklist mode
+func WithBlacklistMode(enabled bool) ServiceOption {
+	return func(s *Service) {
+		s.blacklistEnabled = enabled
+	}
+}
