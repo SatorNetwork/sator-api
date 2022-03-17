@@ -69,6 +69,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	"github.com/SatorNetwork/sator-api/svc/shows/private"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
+	"github.com/SatorNetwork/sator-api/svc/trading_platforms"
+	tradingPlatformsRepo "github.com/SatorNetwork/sator-api/svc/trading_platforms/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
@@ -694,6 +696,21 @@ func (a *app) Run() {
 
 		go quizV2Svc.StartEngine()
 		// TODO(evg): gracefully shutdown the engine
+	}
+
+	{
+		tradingPlatformsRepository, err := tradingPlatformsRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare trading platforms repository: %v", err)
+		}
+
+		tradingPlatformsSvc := trading_platforms.NewService(
+			tradingPlatformsRepository,
+		)
+		r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
+			trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
+			logger,
+		))
 	}
 
 	{
