@@ -91,16 +91,13 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 		GetWallets:                    MakeGetWalletsEndpoint(s),
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
-		// KYC temporary disabled!
-		// CreateTransfer:                kycMdw(MakeCreateTransferRequestEndpoint(s, validateFunc)),
-		// ConfirmTransfer:               kycMdw(MakeConfirmTransferRequestEndpoint(s, validateFunc)),
-		CreateTransfer:     MakeCreateTransferRequestEndpoint(s, validateFunc),
-		ConfirmTransfer:    MakeConfirmTransferRequestEndpoint(s, validateFunc),
-		SetStake:           MakeSetStakeEndpoint(s, validateFunc),
-		GetStake:           MakeGetStakeEndpoint(s, validateFunc),
-		Unstake:            MakeUnstakeEndpoint(s, validateFunc),
-		PossibleMultiplier: MakePossibleMultiplierEndpoint(s, validateFunc),
-		GetStakeLevels:     MakeGetStakeLevelsEndpoint(s),
+		CreateTransfer:                kycMdw(MakeCreateTransferRequestEndpoint(s, validateFunc)),
+		ConfirmTransfer:               kycMdw(MakeConfirmTransferRequestEndpoint(s, validateFunc)),
+		SetStake:                      MakeSetStakeEndpoint(s, validateFunc),
+		GetStake:                      MakeGetStakeEndpoint(s, validateFunc),
+		Unstake:                       MakeUnstakeEndpoint(s, validateFunc),
+		PossibleMultiplier:            MakePossibleMultiplierEndpoint(s, validateFunc),
+		GetStakeLevels:                MakeGetStakeLevelsEndpoint(s),
 	}
 
 	// setup middlewares for each endpoints
