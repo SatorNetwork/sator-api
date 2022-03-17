@@ -39,9 +39,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		// KYC temporary disabled!
-		// ClaimRewards:     kycMdw(MakeClaimRewardsEndpoint(s)),
-		ClaimRewards:     MakeClaimRewardsEndpoint(s),
+		ClaimRewards:     kycMdw(MakeClaimRewardsEndpoint(s)),
 		GetRewardsWallet: MakeGetRewardsWalletEndpoint(s),
 		GetTransactions:  MakeGetTransactionsEndpoint(s, validateFunc),
 	}
