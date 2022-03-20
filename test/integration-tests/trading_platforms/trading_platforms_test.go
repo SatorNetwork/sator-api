@@ -33,12 +33,6 @@ func TestTradingPlatform(t *testing.T) {
 	signUpRequest := auth.RandomSignUpRequest()
 	user := user.NewInitializedUser(signUpRequest, t)
 	user.SetRole(rbac.RoleAdmin)
-
-	err := c.Auth.VerifyAcount(user.AccessToken(), &auth.VerifyAccountRequest{
-		OTP: "12345",
-	})
-	require.NoError(t, err)
-
 	user.RefreshToken()
 
 	var linkID string
