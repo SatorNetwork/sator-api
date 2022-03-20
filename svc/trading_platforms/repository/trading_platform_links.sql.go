@@ -55,6 +55,7 @@ func (q *Queries) DeleteTradingPlatformLink(ctx context.Context, id uuid.UUID) e
 const getTradingPlatformLinks = `-- name: GetTradingPlatformLinks :many
 SELECT id, title, link, logo, updated_at, created_at
 FROM trading_platform_links
+ORDER BY title ASC
 LIMIT $1 OFFSET $2
 `
 
@@ -93,13 +94,14 @@ func (q *Queries) GetTradingPlatformLinks(ctx context.Context, arg GetTradingPla
 	return items, nil
 }
 
-const updateTradingPlatformLink = `-- name: UpdateTradingPlatformLink :exec
+const updateTradingPlatformLink = `-- name: UpdateTradingPlatformLink :one
 UPDATE trading_platform_links
 SET
    title = $1,
    link = $2,
    logo = $3
 WHERE id = $4
+RETURNING id, title, link, logo, updated_at, created_at
 `
 
 type UpdateTradingPlatformLinkParams struct {
@@ -109,12 +111,21 @@ type UpdateTradingPlatformLinkParams struct {
 	ID    uuid.UUID `json:"id"`
 }
 
-func (q *Queries) UpdateTradingPlatformLink(ctx context.Context, arg UpdateTradingPlatformLinkParams) error {
-	_, err := q.exec(ctx, q.updateTradingPlatformLinkStmt, updateTradingPlatformLink,
+func (q *Queries) UpdateTradingPlatformLink(ctx context.Context, arg UpdateTradingPlatformLinkParams) (TradingPlatformLink, error) {
+	row := q.queryRow(ctx, q.updateTradingPlatformLinkStmt, updateTradingPlatformLink,
 		arg.Title,
 		arg.Link,
 		arg.Logo,
 		arg.ID,
 	)
-	return err
+	var i TradingPlatformLink
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Link,
+		&i.Logo,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
