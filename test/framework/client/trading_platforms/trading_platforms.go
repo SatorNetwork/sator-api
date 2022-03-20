@@ -31,18 +31,14 @@ type Links struct {
 	Data []*Link
 }
 
+type LinkWrapper struct {
+	Data *Link
+}
+
 type CreateLinkRequest struct {
 	Title string `json:"title"`
 	Link  string `json:"link"`
 	Logo  string `json:"logo"`
-}
-
-type CreateLinkResponse struct {
-	Id string `json:"id"`
-}
-
-type CreateLinkResponseWrapper struct {
-	Data *CreateLinkResponse `json:"data"`
 }
 
 type UpdateLinkRequest struct {
@@ -51,8 +47,8 @@ type UpdateLinkRequest struct {
 	Logo  string `json:"logo"`
 }
 
-func (c *TradingPlatformsClient) CreateLink(accessToken string, req *CreateLinkRequest) (*CreateLinkResponse, error) {
-	url := fmt.Sprintf("http://localhost:8080/trading_platforms/link")
+func (c *TradingPlatformsClient) CreateLink(accessToken string, req *CreateLinkRequest) (*Link, error) {
+	url := "http://localhost:8080/trading_platforms/link"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
@@ -75,7 +71,7 @@ func (c *TradingPlatformsClient) CreateLink(accessToken string, req *CreateLinkR
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp CreateLinkResponseWrapper
+	var resp LinkWrapper
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
@@ -83,7 +79,7 @@ func (c *TradingPlatformsClient) CreateLink(accessToken string, req *CreateLinkR
 	return resp.Data, nil
 }
 
-func (c *TradingPlatformsClient) UpdateLink(accessToken, linkID string, req *UpdateLinkRequest) (*Empty, error) {
+func (c *TradingPlatformsClient) UpdateLink(accessToken, linkID string, req *UpdateLinkRequest) (*Link, error) {
 	url := fmt.Sprintf("http://localhost:8080/trading_platforms/link/%v", linkID)
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -107,12 +103,12 @@ func (c *TradingPlatformsClient) UpdateLink(accessToken, linkID string, req *Upd
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp Empty
+	var resp LinkWrapper
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
 
-	return &resp, nil
+	return resp.Data, nil
 }
 
 func (c *TradingPlatformsClient) DeleteLink(accessToken, linkID string, req *Empty) (*Empty, error) {
@@ -148,7 +144,7 @@ func (c *TradingPlatformsClient) DeleteLink(accessToken, linkID string, req *Emp
 }
 
 func (c *TradingPlatformsClient) GetLinks(accessToken string, req *Empty) ([]*Link, error) {
-	url := fmt.Sprintf("http://localhost:8080/trading_platforms/links")
+	url := "http://localhost:8080/trading_platforms/links"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
