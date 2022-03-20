@@ -63,7 +63,7 @@ var (
 		SolanaSysvarClock:           "SysvarC1ock11111111111111111111111111111111",
 		SolanaSplToken:              "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
 		SolanaStakeProgramID:        "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-		PostmarkServerToken:         "local",
+		PostmarkServerToken:         "b8de3efc-df98-4302-9d58-7bac75d7fdef",
 		PostmarkAccountToken:        "local",
 		NotificationFromName:        "Sator.io",
 		NotificationFromEmail:       "notifications@sator.io",
