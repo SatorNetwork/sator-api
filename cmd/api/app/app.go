@@ -33,7 +33,7 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/ethereum"
 	"github.com/SatorNetwork/sator-api/lib/firebase"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
-	"github.com/SatorNetwork/sator-api/lib/mail"
+	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
@@ -317,7 +317,7 @@ func (a *app) Run() {
 	}
 
 	// Init mail service
-	mailer := mail.New(postmark.NewClient(a.cfg.PostmarkServerToken, a.cfg.PostmarkAccountToken), mail.Config{
+	mailer := lib_postmark.New(postmark.NewClient(a.cfg.PostmarkServerToken, a.cfg.PostmarkAccountToken), lib_postmark.Config{
 		ProductName:    a.cfg.ProductName,
 		ProductURL:     a.cfg.ProductURL,
 		SupportURL:     a.cfg.SupportURL,

@@ -23,6 +23,7 @@ func TestTradingPlatform(t *testing.T) {
 
 	solanaMock := solana_lib.NewMockInterface(ctrl)
 	mock.RegisterMockObject(mock.SolanaProvider, solanaMock)
+
 	solanaMock.ExpectCheckPrivateKeyAny()
 	solanaMock.ExpectNewAccountAny()
 
