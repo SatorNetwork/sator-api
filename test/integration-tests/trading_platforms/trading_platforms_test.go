@@ -42,6 +42,7 @@ func TestTradingPlatform(t *testing.T) {
 			Link:  "link",
 			Logo:  "logo",
 		})
+		t.Logf("c.TradingPlatformsClient.CreateLink: %v", err)
 		require.NoError(t, err)
 		linkID = resp.Id
 
