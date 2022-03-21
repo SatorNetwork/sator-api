@@ -80,6 +80,27 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/Category"
+
+    TradingPlatformLink:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        title:
+          type: string
+          example: "Coingecko"
+        link:
+          type: string
+          example: "http://coingecko.com"
+        logo:
+          type: string
+          example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
+    TradingPlatformLinks:
+      type: array
+      items:
+        $ref: "#/components/schemas/TradingPlatformLink"
+
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http
@@ -173,6 +194,19 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Categories"
+
+    TradingPlatformLink:
+      description: Trading platform link.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TradingPlatformLink"
+    TradingPlatformLinks:
+      description: Trading platform links.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TradingPlatformLinks"
 paths:
   /:
     get:
@@ -5202,6 +5236,139 @@ paths:
         - name: code
           in: path
           description: Referral code.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /trading_platforms:
+    get:
+      tags:
+        - "Trading platform links"
+      summary: Get trading platform links array with pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          $ref: "#/components/responses/TradingPlatformLinks"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    post:
+      tags:
+        - "Trading platform links"
+      summary: Create new item.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Coingecko"
+                link:
+                  type: string
+                  example: "http://coingecko.com"
+                logo:
+                  type: string
+                  example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
+                  description: "Item logo"
+      responses:
+        "200":
+          $ref: "#/components/responses/TradingPlatformLink"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /trading_platforms/{id}:
+    put:
+      tags:
+        - "Trading platform links"
+      summary: Update item by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Coingecko"
+                link:
+                  type: string
+                  example: "http://coingecko.com"
+                logo:
+                  type: string
+                  example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
+                  description: "Item logo"
+      responses:
+        "200":
+          $ref: "#/components/responses/TradingPlatformLink"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Trading platform links"
+      summary: Delete item by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID.
           required: true
           schema:
             type: string

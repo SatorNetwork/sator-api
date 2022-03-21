@@ -76,6 +76,7 @@ func (a *AuthClient) Login(req *LoginRequest) (*LoginResponse, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")
 	}
+	httpReq.Header.Set("Device-ID", uuid.New().String())
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't make http request")

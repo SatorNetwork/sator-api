@@ -43,6 +43,17 @@ func (db *DB) UpdateKYCStatus(ctx context.Context, email, status string) error {
 	return nil
 }
 
+func (db *DB) UpdateUserRole(ctx context.Context, id uuid.UUID, role string) error {
+	if err := db.authRepository.UpdateUserRole(ctx, authRepo.UpdateUserRoleParams{
+		Role: role,
+		ID:   id,
+	}); err != nil {
+		return fmt.Errorf("could not update role for user: %v: %w", id, err)
+	}
+
+	return nil
+}
+
 func (db *DB) GetUserIDByEmail(ctx context.Context, email string) (uuid.UUID, error) {
 	u, err := db.authRepository.GetUserByEmail(ctx, email)
 	if err != nil {

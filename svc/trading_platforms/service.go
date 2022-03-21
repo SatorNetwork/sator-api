@@ -16,22 +16,21 @@ type (
 	}
 
 	tradingPlatformRepository interface {
-		CreateTradingPlatformLink(
-			ctx context.Context,
-			arg trading_platforms_repository.CreateTradingPlatformLinkParams,
-		) (trading_platforms_repository.TradingPlatformLink, error)
-		UpdateTradingPlatformLink(ctx context.Context, arg trading_platforms_repository.UpdateTradingPlatformLinkParams) error
+		CreateTradingPlatformLink(ctx context.Context, arg trading_platforms_repository.CreateTradingPlatformLinkParams) (trading_platforms_repository.TradingPlatformLink, error)
+		UpdateTradingPlatformLink(ctx context.Context, arg trading_platforms_repository.UpdateTradingPlatformLinkParams) (trading_platforms_repository.TradingPlatformLink, error)
 		DeleteTradingPlatformLink(ctx context.Context, id uuid.UUID) error
-		GetTradingPlatformLinks(
-			ctx context.Context,
-			arg trading_platforms_repository.GetTradingPlatformLinksParams,
-		) ([]trading_platforms_repository.TradingPlatformLink, error)
+		GetTradingPlatformLinks(ctx context.Context, arg trading_platforms_repository.GetTradingPlatformLinksParams) ([]trading_platforms_repository.TradingPlatformLink, error)
+	}
+
+	Link struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+		Link  string `json:"link"`
+		Logo  string `json:"logo"`
 	}
 )
 
-func NewService(
-	tpr tradingPlatformRepository,
-) *Service {
+func NewService(tpr tradingPlatformRepository) *Service {
 	s := &Service{
 		tpr: tpr,
 	}
@@ -39,7 +38,7 @@ func NewService(
 	return s
 }
 
-func (s *Service) CreateLink(ctx context.Context, req *CreateLinkRequest) (*CreateLinkResponse, error) {
+func (s *Service) CreateLink(ctx context.Context, req *CreateLinkRequest) (*Link, error) {
 	resp, err := s.tpr.CreateTradingPlatformLink(ctx, trading_platforms_repository.CreateTradingPlatformLinkParams{
 		Title: req.Title,
 		Link:  req.Link,
@@ -49,13 +48,11 @@ func (s *Service) CreateLink(ctx context.Context, req *CreateLinkRequest) (*Crea
 		return nil, errors.Wrap(err, "can't create trading platform link")
 	}
 
-	return &CreateLinkResponse{
-		ID: resp.ID,
-	}, nil
+	return NewLinkFromSQLC(&resp), nil
 }
 
-func (s *Service) UpdateLink(ctx context.Context, req *UpdateLinkRequest) (*Empty, error) {
-	err := s.tpr.UpdateTradingPlatformLink(ctx, trading_platforms_repository.UpdateTradingPlatformLinkParams{
+func (s *Service) UpdateLink(ctx context.Context, req *UpdateLinkRequest) (*Link, error) {
+	resp, err := s.tpr.UpdateTradingPlatformLink(ctx, trading_platforms_repository.UpdateTradingPlatformLinkParams{
 		ID:    req.ID,
 		Title: req.Title,
 		Link:  req.Link,
@@ -65,16 +62,15 @@ func (s *Service) UpdateLink(ctx context.Context, req *UpdateLinkRequest) (*Empt
 		return nil, errors.Wrap(err, "can't update trading platform link")
 	}
 
-	return &Empty{}, nil
+	return NewLinkFromSQLC(&resp), nil
 }
 
-func (s *Service) DeleteLink(ctx context.Context, req *DeleteLinkRequest) (*Empty, error) {
-	err := s.tpr.DeleteTradingPlatformLink(ctx, req.ID)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't delete trading platform link")
+func (s *Service) DeleteLink(ctx context.Context, id uuid.UUID) error {
+	if err := s.tpr.DeleteTradingPlatformLink(ctx, id); err != nil {
+		return errors.Wrap(err, "can't delete trading platform link")
 	}
 
-	return &Empty{}, nil
+	return nil
 }
 
 func (s *Service) GetLinks(ctx context.Context, req *utils.PaginationRequest) ([]*Link, error) {
@@ -91,7 +87,7 @@ func (s *Service) GetLinks(ctx context.Context, req *utils.PaginationRequest) ([
 
 func NewLinkFromSQLC(link *trading_platforms_repository.TradingPlatformLink) *Link {
 	return &Link{
-		ID:    link.ID,
+		ID:    link.ID.String(),
 		Title: link.Title,
 		Link:  link.Link,
 		Logo:  link.Logo,

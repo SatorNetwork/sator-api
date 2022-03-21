@@ -41,30 +41,30 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Post("/link", httptransport.NewServer(
+	r.Get("/", httptransport.NewServer(
+		e.GetLinks,
+		decodeGetLinksRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/", httptransport.NewServer(
 		e.CreateLink,
 		decodeCreateLinkRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Put("/link/{id}", httptransport.NewServer(
+	r.Put("/{id}", httptransport.NewServer(
 		e.UpdateLink,
 		decodeUpdateLinkRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Delete("/link/{id}", httptransport.NewServer(
+	r.Delete("/{id}", httptransport.NewServer(
 		e.DeleteLink,
 		decodeDeleteLinkRequest,
-		httpencoder.EncodeResponse,
-		options...,
-	).ServeHTTP)
-
-	r.Get("/links", httptransport.NewServer(
-		e.GetLinks,
-		decodeGetLinksRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
