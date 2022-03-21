@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 )
@@ -69,9 +68,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 
 func MakeCreateLinkEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
-			return nil, err
-		}
+		// if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+		// 	return nil, err
+		// }
 
 		typedReq, ok := req.(*CreateLinkRequest)
 		if !ok {
@@ -92,9 +91,9 @@ func MakeCreateLinkEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 
 func MakeUpdateLinkEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
-			return nil, err
-		}
+		// if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+		// 	return nil, err
+		// }
 
 		typedReq, ok := req.(*UpdateLinkRequest)
 		if !ok {
@@ -115,9 +114,9 @@ func MakeUpdateLinkEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 
 func MakeDeleteLinkEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
-			return nil, err
-		}
+		// if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+		// 	return nil, err
+		// }
 
 		typedReq, ok := req.(*DeleteLinkRequest)
 		if !ok {
@@ -134,9 +133,9 @@ func MakeDeleteLinkEndpoint(s service) endpoint.Endpoint {
 
 func MakeGetLinksEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
+		// if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		// 	return nil, err
+		// }
 
 		typedReq, ok := req.(utils.PaginationRequest)
 		if !ok {

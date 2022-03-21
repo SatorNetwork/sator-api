@@ -48,7 +48,7 @@ type UpdateLinkRequest struct {
 }
 
 func (c *TradingPlatformsClient) CreateLink(accessToken string, req *CreateLinkRequest) (*Link, error) {
-	url := "http://localhost:8080/trading_platforms/link"
+	url := "http://localhost:8080/trading_platforms"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
@@ -80,7 +80,7 @@ func (c *TradingPlatformsClient) CreateLink(accessToken string, req *CreateLinkR
 }
 
 func (c *TradingPlatformsClient) UpdateLink(accessToken, linkID string, req *UpdateLinkRequest) (*Link, error) {
-	url := fmt.Sprintf("http://localhost:8080/trading_platforms/link/%v", linkID)
+	url := fmt.Sprintf("http://localhost:8080/trading_platforms/%v", linkID)
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
@@ -112,7 +112,7 @@ func (c *TradingPlatformsClient) UpdateLink(accessToken, linkID string, req *Upd
 }
 
 func (c *TradingPlatformsClient) DeleteLink(accessToken, linkID string, req *Empty) (*Empty, error) {
-	url := fmt.Sprintf("http://localhost:8080/trading_platforms/link/%v", linkID)
+	url := fmt.Sprintf("http://localhost:8080/trading_platforms/%v", linkID)
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
@@ -144,7 +144,7 @@ func (c *TradingPlatformsClient) DeleteLink(accessToken, linkID string, req *Emp
 }
 
 func (c *TradingPlatformsClient) GetLinks(accessToken string, req *Empty) ([]*Link, error) {
-	url := "http://localhost:8080/trading_platforms/links"
+	url := "http://localhost:8080/trading_platforms"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
