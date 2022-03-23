@@ -86,6 +86,8 @@ func (s *Service) GetPuzzleGameByID(ctx context.Context, req *GetPuzzleGameByID)
 	return NewPuzzleGameFromSQLC(&puzzleGame), nil
 }
 
+//get puzzle game by episode_id (one item, not list)
+
 func (s *Service) CreatePuzzleGame(ctx context.Context, req *CreatePuzzleGameRequest) (*PuzzleGame, error) {
 	puzzleGame, err := s.pgr.CreatePuzzleGame(ctx, puzzle_game_repository.CreatePuzzleGameParams{
 		EpisodeID: req.EpisodeID,
