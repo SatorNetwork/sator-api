@@ -22,8 +22,14 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addImageToPuzzleGameStmt, err = db.PrepareContext(ctx, addImageToPuzzleGame); err != nil {
+		return nil, fmt.Errorf("error preparing query AddImageToPuzzleGame: %w", err)
+	}
 	if q.createPuzzleGameStmt, err = db.PrepareContext(ctx, createPuzzleGame); err != nil {
 		return nil, fmt.Errorf("error preparing query CreatePuzzleGame: %w", err)
+	}
+	if q.deleteImageFromPuzzleGameStmt, err = db.PrepareContext(ctx, deleteImageFromPuzzleGame); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteImageFromPuzzleGame: %w", err)
 	}
 	if q.getPuzzleGameByIDStmt, err = db.PrepareContext(ctx, getPuzzleGameByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPuzzleGameByID: %w", err)
@@ -36,9 +42,19 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addImageToPuzzleGameStmt != nil {
+		if cerr := q.addImageToPuzzleGameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addImageToPuzzleGameStmt: %w", cerr)
+		}
+	}
 	if q.createPuzzleGameStmt != nil {
 		if cerr := q.createPuzzleGameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createPuzzleGameStmt: %w", cerr)
+		}
+	}
+	if q.deleteImageFromPuzzleGameStmt != nil {
+		if cerr := q.deleteImageFromPuzzleGameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteImageFromPuzzleGameStmt: %w", cerr)
 		}
 	}
 	if q.getPuzzleGameByIDStmt != nil {
@@ -88,19 +104,23 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                    DBTX
-	tx                    *sql.Tx
-	createPuzzleGameStmt  *sql.Stmt
-	getPuzzleGameByIDStmt *sql.Stmt
-	updatePuzzleGameStmt  *sql.Stmt
+	db                            DBTX
+	tx                            *sql.Tx
+	addImageToPuzzleGameStmt      *sql.Stmt
+	createPuzzleGameStmt          *sql.Stmt
+	deleteImageFromPuzzleGameStmt *sql.Stmt
+	getPuzzleGameByIDStmt         *sql.Stmt
+	updatePuzzleGameStmt          *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                    tx,
-		tx:                    tx,
-		createPuzzleGameStmt:  q.createPuzzleGameStmt,
-		getPuzzleGameByIDStmt: q.getPuzzleGameByIDStmt,
-		updatePuzzleGameStmt:  q.updatePuzzleGameStmt,
+		db:                            tx,
+		tx:                            tx,
+		addImageToPuzzleGameStmt:      q.addImageToPuzzleGameStmt,
+		createPuzzleGameStmt:          q.createPuzzleGameStmt,
+		deleteImageFromPuzzleGameStmt: q.deleteImageFromPuzzleGameStmt,
+		getPuzzleGameByIDStmt:         q.getPuzzleGameByIDStmt,
+		updatePuzzleGameStmt:          q.updatePuzzleGameStmt,
 	}
 }

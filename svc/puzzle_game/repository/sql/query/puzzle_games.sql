@@ -27,6 +27,20 @@ SET
 WHERE id = @id
    RETURNING *;
 
+-- name: AddImageToPuzzleGame :exec
+INSERT INTO puzzle_games_to_images (
+    file_id,
+    puzzle_game_id
+)
+VALUES (
+    @file_id,
+    @puzzle_game_id
+);
+
+-- name: DeleteImageFromPuzzleGame :exec
+DELETE FROM puzzle_games_to_images
+WHERE file_id = @file_id AND puzzle_game_id = @puzzle_game_id;
+
 -- -- name: DeleteTradingPlatformLink :exec
 -- DELETE FROM trading_platform_links
 -- WHERE id = @id;

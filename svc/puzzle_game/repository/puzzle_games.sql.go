@@ -9,6 +9,27 @@ import (
 	"github.com/google/uuid"
 )
 
+const addImageToPuzzleGame = `-- name: AddImageToPuzzleGame :exec
+INSERT INTO puzzle_games_to_images (
+    file_id,
+    puzzle_game_id
+)
+VALUES (
+    $1,
+    $2
+)
+`
+
+type AddImageToPuzzleGameParams struct {
+	FileID       uuid.UUID `json:"file_id"`
+	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
+}
+
+func (q *Queries) AddImageToPuzzleGame(ctx context.Context, arg AddImageToPuzzleGameParams) error {
+	_, err := q.exec(ctx, q.addImageToPuzzleGameStmt, addImageToPuzzleGame, arg.FileID, arg.PuzzleGameID)
+	return err
+}
+
 const createPuzzleGame = `-- name: CreatePuzzleGame :one
 INSERT INTO puzzle_games (
     episode_id,
@@ -49,6 +70,21 @@ func (q *Queries) CreatePuzzleGame(ctx context.Context, arg CreatePuzzleGamePara
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteImageFromPuzzleGame = `-- name: DeleteImageFromPuzzleGame :exec
+DELETE FROM puzzle_games_to_images
+WHERE file_id = $1 AND puzzle_game_id = $2
+`
+
+type DeleteImageFromPuzzleGameParams struct {
+	FileID       uuid.UUID `json:"file_id"`
+	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
+}
+
+func (q *Queries) DeleteImageFromPuzzleGame(ctx context.Context, arg DeleteImageFromPuzzleGameParams) error {
+	_, err := q.exec(ctx, q.deleteImageFromPuzzleGameStmt, deleteImageFromPuzzleGame, arg.FileID, arg.PuzzleGameID)
+	return err
 }
 
 const getPuzzleGameByID = `-- name: GetPuzzleGameByID :one

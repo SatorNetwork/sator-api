@@ -18,3 +18,10 @@ type PuzzleGame struct {
 	UpdatedAt sql.NullTime `json:"updated_at"`
 	CreatedAt time.Time    `json:"created_at"`
 }
+
+type PuzzleGamesToImage struct {
+	FileID       uuid.UUID    `json:"file_id"`
+	PuzzleGameID uuid.UUID    `json:"puzzle_game_id"`
+	UpdatedAt    sql.NullTime `json:"updated_at"`
+	CreatedAt    time.Time    `json:"created_at"`
+}

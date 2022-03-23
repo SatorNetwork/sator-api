@@ -18,7 +18,11 @@ type (
 		GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (puzzle_game_repository.PuzzleGame, error)
 		CreatePuzzleGame(ctx context.Context, arg puzzle_game_repository.CreatePuzzleGameParams) (puzzle_game_repository.PuzzleGame, error)
 		UpdatePuzzleGame(ctx context.Context, arg puzzle_game_repository.UpdatePuzzleGameParams) (puzzle_game_repository.PuzzleGame, error)
+		AddImageToPuzzleGame(ctx context.Context, arg puzzle_game_repository.AddImageToPuzzleGameParams) error
+		DeleteImageFromPuzzleGame(ctx context.Context, arg puzzle_game_repository.DeleteImageFromPuzzleGameParams) error
 	}
+
+	Empty struct{}
 
 	GetPuzzleGameByID struct {
 		ID uuid.UUID `json:"id"`
@@ -44,6 +48,16 @@ type (
 		PrizePool float64   `json:"prize_pool"`
 		PartsX    int32     `json:"parts_x"`
 		PartsY    int32     `json:"parts_y"`
+	}
+
+	AddImageToPuzzleGameRequest struct {
+		RawImage     string    `json:"raw_image"`
+		PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
+	}
+
+	DeleteImageFromPuzzleGameRequest struct {
+		FileID       uuid.UUID `json:"file_id"`
+		PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
 	}
 )
 
@@ -138,3 +152,33 @@ func NewPuzzleGameFromSQLC(pg *puzzle_game_repository.PuzzleGame) *PuzzleGame {
 //
 //	return links
 //}
+
+//add an image to a puzzle game
+//delete an image from a puzzle game
+//get image list by puzzle game id
+func (s *Service) AddImageToPuzzleGame(ctx context.Context, req *AddImageToPuzzleGameRequest) (*Empty, error) {
+	var fileID uuid.UUID
+	// TODO:
+
+	err := s.pgr.AddImageToPuzzleGame(ctx, puzzle_game_repository.AddImageToPuzzleGameParams{
+		FileID:       fileID,
+		PuzzleGameID: req.PuzzleGameID,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't add image to puzzle game")
+	}
+
+	return &Empty{}, nil
+}
+
+func (s *Service) DeleteImageFromPuzzleGame(ctx context.Context, req *DeleteImageFromPuzzleGameRequest) (*Empty, error) {
+	err := s.pgr.DeleteImageFromPuzzleGame(ctx, puzzle_game_repository.DeleteImageFromPuzzleGameParams{
+		FileID:       req.FileID,
+		PuzzleGameID: req.PuzzleGameID,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't delete image from puzzle game")
+	}
+
+	return &Empty{}, nil
+}
