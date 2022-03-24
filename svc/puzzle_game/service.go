@@ -2,16 +2,19 @@ package puzzle_game
 
 import (
 	"context"
+	"mime/multipart"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
+	files_svc "github.com/SatorNetwork/sator-api/svc/files"
 	puzzle_game_repository "github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 )
 
 type (
 	Service struct {
-		pgr puzzleGameRepository
+		pgr      puzzleGameRepository
+		filesSvc filesService
 	}
 
 	puzzleGameRepository interface {
@@ -20,6 +23,10 @@ type (
 		UpdatePuzzleGame(ctx context.Context, arg puzzle_game_repository.UpdatePuzzleGameParams) (puzzle_game_repository.PuzzleGame, error)
 		AddImageToPuzzleGame(ctx context.Context, arg puzzle_game_repository.AddImageToPuzzleGameParams) error
 		DeleteImageFromPuzzleGame(ctx context.Context, arg puzzle_game_repository.DeleteImageFromPuzzleGameParams) error
+	}
+
+	filesService interface {
+		AddFile(ctx context.Context, it files_svc.File, file []byte, fileHeader *multipart.FileHeader) (files_svc.File, error)
 	}
 
 	Empty struct{}
@@ -52,6 +59,8 @@ type (
 
 	AddImageToPuzzleGameRequest struct {
 		RawImage     string    `json:"raw_image"`
+		Filename string `json:"filename"`
+		FileHeader *multipart.FileHeader
 		PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
 	}
 
@@ -61,9 +70,10 @@ type (
 	}
 )
 
-func NewService(pgr puzzleGameRepository) *Service {
+func NewService(pgr puzzleGameRepository, filesSvc filesService) *Service {
 	s := &Service{
-		pgr: pgr,
+		pgr:      pgr,
+		filesSvc: filesSvc,
 	}
 
 	return s
@@ -161,6 +171,8 @@ func NewPuzzleGameFromSQLC(pg *puzzle_game_repository.PuzzleGame) *PuzzleGame {
 func (s *Service) AddImageToPuzzleGame(ctx context.Context, req *AddImageToPuzzleGameRequest) (*Empty, error) {
 	var fileID uuid.UUID
 	// TODO:
+	// ctx context.Context, it files_svc.File, file []byte, fileHeader *multipart.FileHeader
+	s.filesSvc.AddFile(ctx, files_svc.File{Filename: req.Filename}, []byte(req.RawImage), req.FileHeader)
 
 	err := s.pgr.AddImageToPuzzleGame(ctx, puzzle_game_repository.AddImageToPuzzleGameParams{
 		FileID:       fileID,

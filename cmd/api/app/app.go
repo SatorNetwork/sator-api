@@ -714,6 +714,21 @@ func (a *app) Run() {
 	}
 
 	{
+		//tradingPlatformsRepository, err := tradingPlatformsRepo.Prepare(ctx, db)
+		//if err != nil {
+		//	log.Fatalf("can't prepare trading platforms repository: %v", err)
+		//}
+		//
+		//tradingPlatformsSvc := trading_platforms.NewService(
+		//	tradingPlatformsRepository,
+		//)
+		//r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
+		//	trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
+		//	logger,
+		//))
+	}
+
+	{
 		// Init and run http server
 		httpServer := &http.Server{
 			Handler: r,
