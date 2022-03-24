@@ -25,6 +25,7 @@ import (
 	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
+	"github.com/portto/solana-go-sdk/types"
 	"github.com/rs/cors"
 	"github.com/zeebo/errs"
 
@@ -47,6 +48,7 @@ import (
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
@@ -371,44 +373,52 @@ func (a *app) Run() {
 		return a.cfg.KycSkip
 	})
 
-	var walletSvcClient *walletClient.Client
-	// Wallet service
-	{
-		walletRepository, err := walletRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("walletRepo error: %v", err)
-		}
+	walletRepository, err := walletRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("can't prepare wallet repository: %v", err)
+	}
+	solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
+		SystemProgram:  a.cfg.SolanaSystemProgram,
+		SysvarRent:     a.cfg.SolanaSysvarRent,
+		SysvarClock:    a.cfg.SolanaSysvarClock,
+		SplToken:       a.cfg.SolanaSplToken,
+		StakeProgramID: a.cfg.SolanaStakeProgramID,
+	})
 
+	var feePayer types.Account
+	{
 		feePayerPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaFeePayerPrivateKey)
 		if err != nil {
 			log.Fatalf("feePayerPk base64 decoding error: %v", err)
 		}
+		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
+		}
+		feePayer = types.AccountFromPrivateKeyBytes(feePayerPk)
+	}
+
+	var tokenHolder types.Account
+	{
 		tokenHolderPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaTokenHolderPrivateKey)
 		if err != nil {
 			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
 		}
-
-		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:  a.cfg.SolanaSystemProgram,
-			SysvarRent:     a.cfg.SolanaSysvarRent,
-			SysvarClock:    a.cfg.SolanaSysvarClock,
-			SplToken:       a.cfg.SolanaSplToken,
-			StakeProgramID: a.cfg.SolanaStakeProgramID,
-		})
-		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
-			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
-		}
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, tokenHolderPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
 		}
+		tokenHolder = types.AccountFromPrivateKeyBytes(tokenHolderPk)
+	}
 
+	var walletSvcClient *walletClient.Client
+	// Wallet service
+	{
 		walletService := wallet.NewService(
 			walletRepository,
 			solanaClient,
 			ethereumClient,
 			wallet.WithAssetSolanaAddress(a.cfg.SolanaAssetAddr),
-			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayerPk),
-			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolderPk),
+			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayer.PrivateKey),
+			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey),
 			wallet.WithMinAmountToTransfer(a.cfg.MinAmountToTransfer),
 			wallet.WithStakePoolSolanaAddress(a.cfg.SolanaStakePoolAddr),
 		)
@@ -709,6 +719,20 @@ func (a *app) Run() {
 		)
 		r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
 			trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	{
+		iapSvc := iap_svc.NewService(
+			walletRepository,
+			solanaClient,
+			a.cfg.SolanaAssetAddr,
+			feePayer,
+			tokenHolder,
+		)
+		r.Mount("/iap", iap_svc.MakeHTTPHandler(
+			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
 			logger,
 		))
 	}
