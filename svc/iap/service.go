@@ -25,7 +25,7 @@ const (
 	constantBackOff = 10 * time.Second
 
 	testProductID   = "test2"
-	testTokenAmount = 1
+	testTokenAmount = 0
 )
 
 type (
