@@ -49,6 +49,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
+	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
@@ -724,7 +725,13 @@ func (a *app) Run() {
 	}
 
 	{
+		iapRepository, err := iap_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare trading platforms repository: %v", err)
+		}
+
 		iapSvc := iap_svc.NewService(
+			iapRepository,
 			walletRepository,
 			solanaClient,
 			a.cfg.SolanaAssetAddr,

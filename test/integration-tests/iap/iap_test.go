@@ -50,7 +50,7 @@ func TestIAP(t *testing.T) {
 	appStoreMock.EXPECT().
 		Verify(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(callback).
-		Times(1)
+		Times(2)
 
 	defer app_config.RunAndWait()()
 
@@ -63,4 +63,10 @@ func TestIAP(t *testing.T) {
 		ReceiptData: testReceiptData,
 	})
 	require.NoError(t, err)
+
+	_, err = c.InAppClient.RegisterInAppPurchase(user.AccessToken(), &iap.RegisterInAppPurchaseRequest{
+		ReceiptData: testReceiptData,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "receipt already processed")
 }
