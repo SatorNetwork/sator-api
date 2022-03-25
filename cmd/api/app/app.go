@@ -727,7 +727,7 @@ func (a *app) Run() {
 	{
 		iapRepository, err := iap_repository.Prepare(ctx, db)
 		if err != nil {
-			log.Fatalf("can't prepare trading platforms repository: %v", err)
+			log.Fatalf("can't prepare iap repository: %v", err)
 		}
 
 		iapSvc := iap_svc.NewService(
