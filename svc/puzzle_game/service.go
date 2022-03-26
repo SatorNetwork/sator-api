@@ -21,8 +21,8 @@ type (
 		GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (puzzle_game_repository.PuzzleGame, error)
 		CreatePuzzleGame(ctx context.Context, arg puzzle_game_repository.CreatePuzzleGameParams) (puzzle_game_repository.PuzzleGame, error)
 		UpdatePuzzleGame(ctx context.Context, arg puzzle_game_repository.UpdatePuzzleGameParams) (puzzle_game_repository.PuzzleGame, error)
-		AddImageToPuzzleGame(ctx context.Context, arg puzzle_game_repository.AddImageToPuzzleGameParams) error
-		DeleteImageFromPuzzleGame(ctx context.Context, arg puzzle_game_repository.DeleteImageFromPuzzleGameParams) error
+		LinkImageToPuzzleGame(ctx context.Context, arg puzzle_game_repository.LinkImageToPuzzleGameParams) error
+		UnlinkImageFromPuzzleGame(ctx context.Context, arg puzzle_game_repository.UnlinkImageFromPuzzleGameParams) error
 	}
 
 	filesService interface {
@@ -58,9 +58,9 @@ type (
 	}
 
 	AddImageToPuzzleGameRequest struct {
-		RawImage     string    `json:"raw_image"`
-		Filename string `json:"filename"`
-		FileHeader *multipart.FileHeader
+		RawImage     string `json:"raw_image"`
+		Filename     string `json:"filename"`
+		FileHeader   *multipart.FileHeader
 		PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
 	}
 
@@ -79,14 +79,6 @@ func NewService(pgr puzzleGameRepository, filesSvc filesService) *Service {
 	return s
 }
 
-//get puzzle game by id
-//get puzzle game by episode_id (one item, not list)
-//create puzzle game
-//update puzzle game
-//add an image to a puzzle game
-//delete an image from a puzzle game
-//get image list by puzzle game id
-
 func (s *Service) GetPuzzleGameByID(ctx context.Context, req *GetPuzzleGameByID) (*PuzzleGame, error) {
 	puzzleGame, err := s.pgr.GetPuzzleGameByID(ctx, req.ID)
 	if err != nil {
@@ -96,7 +88,14 @@ func (s *Service) GetPuzzleGameByID(ctx context.Context, req *GetPuzzleGameByID)
 	return NewPuzzleGameFromSQLC(&puzzleGame), nil
 }
 
-//get puzzle game by episode_id (one item, not list)
+func (s *Service) GetPuzzleGameByEpisodeID(ctx context.Context, req *GetPuzzleGameByID) (*PuzzleGame, error) {
+	puzzleGame, err := s.pgr.GetPuzzleGameByID(ctx, req.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get puzzle game by id")
+	}
+
+	return NewPuzzleGameFromSQLC(&puzzleGame), nil
+}
 
 func (s *Service) CreatePuzzleGame(ctx context.Context, req *CreatePuzzleGameRequest) (*PuzzleGame, error) {
 	puzzleGame, err := s.pgr.CreatePuzzleGame(ctx, puzzle_game_repository.CreatePuzzleGameParams{
@@ -114,7 +113,6 @@ func (s *Service) CreatePuzzleGame(ctx context.Context, req *CreatePuzzleGameReq
 
 func (s *Service) UpdatePuzzleGame(ctx context.Context, req *UpdatePuzzleGameRequest) (*PuzzleGame, error) {
 	puzzleGame, err := s.pgr.UpdatePuzzleGame(ctx, puzzle_game_repository.UpdatePuzzleGameParams{
-		EpisodeID: req.EpisodeID,
 		PrizePool: req.PrizePool,
 		PartsX:    req.PartsX,
 		PartsY:    req.PartsY,

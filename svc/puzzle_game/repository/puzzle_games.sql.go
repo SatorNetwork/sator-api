@@ -9,27 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const addImageToPuzzleGame = `-- name: AddImageToPuzzleGame :exec
-INSERT INTO puzzle_games_to_images (
-    file_id,
-    puzzle_game_id
-)
-VALUES (
-    $1,
-    $2
-)
-`
-
-type AddImageToPuzzleGameParams struct {
-	FileID       uuid.UUID `json:"file_id"`
-	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
-}
-
-func (q *Queries) AddImageToPuzzleGame(ctx context.Context, arg AddImageToPuzzleGameParams) error {
-	_, err := q.exec(ctx, q.addImageToPuzzleGameStmt, addImageToPuzzleGame, arg.FileID, arg.PuzzleGameID)
-	return err
-}
-
 const createPuzzleGame = `-- name: CreatePuzzleGame :one
 INSERT INTO puzzle_games (
     episode_id,
@@ -72,19 +51,25 @@ func (q *Queries) CreatePuzzleGame(ctx context.Context, arg CreatePuzzleGamePara
 	return i, err
 }
 
-const deleteImageFromPuzzleGame = `-- name: DeleteImageFromPuzzleGame :exec
-DELETE FROM puzzle_games_to_images
-WHERE file_id = $1 AND puzzle_game_id = $2
+const getPuzzleGameByEpisodeID = `-- name: GetPuzzleGameByEpisodeID :one
+SELECT id, episode_id, prize_pool, parts_x, parts_y, updated_at, created_at
+FROM puzzle_games
+WHERE episode_id = $1
 `
 
-type DeleteImageFromPuzzleGameParams struct {
-	FileID       uuid.UUID `json:"file_id"`
-	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
-}
-
-func (q *Queries) DeleteImageFromPuzzleGame(ctx context.Context, arg DeleteImageFromPuzzleGameParams) error {
-	_, err := q.exec(ctx, q.deleteImageFromPuzzleGameStmt, deleteImageFromPuzzleGame, arg.FileID, arg.PuzzleGameID)
-	return err
+func (q *Queries) GetPuzzleGameByEpisodeID(ctx context.Context, episodeID uuid.UUID) (PuzzleGame, error) {
+	row := q.queryRow(ctx, q.getPuzzleGameByEpisodeIDStmt, getPuzzleGameByEpisodeID, episodeID)
+	var i PuzzleGame
+	err := row.Scan(
+		&i.ID,
+		&i.EpisodeID,
+		&i.PrizePool,
+		&i.PartsX,
+		&i.PartsY,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getPuzzleGameByID = `-- name: GetPuzzleGameByID :one
@@ -108,19 +93,53 @@ func (q *Queries) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 	return i, err
 }
 
+const linkImageToPuzzleGame = `-- name: LinkImageToPuzzleGame :exec
+INSERT INTO puzzle_games_to_images (
+    file_id,
+    puzzle_game_id
+)
+VALUES (
+    $1,
+    $2
+)
+`
+
+type LinkImageToPuzzleGameParams struct {
+	FileID       uuid.UUID `json:"file_id"`
+	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
+}
+
+func (q *Queries) LinkImageToPuzzleGame(ctx context.Context, arg LinkImageToPuzzleGameParams) error {
+	_, err := q.exec(ctx, q.linkImageToPuzzleGameStmt, linkImageToPuzzleGame, arg.FileID, arg.PuzzleGameID)
+	return err
+}
+
+const unlinkImageFromPuzzleGame = `-- name: UnlinkImageFromPuzzleGame :exec
+DELETE FROM puzzle_games_to_images
+WHERE file_id = $1 AND puzzle_game_id = $2
+`
+
+type UnlinkImageFromPuzzleGameParams struct {
+	FileID       uuid.UUID `json:"file_id"`
+	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
+}
+
+func (q *Queries) UnlinkImageFromPuzzleGame(ctx context.Context, arg UnlinkImageFromPuzzleGameParams) error {
+	_, err := q.exec(ctx, q.unlinkImageFromPuzzleGameStmt, unlinkImageFromPuzzleGame, arg.FileID, arg.PuzzleGameID)
+	return err
+}
+
 const updatePuzzleGame = `-- name: UpdatePuzzleGame :one
 UPDATE puzzle_games
 SET
-    episode_id = $1,
-    prize_pool = $2,
-    parts_x = $3,
-    parts_y = $4
-WHERE id = $5
+    prize_pool = $1,
+    parts_x = $2,
+    parts_y = $3
+WHERE id = $4
    RETURNING id, episode_id, prize_pool, parts_x, parts_y, updated_at, created_at
 `
 
 type UpdatePuzzleGameParams struct {
-	EpisodeID uuid.UUID `json:"episode_id"`
 	PrizePool float64   `json:"prize_pool"`
 	PartsX    int32     `json:"parts_x"`
 	PartsY    int32     `json:"parts_y"`
@@ -129,7 +148,6 @@ type UpdatePuzzleGameParams struct {
 
 func (q *Queries) UpdatePuzzleGame(ctx context.Context, arg UpdatePuzzleGameParams) (PuzzleGame, error) {
 	row := q.queryRow(ctx, q.updatePuzzleGameStmt, updatePuzzleGame,
-		arg.EpisodeID,
 		arg.PrizePool,
 		arg.PartsX,
 		arg.PartsY,

@@ -3,6 +3,11 @@ SELECT *
 FROM puzzle_games
 WHERE id = $1;
 
+-- name: GetPuzzleGameByEpisodeID :one
+SELECT *
+FROM puzzle_games
+WHERE episode_id = $1;
+
 -- name: CreatePuzzleGame :one
 INSERT INTO puzzle_games (
     episode_id,
@@ -20,14 +25,13 @@ VALUES (
 -- name: UpdatePuzzleGame :one
 UPDATE puzzle_games
 SET
-    episode_id = @episode_id,
     prize_pool = @prize_pool,
     parts_x = @parts_x,
     parts_y = @parts_y
 WHERE id = @id
    RETURNING *;
 
--- name: AddImageToPuzzleGame :exec
+-- name: LinkImageToPuzzleGame :exec
 INSERT INTO puzzle_games_to_images (
     file_id,
     puzzle_game_id
@@ -37,16 +41,6 @@ VALUES (
     @puzzle_game_id
 );
 
--- name: DeleteImageFromPuzzleGame :exec
+-- name: UnlinkImageFromPuzzleGame :exec
 DELETE FROM puzzle_games_to_images
 WHERE file_id = @file_id AND puzzle_game_id = @puzzle_game_id;
-
--- -- name: DeleteTradingPlatformLink :exec
--- DELETE FROM trading_platform_links
--- WHERE id = @id;
---
--- -- name: GetTradingPlatformLinks :many
--- SELECT *
--- FROM trading_platform_links
--- ORDER BY title ASC
---    LIMIT $1 OFFSET $2;

@@ -22,17 +22,20 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.addImageToPuzzleGameStmt, err = db.PrepareContext(ctx, addImageToPuzzleGame); err != nil {
-		return nil, fmt.Errorf("error preparing query AddImageToPuzzleGame: %w", err)
-	}
 	if q.createPuzzleGameStmt, err = db.PrepareContext(ctx, createPuzzleGame); err != nil {
 		return nil, fmt.Errorf("error preparing query CreatePuzzleGame: %w", err)
 	}
-	if q.deleteImageFromPuzzleGameStmt, err = db.PrepareContext(ctx, deleteImageFromPuzzleGame); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteImageFromPuzzleGame: %w", err)
+	if q.getPuzzleGameByEpisodeIDStmt, err = db.PrepareContext(ctx, getPuzzleGameByEpisodeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPuzzleGameByEpisodeID: %w", err)
 	}
 	if q.getPuzzleGameByIDStmt, err = db.PrepareContext(ctx, getPuzzleGameByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPuzzleGameByID: %w", err)
+	}
+	if q.linkImageToPuzzleGameStmt, err = db.PrepareContext(ctx, linkImageToPuzzleGame); err != nil {
+		return nil, fmt.Errorf("error preparing query LinkImageToPuzzleGame: %w", err)
+	}
+	if q.unlinkImageFromPuzzleGameStmt, err = db.PrepareContext(ctx, unlinkImageFromPuzzleGame); err != nil {
+		return nil, fmt.Errorf("error preparing query UnlinkImageFromPuzzleGame: %w", err)
 	}
 	if q.updatePuzzleGameStmt, err = db.PrepareContext(ctx, updatePuzzleGame); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdatePuzzleGame: %w", err)
@@ -42,24 +45,29 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
-	if q.addImageToPuzzleGameStmt != nil {
-		if cerr := q.addImageToPuzzleGameStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing addImageToPuzzleGameStmt: %w", cerr)
-		}
-	}
 	if q.createPuzzleGameStmt != nil {
 		if cerr := q.createPuzzleGameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createPuzzleGameStmt: %w", cerr)
 		}
 	}
-	if q.deleteImageFromPuzzleGameStmt != nil {
-		if cerr := q.deleteImageFromPuzzleGameStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteImageFromPuzzleGameStmt: %w", cerr)
+	if q.getPuzzleGameByEpisodeIDStmt != nil {
+		if cerr := q.getPuzzleGameByEpisodeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPuzzleGameByEpisodeIDStmt: %w", cerr)
 		}
 	}
 	if q.getPuzzleGameByIDStmt != nil {
 		if cerr := q.getPuzzleGameByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getPuzzleGameByIDStmt: %w", cerr)
+		}
+	}
+	if q.linkImageToPuzzleGameStmt != nil {
+		if cerr := q.linkImageToPuzzleGameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing linkImageToPuzzleGameStmt: %w", cerr)
+		}
+	}
+	if q.unlinkImageFromPuzzleGameStmt != nil {
+		if cerr := q.unlinkImageFromPuzzleGameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing unlinkImageFromPuzzleGameStmt: %w", cerr)
 		}
 	}
 	if q.updatePuzzleGameStmt != nil {
@@ -106,10 +114,11 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                            DBTX
 	tx                            *sql.Tx
-	addImageToPuzzleGameStmt      *sql.Stmt
 	createPuzzleGameStmt          *sql.Stmt
-	deleteImageFromPuzzleGameStmt *sql.Stmt
+	getPuzzleGameByEpisodeIDStmt  *sql.Stmt
 	getPuzzleGameByIDStmt         *sql.Stmt
+	linkImageToPuzzleGameStmt     *sql.Stmt
+	unlinkImageFromPuzzleGameStmt *sql.Stmt
 	updatePuzzleGameStmt          *sql.Stmt
 }
 
@@ -117,10 +126,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                            tx,
 		tx:                            tx,
-		addImageToPuzzleGameStmt:      q.addImageToPuzzleGameStmt,
 		createPuzzleGameStmt:          q.createPuzzleGameStmt,
-		deleteImageFromPuzzleGameStmt: q.deleteImageFromPuzzleGameStmt,
+		getPuzzleGameByEpisodeIDStmt:  q.getPuzzleGameByEpisodeIDStmt,
 		getPuzzleGameByIDStmt:         q.getPuzzleGameByIDStmt,
+		linkImageToPuzzleGameStmt:     q.linkImageToPuzzleGameStmt,
+		unlinkImageFromPuzzleGameStmt: q.unlinkImageFromPuzzleGameStmt,
 		updatePuzzleGameStmt:          q.updatePuzzleGameStmt,
 	}
 }
