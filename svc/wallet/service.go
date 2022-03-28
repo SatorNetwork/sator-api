@@ -633,10 +633,16 @@ func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 }
 
 // SetStake method for set stake
+// duration is in days
 func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
 	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
 	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
 	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
+
+	lockDuration := time.Hour * 24 * 30
+	if duration > 0 {
+		lockDuration = time.Hour * 24 * time.Duration(duration)
+	}
 
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
@@ -694,8 +700,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 					Int32: int32(duration),
 					Valid: true,
 				},
-				UnstakeDate:      time.Now().Add(time.Duration(duration) * time.Second),
-				UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
+				UnstakeDate:      time.Now().Add(lockDuration),
+				UnstakeTimestamp: time.Now().Add(lockDuration).Unix(),
 			})
 			if err != nil {
 				log.Printf("could not add stake to db for user= %v, %v", userID, err)
@@ -716,8 +722,8 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 			Int32: int32(duration),
 			Valid: true,
 		},
-		UnstakeDate:      time.Now().Add(time.Duration(duration) * time.Second),
-		UnstakeTimestamp: time.Now().Add(time.Duration(duration) * time.Second).Unix(),
+		UnstakeDate:      time.Now().Add(lockDuration),
+		UnstakeTimestamp: time.Now().Add(lockDuration).Unix(),
 	})
 	if err != nil {
 		log.Printf("could not update stake in db for user= %v, %v", userID, err)
@@ -750,7 +756,11 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get wallet lock pool: %w", err)
 	}
 
-	unstakeDate := time.Unix(stake.UnstakeTimestamp, 0)
+	unstakeDate := stake.CreatedAt.Add(time.Hour * 24 * time.Duration(stake.StakeDuration.Int32))
+	if stake.UpdatedAt.Valid {
+		unstakeDate = stake.UpdatedAt.Time.Add(time.Hour * 24 * time.Duration(stake.StakeDuration.Int32))
+	}
+
 	if time.Now().Before(unstakeDate) {
 		return fmt.Errorf("unlock time has not yet come, unlock will be availabe at: %s", unstakeDate.String())
 	}
