@@ -756,7 +756,11 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get wallet lock pool: %w", err)
 	}
 
-	unstakeDate := stake.UpdatedAt.Time.Add(time.Hour * 24 * time.Duration(stake.StakeDuration.Int32))
+	unstakeDate := stake.CreatedAt.Add(time.Hour * 24 * time.Duration(stake.StakeDuration.Int32))
+	if stake.UpdatedAt.Valid {
+		unstakeDate = stake.UpdatedAt.Time.Add(time.Hour * 24 * time.Duration(stake.StakeDuration.Int32))
+	}
+
 	if time.Now().Before(unstakeDate) {
 		return fmt.Errorf("unlock time has not yet come, unlock will be availabe at: %s", unstakeDate.String())
 	}
