@@ -15,10 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dmitrymomot/distlock"
-	"github.com/dmitrymomot/distlock/inmem"
 	"github.com/dmitrymomot/go-env"
-	signature "github.com/dmitrymomot/go-signature"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	kitlog "github.com/go-kit/kit/log"
@@ -55,10 +52,10 @@ import (
 	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/puzzle_game"
+	puzzleGameRepo "github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
-	"github.com/SatorNetwork/sator-api/svc/quiz"
-	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
 	quizV2Repo "github.com/SatorNetwork/sator-api/svc/quiz_v2/repository"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
@@ -291,11 +288,6 @@ func (a *app) Run() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	mutex := distlock.New(
-		distlock.WithStorageDrivers(inmem.New()),
-		distlock.WithTries(10),
-	)
 
 	// runtime group
 	var g run.Group
@@ -591,6 +583,7 @@ func (a *app) Run() {
 	}
 
 	// files service
+	var fileSvc *files.Service
 	{
 		opt := storage.Options{
 			Key:            a.cfg.FileStorageKey,
@@ -608,8 +601,11 @@ func (a *app) Run() {
 		if err != nil {
 			log.Fatalf("mediaServiceRepo error: %v", err)
 		}
+
+		fileSvc = files.NewService(mediaServiceRepo, stor, resizer.Resize)
+
 		r.Mount("/files", files.MakeHTTPHandler(
-			files.MakeEndpoints(files.NewService(mediaServiceRepo, stor, resizer.Resize), jwtMdw),
+			files.MakeEndpoints(fileSvc, jwtMdw),
 			logger,
 		))
 	}
@@ -632,42 +628,6 @@ func (a *app) Run() {
 			qrcodes.MakeEndpoints(qrcodes.NewService(qrcodesRepository, rewardsSvcClient), jwtMdw),
 			logger,
 		))
-	}
-
-	// Quiz service
-	{
-		// Quiz service
-		quizRepository, err := quizRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("quizRepo error: %v", err)
-		}
-		quizSvc := quiz.NewService(
-			mutex,
-			quizRepository,
-			rewardsSvcClient,
-			challengeSvcClient,
-			a.cfg.QuizWsConnURL,
-			quiz.WithCustomTokenGenerateFunction(signature.NewTemporary),
-			quiz.WithCustomTokenParseFunction(signature.Parse),
-		)
-		r.Mount("/quiz", quiz.MakeHTTPHandler(
-			quiz.MakeEndpoints(quizSvc, jwtMdw),
-			logger,
-			quiz.QuizWsHandler(
-				quizSvc,
-				invitationsService.SendReward(rewardService.AddTransaction),
-				challengeSvcClient,
-				profileSvc,
-				a.cfg.QuizBotsTimeout,
-			),
-		))
-
-		// run quiz service
-		g.Add(func() error {
-			return quizSvc.Serve(ctx)
-		}, func(err error) {
-			//log.Fatalf("quiz service: %v", err)
-		})
 	}
 
 	{
@@ -714,18 +674,23 @@ func (a *app) Run() {
 	}
 
 	{
-		//tradingPlatformsRepository, err := tradingPlatformsRepo.Prepare(ctx, db)
-		//if err != nil {
-		//	log.Fatalf("can't prepare trading platforms repository: %v", err)
-		//}
-		//
-		//tradingPlatformsSvc := trading_platforms.NewService(
-		//	tradingPlatformsRepository,
-		//)
-		//r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
-		//	trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
-		//	logger,
-		//))
+		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare puzzle game repository: %v", err)
+		}
+
+		puzzleGameSvc := puzzle_game.NewService(
+			puzzleGameRepository,
+			puzzle_game.WithChargeFunction(walletSvcClient.PayForService),
+			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
+			puzzle_game.WithFileServiceClient(fileSvc),
+			puzzle_game.WithUserMultiplierFunction(walletSvcClient.GetMultiplier),
+		)
+
+		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(
+			puzzle_game.MakeEndpoints(puzzleGameSvc, jwtMdw),
+			logger,
+		))
 	}
 
 	{

@@ -38,6 +38,7 @@ type (
 		AddFile(ctx context.Context, arg repository.AddFileParams) (repository.File, error)
 		GetFileByID(ctx context.Context, id uuid.UUID) (repository.File, error)
 		GetFilesList(ctx context.Context, arg repository.GetFilesListParams) ([]repository.File, error)
+		GetFilesByIDs(ctx context.Context, ids []uuid.UUID) ([]repository.File, error)
 		DeleteFileByID(ctx context.Context, id uuid.UUID) error
 	}
 )
@@ -148,6 +149,17 @@ func (s *Service) GetImagesList(ctx context.Context, limit, offset int32) ([]Fil
 	if err != nil {
 		return nil, fmt.Errorf("could not get images list: %w", err)
 	}
+
+	return castToListFiles(images), nil
+}
+
+// GetImagesList returns list images.
+func (s *Service) GetImagesListByIDs(ctx context.Context, ids []uuid.UUID) ([]File, error) {
+	images, err := s.msr.GetFilesByIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("could not get images list: %w", err)
+	}
+
 	return castToListFiles(images), nil
 }
 
@@ -199,6 +211,15 @@ func castToListFiles(source []repository.File) []File {
 			FileUrl:   s.FileUrl,
 			CreatedAt: s.CreatedAt.String(),
 		})
+	}
+	return result
+}
+
+// Cast repository.File to service File structure
+func castToImagesList(source []repository.File) []string {
+	result := make([]string, 0, len(source))
+	for _, s := range source {
+		result = append(result, s.FileUrl)
 	}
 	return result
 }

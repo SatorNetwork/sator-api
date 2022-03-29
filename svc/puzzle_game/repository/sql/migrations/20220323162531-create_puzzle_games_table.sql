@@ -15,9 +15,10 @@ CREATE TABLE IF NOT EXISTS puzzle_games (
     parts_y INTEGER NOT NULL DEFAULT 5,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
-    );
+);
 CREATE TRIGGER update_puzzle_games_modtime BEFORE
     UPDATE ON puzzle_games FOR EACH ROW EXECUTE PROCEDURE puzzle_games_update_updated_at_column();
+    
 -- +migrate Down
 DROP TRIGGER IF EXISTS update_puzzle_games_modtime ON puzzle_games;
 DROP TABLE IF EXISTS puzzle_games;

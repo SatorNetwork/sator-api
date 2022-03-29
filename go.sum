@@ -146,8 +146,6 @@ github.com/denisenkom/go-mssqldb v0.9.0/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27N
 github.com/dgryski/go-bitstream v0.0.0-20180413035011-3522498ce2c8/go.mod h1:VMaSuZ+SZcx/wljOQKvp5srsbCiKDEb6K2wC4+PiBmQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
-github.com/dmitrymomot/distlock v0.1.1 h1:e5w0dwvEVBsGwx21z13GBsPuwWM314MXu46XRkiom5Q=
-github.com/dmitrymomot/distlock v0.1.1/go.mod h1:QX13Grcii9rh9SU8nROmjpqwkaAGWI049aB5RSWHHOg=
 github.com/dmitrymomot/go-env v0.1.1 h1:Yx7gev20j7zMA1LW/GMBrdJx2PQQy7/LY7tkWGKhGcM=
 github.com/dmitrymomot/go-env v0.1.1/go.mod h1:NM1eMH8iEskjkdd78BIBqK4PH7XC7tnAwW4i++62uLM=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3 h1:yF6awAXyo0ZoZGrqGGDMeavVlNB5VOWmTGG7nau6cm8=
