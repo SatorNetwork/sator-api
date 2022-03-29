@@ -1,0 +1,297 @@
+package puzzle_game
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/validator"
+	"github.com/go-kit/kit/endpoint"
+	"github.com/google/uuid"
+)
+
+type (
+	// Endpoints collection of profile service
+	Endpoints struct {
+		GetPuzzleGameByID        endpoint.Endpoint
+		GetPuzzleGameByEpisodeID endpoint.Endpoint
+		CreatePuzzleGame         endpoint.Endpoint
+		UpdatePuzzleGame         endpoint.Endpoint
+
+		LinkImageToPuzzleGame endpoint.Endpoint
+		DeleteImageByID       endpoint.Endpoint
+
+		GetPuzzleGameForUser endpoint.Endpoint
+		UnlockPuzzleGame     endpoint.Endpoint
+		StartPuzzleGame      endpoint.Endpoint
+		FinishPuzzleGame     endpoint.Endpoint
+
+		GetPuzzleGameUnlockOptions endpoint.Endpoint
+	}
+
+	service interface {
+		GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (*PuzzleGame, error)
+		GetPuzzleGameByEpisodeID(ctx context.Context, episodeID uuid.UUID) (*PuzzleGame, error)
+		CreatePuzzleGame(ctx context.Context, epID uuid.UUID, prizePool float64, partsX int32) (*PuzzleGame, error)
+		UpdatePuzzleGame(ctx context.Context, id uuid.UUID, prizePool float64, partsX int32) (*PuzzleGame, error)
+
+		LinkImageToPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
+		UnlinkImageFromPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
+
+		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (*PuzzleGame, error)
+		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) error
+		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (*PuzzleGame, error)
+		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (*PuzzleGame, error)
+
+		GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error)
+	}
+
+	CreatePuzzleGameRequest struct {
+		EpisodeID string  `json:"episode_id" validate:"required,uuid"`
+		PrizePool float64 `json:"prize_pool" validate:"required,min=0"`
+		PartsX    int32   `json:"parts_x" validate:"required,min=2,max=10"`
+	}
+
+	UpdatePuzzleGameRequest struct {
+		ID        string  `json:"episode_id" validate:"required,uuid"`
+		PrizePool float64 `json:"prize_pool" validate:"required,min=0"`
+		PartsX    int32   `json:"parts_x" validate:"required,min=2,max=10"`
+	}
+
+	ImageToPuzzleGameRequest struct {
+		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
+		ImageID      string `json:"image_id" validate:"required,uuid"`
+	}
+
+	UnlockPuzzleGameRequest struct {
+		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
+		UnlockOption string `json:"unlock_option" validate:"required"`
+	}
+
+	FinishPuzzleGameRequest struct {
+		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
+		Result       int32  `json:"result" validate:"required,oneof=0 1 2"`
+		StepsTaken   int32  `json:"steps_taken" validate:"required,min=0"`
+	}
+)
+
+func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
+	validateFunc := validator.ValidateStruct()
+
+	e := Endpoints{
+		GetPuzzleGameByID:        MakeGetPuzzleGameByIDEndpoint(s),
+		GetPuzzleGameByEpisodeID: MakeGetPuzzleGameByEpisodeIDEndpoint(s),
+		CreatePuzzleGame:         MakeCreatePuzzleGameEndpoint(s, validateFunc),
+		UpdatePuzzleGame:         MakeUpdatePuzzleGameEndpoint(s, validateFunc),
+
+		LinkImageToPuzzleGame: MakeLinkImageToPuzzleGameEndpoint(s, validateFunc),
+		DeleteImageByID:       MakeDeleteImageByIDEndpoint(s, validateFunc),
+
+		GetPuzzleGameForUser: MakeGetPuzzleGameForUserEndpoint(s),
+		UnlockPuzzleGame:     MakeUnlockPuzzleGameEndpoint(s, validateFunc),
+		StartPuzzleGame:      MakeStartPuzzleGameEndpoint(s),
+		FinishPuzzleGame:     MakeFinishPuzzleGameEndpoint(s, validateFunc),
+
+		GetPuzzleGameUnlockOptions: MakeGetPuzzleGameUnlockOptionsEndpoint(s),
+	}
+
+	// setup middlewares for each endpoints
+	if len(m) > 0 {
+		for _, mdw := range m {
+			e.GetPuzzleGameByID = mdw(e.GetPuzzleGameByID)
+			e.GetPuzzleGameByEpisodeID = mdw(e.GetPuzzleGameByEpisodeID)
+			e.CreatePuzzleGame = mdw(e.CreatePuzzleGame)
+			e.UpdatePuzzleGame = mdw(e.UpdatePuzzleGame)
+
+			e.LinkImageToPuzzleGame = mdw(e.LinkImageToPuzzleGame)
+			e.DeleteImageByID = mdw(e.DeleteImageByID)
+
+			e.GetPuzzleGameForUser = mdw(e.GetPuzzleGameForUser)
+			e.UnlockPuzzleGame = mdw(e.UnlockPuzzleGame)
+			e.StartPuzzleGame = mdw(e.StartPuzzleGame)
+			e.FinishPuzzleGame = mdw(e.FinishPuzzleGame)
+		}
+	}
+
+	return e
+}
+
+func MakeGetPuzzleGameByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		return s.GetPuzzleGameByID(ctx, uuid.MustParse(request.(string)))
+	}
+}
+
+func MakeGetPuzzleGameByEpisodeIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		return s.GetPuzzleGameByEpisodeID(ctx, uuid.MustParse(request.(string)))
+	}
+}
+
+func MakeCreatePuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(CreatePuzzleGameRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		return s.CreatePuzzleGame(ctx, uuid.MustParse(req.EpisodeID), req.PrizePool, req.PartsX)
+	}
+}
+
+func MakeUpdatePuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(UpdatePuzzleGameRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		return s.UpdatePuzzleGame(ctx, uuid.MustParse(req.ID), req.PrizePool, req.PartsX)
+	}
+}
+
+func MakeLinkImageToPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(ImageToPuzzleGameRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		if err := s.LinkImageToPuzzleGame(
+			ctx,
+			uuid.MustParse(req.PuzzleGameID),
+			uuid.MustParse(req.ImageID),
+		); err != nil {
+			return nil, err
+		}
+		return true, nil
+	}
+}
+
+func MakeDeleteImageByIDEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(ImageToPuzzleGameRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		if err := s.UnlinkImageFromPuzzleGame(
+			ctx,
+			uuid.MustParse(req.PuzzleGameID),
+			uuid.MustParse(req.ImageID),
+		); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+}
+
+func MakeGetPuzzleGameForUserEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		return s.GetPuzzleGameForUser(ctx, uid, uuid.MustParse(request.(string)))
+	}
+}
+
+func MakeUnlockPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(UnlockPuzzleGameRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		if err := s.UnlockPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.UnlockOption); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+}
+
+func MakeStartPuzzleGameEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		return s.StartPuzzleGame(ctx, uid, uuid.MustParse(request.(string)))
+	}
+}
+
+func MakeFinishPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		req := request.(FinishPuzzleGameRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		return s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.Result, req.StepsTaken)
+	}
+}
+
+func MakeGetPuzzleGameUnlockOptionsEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		return s.GetPuzzleGameUnlockOptions(ctx)
+	}
+}

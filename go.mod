@@ -9,7 +9,6 @@ require (
 	github.com/anytypeio/go-slip10 v0.0.0-20200330114100-25f30c832993
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dmitrymomot/distlock v0.1.1
 	github.com/dmitrymomot/go-env v0.1.1
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
