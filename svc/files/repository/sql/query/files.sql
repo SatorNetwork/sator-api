@@ -5,7 +5,7 @@ WHERE id = $1
 
 -- name: GetFilesByIDs :many
 SELECT * FROM files
-WHERE id IN (@ids::uuid[]);
+WHERE id = ANY(@ids::uuid[]); 
 
 -- name: GetFilesList :many
 SELECT * FROM files

@@ -72,7 +72,7 @@ func (q *Queries) GetFileByID(ctx context.Context, id uuid.UUID) (File, error) {
 
 const getFilesByIDs = `-- name: GetFilesByIDs :many
 SELECT id, file_name, file_path, file_url, created_at FROM files
-WHERE id IN ($1::uuid[])
+WHERE id = ANY($1::uuid[])
 `
 
 func (q *Queries) GetFilesByIDs(ctx context.Context, ids []uuid.UUID) ([]File, error) {
