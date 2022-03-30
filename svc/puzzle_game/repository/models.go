@@ -40,6 +40,7 @@ type PuzzleGamesAttempt struct {
 	Image         sql.NullString `json:"image"`
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
+	BonusAmount   float64        `json:"bonus_amount"`
 }
 
 type PuzzleGamesToImage struct {

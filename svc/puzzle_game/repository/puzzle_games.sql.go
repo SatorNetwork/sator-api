@@ -51,17 +51,19 @@ UPDATE puzzle_games_attempts
 SET status = 2,
     steps_taken = $1,
     rewards_amount = $2,
-    result = $3
-WHERE puzzle_game_id = $4 
-AND user_id = $5
+    bonus_amount = $3,
+    result = $4
+WHERE puzzle_game_id = $5 
+AND user_id = $6
 AND status = 1
 AND image IS NOT NULL
-RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at
+RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount
 `
 
 type FinishPuzzleGameParams struct {
 	StepsTaken    int32     `json:"steps_taken"`
 	RewardsAmount float64   `json:"rewards_amount"`
+	BonusAmount   float64   `json:"bonus_amount"`
 	Result        int32     `json:"result"`
 	PuzzleGameID  uuid.UUID `json:"puzzle_game_id"`
 	UserID        uuid.UUID `json:"user_id"`
@@ -71,6 +73,7 @@ func (q *Queries) FinishPuzzleGame(ctx context.Context, arg FinishPuzzleGamePara
 	_, err := q.exec(ctx, q.finishPuzzleGameStmt, finishPuzzleGame,
 		arg.StepsTaken,
 		arg.RewardsAmount,
+		arg.BonusAmount,
 		arg.Result,
 		arg.PuzzleGameID,
 		arg.UserID,
@@ -121,9 +124,9 @@ func (q *Queries) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 }
 
 const getPuzzleGameCurrentAttemt = `-- name: GetPuzzleGameCurrentAttemt :one
-SELECT id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at
+SELECT id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount
 FROM puzzle_games_attempts
-WHERE user_id = $1 AND puzzle_game_id = $2
+WHERE user_id = $1 AND puzzle_game_id = $2 AND status = $3
 ORDER BY created_at DESC
 LIMIT 1
 `
@@ -131,10 +134,11 @@ LIMIT 1
 type GetPuzzleGameCurrentAttemtParams struct {
 	UserID       uuid.UUID `json:"user_id"`
 	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
+	Status       int32     `json:"status"`
 }
 
 func (q *Queries) GetPuzzleGameCurrentAttemt(ctx context.Context, arg GetPuzzleGameCurrentAttemtParams) (PuzzleGamesAttempt, error) {
-	row := q.queryRow(ctx, q.getPuzzleGameCurrentAttemtStmt, getPuzzleGameCurrentAttemt, arg.UserID, arg.PuzzleGameID)
+	row := q.queryRow(ctx, q.getPuzzleGameCurrentAttemtStmt, getPuzzleGameCurrentAttemt, arg.UserID, arg.PuzzleGameID, arg.Status)
 	var i PuzzleGamesAttempt
 	err := row.Scan(
 		&i.ID,
@@ -148,6 +152,7 @@ func (q *Queries) GetPuzzleGameCurrentAttemt(ctx context.Context, arg GetPuzzleG
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.BonusAmount,
 	)
 	return i, err
 }
@@ -282,7 +287,7 @@ WHERE puzzle_game_id = $2
 AND user_id = $3
 AND status = 0
 AND image IS NULL
-RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at
+RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount
 `
 
 type StartPuzzleGameParams struct {
@@ -306,6 +311,7 @@ func (q *Queries) StartPuzzleGame(ctx context.Context, arg StartPuzzleGameParams
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.BonusAmount,
 	)
 	return i, err
 }
@@ -335,7 +341,7 @@ VALUES (
     $1,
     $2,
     $3
-) RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at
+) RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount
 `
 
 type UnlockPuzzleGameParams struct {
@@ -359,6 +365,7 @@ func (q *Queries) UnlockPuzzleGame(ctx context.Context, arg UnlockPuzzleGamePara
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.BonusAmount,
 	)
 	return i, err
 }

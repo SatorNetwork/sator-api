@@ -255,6 +255,9 @@ components:
               rewards:
                 type: number
                 description: User's rewards for this puzzle game
+              bonus_rewards:
+                type: number
+                description: User's bonus rewards for locked tokens.
               parts_x:
                 type: number
                 description: Number of parts in x axis

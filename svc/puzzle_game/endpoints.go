@@ -40,7 +40,7 @@ type (
 		UnlinkImageFromPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
 
 		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (*PuzzleGame, error)
-		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) error
+		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (*PuzzleGame, error)
 		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (*PuzzleGame, error)
 		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (*PuzzleGame, error)
 
@@ -243,11 +243,7 @@ func MakeUnlockPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		if err := s.UnlockPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.UnlockOption); err != nil {
-			return false, err
-		}
-
-		return true, nil
+		return s.UnlockPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.UnlockOption)
 	}
 }
 

@@ -72,11 +72,12 @@ type (
 
 	PuzzleGame struct {
 		// general info
-		ID        uuid.UUID `json:"id"`
-		EpisodeID uuid.UUID `json:"episode_id"`
-		PrizePool float64   `json:"prize_pool"`
-		Rewards   float64   `json:"rewards,omitempty"`
-		PartsX    int32     `json:"parts_x"`
+		ID           uuid.UUID `json:"id"`
+		EpisodeID    uuid.UUID `json:"episode_id"`
+		PrizePool    float64   `json:"prize_pool"`
+		Rewards      float64   `json:"rewards,omitempty"`
+		BonusRewards float64   `json:"bonus_rewards,omitempty"`
+		PartsX       int32     `json:"parts_x"`
 		// PartsY     int32     `json:"parts_y"`
 		Steps      int32 `json:"steps"`
 		StepsTaken int32 `json:"steps_taken,omitempty"`
@@ -259,22 +260,22 @@ func (s *Service) GetPuzzleGameForUser(ctx context.Context, userID, episodeID uu
 		return nil, errors.Wrap(err, "can't get puzzle game by episode id")
 	}
 
-	return s.getPuzzleGameForUser(ctx, userID, &pg)
+	return s.getPuzzleGameForUser(ctx, userID, &pg, PuzzleGameStatusNew)
 }
 
-func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) error {
+func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (*PuzzleGame, error) {
 	if s.chargeForUnlock == nil {
-		return errors.New("payment service is not set")
+		return nil, errors.New("payment service is not set")
 	}
 
 	opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
 	if err != nil {
-		return errors.Wrap(err, "can't get puzzle game unlock option")
+		return nil, errors.Wrap(err, "can't get puzzle game unlock option")
 	}
 
 	if err := s.chargeForUnlock(ctx, userID, opt.Amount,
 		fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
-		return errors.Wrap(err, "can't charge for unlock puzzle game")
+		return nil, errors.Wrap(err, "can't charge for unlock puzzle game")
 	}
 
 	if _, err := s.pgr.UnlockPuzzleGame(ctx, repository.UnlockPuzzleGameParams{
@@ -282,10 +283,20 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		UserID:       userID,
 		Steps:        opt.Steps,
 	}); err != nil {
-		return errors.Wrap(err, "can't unlock puzzle game")
+		return nil, errors.Wrap(err, "can't unlock puzzle game")
 	}
 
-	return nil
+	pg, err := s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get puzzle game")
+	}
+
+	result, err := s.getPuzzleGameForUser(ctx, userID, &pg, PuzzleGameStatusNew)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get puzzle game for user")
+	}
+
+	return result, nil
 }
 
 func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (*PuzzleGame, error) {
@@ -307,7 +318,7 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		return nil, errors.Wrap(err, "can't get puzzle game")
 	}
 
-	result, err := s.getPuzzleGameForUser(ctx, userID, &pg)
+	result, err := s.getPuzzleGameForUser(ctx, userID, &pg, PuzzleGameStatusInProgress)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get puzzle game for user")
 	}
@@ -321,14 +332,14 @@ func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return nil, errors.Wrap(err, "can't get puzzle game")
 	}
 
-	var rewardsAmount float64 = 0
+	var rewardsAmount, lockRewardsAmount float64 = 0, 0
 	if result == PuzzleGameResultWon {
 		rewardsAmount = pg.PrizePool
 
 		if s.getUserRewardsMultiplierFn != nil {
 			mltp, _ := s.getUserRewardsMultiplierFn(ctx, userID)
 			if mltp > 0 {
-				lockRewardsAmount := (float64(mltp) / 100) * rewardsAmount
+				lockRewardsAmount = (float64(mltp) / 100) * rewardsAmount
 				rewardsAmount = rewardsAmount + lockRewardsAmount
 			}
 		}
@@ -351,6 +362,7 @@ func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		UserID:        userID,
 		StepsTaken:    stepsTaken,
 		RewardsAmount: rewardsAmount,
+		BonusAmount:   lockRewardsAmount,
 		Result:        result,
 	}); err != nil {
 		return nil, errors.Wrap(err, "can't finish puzzle game")
@@ -361,20 +373,22 @@ func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return nil, errors.Wrap(err, "can't get puzzle game")
 	}
 
-	return s.getPuzzleGameForUser(ctx, userID, &pg)
+	return s.getPuzzleGameForUser(ctx, userID, &pg, PuzzleGameStatusFinished)
 }
 
-func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame *repository.PuzzleGame) (*PuzzleGame, error) {
+func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame *repository.PuzzleGame, status int32) (*PuzzleGame, error) {
 	pg := NewPuzzleGameFromSQLC(puzzleGame)
 
 	att, _ := s.pgr.GetPuzzleGameCurrentAttemt(ctx, repository.GetPuzzleGameCurrentAttemtParams{
 		PuzzleGameID: pg.ID,
 		UserID:       userID,
+		Status:       status,
 	})
 
 	pg.Steps = att.Steps
 	pg.StepsTaken = att.StepsTaken
 	pg.Rewards = att.RewardsAmount
+	pg.BonusRewards = att.BonusAmount
 	pg.Result = att.Result
 	pg.Status = att.Status
 
