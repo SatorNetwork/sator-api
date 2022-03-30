@@ -5712,7 +5712,7 @@ paths:
                   description: Unlock option.
       responses:
         "200":
-          $ref: "#/components/responses/ResultSuccess"
+          $ref: "#/components/responses/PuzzleGame"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
