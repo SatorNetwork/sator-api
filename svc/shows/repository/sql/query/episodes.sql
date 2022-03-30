@@ -96,3 +96,8 @@ JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY(@episode_ids::uuid[])
 AND episodes.archived = FALSE
 ORDER BY episodes.episode_number DESC;
+
+-- name: GetAllEpisodes :many
+SELECT *
+FROM episodes
+WHERE archived = FALSE;
