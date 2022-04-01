@@ -50,13 +50,13 @@ type (
 	CreatePuzzleGameRequest struct {
 		EpisodeID string  `json:"episode_id" validate:"required,uuid"`
 		PrizePool float64 `json:"prize_pool" validate:"required,min=0"`
-		PartsX    int32   `json:"parts_x" validate:"required,min=2,max=10"`
+		PartsX    int32   `json:"parts_x" validate:"required,min=3,max=10"`
 	}
 
 	UpdatePuzzleGameRequest struct {
 		ID        string  `json:"episode_id" validate:"required,uuid"`
 		PrizePool float64 `json:"prize_pool" validate:"required,min=0"`
-		PartsX    int32   `json:"parts_x" validate:"required,min=2,max=10"`
+		PartsX    int32   `json:"parts_x" validate:"required,min=3,max=10"`
 	}
 
 	ImageToPuzzleGameRequest struct {
