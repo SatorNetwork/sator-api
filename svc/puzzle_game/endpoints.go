@@ -111,6 +111,8 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.UnlockPuzzleGame = mdw(e.UnlockPuzzleGame)
 			e.StartPuzzleGame = mdw(e.StartPuzzleGame)
 			e.FinishPuzzleGame = mdw(e.FinishPuzzleGame)
+
+			e.GetPuzzleGameUnlockOptions = mdw(e.GetPuzzleGameUnlockOptions)
 		}
 	}
 
