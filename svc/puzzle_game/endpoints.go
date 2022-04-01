@@ -49,7 +49,7 @@ type (
 
 	CreatePuzzleGameRequest struct {
 		EpisodeID string  `json:"episode_id" validate:"required,uuid"`
-		PrizePool float64 `json:"prize_pool" validate:"required,min=0"`
+		PrizePool float64 `json:"prize_pool" validate:"min=0"`
 		PartsX    int32   `json:"parts_x" validate:"required,min=3,max=10"`
 	}
 
@@ -71,8 +71,8 @@ type (
 
 	FinishPuzzleGameRequest struct {
 		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
-		Result       int32  `json:"result" validate:"required,oneof=0 1 2"`
-		StepsTaken   int32  `json:"steps_taken" validate:"required,min=0"`
+		Result       int    `json:"result" validate:"oneof=0 1 2"`
+		StepsTaken   int    `json:"steps_taken" validate:"min=0"`
 	}
 )
 
@@ -280,7 +280,7 @@ func MakeFinishPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, err
 		}
 
-		return s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.Result, req.StepsTaken)
+		return s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), int32(req.Result), int32(req.StepsTaken))
 	}
 }
 
