@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -66,11 +67,12 @@ func NewService(
 	qr interfaces.QuizV2Repository,
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
+	quizLobbyLatency time.Duration,
 ) *Service {
 	restrictionManager := restriction_manager.New(challenges)
 
 	s := &Service{
-		engine:              engine.New(challenges, stakeLevels, rewards, qr, restrictionManager, shuffleQuestions),
+		engine:              engine.New(challenges, stakeLevels, rewards, qr, restrictionManager, shuffleQuestions, quizLobbyLatency),
 		restrictionManager:  restrictionManager,
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
