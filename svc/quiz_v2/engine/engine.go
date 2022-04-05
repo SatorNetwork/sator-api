@@ -3,6 +3,7 @@ package engine
 import (
 	"log"
 	"sync"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
@@ -23,6 +24,7 @@ type Engine struct {
 	restrictionManager restriction_manager.RestrictionManager
 
 	shuffleQuestions bool
+	quizLobbyLatency time.Duration
 
 	done chan struct{}
 }
@@ -34,6 +36,7 @@ func New(
 	qr interfaces.QuizV2Repository,
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
+	quizLobbyLatency time.Duration,
 ) *Engine {
 	return &Engine{
 		newPlayersChan:         make(chan player.Player),
@@ -47,6 +50,7 @@ func New(
 		restrictionManager: restrictionManager,
 
 		shuffleQuestions: shuffleQuestions,
+		quizLobbyLatency: quizLobbyLatency,
 
 		done: make(chan struct{}),
 	}
@@ -107,6 +111,7 @@ func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
 			e.qr,
 			e.restrictionManager,
 			e.shuffleQuestions,
+			e.quizLobbyLatency,
 		)
 		if err != nil {
 			return nil, err

@@ -51,6 +51,7 @@ type defaultRoom struct {
 	st                  *status_transactor.StatusTransactor
 
 	quizEngine         quiz_engine.QuizEngine
+	quizLobbyLatency   time.Duration
 	rewards            interfaces.RewardsService
 	restrictionManager restriction_manager.RestrictionManager
 
@@ -65,6 +66,7 @@ func New(
 	qr interfaces.QuizV2Repository,
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
+	quizLobbyLatency time.Duration,
 ) (*defaultRoom, error) {
 	roomID := uuid.New()
 	challengeUID, err := uuid.Parse(challengeID)
@@ -93,6 +95,7 @@ func New(
 		st:                  status_transactor.New(statusIsUpdatedChan),
 
 		quizEngine:         quizEngine,
+		quizLobbyLatency:   quizLobbyLatency,
 		rewards:            rewards,
 		restrictionManager: restrictionManager,
 
@@ -138,7 +141,7 @@ LOOP:
 
 			if r.IsFull() {
 				log.Println("Room is full")
-
+				time.Sleep(r.quizLobbyLatency)
 				r.st.SetStatus(status_transactor.RoomIsFullStatus)
 			}
 
