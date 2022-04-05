@@ -87,6 +87,7 @@ type Config struct {
 	MasterOTPHash               string
 	QuizWsConnURL               string
 	QuizBotsTimeout             time.Duration
+	QuizLobbyLatency			time.Duration
 	TokenCirculatingSupply      float64
 	SolanaEnv                   string
 	SolanaApiBaseUrl            string
@@ -175,6 +176,7 @@ func ConfigFromEnv() *Config {
 		// Quiz
 		QuizWsConnURL:   env.MustString("QUIZ_WS_CONN_URL"),
 		QuizBotsTimeout: env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second),
+		QuizLobbyLatency: env.GetDuration("QUIZ_LOBBY_LATENCY", 5*time.Second),
 
 		// Solana
 		TokenCirculatingSupply:      env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844),
@@ -648,6 +650,7 @@ func (a *app) Run() {
 			quizV2Repository,
 			serverRSAPrivateKey,
 			a.cfg.QuizV2ShuffleQuestions,
+			a.cfg.QuizLobbyLatency,
 		)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),

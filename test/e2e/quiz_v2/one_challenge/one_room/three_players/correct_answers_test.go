@@ -81,7 +81,7 @@ func TestCorrectAnswers(t *testing.T) {
 		defer messageVerifiers[i].Close()
 	}
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 15)
 
 	err = messageVerifiers[0].NonStrictVerify()
 	require.NoError(t, err)

@@ -107,7 +107,7 @@ func TestCorrectAnswers(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 25)
 
 	for _, mv := range messageVerifiers {
 		err := mv.NonStrictVerify()
