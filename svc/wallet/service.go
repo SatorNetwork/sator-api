@@ -678,7 +678,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 				log.Println(err)
 			} else {
 				cancel()
-				return false, fmt.Errorf("transaction: %w", err)
+				return false, fmt.Errorf("transaction failed")
 			}
 			cancel()
 			time.Sleep(time.Second * 10)

@@ -5,6 +5,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/mr-tron/base58"
 	"github.com/near/borsh-go"
@@ -94,14 +95,16 @@ func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, 
 		Amount:   amount,
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not serialize data with borsh: %w", err)
+		log.Printf("could not serialize data with borsh: %v", err)
+		return "", err
 	}
 
 	var seeds [][]byte
 	seeds = append(seeds, pool.Bytes()[0:32])
 	stakeAuthority, _, err := common.FindProgramAddress(seeds, programID)
 	if err != nil {
-		return "", fmt.Errorf("could not get stake authority: %w", err)
+		log.Printf("could not get stake authority: %v", err)
+		return "", err
 	}
 
 	tokenAccountStakeTarget := common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
@@ -111,7 +114,8 @@ func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, 
 
 	res, err := c.solana.GetRecentBlockhash(ctx)
 	if err != nil {
-		return "", fmt.Errorf("could not get recent block hash: %w", err)
+		log.Printf("could not get recent block hash: %v", err)
+		return "", err
 	}
 
 	ataPub, err := c.deriveATAPublicKey(ctx, userWallet.PublicKey, asset)
@@ -144,12 +148,14 @@ func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, 
 		RecentBlockHash: res.Blockhash,
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not create new raw transaction: %w", err)
+		log.Printf("could not create new raw transaction: %v", err)
+		return "", err
 	}
 
 	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
 	if err != nil {
-		return "", fmt.Errorf("could not send raw transaction: %w", err)
+		log.Printf("could not send raw transaction: %v", err)
+		return "", err
 	}
 
 	return txhash, nil
