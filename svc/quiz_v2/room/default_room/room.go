@@ -141,8 +141,10 @@ LOOP:
 
 			if r.IsFull() {
 				log.Println("Room is full")
-				time.Sleep(r.quizLobbyLatency)
-				r.st.SetStatus(status_transactor.RoomIsFullStatus)
+				go func() {
+					time.Sleep(r.quizLobbyLatency)
+					r.st.SetStatus(status_transactor.RoomIsFullStatus)
+				}()
 			}
 
 		case <-r.statusIsUpdatedChan:
