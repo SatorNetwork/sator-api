@@ -97,7 +97,7 @@ var (
 		KycAppSecret:                "XXXXXXXXXX",
 		KycAppBaseURL:               "XXXXXXXXXX",
 		KycAppTTL:                   1200,
-		KycSkip:                     false,
+		KycSkip:                     true,
 		NatsURL:                     "nats://127.0.0.1:4222",
 		NatsWSURL:                   "ws://127.0.0.1:8080",
 		QuizV2ShuffleQuestions:      false,

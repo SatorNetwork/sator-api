@@ -197,4 +197,12 @@ func TestCorrectAnswers(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "reward has been already received for this challenge")
 	}
+
+	{
+		_, err := c.RewardsClient.ClaimRewards(user1.AccessToken())
+		require.NoError(t, err)
+
+		_, err = c.RewardsClient.ClaimRewards(user2.AccessToken())
+		require.NoError(t, err)
+	}
 }
