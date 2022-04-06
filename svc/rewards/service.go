@@ -22,10 +22,11 @@ const (
 	TransactionTypeWithdraw
 )
 
+//go:generate mockgen -destination=mock_repository.go -package=rewards github.com/SatorNetwork/sator-api/svc/rewards RewardsRepository
 type (
 	// Service struct
 	Service struct {
-		repo              rewardsRepository
+		repo              RewardsRepository
 		ws                walletService
 		getLocker         db.GetLocker
 		assetName         string
@@ -39,7 +40,7 @@ type (
 		Points int
 	}
 
-	rewardsRepository interface {
+	RewardsRepository interface {
 		AddTransaction(ctx context.Context, arg repository.AddTransactionParams) error
 		Withdraw(ctx context.Context, uid uuid.UUID) error
 		GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64, error)
@@ -65,7 +66,7 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker, opt ...Option) *Service {
+func NewService(repo RewardsRepository, ws walletService, getLocker db.GetLocker, opt ...Option) *Service {
 	s := &Service{
 		repo:              repo,
 		ws:                ws,
