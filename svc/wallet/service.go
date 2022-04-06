@@ -665,7 +665,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 	}
 
 	if bal < amount || bal < level.MinStakeAmount.Float64 {
-		return false, fmt.Errorf("insufficient balance for a lock : %.2f", bal)
+		return false, fmt.Errorf("insufficient balance amount. You have %.5f SAO", bal)
 	}
 
 	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
