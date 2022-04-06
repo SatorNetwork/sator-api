@@ -167,6 +167,10 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		UserID:          uid,
 		Amount:          amount,
 		TransactionType: TransactionTypeWithdraw,
+		TxHash:  		 sql.NullString{
+			String: txHash,
+			Valid:  true,
+		},
 	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}
