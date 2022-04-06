@@ -8,13 +8,14 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 )
 
+//go:generate mockgen -destination=mock_wallet.go -package=client github.com/SatorNetwork/sator-api/svc/wallet/client Service
 type (
 	// Client struct
 	Client struct {
-		s service
+		s Service
 	}
 
-	service interface {
+	Service interface {
 		GetWallets(ctx context.Context, userID uuid.UUID) (wallet.Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error)
 		CreateWallet(ctx context.Context, userID uuid.UUID) error
@@ -28,7 +29,7 @@ type (
 )
 
 // New challenges service client implementation
-func New(s service) *Client {
+func New(s Service) *Client {
 	return &Client{s: s}
 }
 
