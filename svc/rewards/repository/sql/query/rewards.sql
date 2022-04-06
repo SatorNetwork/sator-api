@@ -4,14 +4,16 @@ INSERT INTO rewards (
         relation_id,
         relation_type,
         transaction_type,
-        amount
+        amount,
+        tx_hash
     )
 VALUES (
         @user_id,
         @relation_id,
         @relation_type,
         @transaction_type,
-        @amount
+        @amount,
+        @tx_hash
     );
 
 -- name: Withdraw :exec
