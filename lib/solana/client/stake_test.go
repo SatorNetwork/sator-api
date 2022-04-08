@@ -50,6 +50,7 @@ func TestScNew(t *testing.T) {
 
 	ctx := context.Background()
 	wallet := types.NewAccount()
+	tokenHolder := types.NewAccount()
 
 	tx, err := c.CreateAccountWithATA(ctx, asset.ToBase58(), wallet.PublicKey.ToBase58(), feePayer)
 	if err != nil {
@@ -57,7 +58,7 @@ func TestScNew(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 2)
+		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), tokenHolder.PublicKey.ToBase58(), 2, 0)
 		if err == nil {
 			break
 		}
