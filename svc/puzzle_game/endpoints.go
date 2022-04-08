@@ -31,18 +31,18 @@ type (
 	}
 
 	service interface {
-		GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (*PuzzleGame, error)
-		GetPuzzleGameByEpisodeID(ctx context.Context, episodeID uuid.UUID) (*PuzzleGame, error)
-		CreatePuzzleGame(ctx context.Context, epID uuid.UUID, prizePool float64, partsX int32) (*PuzzleGame, error)
-		UpdatePuzzleGame(ctx context.Context, id uuid.UUID, prizePool float64, partsX int32) (*PuzzleGame, error)
+		GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGame, error)
+		GetPuzzleGameByEpisodeID(ctx context.Context, episodeID uuid.UUID) (PuzzleGame, error)
+		CreatePuzzleGame(ctx context.Context, epID uuid.UUID, prizePool float64, partsX int32) (PuzzleGame, error)
+		UpdatePuzzleGame(ctx context.Context, id uuid.UUID, prizePool float64, partsX int32) (PuzzleGame, error)
 
 		LinkImageToPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
 		UnlinkImageFromPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
 
-		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (*PuzzleGame, error)
-		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (*PuzzleGame, error)
-		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (*PuzzleGame, error)
-		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (*PuzzleGame, error)
+		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (PuzzleGame, error)
+		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (PuzzleGame, error)
+		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (PuzzleGame, error)
+		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (PuzzleGame, error)
 
 		GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error)
 	}
@@ -125,7 +125,12 @@ func MakeGetPuzzleGameByIDEndpoint(s service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return s.GetPuzzleGameByID(ctx, uuid.MustParse(request.(string)))
+		res, err := s.GetPuzzleGameByID(ctx, uuid.MustParse(request.(string)))
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -135,7 +140,12 @@ func MakeGetPuzzleGameByEpisodeIDEndpoint(s service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return s.GetPuzzleGameByEpisodeID(ctx, uuid.MustParse(request.(string)))
+		res, err := s.GetPuzzleGameByEpisodeID(ctx, uuid.MustParse(request.(string)))
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -150,7 +160,12 @@ func MakeCreatePuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, err
 		}
 
-		return s.CreatePuzzleGame(ctx, uuid.MustParse(req.EpisodeID), req.PrizePool, req.PartsX)
+		res, err := s.CreatePuzzleGame(ctx, uuid.MustParse(req.EpisodeID), req.PrizePool, req.PartsX)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -165,7 +180,12 @@ func MakeUpdatePuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, err
 		}
 
-		return s.UpdatePuzzleGame(ctx, uuid.MustParse(req.ID), req.PrizePool, req.PartsX)
+		res, err := s.UpdatePuzzleGame(ctx, uuid.MustParse(req.ID), req.PrizePool, req.PartsX)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -187,6 +207,7 @@ func MakeLinkImageToPuzzleGameEndpoint(s service, validateFunc validator.Validat
 		); err != nil {
 			return nil, err
 		}
+
 		return true, nil
 	}
 }
@@ -225,7 +246,12 @@ func MakeGetPuzzleGameForUserEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		return s.GetPuzzleGameForUser(ctx, uid, uuid.MustParse(request.(string)))
+		res, err := s.GetPuzzleGameForUser(ctx, uid, uuid.MustParse(request.(string)))
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -245,7 +271,12 @@ func MakeUnlockPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		return s.UnlockPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.UnlockOption)
+		res, err := s.UnlockPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), req.UnlockOption)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -260,7 +291,12 @@ func MakeStartPuzzleGameEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		return s.StartPuzzleGame(ctx, uid, uuid.MustParse(request.(string)))
+		res, err := s.StartPuzzleGame(ctx, uid, uuid.MustParse(request.(string)))
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -280,7 +316,12 @@ func MakeFinishPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, err
 		}
 
-		return s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), int32(req.Result), int32(req.StepsTaken))
+		res, err := s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), int32(req.Result), int32(req.StepsTaken))
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
 
@@ -290,6 +331,11 @@ func MakeGetPuzzleGameUnlockOptionsEndpoint(s service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return s.GetPuzzleGameUnlockOptions(ctx)
+		res, err := s.GetPuzzleGameUnlockOptions(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
 	}
 }
