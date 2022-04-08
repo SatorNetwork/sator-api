@@ -1,5 +1,3 @@
-//go:build !mock_solana
-
 package client
 
 import "errors"
