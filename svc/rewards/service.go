@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/qrcodes"
+	"github.com/google/uuid"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
+	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
+	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -20,6 +20,19 @@ const (
 	TransactionTypeDeposit = iota + 1
 	// TransactionTypeWithdraw indicates that transaction type withdraw.
 	TransactionTypeWithdraw
+)
+
+const (
+	// TransactionStatusAvailable indicates that transaction available to withdraw
+	TransactionStatusAvailable = iota
+	// TransactionStatusRequested indicates that transaction requested to withdraw
+	TransactionStatusRequested
+	// TransactionStatusInProgress indicates that transaction in progress to withdraw
+	TransactionStatusInProgress
+	// TransactionStatusFailed indicates that transaction failed to withdraw
+	TransactionStatusFailed
+	// TransactionStatusDone indicates that transaction withdrawn
+	TransactionStatusDone
 )
 
 //go:generate mockgen -destination=mock_repository.go -package=rewards github.com/SatorNetwork/sator-api/svc/rewards RewardsRepository
@@ -33,6 +46,7 @@ type (
 		explorerURLTmpl   string
 		holdRewardsPeriod time.Duration
 		minAmountToClaim  float64 // minimum amount to claim rewards
+		worker            *worker.InProgressTransactionStatusWorker
 	}
 
 	Winner struct {
@@ -47,6 +61,9 @@ type (
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
 		// GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
 		GetScannedQRCodeByUserID(ctx context.Context, arg repository.GetScannedQRCodeByUserIDParams) (repository.Reward, error)
+		RequestTransactionsByUserID(ctx context.Context, userID uuid.UUID) error
+		SetInProgressTransaction(ctx context.Context, arg repository.SetInProgressTransactionParams) error
+		UpdateTransactionStatusByTxHash(ctx context.Context, arg repository.UpdateTransactionStatusByTxHashParams) error
 	}
 
 	ClaimRewardsResult struct {
@@ -66,7 +83,13 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo RewardsRepository, ws walletService, getLocker db.GetLocker, opt ...Option) *Service {
+func NewService(
+	repo RewardsRepository,
+	ws walletService,
+	getLocker db.GetLocker,
+	worker *worker.InProgressTransactionStatusWorker,
+	opt ...Option,
+) *Service {
 	s := &Service{
 		repo:              repo,
 		ws:                ws,
@@ -75,6 +98,7 @@ func NewService(repo RewardsRepository, ws walletService, getLocker db.GetLocker
 		explorerURLTmpl:   "https://explorer.solana.com/tx/%s?cluster=devnet",
 		holdRewardsPeriod: time.Hour * 24 * 30,
 		minAmountToClaim:  0,
+		worker:            worker,
 	}
 
 	for _, fn := range opt {
@@ -155,26 +179,34 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("%w: %.2f", ErrNotEnoughBalance, s.minAmountToClaim)
 	}
 
+	err = s.repo.RequestTransactionsByUserID(ctx, uid)
+	if err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("%w", ErrInternalServerError)
+	}
+
 	txHash, err := s.ws.WithdrawRewards(ctx, uid, amount)
 	if err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
-	}
-
-	if err = s.repo.Withdraw(ctx, uid); err != nil {
-		return ClaimRewardsResult{}, fmt.Errorf("could not update rewards status: %w", err)
 	}
 
 	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
 		Amount:          amount,
 		TransactionType: TransactionTypeWithdraw,
-		TxHash:  		 sql.NullString{
+		TxHash: sql.NullString{
 			String: txHash,
 			Valid:  true,
 		},
+		Status: TransactionStatusInProgress,
 	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}
+
+	s.worker.AddTransaction(worker.InProgressTransactionStatusWorkerJob{
+		UserID: uid,
+		Amount: amount,
+		TxHash: txHash,
+	})
 
 	// We should release a lock in any case, even if context was cancelled
 	// TODO(evg): get timeout from config
@@ -270,4 +302,8 @@ func (s *Service) IsQRCodeScanned(ctx context.Context, userID, qrcodeID uuid.UUI
 	}
 
 	return true, nil
+}
+
+func (s *Service) StartWorker() {
+	s.worker.Start()
 }

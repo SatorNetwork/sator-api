@@ -95,6 +95,48 @@ func (mr *MockRewardsRepositoryMockRecorder) GetTransactionsByUserIDPaginated(ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransactionsByUserIDPaginated", reflect.TypeOf((*MockRewardsRepository)(nil).GetTransactionsByUserIDPaginated), arg0, arg1)
 }
 
+// RequestTransactionsByUserID mocks base method.
+func (m *MockRewardsRepository) RequestTransactionsByUserID(arg0 context.Context, arg1 uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestTransactionsByUserID", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RequestTransactionsByUserID indicates an expected call of RequestTransactionsByUserID.
+func (mr *MockRewardsRepositoryMockRecorder) RequestTransactionsByUserID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestTransactionsByUserID", reflect.TypeOf((*MockRewardsRepository)(nil).RequestTransactionsByUserID), arg0, arg1)
+}
+
+// SetInProgressTransaction mocks base method.
+func (m *MockRewardsRepository) SetInProgressTransaction(arg0 context.Context, arg1 repository.SetInProgressTransactionParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetInProgressTransaction", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetInProgressTransaction indicates an expected call of SetInProgressTransaction.
+func (mr *MockRewardsRepositoryMockRecorder) SetInProgressTransaction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetInProgressTransaction", reflect.TypeOf((*MockRewardsRepository)(nil).SetInProgressTransaction), arg0, arg1)
+}
+
+// UpdateTransactionStatusByTxHash mocks base method.
+func (m *MockRewardsRepository) UpdateTransactionStatusByTxHash(arg0 context.Context, arg1 repository.UpdateTransactionStatusByTxHashParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTransactionStatusByTxHash", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTransactionStatusByTxHash indicates an expected call of UpdateTransactionStatusByTxHash.
+func (mr *MockRewardsRepositoryMockRecorder) UpdateTransactionStatusByTxHash(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTransactionStatusByTxHash", reflect.TypeOf((*MockRewardsRepository)(nil).UpdateTransactionStatusByTxHash), arg0, arg1)
+}
+
 // Withdraw mocks base method.
 func (m *MockRewardsRepository) Withdraw(arg0 context.Context, arg1 uuid.UUID) error {
 	m.ctrl.T.Helper()
