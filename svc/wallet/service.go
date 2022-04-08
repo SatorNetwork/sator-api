@@ -641,10 +641,11 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
 	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
 
-	lockDuration := time.Hour * 24 * 30
-	if duration > 0 {
-		lockDuration = time.Hour * 24 * time.Duration(duration)
+	if duration <= 0 {
+		duration = 30
 	}
+
+	lockDuration := time.Hour * 24 * time.Duration(duration)
 
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
