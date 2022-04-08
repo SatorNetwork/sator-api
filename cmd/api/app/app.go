@@ -114,6 +114,7 @@ type Config struct {
 	CompanyName                 string
 	CompanyAddress              string
 	HoldRewardsPeriod           time.Duration
+	RewardsFWorkerPeriod		time.Duration
 	InvitationReward            float64
 	InvitationURL               string
 	FileStorageKey              string
@@ -212,6 +213,7 @@ func ConfigFromEnv() *Config {
 
 		// Rewards
 		HoldRewardsPeriod: env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		RewardsFWorkerPeriod: time.Minute * 30,
 
 		// Invitation
 		InvitationReward: env.GetFloat("INVITATION_REWARD", 0),
@@ -439,7 +441,7 @@ func (a *app) Run() {
 	go rewardService.StartWorker()
 
 	// Rewards Failed transactions worker
-	fWorkerTicker := time.NewTicker(time.Minute)
+	fWorkerTicker := time.NewTicker(a.cfg.RewardsFWorkerPeriod)
 	defer fWorkerTicker.Stop()
 
 	fWorkerTickerDone := make(chan bool)
