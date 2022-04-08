@@ -11,6 +11,19 @@ import (
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 )
 
+// GetTransaction returns transaction details
+func (c *Client) GetTransaction(ctx context.Context, txhash string) (lib_solana.GetConfirmedTransactionResponse, error) {
+	res := struct {
+		GeneralResponse
+		Result lib_solana.GetConfirmedTransactionResponse `json:"result"`
+	}{}
+	err := c.request(ctx, "getTransaction", []interface{}{txhash, "json"}, &res)
+	if err != nil {
+		return lib_solana.GetConfirmedTransactionResponse{}, err
+	}
+	return res.Result, nil
+}
+
 // GetConfirmedTransaction returns extended transaction details
 func (c *Client) GetConfirmedTransaction(ctx context.Context, txhash string) (lib_solana.GetConfirmedTransactionResponse, error) {
 	res := struct {

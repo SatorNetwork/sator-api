@@ -10,4 +10,6 @@ var (
 	ErrInvalidParameter = errors.New("invalid parameter")
 
 	ErrNotEnoughBalance = errors.New("minimal amount to claim")
+
+	ErrInternalServerError = errors.New("internal server error")
 )

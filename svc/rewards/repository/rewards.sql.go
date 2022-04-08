@@ -20,7 +20,8 @@ INSERT INTO rewards (
         relation_type,
         transaction_type,
         amount,
-        tx_hash
+        tx_hash,
+        status
     )
 VALUES (
         $1,
@@ -28,7 +29,8 @@ VALUES (
         $3,
         $4,
         $5,
-        $6
+        $6,
+        $7
     )
 `
 
@@ -39,6 +41,7 @@ type AddTransactionParams struct {
 	TransactionType int32          `json:"transaction_type"`
 	Amount          float64        `json:"amount"`
 	TxHash          sql.NullString `json:"tx_hash"`
+	Status          int32          `json:"status"`
 }
 
 func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) error {
@@ -49,6 +52,7 @@ func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) 
 		arg.TransactionType,
 		arg.Amount,
 		arg.TxHash,
+		arg.Status,
 	)
 	return err
 }
@@ -57,7 +61,7 @@ const getAmountAvailableToWithdraw = `-- name: GetAmountAvailableToWithdraw :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = $1
-AND withdrawn = FALSE
+AND status = 0
 AND transaction_type = 1
 AND created_at < $2
 GROUP BY user_id
@@ -75,8 +79,49 @@ func (q *Queries) GetAmountAvailableToWithdraw(ctx context.Context, arg GetAmoun
 	return column_1, err
 }
 
+const getFailedTransactions = `-- name: GetFailedTransactions :many
+SELECT id, user_id, relation_id, amount, updated_at, created_at, transaction_type, relation_type, tx_hash, status
+FROM rewards
+WHERE status = 3
+AND transaction_type = 1
+`
+
+func (q *Queries) GetFailedTransactions(ctx context.Context) ([]Reward, error) {
+	rows, err := q.query(ctx, q.getFailedTransactionsStmt, getFailedTransactions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Reward
+	for rows.Next() {
+		var i Reward
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.RelationID,
+			&i.Amount,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.TransactionType,
+			&i.RelationType,
+			&i.TxHash,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getScannedQRCodeByUserID = `-- name: GetScannedQRCodeByUserID :one
-SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type, tx_hash
+SELECT id, user_id, relation_id, amount, updated_at, created_at, transaction_type, relation_type, tx_hash, status
 FROM rewards
 WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
     LIMIT 1
@@ -96,12 +141,12 @@ func (q *Queries) GetScannedQRCodeByUserID(ctx context.Context, arg GetScannedQR
 		&i.UserID,
 		&i.RelationID,
 		&i.Amount,
-		&i.Withdrawn,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.TransactionType,
 		&i.RelationType,
 		&i.TxHash,
+		&i.Status,
 	)
 	return i, err
 }
@@ -110,7 +155,7 @@ const getTotalAmount = `-- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = $1
-AND withdrawn = FALSE
+AND status = 0
 AND transaction_type = 1
 GROUP BY user_id
 `
@@ -123,7 +168,7 @@ func (q *Queries) GetTotalAmount(ctx context.Context, userID uuid.UUID) (float64
 }
 
 const getTransactionsByUserIDPaginated = `-- name: GetTransactionsByUserIDPaginated :many
-SELECT id, user_id, relation_id, amount, withdrawn, updated_at, created_at, transaction_type, relation_type, tx_hash
+SELECT id, user_id, relation_id, amount, updated_at, created_at, transaction_type, relation_type, tx_hash, status
 FROM rewards
 WHERE user_id = $1
 ORDER BY created_at DESC
@@ -150,12 +195,12 @@ func (q *Queries) GetTransactionsByUserIDPaginated(ctx context.Context, arg GetT
 			&i.UserID,
 			&i.RelationID,
 			&i.Amount,
-			&i.Withdrawn,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.TransactionType,
 			&i.RelationType,
 			&i.TxHash,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -170,11 +215,59 @@ func (q *Queries) GetTransactionsByUserIDPaginated(ctx context.Context, arg GetT
 	return items, nil
 }
 
-const withdraw = `-- name: Withdraw :exec
+const requestTransactionsByUserID = `-- name: RequestTransactionsByUserID :exec
 UPDATE rewards
-SET withdrawn = TRUE
+SET status = 1
 WHERE user_id = $1
 AND transaction_type = 1
+AND status = 0
+`
+
+func (q *Queries) RequestTransactionsByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.requestTransactionsByUserIDStmt, requestTransactionsByUserID, userID)
+	return err
+}
+
+const setInProgressTransaction = `-- name: SetInProgressTransaction :exec
+UPDATE rewards
+SET status = 2, tx_hash = $1
+WHERE user_id = $2
+AND transaction_type = 1
+AND status = 1
+`
+
+type SetInProgressTransactionParams struct {
+	TxHash sql.NullString `json:"tx_hash"`
+	UserID uuid.UUID      `json:"user_id"`
+}
+
+func (q *Queries) SetInProgressTransaction(ctx context.Context, arg SetInProgressTransactionParams) error {
+	_, err := q.exec(ctx, q.setInProgressTransactionStmt, setInProgressTransaction, arg.TxHash, arg.UserID)
+	return err
+}
+
+const updateTransactionStatusByTxHash = `-- name: UpdateTransactionStatusByTxHash :exec
+UPDATE rewards
+SET status = $1
+WHERE tx_hash = $2
+`
+
+type UpdateTransactionStatusByTxHashParams struct {
+	Status int32          `json:"status"`
+	TxHash sql.NullString `json:"tx_hash"`
+}
+
+func (q *Queries) UpdateTransactionStatusByTxHash(ctx context.Context, arg UpdateTransactionStatusByTxHashParams) error {
+	_, err := q.exec(ctx, q.updateTransactionStatusByTxHashStmt, updateTransactionStatusByTxHash, arg.Status, arg.TxHash)
+	return err
+}
+
+const withdraw = `-- name: Withdraw :exec
+UPDATE rewards
+SET status = 4
+WHERE user_id = $1
+AND transaction_type = 1
+AND status = 1
 `
 
 func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {

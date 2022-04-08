@@ -2,6 +2,7 @@ package two_players
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/lib/encryption/envelope"
 	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/e2e/quiz_v2/message_container"
@@ -32,6 +34,14 @@ func TestCorrectAnswers(t *testing.T) {
 	err = c.DB.QuizV2DB().Repository().CleanUp(context.Background())
 	require.NoError(t, err)
 	totalRewards := float64(250)
+
+	sc := solana_client.New(app_config.AppConfigForTests.SolanaApiBaseUrl, solana_client.Config{
+		SystemProgram:  app_config.AppConfigForTests.SolanaSystemProgram,
+		SysvarRent:     app_config.AppConfigForTests.SolanaSysvarRent,
+		SysvarClock:    app_config.AppConfigForTests.SolanaSysvarClock,
+		SplToken:       app_config.AppConfigForTests.SolanaSplToken,
+		StakeProgramID: app_config.AppConfigForTests.SolanaStakeProgramID,
+	})
 
 	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 	user2 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
@@ -198,11 +208,39 @@ func TestCorrectAnswers(t *testing.T) {
 		require.Contains(t, err.Error(), "reward has been already received for this challenge")
 	}
 
+	var user1TxHash string
+	var user2TxHash string
 	{
-		_, err := c.RewardsClient.ClaimRewards(user1.AccessToken())
+		user1ClaimRewards, err := c.RewardsClient.ClaimRewards(user1.AccessToken())
+		user1TxHash = getTxHashFromTransactionURL(user1ClaimRewards.TransactionURL)
 		require.NoError(t, err)
+		require.NotEqual(t, "", user1TxHash)
 
-		_, err = c.RewardsClient.ClaimRewards(user2.AccessToken())
+		user2ClaimRewards, err := c.RewardsClient.ClaimRewards(user2.AccessToken())
+		user2TxHash = getTxHashFromTransactionURL(user2ClaimRewards.TransactionURL)
 		require.NoError(t, err)
+		require.NotEqual(t, "", user2TxHash)
 	}
+
+	{
+		resp, err := sc.GetTransaction(context.Background(), user1TxHash)
+		require.NoError(t, err)
+		require.Nil(t, resp.Meta.Err)
+
+		resp, err = sc.GetTransaction(context.Background(), user2TxHash)
+		require.NoError(t, err)
+		require.Nil(t, resp.Meta.Err)
+	}
+}
+
+func getTxHashFromTransactionURL(transactionURL string) string {
+	s := strings.Split(transactionURL, "https://explorer.solana.com/tx/")
+	if len(s) != 2 {
+		return ""
+	}
+	s = strings.Split(s[1], "?cluster=devnet")
+	if len(s) != 2 {
+		return ""
+	}
+	return s[0]
 }
