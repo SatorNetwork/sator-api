@@ -295,6 +295,9 @@ components:
               steps:
                 type: number
                 description: Number of steps in the puzzle game
+              is_locked:
+                type: boolean
+                description: Is this option locked?
 paths:
   /:
     get:
