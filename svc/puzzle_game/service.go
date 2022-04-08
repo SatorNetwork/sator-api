@@ -340,7 +340,7 @@ func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 	}
 
 	var rewardsAmount, lockRewardsAmount float64 = 0, 0
-	if result == PuzzleGameResultWon {
+	if result == PuzzleGameResultWon && pg.PrizePool > 0 {
 		rewardsAmount = pg.PrizePool
 
 		if s.getUserRewardsMultiplierFn != nil {
