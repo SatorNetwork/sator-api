@@ -34,8 +34,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getPuzzleGameByIDStmt, err = db.PrepareContext(ctx, getPuzzleGameByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPuzzleGameByID: %w", err)
 	}
-	if q.getPuzzleGameCurrentAttemtStmt, err = db.PrepareContext(ctx, getPuzzleGameCurrentAttemt); err != nil {
-		return nil, fmt.Errorf("error preparing query GetPuzzleGameCurrentAttemt: %w", err)
+	if q.getPuzzleGameCurrentAttemptStmt, err = db.PrepareContext(ctx, getPuzzleGameCurrentAttempt); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPuzzleGameCurrentAttempt: %w", err)
 	}
 	if q.getPuzzleGameImageIDsStmt, err = db.PrepareContext(ctx, getPuzzleGameImageIDs); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPuzzleGameImageIDs: %w", err)
@@ -89,9 +89,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getPuzzleGameByIDStmt: %w", cerr)
 		}
 	}
-	if q.getPuzzleGameCurrentAttemtStmt != nil {
-		if cerr := q.getPuzzleGameCurrentAttemtStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getPuzzleGameCurrentAttemtStmt: %w", cerr)
+	if q.getPuzzleGameCurrentAttemptStmt != nil {
+		if cerr := q.getPuzzleGameCurrentAttemptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPuzzleGameCurrentAttemptStmt: %w", cerr)
 		}
 	}
 	if q.getPuzzleGameImageIDsStmt != nil {
@@ -176,41 +176,41 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                             DBTX
-	tx                             *sql.Tx
-	createPuzzleGameStmt           *sql.Stmt
-	finishPuzzleGameStmt           *sql.Stmt
-	getPuzzleGameByEpisodeIDStmt   *sql.Stmt
-	getPuzzleGameByIDStmt          *sql.Stmt
-	getPuzzleGameCurrentAttemtStmt *sql.Stmt
-	getPuzzleGameImageIDsStmt      *sql.Stmt
-	getPuzzleGameUnlockOptionStmt  *sql.Stmt
-	getPuzzleGameUnlockOptionsStmt *sql.Stmt
-	getUserAvailableStepsStmt      *sql.Stmt
-	linkImageToPuzzleGameStmt      *sql.Stmt
-	startPuzzleGameStmt            *sql.Stmt
-	unlinkImageFromPuzzleGameStmt  *sql.Stmt
-	unlockPuzzleGameStmt           *sql.Stmt
-	updatePuzzleGameStmt           *sql.Stmt
+	db                              DBTX
+	tx                              *sql.Tx
+	createPuzzleGameStmt            *sql.Stmt
+	finishPuzzleGameStmt            *sql.Stmt
+	getPuzzleGameByEpisodeIDStmt    *sql.Stmt
+	getPuzzleGameByIDStmt           *sql.Stmt
+	getPuzzleGameCurrentAttemptStmt *sql.Stmt
+	getPuzzleGameImageIDsStmt       *sql.Stmt
+	getPuzzleGameUnlockOptionStmt   *sql.Stmt
+	getPuzzleGameUnlockOptionsStmt  *sql.Stmt
+	getUserAvailableStepsStmt       *sql.Stmt
+	linkImageToPuzzleGameStmt       *sql.Stmt
+	startPuzzleGameStmt             *sql.Stmt
+	unlinkImageFromPuzzleGameStmt   *sql.Stmt
+	unlockPuzzleGameStmt            *sql.Stmt
+	updatePuzzleGameStmt            *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                             tx,
-		tx:                             tx,
-		createPuzzleGameStmt:           q.createPuzzleGameStmt,
-		finishPuzzleGameStmt:           q.finishPuzzleGameStmt,
-		getPuzzleGameByEpisodeIDStmt:   q.getPuzzleGameByEpisodeIDStmt,
-		getPuzzleGameByIDStmt:          q.getPuzzleGameByIDStmt,
-		getPuzzleGameCurrentAttemtStmt: q.getPuzzleGameCurrentAttemtStmt,
-		getPuzzleGameImageIDsStmt:      q.getPuzzleGameImageIDsStmt,
-		getPuzzleGameUnlockOptionStmt:  q.getPuzzleGameUnlockOptionStmt,
-		getPuzzleGameUnlockOptionsStmt: q.getPuzzleGameUnlockOptionsStmt,
-		getUserAvailableStepsStmt:      q.getUserAvailableStepsStmt,
-		linkImageToPuzzleGameStmt:      q.linkImageToPuzzleGameStmt,
-		startPuzzleGameStmt:            q.startPuzzleGameStmt,
-		unlinkImageFromPuzzleGameStmt:  q.unlinkImageFromPuzzleGameStmt,
-		unlockPuzzleGameStmt:           q.unlockPuzzleGameStmt,
-		updatePuzzleGameStmt:           q.updatePuzzleGameStmt,
+		db:                              tx,
+		tx:                              tx,
+		createPuzzleGameStmt:            q.createPuzzleGameStmt,
+		finishPuzzleGameStmt:            q.finishPuzzleGameStmt,
+		getPuzzleGameByEpisodeIDStmt:    q.getPuzzleGameByEpisodeIDStmt,
+		getPuzzleGameByIDStmt:           q.getPuzzleGameByIDStmt,
+		getPuzzleGameCurrentAttemptStmt: q.getPuzzleGameCurrentAttemptStmt,
+		getPuzzleGameImageIDsStmt:       q.getPuzzleGameImageIDsStmt,
+		getPuzzleGameUnlockOptionStmt:   q.getPuzzleGameUnlockOptionStmt,
+		getPuzzleGameUnlockOptionsStmt:  q.getPuzzleGameUnlockOptionsStmt,
+		getUserAvailableStepsStmt:       q.getUserAvailableStepsStmt,
+		linkImageToPuzzleGameStmt:       q.linkImageToPuzzleGameStmt,
+		startPuzzleGameStmt:             q.startPuzzleGameStmt,
+		unlinkImageFromPuzzleGameStmt:   q.unlinkImageFromPuzzleGameStmt,
+		unlockPuzzleGameStmt:            q.unlockPuzzleGameStmt,
+		updatePuzzleGameStmt:            q.updatePuzzleGameStmt,
 	}
 }

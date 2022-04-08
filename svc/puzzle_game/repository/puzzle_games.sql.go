@@ -123,7 +123,7 @@ func (q *Queries) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 	return i, err
 }
 
-const getPuzzleGameCurrentAttemt = `-- name: GetPuzzleGameCurrentAttemt :one
+const getPuzzleGameCurrentAttempt = `-- name: GetPuzzleGameCurrentAttempt :one
 SELECT id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount
 FROM puzzle_games_attempts
 WHERE user_id = $1 AND puzzle_game_id = $2 AND status = $3
@@ -131,14 +131,14 @@ ORDER BY created_at DESC
 LIMIT 1
 `
 
-type GetPuzzleGameCurrentAttemtParams struct {
+type GetPuzzleGameCurrentAttemptParams struct {
 	UserID       uuid.UUID `json:"user_id"`
 	PuzzleGameID uuid.UUID `json:"puzzle_game_id"`
 	Status       int32     `json:"status"`
 }
 
-func (q *Queries) GetPuzzleGameCurrentAttemt(ctx context.Context, arg GetPuzzleGameCurrentAttemtParams) (PuzzleGamesAttempt, error) {
-	row := q.queryRow(ctx, q.getPuzzleGameCurrentAttemtStmt, getPuzzleGameCurrentAttemt, arg.UserID, arg.PuzzleGameID, arg.Status)
+func (q *Queries) GetPuzzleGameCurrentAttempt(ctx context.Context, arg GetPuzzleGameCurrentAttemptParams) (PuzzleGamesAttempt, error) {
+	row := q.queryRow(ctx, q.getPuzzleGameCurrentAttemptStmt, getPuzzleGameCurrentAttempt, arg.UserID, arg.PuzzleGameID, arg.Status)
 	var i PuzzleGamesAttempt
 	err := row.Scan(
 		&i.ID,

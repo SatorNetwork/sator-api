@@ -55,7 +55,7 @@ WHERE user_id = $1 AND puzzle_game_id = $2 AND status = 0
 ORDER BY created_at DESC
 LIMIT 1;
 
--- name: GetPuzzleGameCurrentAttemt :one
+-- name: GetPuzzleGameCurrentAttempt :one
 SELECT *
 FROM puzzle_games_attempts
 WHERE user_id = $1 AND puzzle_game_id = $2 AND status = $3

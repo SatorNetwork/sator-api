@@ -47,7 +47,7 @@ type (
 		LinkImageToPuzzleGame(ctx context.Context, arg repository.LinkImageToPuzzleGameParams) error
 		UnlinkImageFromPuzzleGame(ctx context.Context, arg repository.UnlinkImageFromPuzzleGameParams) error
 
-		GetPuzzleGameCurrentAttemt(ctx context.Context, arg repository.GetPuzzleGameCurrentAttemtParams) (repository.PuzzleGamesAttempt, error)
+		GetPuzzleGameCurrentAttempt(ctx context.Context, arg repository.GetPuzzleGameCurrentAttemptParams) (repository.PuzzleGamesAttempt, error)
 		GetUserAvailableSteps(ctx context.Context, arg repository.GetUserAvailableStepsParams) (int32, error)
 		UnlockPuzzleGame(ctx context.Context, arg repository.UnlockPuzzleGameParams) (repository.PuzzleGamesAttempt, error)
 		StartPuzzleGame(ctx context.Context, arg repository.StartPuzzleGameParams) (repository.PuzzleGamesAttempt, error)
@@ -352,13 +352,22 @@ func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		}
 
 		if s.rewardsFn != nil {
+			att, err := s.pgr.GetPuzzleGameCurrentAttempt(ctx, repository.GetPuzzleGameCurrentAttemptParams{
+				PuzzleGameID: puzzleGameID,
+				UserID:       userID,
+				Status:       PuzzleGameStatusInProgress,
+			})
+			if err != nil {
+				return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game current attempt")
+			}
+
+		retrySendReward:
 			for i := 0; i < 5; i++ {
-				err := s.rewardsFn(ctx, userID, puzzleGameID, "puzzle_games", rewardsAmount)
-				if err != nil {
+				if err := s.rewardsFn(ctx, userID, att.ID, "puzzle_games", rewardsAmount); err != nil {
 					log.Printf("can't add rewards for puzzle game: %v", err)
 					time.Sleep(time.Second * 3)
 				} else {
-					break
+					break retrySendReward
 				}
 			}
 		}
@@ -386,7 +395,7 @@ func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame repository.PuzzleGame, status int32) (PuzzleGame, error) {
 	pg := NewPuzzleGameFromSQLC(puzzleGame)
 
-	att, _ := s.pgr.GetPuzzleGameCurrentAttemt(ctx, repository.GetPuzzleGameCurrentAttemtParams{
+	att, _ := s.pgr.GetPuzzleGameCurrentAttempt(ctx, repository.GetPuzzleGameCurrentAttemptParams{
 		PuzzleGameID: pg.ID,
 		UserID:       userID,
 		Status:       status,
