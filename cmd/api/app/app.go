@@ -215,7 +215,7 @@ func ConfigFromEnv() *Config {
 
 		// Rewards
 		HoldRewardsPeriod: env.GetDuration("HOLD_REWARDS_PERIOD", 0),
-		RewardsFWorkerPeriod: time.Minute * 30,
+		RewardsFWorkerPeriod: env.GetDuration("REWARDS_WORKER_PERIOD", time.Minute * 30),
 
 		// Invitation
 		InvitationReward: env.GetFloat("INVITATION_REWARD", 0),
