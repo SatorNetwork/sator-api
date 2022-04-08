@@ -26,6 +26,7 @@ type PuzzleGameUnlockOption struct {
 	Disabled  bool         `json:"disabled"`
 	UpdatedAt sql.NullTime `json:"updated_at"`
 	CreatedAt time.Time    `json:"created_at"`
+	Locked    bool         `json:"locked"`
 }
 
 type PuzzleGamesAttempt struct {

@@ -95,9 +95,10 @@ type (
 	}
 
 	PuzzleGameUnlockOption struct {
-		ID     string  `json:"id"`
-		Amount float64 `json:"amount"`
-		Steps  int32   `json:"steps"`
+		ID       string  `json:"id"`
+		Amount   float64 `json:"amount"`
+		Steps    int32   `json:"steps"`
+		IsLocked bool    `json:"is_locked"`
 	}
 )
 
@@ -273,6 +274,10 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return nil, errors.Wrap(err, "can't get puzzle game unlock option")
 	}
 
+	if opt.Locked {
+		return nil, errors.New("this unlock option is not available")
+	}
+
 	if err := s.chargeForUnlock(ctx, userID, opt.Amount,
 		fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
 		return nil, errors.Wrap(err, "can't charge for unlock puzzle game")
@@ -443,9 +448,10 @@ func (s *Service) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameU
 	result := make([]PuzzleGameUnlockOption, 0, len(options))
 	for _, opt := range options {
 		result = append(result, PuzzleGameUnlockOption{
-			ID:     opt.ID,
-			Amount: opt.Amount,
-			Steps:  opt.Steps,
+			ID:       opt.ID,
+			Amount:   opt.Amount,
+			Steps:    opt.Steps,
+			IsLocked: opt.Locked,
 		})
 	}
 

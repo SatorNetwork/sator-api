@@ -103,4 +103,4 @@ WHERE id = $1;
 -- name: GetPuzzleGameUnlockOptions :many
 SELECT * FROM puzzle_game_unlock_options
 WHERE disabled = FALSE
-ORDER BY amount ASC;
+ORDER BY locked ASC, amount ASC;

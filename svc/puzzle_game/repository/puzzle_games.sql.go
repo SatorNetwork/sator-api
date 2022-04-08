@@ -186,7 +186,7 @@ func (q *Queries) GetPuzzleGameImageIDs(ctx context.Context, puzzleGameID uuid.U
 }
 
 const getPuzzleGameUnlockOption = `-- name: GetPuzzleGameUnlockOption :one
-SELECT id, steps, amount, disabled, updated_at, created_at FROM puzzle_game_unlock_options
+SELECT id, steps, amount, disabled, updated_at, created_at, locked FROM puzzle_game_unlock_options
 WHERE id = $1
 `
 
@@ -200,14 +200,15 @@ func (q *Queries) GetPuzzleGameUnlockOption(ctx context.Context, id string) (Puz
 		&i.Disabled,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Locked,
 	)
 	return i, err
 }
 
 const getPuzzleGameUnlockOptions = `-- name: GetPuzzleGameUnlockOptions :many
-SELECT id, steps, amount, disabled, updated_at, created_at FROM puzzle_game_unlock_options
+SELECT id, steps, amount, disabled, updated_at, created_at, locked FROM puzzle_game_unlock_options
 WHERE disabled = FALSE
-ORDER BY amount ASC
+ORDER BY locked ASC, amount ASC
 `
 
 func (q *Queries) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error) {
@@ -226,6 +227,7 @@ func (q *Queries) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameU
 			&i.Disabled,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Locked,
 		); err != nil {
 			return nil, err
 		}
