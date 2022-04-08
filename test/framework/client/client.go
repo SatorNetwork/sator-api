@@ -20,7 +20,7 @@ type Client struct {
 	ChallengesClient       *challenge.ChallengesClient
 	ShowsClient            *shows.ShowsClient
 	TradingPlatformsClient *trading_platforms.TradingPlatformsClient
-	RewardsClient		   *rewards.RewardsClient
+	RewardsClient          *rewards.RewardsClient
 
 	DB *db.DB
 }
@@ -38,7 +38,7 @@ func NewClient() *Client {
 		ChallengesClient:       challenge.New(),
 		ShowsClient:            shows.New(),
 		TradingPlatformsClient: trading_platforms.New(),
-		RewardsClient: 			rewards.New(),
+		RewardsClient:          rewards.New(),
 
 		DB: db,
 	}

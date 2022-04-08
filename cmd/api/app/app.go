@@ -32,6 +32,7 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
+	"github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
@@ -63,6 +64,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/rewards"
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
+	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	"github.com/SatorNetwork/sator-api/svc/shows/private"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
@@ -364,6 +366,7 @@ func (a *app) Run() {
 	})
 
 	var walletSvcClient *walletClient.Client
+	var solanaClient solana.Interface
 	// Wallet service
 	{
 		walletRepository, err := walletRepo.Prepare(ctx, db)
@@ -380,7 +383,7 @@ func (a *app) Run() {
 			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
 		}
 
-		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
+		solanaClient = solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
 			SystemProgram:  a.cfg.SolanaSystemProgram,
 			SysvarRent:     a.cfg.SolanaSysvarRent,
 			SysvarClock:    a.cfg.SolanaSysvarClock,
@@ -418,10 +421,12 @@ func (a *app) Run() {
 	if err != nil {
 		log.Fatalf("rewardsRepo error: %v", err)
 	}
+	rewardsIPWorker := worker.NewInProgressTransactionStatusWorker(context.Background(), rewardsRepository, solanaClient)
 	rewardService := rewards.NewService(
 		rewardsRepository,
 		walletSvcClient,
 		db_internal.NewAdvisoryLocks(db),
+		rewardsIPWorker,
 		rewards.WithExplorerURLTmpl("https://explorer.solana.com/tx/%s?cluster="+a.cfg.SolanaEnv),
 		rewards.WithHoldRewardsPeriod(a.cfg.HoldRewardsPeriod),
 		rewards.WithMinAmountToClaim(a.cfg.MinAmountToClaim),
@@ -431,6 +436,30 @@ func (a *app) Run() {
 		rewards.MakeEndpoints(rewardService, kycMdw, jwtMdw),
 		logger,
 	))
+	go rewardService.StartWorker()
+
+	// Rewards Failed transactions worker
+	fWorkerTicker := time.NewTicker(time.Minute)
+	defer fWorkerTicker.Stop()
+
+	fWorkerTickerDone := make(chan bool)
+	defer close(fWorkerTickerDone)
+
+	rewardsFWorker := worker.NewFailedTransactionStatusWorker(context.Background(), rewardsRepository, rewardsIPWorker)
+	g.Add(func() error {
+		for {
+			select {
+			case <-fWorkerTickerDone:
+				return nil
+			case <-fWorkerTicker.C:
+				rewardsFWorker.Start()
+			}
+		}
+	}, func(err error) {
+		fmt.Println("going to shutdown worker ticker")
+		fWorkerTickerDone <- true
+		fmt.Println("worker ticker is shutdown")
+	})
 
 	// Invitation service
 	invitationsRepository, err := invitationsRepo.Prepare(ctx, db)

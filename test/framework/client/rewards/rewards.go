@@ -3,13 +3,14 @@ package rewards
 import (
 	"encoding/json"
 	"fmt"
-	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
+
+	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
+	"github.com/pkg/errors"
 )
 
-type RewardsClient struct {}
+type RewardsClient struct{}
 
 func New() *RewardsClient {
 	return new(RewardsClient)
@@ -41,10 +42,12 @@ func (a *RewardsClient) ClaimRewards(accessToken string) (*ClaimRewardsResult, e
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp ClaimRewardsResult
+	var resp struct {
+		Data ClaimRewardsResult `json:"data"`
+	}
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
 
-	return &resp, nil
+	return &resp.Data, nil
 }
