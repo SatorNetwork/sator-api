@@ -749,7 +749,7 @@ func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // TODO: remove it, added for demo
 func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
 		}
 
@@ -784,6 +784,10 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeGetAttemptsLeftForVerificationQuestionEndpoint ...
 func MakeGetAttemptsLeftForVerificationQuestionEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
