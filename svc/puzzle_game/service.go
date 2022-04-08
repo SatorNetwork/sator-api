@@ -278,9 +278,11 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return nil, errors.New("this unlock option is not available")
 	}
 
-	if err := s.chargeForUnlock(ctx, userID, opt.Amount,
-		fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
-		return nil, errors.Wrap(err, "can't charge for unlock puzzle game")
+	if opt.Amount > 0 {
+		if err := s.chargeForUnlock(ctx, userID, opt.Amount,
+			fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
+			return nil, errors.Wrap(err, "can't charge for unlock puzzle game")
+		}
 	}
 
 	if _, err := s.pgr.UnlockPuzzleGame(ctx, repository.UnlockPuzzleGameParams{
