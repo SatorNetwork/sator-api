@@ -137,3 +137,8 @@ WHERE id = @id;
 SELECT public_key
 FROM users
 WHERE id = @id;
+
+-- name: UpdateUserRole :exec
+UPDATE users
+SET role = @role
+WHERE id = @id;

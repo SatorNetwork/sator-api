@@ -6,15 +6,14 @@ import (
 	"log"
 	"net/url"
 
-	"filippo.io/edwards25519"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/solana/client"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
-	"github.com/portto/solana-go-sdk/common"
 )
 
 type (
@@ -373,9 +372,8 @@ func MakeGetStakeLevelsEndpoint(s service) endpoint.Endpoint {
 }
 
 func validateSolanaWalletAddr(fieldName, addr string) error {
-	p := common.PublicKeyFromString(addr)
-	if _, err := new(edwards25519.Point).SetBytes(p.Bytes()); err != nil {
-		log.Printf("invalid solana wallet address: %v", err)
+	if err := client.ValidateSolanaWalletAddr(addr); err != nil {
+		log.Printf("invalid solana wallet address=%s, error: %v", addr, err)
 		return validator.NewValidationError(url.Values{
 			fieldName: []string{"invalid solana wallet address"},
 		})

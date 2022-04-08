@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
 )
@@ -95,4 +96,23 @@ func (u *User) CreateEmptyStake() {
 
 	err = u.c.DB.WalletDB().SetEmptyStake(id)
 	require.NoError(u.t, err)
+}
+
+func (u *User) SetRole(role rbac.Role) {
+	id, err := u.c.DB.AuthDB().GetUserIDByEmail(context.Background(), u.email)
+	require.NoError(u.t, err)
+
+	err = u.c.DB.AuthDB().UpdateUserRole(context.TODO(), id, role.String())
+	require.NoError(u.t, err)
+}
+
+func (u *User) RefreshToken() {
+	resp, err := u.c.Auth.Login(&auth.LoginRequest{
+		Email:    u.email,
+		Password: u.password,
+	})
+	require.NoError(u.t, err)
+	require.NotEmpty(u.t, resp.AccessToken)
+
+	u.accessToken = resp.AccessToken
 }

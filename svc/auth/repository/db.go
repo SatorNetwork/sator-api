@@ -139,6 +139,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateUserPasswordStmt, err = db.PrepareContext(ctx, updateUserPassword); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserPassword: %w", err)
 	}
+	if q.updateUserRoleStmt, err = db.PrepareContext(ctx, updateUserRole); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserRole: %w", err)
+	}
 	if q.updateUserSanitizedEmailStmt, err = db.PrepareContext(ctx, updateUserSanitizedEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserSanitizedEmail: %w", err)
 	}
@@ -351,6 +354,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateUserPasswordStmt: %w", cerr)
 		}
 	}
+	if q.updateUserRoleStmt != nil {
+		if cerr := q.updateUserRoleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserRoleStmt: %w", cerr)
+		}
+	}
 	if q.updateUserSanitizedEmailStmt != nil {
 		if cerr := q.updateUserSanitizedEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserSanitizedEmailStmt: %w", cerr)
@@ -449,6 +457,7 @@ type Queries struct {
 	updatePublicKeyStmt                 *sql.Stmt
 	updateUserEmailStmt                 *sql.Stmt
 	updateUserPasswordStmt              *sql.Stmt
+	updateUserRoleStmt                  *sql.Stmt
 	updateUserSanitizedEmailStmt        *sql.Stmt
 	updateUserStatusStmt                *sql.Stmt
 	updateUserVerifiedAtStmt            *sql.Stmt
@@ -498,6 +507,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updatePublicKeyStmt:                 q.updatePublicKeyStmt,
 		updateUserEmailStmt:                 q.updateUserEmailStmt,
 		updateUserPasswordStmt:              q.updateUserPasswordStmt,
+		updateUserRoleStmt:                  q.updateUserRoleStmt,
 		updateUserSanitizedEmailStmt:        q.updateUserSanitizedEmailStmt,
 		updateUserStatusStmt:                q.updateUserStatusStmt,
 		updateUserVerifiedAtStmt:            q.updateUserVerifiedAtStmt,

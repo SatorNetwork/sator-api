@@ -70,6 +70,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.didUserReviewEpisodeStmt, err = db.PrepareContext(ctx, didUserReviewEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query DidUserReviewEpisode: %w", err)
 	}
+	if q.getAllEpisodesStmt, err = db.PrepareContext(ctx, getAllEpisodes); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllEpisodes: %w", err)
+	}
 	if q.getCategoriesByShowIDStmt, err = db.PrepareContext(ctx, getCategoriesByShowID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCategoriesByShowID: %w", err)
 	}
@@ -240,6 +243,11 @@ func (q *Queries) Close() error {
 	if q.didUserReviewEpisodeStmt != nil {
 		if cerr := q.didUserReviewEpisodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing didUserReviewEpisodeStmt: %w", cerr)
+		}
+	}
+	if q.getAllEpisodesStmt != nil {
+		if cerr := q.getAllEpisodesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllEpisodesStmt: %w", cerr)
 		}
 	}
 	if q.getCategoriesByShowIDStmt != nil {
@@ -442,6 +450,7 @@ type Queries struct {
 	deleteUserEpisodeReviewStmt               *sql.Stmt
 	didUserRateEpisodeStmt                    *sql.Stmt
 	didUserReviewEpisodeStmt                  *sql.Stmt
+	getAllEpisodesStmt                        *sql.Stmt
 	getCategoriesByShowIDStmt                 *sql.Stmt
 	getEpisodeByIDStmt                        *sql.Stmt
 	getEpisodeIDByQuizChallengeIDStmt         *sql.Stmt
@@ -493,6 +502,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteUserEpisodeReviewStmt:       q.deleteUserEpisodeReviewStmt,
 		didUserRateEpisodeStmt:            q.didUserRateEpisodeStmt,
 		didUserReviewEpisodeStmt:          q.didUserReviewEpisodeStmt,
+		getAllEpisodesStmt:                q.getAllEpisodesStmt,
 		getCategoriesByShowIDStmt:         q.getCategoriesByShowIDStmt,
 		getEpisodeByIDStmt:                q.getEpisodeByIDStmt,
 		getEpisodeIDByQuizChallengeIDStmt: q.getEpisodeIDByQuizChallengeIDStmt,

@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	jwti "github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/go-kit/kit/auth/jwt"
@@ -63,7 +64,7 @@ func CodeAndMessageFrom(err error) (int, interface{}) {
 	}
 
 	if errors.Is(err, jwti.ErrInvalidJWTSubject) || errors.Is(err, sumsub.ErrKYCInProgress) ||
-		errors.Is(err, sumsub.ErrKYCUserIsDisabled) {
+		errors.Is(err, sumsub.ErrKYCUserIsDisabled) || errors.Is(err, rbac.ErrAccessDenied) {
 		return http.StatusForbidden, err.Error()
 	}
 

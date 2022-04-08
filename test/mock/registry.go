@@ -19,5 +19,6 @@ func GetMockObject(name string) interface{} {
 }
 
 const (
-	SolanaProvider = "SolanaProvider"
+	SolanaProvider   = "SolanaProvider"
+	PostMarkProvider = "PostMarkProvider"
 )
