@@ -84,7 +84,7 @@ type (
 		NewAccount() types.Account
 		AccountFromPrivateKeyBytes(pk []byte) types.Account
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error)
+		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr, tokenHolderAddr string, amount, fee float64) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
@@ -534,10 +534,10 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 		return fmt.Errorf("could not unmarshal: %w", err)
 	}
 
-	return s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount)
+	return s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, 0)
 }
 
-func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64) error {
+func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount, fee float64) error {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return fmt.Errorf("could not get solana account: %w", err)
@@ -564,7 +564,9 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
 			s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey),
 			recipientAddr,
+			s.tokenHolderSolanaAddr,
 			amount,
+			fee,
 		); err != nil {
 			if i < 4 {
 				log.Println(err)
@@ -830,7 +832,7 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("not enough balance for payment: %v", bal)
 	}
 
-	if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount); err != nil {
+	if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount, 0); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
@@ -873,7 +875,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 	if creatorShare > 0 && creatorAddr != "" {
 		creatorAmount := amount / 100 * float64(creatorShare)
 
-		if err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount); err != nil {
+		if err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount, 0); err != nil {
 			return fmt.Errorf("could not make payment for %s: %w", info, err)
 		}
 
@@ -881,7 +883,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 	}
 
 	if satorShare > 0 {
-		if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare); err != nil {
+		if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare, 0); err != nil {
 			return fmt.Errorf("could not make payment for %s: %w", info, err)
 		}
 	}
@@ -890,7 +892,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 }
 
 // P2PTransfer draft
-func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error {
+func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, fee float64, info string) error {
 	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     uid,
 		WalletType: WalletTypeSator,
@@ -932,7 +934,7 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 		return fmt.Errorf("could not get recipient solana account for this wallet: %w", err)
 	}
 
-	if err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount); err != nil {
+	if err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, fee); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
