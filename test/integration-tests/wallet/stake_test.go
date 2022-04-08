@@ -68,5 +68,6 @@ func TestStake(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 	err = c.Wallet.Unstake(signUpResp.AccessToken, wallet.Id)
-	require.NoError(t, err)
+	require.Error(t, err)
+	// TODO: add successful unstake test case
 }

@@ -639,7 +639,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
 	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
 
-	if duration <= 0 {
+	if duration < 1 {
 		duration = 30
 	}
 
