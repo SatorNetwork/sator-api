@@ -60,7 +60,7 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 	return txHash, nil
 }
 
-func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64) (string, error) {
+func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr, tokenHolderAddr string, amount, fee float64) (string, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
 	asset := common.PublicKeyFromString(assetAddr)
 	instructions := make([]types.Instruction, 0, 2)
@@ -100,6 +100,25 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 		amountToSend,
 		c.decimals,
 	))
+
+	if fee > 0 {
+		tokenHolderPublicKey := common.PublicKeyFromString(tokenHolderAddr)
+		tokenHolderAta, err := c.deriveATAPublicKey(ctx, tokenHolderPublicKey, asset)
+		if err != nil {
+			return "", err
+		}
+
+		instructions = append(instructions, tokenprog.TransferChecked(
+			sourceAta,
+			tokenHolderAta,
+			asset,
+			source.PublicKey,
+			[]common.PublicKey{},
+			uint64(fee * float64(c.mltpl)),
+			c.decimals,
+		))
+	}
+
 	txHash, err := c.SendTransaction(ctx, feePayer, source, instructions...)
 	if err != nil {
 		return "", fmt.Errorf("could not send asset: %w", err)
