@@ -11,4 +11,5 @@ var (
 	ErrMinimalAmountToSend = errors.New("minimal amount to send")
 	ErrNotEnoughBalance    = errors.New("not enough balance amount")
 	ErrCouldNotLock        = errors.New("could not lock tokens, try again later")
+	ErrTransactionFailed   = errors.New("transaction failed")
 )
