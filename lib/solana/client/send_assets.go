@@ -114,7 +114,7 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 			asset,
 			source.PublicKey,
 			[]common.PublicKey{},
-			uint64(fee * float64(c.mltpl)),
+			uint64(fee*float64(c.mltpl)),
 			c.decimals,
 		))
 	}
