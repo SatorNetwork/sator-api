@@ -49,6 +49,7 @@ var (
 		MasterOTPHash:               "$2a$04$JEj1CnjccUr237U8lOWMVOUPcm4xG/a3SHcJM00uNQKAx.ujaP5Pa",
 		QuizWsConnURL:               "https://aec45cb3e117.ngrok.io/quiz",
 		QuizBotsTimeout:             5 * time.Second,
+		QuizLobbyLatency:            5 * time.Second,
 		TokenCirculatingSupply:      11839844,
 		SolanaEnv:                   "devnet",
 		SolanaApiBaseUrl:            "http://localhost:8899/",

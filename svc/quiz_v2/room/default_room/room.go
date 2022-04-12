@@ -2,6 +2,7 @@ package default_room
 
 import (
 	"context"
+	engine_events "github.com/SatorNetwork/sator-api/svc/quiz_v2/engine/events"
 	"log"
 	"time"
 
@@ -45,12 +46,14 @@ type defaultRoom struct {
 	countdownChan         chan int
 	questionChan          chan *questionWrapper
 	answersChan           chan *answerWrapper
+	eventsChan            chan engine_events.Event
 	messagesForNewPlayers []*message.Message
 
 	statusIsUpdatedChan chan struct{}
 	st                  *status_transactor.StatusTransactor
 
 	quizEngine         quiz_engine.QuizEngine
+	quizLobbyLatency   time.Duration
 	rewards            interfaces.RewardsService
 	restrictionManager restriction_manager.RestrictionManager
 
@@ -65,6 +68,8 @@ func New(
 	qr interfaces.QuizV2Repository,
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
+	quizLobbyLatency time.Duration,
+	eventsChan chan engine_events.Event,
 ) (*defaultRoom, error) {
 	roomID := uuid.New()
 	challengeUID, err := uuid.Parse(challengeID)
@@ -87,12 +92,14 @@ func New(
 		countdownChan:         make(chan int, defaultChanBuffSize),
 		questionChan:          make(chan *questionWrapper, defaultChanBuffSize),
 		answersChan:           make(chan *answerWrapper, defaultChanBuffSize),
+		eventsChan:            eventsChan,
 		messagesForNewPlayers: make([]*message.Message, 0),
 
 		statusIsUpdatedChan: statusIsUpdatedChan,
 		st:                  status_transactor.New(statusIsUpdatedChan),
 
 		quizEngine:         quizEngine,
+		quizLobbyLatency:   quizLobbyLatency,
 		rewards:            rewards,
 		restrictionManager: restrictionManager,
 
@@ -138,8 +145,11 @@ LOOP:
 
 			if r.IsFull() {
 				log.Println("Room is full")
-
-				r.st.SetStatus(status_transactor.RoomIsFullStatus)
+				go func() {
+					time.Sleep(r.quizLobbyLatency)
+					r.st.SetStatus(status_transactor.RoomIsFullStatus)
+					r.eventsChan <- engine_events.NewForgetRoomEvent(r.ChallengeID())
+				}()
 			}
 
 		case <-r.statusIsUpdatedChan:
