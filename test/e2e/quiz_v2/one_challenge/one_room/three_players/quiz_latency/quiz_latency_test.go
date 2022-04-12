@@ -89,4 +89,6 @@ func TestQuizLatency(t *testing.T) {
 	require.NoError(t, err)
 	err = messageVerifiers[2].NonStrictVerify()
 	require.NoError(t, err)
+	err = messageVerifiers[3].NonStrictVerify()
+	require.NoError(t, err)
 }
