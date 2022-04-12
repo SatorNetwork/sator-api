@@ -81,5 +81,6 @@ SET title = @title,
 WHERE id = @id;
 
 -- name: DeleteShowByID :exec
-DELETE FROM shows
+UPDATE shows
+SET archived = true
 WHERE id = @id;
