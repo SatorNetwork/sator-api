@@ -78,7 +78,7 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 
 const deleteShowByID = `-- name: DeleteShowByID :exec
 UPDATE shows
-SET archive = true
+SET archived = true
 WHERE id = $1
 `
 

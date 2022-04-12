@@ -82,5 +82,5 @@ WHERE id = @id;
 
 -- name: DeleteShowByID :exec
 UPDATE shows
-SET archive = true
+SET archived = true
 WHERE id = @id;
