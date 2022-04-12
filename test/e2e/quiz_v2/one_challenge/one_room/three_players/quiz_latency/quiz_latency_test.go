@@ -81,7 +81,7 @@ func TestQuizLatency(t *testing.T) {
 		defer messageVerifiers[i].Close()
 	}
 
-	time.Sleep(time.Second * 10 + app_config.AppConfigForTests.QuizLobbyLatency)
+	time.Sleep(time.Second*10 + app_config.AppConfigForTests.QuizLobbyLatency)
 
 	err = messageVerifiers[0].NonStrictVerify()
 	require.NoError(t, err)

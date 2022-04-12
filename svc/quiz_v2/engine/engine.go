@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	engine_events "github.com/SatorNetwork/sator-api/svc/quiz_v2/engine/events"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
@@ -14,6 +15,7 @@ import (
 
 type Engine struct {
 	newPlayersChan         chan player.Player
+	eventsChan             chan engine_events.Event
 	challengeIDToRoom      map[string]room.Room
 	challengeIDToRoomMutex *sync.Mutex
 
@@ -40,6 +42,7 @@ func New(
 ) *Engine {
 	return &Engine{
 		newPlayersChan:         make(chan player.Player),
+		eventsChan:             make(chan engine_events.Event),
 		challengeIDToRoom:      make(map[string]room.Room, 0),
 		challengeIDToRoomMutex: &sync.Mutex{},
 
@@ -61,17 +64,19 @@ LOOP:
 	for {
 		select {
 		case newPlayer := <-e.newPlayersChan:
-			room, err := e.getOrCreateRoom(newPlayer.ChallengeID())
+			room, err := e.getOrCreateRoom(newPlayer.ChallengeID(), e.eventsChan)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 
 			room.AddPlayer(newPlayer)
-			if room.IsFull() {
-				e.deleteRoom(room.ChallengeID())
-			}
 
+		case event := <-e.eventsChan:
+			switch event := event.(type) {
+			case *engine_events.ForgetRoomEvent:
+				e.deleteRoom(event.RoomID.String())
+			}
 		case <-e.done:
 			break LOOP
 		}
@@ -98,7 +103,7 @@ func (e *Engine) GetRoomDetails(challengeID string) (*room.RoomDetails, error) {
 	return room.GetRoomDetails()
 }
 
-func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
+func (e *Engine) getOrCreateRoom(challengeID string, eventsChan chan engine_events.Event) (room.Room, error) {
 	e.challengeIDToRoomMutex.Lock()
 	defer e.challengeIDToRoomMutex.Unlock()
 
@@ -112,6 +117,7 @@ func (e *Engine) getOrCreateRoom(challengeID string) (room.Room, error) {
 			e.restrictionManager,
 			e.shuffleQuestions,
 			e.quizLobbyLatency,
+			eventsChan,
 		)
 		if err != nil {
 			return nil, err

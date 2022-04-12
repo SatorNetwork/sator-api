@@ -2,6 +2,7 @@ package default_room
 
 import (
 	"context"
+	engine_events "github.com/SatorNetwork/sator-api/svc/quiz_v2/engine/events"
 	"log"
 	"time"
 
@@ -45,6 +46,7 @@ type defaultRoom struct {
 	countdownChan         chan int
 	questionChan          chan *questionWrapper
 	answersChan           chan *answerWrapper
+	eventsChan            chan engine_events.Event
 	messagesForNewPlayers []*message.Message
 
 	statusIsUpdatedChan chan struct{}
@@ -67,6 +69,7 @@ func New(
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
 	quizLobbyLatency time.Duration,
+	eventsChan chan engine_events.Event,
 ) (*defaultRoom, error) {
 	roomID := uuid.New()
 	challengeUID, err := uuid.Parse(challengeID)
@@ -89,6 +92,7 @@ func New(
 		countdownChan:         make(chan int, defaultChanBuffSize),
 		questionChan:          make(chan *questionWrapper, defaultChanBuffSize),
 		answersChan:           make(chan *answerWrapper, defaultChanBuffSize),
+		eventsChan:            eventsChan,
 		messagesForNewPlayers: make([]*message.Message, 0),
 
 		statusIsUpdatedChan: statusIsUpdatedChan,
@@ -144,6 +148,7 @@ LOOP:
 				go func() {
 					time.Sleep(r.quizLobbyLatency)
 					r.st.SetStatus(status_transactor.RoomIsFullStatus)
+					r.eventsChan <- engine_events.NewForgetRoomEvent(r.roomID)
 				}()
 			}
 

@@ -127,7 +127,7 @@ func TestNoAnswers(t *testing.T) {
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
-		time.Sleep(time.Second * 25 + app_config.AppConfigForTests.QuizLobbyLatency)
+		time.Sleep(time.Second*25 + app_config.AppConfigForTests.QuizLobbyLatency)
 
 		err = messageVerifier.Verify()
 		require.NoError(t, err)

@@ -87,7 +87,7 @@ type Config struct {
 	MasterOTPHash               string
 	QuizWsConnURL               string
 	QuizBotsTimeout             time.Duration
-	QuizLobbyLatency			time.Duration
+	QuizLobbyLatency            time.Duration
 	TokenCirculatingSupply      float64
 	SolanaEnv                   string
 	SolanaApiBaseUrl            string
@@ -174,8 +174,8 @@ func ConfigFromEnv() *Config {
 		JwtTTL:        env.GetDuration("JWT_TTL", 24*time.Hour),
 
 		// Quiz
-		QuizWsConnURL:   env.MustString("QUIZ_WS_CONN_URL"),
-		QuizBotsTimeout: env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second),
+		QuizWsConnURL:    env.MustString("QUIZ_WS_CONN_URL"),
+		QuizBotsTimeout:  env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second),
 		QuizLobbyLatency: env.GetDuration("QUIZ_LOBBY_LATENCY", 5*time.Second),
 
 		// Solana
