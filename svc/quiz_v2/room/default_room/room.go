@@ -148,7 +148,7 @@ LOOP:
 				go func() {
 					time.Sleep(r.quizLobbyLatency)
 					r.st.SetStatus(status_transactor.RoomIsFullStatus)
-					r.eventsChan <- engine_events.NewForgetRoomEvent(r.roomID)
+					r.eventsChan <- engine_events.NewForgetRoomEvent(r.ChallengeID())
 				}()
 			}
 

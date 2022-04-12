@@ -99,7 +99,7 @@ func TestCorrectAnswers(t *testing.T) {
 
 		// Wait until room will be closed
 		if (i+1)%playersInRoom == 0 {
-			time.Sleep(3 * time.Second)
+			time.Sleep(3*time.Second + app_config.AppConfigForTests.QuizLobbyLatency)
 		}
 
 		// TODO(evg): investigate and remove

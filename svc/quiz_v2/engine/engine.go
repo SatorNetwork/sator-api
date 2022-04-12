@@ -75,7 +75,7 @@ LOOP:
 		case event := <-e.eventsChan:
 			switch event := event.(type) {
 			case *engine_events.ForgetRoomEvent:
-				e.deleteRoom(event.RoomID.String())
+				e.deleteRoom(event.ChallengeID)
 			}
 		case <-e.done:
 			break LOOP

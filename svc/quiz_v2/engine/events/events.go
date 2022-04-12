@@ -1,15 +1,13 @@
 package events
 
-import "github.com/google/uuid"
-
 type Event interface{}
 
 type ForgetRoomEvent struct {
-	RoomID uuid.UUID
+	ChallengeID string
 }
 
-func NewForgetRoomEvent(roomID uuid.UUID) *ForgetRoomEvent {
+func NewForgetRoomEvent(challengeID string) *ForgetRoomEvent {
 	return &ForgetRoomEvent{
-		RoomID: roomID,
+		ChallengeID: challengeID,
 	}
 }
