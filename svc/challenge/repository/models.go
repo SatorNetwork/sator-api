@@ -43,6 +43,8 @@ type Challenge struct {
 	MaxWinners        sql.NullInt32  `json:"max_winners"`
 	QuestionsPerGame  int32          `json:"questions_per_game"`
 	MinCorrectAnswers int32          `json:"min_correct_answers"`
+	PercentForQuiz    float64        `json:"percent_for_quiz"`
+	MinimumReward     float64        `json:"minimum_reward"`
 }
 
 type EpisodeAccess struct {

@@ -34,6 +34,7 @@ var defaultChallenge = challengeRepo.AddChallengeParams{
 	},
 	QuestionsPerGame:  5,
 	MinCorrectAnswers: 1,
+	PercentForQuiz:    100,
 }
 
 func getDefaultQuestionsWithOptions(challengeID uuid.UUID) []questionWithOptions {

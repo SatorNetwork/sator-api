@@ -2,7 +2,6 @@ package default_room
 
 import (
 	"context"
-	engine_events "github.com/SatorNetwork/sator-api/svc/quiz_v2/engine/events"
 	"log"
 	"time"
 
@@ -10,9 +9,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
+	engine_events "github.com/SatorNetwork/sator-api/svc/quiz_v2/engine/events"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/player"
+	quiz_v2_repository "github.com/SatorNetwork/sator-api/svc/quiz_v2/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/restriction_manager"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/players_map"
@@ -41,6 +42,7 @@ type answerWrapper struct {
 type defaultRoom struct {
 	roomID                uuid.UUID
 	challengeID           string
+	qr                    interfaces.QuizV2Repository
 	pm                    *players_map.PlayersMap
 	newPlayersChan        chan player.Player
 	countdownChan         chan int
@@ -79,7 +81,7 @@ func New(
 
 	statusIsUpdatedChan := make(chan struct{}, defaultChanBuffSize)
 
-	quizEngine, err := quiz_engine.New(challengeID, challenges, stakeLevels, shuffleQuestions)
+	quizEngine, err := quiz_engine.New(challengeID, challenges, qr, stakeLevels, shuffleQuestions)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +89,7 @@ func New(
 	return &defaultRoom{
 		roomID:                roomID,
 		challengeID:           challengeID,
+		qr:                    qr,
 		pm:                    players_map.New(roomID, challengeUID, qr),
 		newPlayersChan:        make(chan player.Player, defaultChanBuffSize),
 		countdownChan:         make(chan int, defaultChanBuffSize),
@@ -469,6 +472,15 @@ func (r *defaultRoom) sendRewards() {
 			log.Printf("can't register earned reward: %v\n", err)
 			return
 		}
+	}
+
+	distributedPrizePool := r.quizEngine.DistributedPrizePool()
+	_, err = r.qr.RegisterNewQuiz(context.Background(), quiz_v2_repository.RegisterNewQuizParams{
+		ChallengeID:        challengeID,
+		DistributedRewards: distributedPrizePool,
+	})
+	if err != nil {
+		log.Printf("can't register new quiz: %v\n", err)
 	}
 
 	r.st.SetStatus(status_transactor.RewardsAreSent)

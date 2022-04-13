@@ -85,6 +85,31 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		}
 	}
 
+	{
+		defaultChallengeCopy := deepcopy.Copy(defaultChallenge).(challengeRepo.AddChallengeParams)
+		defaultChallengeCopy.Title = "new-prize-pool-logic"
+		defaultChallengeCopy.PercentForQuiz = 5
+		challenge, err := db.challengeRepository.AddChallenge(ctx, defaultChallengeCopy)
+		if err != nil {
+			return errors.Wrapf(err, "can't add %v challenge", defaultChallengeCopy.Title)
+		}
+
+		questionsWithOptions := getDefaultQuestionsWithOptions(challenge.ID)
+		for _, q := range questionsWithOptions {
+			addQuestionResp, err := db.challengeRepository.AddQuestion(ctx, q.question)
+			if err != nil {
+				return err
+			}
+
+			for _, option := range q.options {
+				option.QuestionID = addQuestionResp.ID
+				if _, err := db.challengeRepository.AddQuestionOption(ctx, option); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

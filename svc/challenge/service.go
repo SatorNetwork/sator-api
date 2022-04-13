@@ -19,6 +19,9 @@ const (
 	defaultMaxWinners        = 1
 	defaultQuestionsPerGame  = 5
 	defaultMinCorrectAnswers = 1
+
+	defaultPercentForQuiz = 5
+	defaultMinimumReward  = 1
 )
 
 type (
@@ -122,6 +125,8 @@ type (
 		IsRealmActivated      bool       `json:"is_realm_activated"`
 		RegisteredPlayers     int        `json:"registered_players"`
 		RegisteredPlayersInDB int        `json:"registered_players_in_db"`
+		PercentForQuiz        float64    `json:"percent_for_quiz"`
+		MinimumReward         float64    `json:"minimum_reward"`
 	}
 
 	RawChallenge struct {
@@ -140,6 +145,8 @@ type (
 		MaxWinners         int32      `json:"max_winners"`
 		QuestionsPerGame   int32      `json:"questions_per_game"`
 		MinCorrectAnswers  int32      `json:"min_correct_answers"`
+		PercentForQuiz     float64    `json:"percent_for_quiz"`
+		MinimumReward      float64    `json:"minimum_reward"`
 	}
 
 	// Question struct
@@ -463,6 +470,8 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		QuestionsPerGame:   c.QuestionsPerGame,
 		MinCorrectAnswers:  c.MinCorrectAnswers,
 		IsRealmActivated:   isActivated,
+		PercentForQuiz:     c.PercentForQuiz,
+		MinimumReward:      c.MinimumReward,
 	}
 
 	if ch.MaxWinners == 0 {
@@ -492,6 +501,8 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 		MaxWinners:         c.MaxWinners.Int32,
 		QuestionsPerGame:   c.QuestionsPerGame,
 		MinCorrectAnswers:  c.MinCorrectAnswers,
+		PercentForQuiz:     c.PercentForQuiz,
+		MinimumReward:      c.MinimumReward,
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
@@ -515,6 +526,12 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 	}
 	if ch.MinCorrectAnswers == 0 {
 		ch.MinCorrectAnswers = defaultMinCorrectAnswers
+	}
+	if ch.PercentForQuiz == 0 {
+		ch.PercentForQuiz = defaultPercentForQuiz
+	}
+	if ch.MinimumReward == 0 {
+		ch.MinimumReward = defaultMinimumReward
 	}
 
 	params := repository.AddChallengeParams{
@@ -542,6 +559,8 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		},
 		QuestionsPerGame:  ch.QuestionsPerGame,
 		MinCorrectAnswers: ch.MinCorrectAnswers,
+		PercentForQuiz:    ch.PercentForQuiz,
+		MinimumReward:     ch.MinimumReward,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
@@ -580,6 +599,12 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	if ch.MinCorrectAnswers == 0 {
 		ch.MinCorrectAnswers = defaultMinCorrectAnswers
 	}
+	if ch.PercentForQuiz == 0 {
+		ch.PercentForQuiz = defaultPercentForQuiz
+	}
+	if ch.MinimumReward == 0 {
+		ch.MinimumReward = defaultMinimumReward
+	}
 
 	params := repository.UpdateChallengeParams{
 		ID:     ch.ID,
@@ -603,6 +628,8 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		},
 		QuestionsPerGame:  ch.QuestionsPerGame,
 		MinCorrectAnswers: ch.MinCorrectAnswers,
+		PercentForQuiz:    ch.PercentForQuiz,
+		MinimumReward:     ch.MinimumReward,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
