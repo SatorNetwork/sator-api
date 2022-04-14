@@ -9,6 +9,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type QuizzesV2 struct {
+	ID                 uuid.UUID    `json:"id"`
+	ChallengeID        uuid.UUID    `json:"challenge_id"`
+	DistributedRewards float64      `json:"distributed_rewards"`
+	UpdatedAt          sql.NullTime `json:"updated_at"`
+	CreatedAt          time.Time    `json:"created_at"`
+}
+
 type RoomPlayer struct {
 	ChallengeID uuid.UUID    `json:"challenge_id"`
 	UserID      uuid.UUID    `json:"user_id"`
