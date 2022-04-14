@@ -361,6 +361,8 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			MaxWinners:         int32(req.MaxWinners),
 			QuestionsPerGame:   int32(req.QuestionsPerGame),
 			MinCorrectAnswers:  int32(req.MinCorrectAnswers),
+			PercentForQuiz:     req.PercentForQuiz,
+			MinimumReward:      req.MinimumReward,
 		}
 
 		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
@@ -436,6 +438,8 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			MaxWinners:         int32(req.MaxWinners),
 			QuestionsPerGame:   int32(req.QuestionsPerGame),
 			MinCorrectAnswers:  int32(req.MinCorrectAnswers),
+			PercentForQuiz:     req.PercentForQuiz,
+			MinimumReward:      req.MinimumReward,
 		}
 
 		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
