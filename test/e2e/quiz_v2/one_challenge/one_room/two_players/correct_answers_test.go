@@ -2,6 +2,8 @@ package two_players
 
 import (
 	"context"
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
+	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +12,6 @@ import (
 
 	"github.com/SatorNetwork/sator-api/lib/encryption/envelope"
 	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
-	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/message"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/e2e/quiz_v2/message_container"
@@ -43,8 +44,10 @@ func TestCorrectAnswers(t *testing.T) {
 		StakeProgramID: app_config.AppConfigForTests.SolanaStakeProgramID,
 	})
 
-	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
-	user2 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
+	user1SignUpRequest := auth.RandomSignUpRequest()
+	user1 := user.NewInitializedUser(user1SignUpRequest, t)
+	user2SignUpRequest := auth.RandomSignUpRequest()
+	user2 := user.NewInitializedUser(user2SignUpRequest, t)
 
 	{
 		challenge, err := c.ChallengesClient.GetChallengeById(user1.AccessToken(), defaultChallengeID.String())
@@ -208,15 +211,22 @@ func TestCorrectAnswers(t *testing.T) {
 		require.Contains(t, err.Error(), "reward has been already received for this challenge")
 	}
 
+	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), user1SignUpRequest.Email, sumsub.KYCStatusApproved)
+	require.NoError(t, err)
+	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), user2SignUpRequest.Email, sumsub.KYCStatusApproved)
+	require.NoError(t, err)
+
 	var user1TxHash string
 	var user2TxHash string
 	{
 		user1ClaimRewards, err := c.RewardsClient.ClaimRewards(user1.AccessToken())
+		require.NoError(t, err)
 		user1TxHash = getTxHashFromTransactionURL(user1ClaimRewards.TransactionURL)
 		require.NoError(t, err)
 		require.NotEqual(t, "", user1TxHash)
 
 		user2ClaimRewards, err := c.RewardsClient.ClaimRewards(user2.AccessToken())
+		require.NoError(t, err)
 		user2TxHash = getTxHashFromTransactionURL(user2ClaimRewards.TransactionURL)
 		require.NoError(t, err)
 		require.NotEqual(t, "", user2TxHash)
