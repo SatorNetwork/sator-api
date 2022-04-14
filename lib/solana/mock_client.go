@@ -169,6 +169,21 @@ func (mr *MockInterfaceMockRecorder) GetTokenAccountBalanceWithAutoDerive(arg0, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTokenAccountBalanceWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).GetTokenAccountBalanceWithAutoDerive), arg0, arg1, arg2)
 }
 
+// GetTransaction mocks base method.
+func (m *MockInterface) GetTransaction(arg0 context.Context, arg1 string) (GetConfirmedTransactionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTransaction", arg0, arg1)
+	ret0, _ := ret[0].(GetConfirmedTransactionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTransaction indicates an expected call of GetTransaction.
+func (mr *MockInterfaceMockRecorder) GetTransaction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransaction", reflect.TypeOf((*MockInterface)(nil).GetTransaction), arg0, arg1)
+}
+
 // GetTransactions mocks base method.
 func (m *MockInterface) GetTransactions(arg0 context.Context, arg1 string) ([]ConfirmedTransactionResponse, error) {
 	m.ctrl.T.Helper()
