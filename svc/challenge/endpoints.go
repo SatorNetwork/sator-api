@@ -81,6 +81,8 @@ type (
 		MaxWinners         int     `json:"max_winners"`
 		QuestionsPerGame   int     `json:"questions_per_game"`
 		MinCorrectAnswers  int     `json:"min_correct_answers"`
+		PercentForQuiz     float64 `json:"percent_for_quiz" validate:"required,gt=0"`
+		MinimumReward      float64 `json:"minimum_reward" validate:"required,gt=0"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -98,6 +100,8 @@ type (
 		MaxWinners         int     `json:"max_winners"`
 		QuestionsPerGame   int     `json:"questions_per_game"`
 		MinCorrectAnswers  int     `json:"min_correct_answers"`
+		PercentForQuiz     float64 `json:"percent_for_quiz" validate:"required,gt=0"`
+		MinimumReward      float64 `json:"minimum_reward" validate:"required,gt=0"`
 	}
 
 	CheckAnswerRequest struct {
