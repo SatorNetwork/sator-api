@@ -109,6 +109,9 @@ func TestCorrectAnswers(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 2, challenge.Players)
 			require.Equal(t, 1, challenge.RegisteredPlayersInDB)
+
+			require.Equal(t, "250 SAO", challenge.CurrentPrizePool)
+			require.Equal(t, float64(250), challenge.CurrentPrizePoolAmount)
 		}
 		{
 			challengesWithPlayer, err := c.QuizV2Client.GetChallengesSortedByPlayers(user1.AccessToken())
