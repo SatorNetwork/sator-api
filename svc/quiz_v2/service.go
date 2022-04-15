@@ -194,8 +194,8 @@ func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
 
 func NewChallengesFromSQL(sqlChallenges []*sql_executor.Challenge) []*Challenge {
 	challenges := make([]*Challenge, 0)
-	for _, c := range sqlChallenges {
-		challenges = append(challenges, NewChallengeFromSQL(c))
+	for i := range sqlChallenges {
+		challenges = append(challenges, NewChallengeFromSQL(sqlChallenges[i]))
 	}
 
 	return challenges
