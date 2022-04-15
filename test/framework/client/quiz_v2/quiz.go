@@ -34,24 +34,26 @@ type ChallengeWrapper struct {
 }
 
 type Challenge struct {
-	Id                    string      `json:"id"`
-	ShowId                string      `json:"show_id"`
-	Title                 string      `json:"title"`
-	Description           string      `json:"description"`
-	PrizePool             string      `json:"prize_pool"`
-	PrizePoolAmount       int         `json:"prize_pool_amount"`
-	Players               int         `json:"players"`
-	Winners               string      `json:"winners"`
-	TimePerQuestion       string      `json:"time_per_question"`
-	TimePerQuestionSec    int         `json:"time_per_question_sec"`
-	Play                  string      `json:"play"`
-	EpisodeId             interface{} `json:"episode_id"`
-	Kind                  int         `json:"kind"`
-	UserMaxAttempts       int         `json:"user_max_attempts"`
-	AttemptsLeft          int         `json:"attempts_left"`
-	ReceivedReward        int         `json:"received_reward"`
-	ReceivedRewardStr     string      `json:"received_reward_str"`
-	RegisteredPlayersInDB int         `json:"registered_players_in_db"`
+	Id                     string      `json:"id"`
+	ShowId                 string      `json:"show_id"`
+	Title                  string      `json:"title"`
+	Description            string      `json:"description"`
+	PrizePool              string      `json:"prize_pool"`
+	PrizePoolAmount        int         `json:"prize_pool_amount"`
+	Players                int         `json:"players"`
+	Winners                string      `json:"winners"`
+	TimePerQuestion        string      `json:"time_per_question"`
+	TimePerQuestionSec     int         `json:"time_per_question_sec"`
+	Play                   string      `json:"play"`
+	EpisodeId              interface{} `json:"episode_id"`
+	Kind                   int         `json:"kind"`
+	UserMaxAttempts        int         `json:"user_max_attempts"`
+	AttemptsLeft           int         `json:"attempts_left"`
+	ReceivedReward         int         `json:"received_reward"`
+	ReceivedRewardStr      string      `json:"received_reward_str"`
+	RegisteredPlayersInDB  int         `json:"registered_players_in_db"`
+	CurrentPrizePool       string      `json:"current_prize_pool"`
+	CurrentPrizePoolAmount float64     `json:"current_prize_pool_amount"`
 }
 
 type ChallengeWithPlayer struct {
