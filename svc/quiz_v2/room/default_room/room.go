@@ -2,6 +2,7 @@ package default_room
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -428,6 +429,7 @@ func (r *defaultRoom) sendWinnersTable() {
 		Winners:               msgWinners,
 		Losers:                msgLosers,
 		PrizePoolDistribution: usernameIDToPrize,
+		CurrentPrizePool:      fmt.Sprintf("%v", r.quizEngine.GetCurrentPrizePool()),
 	}
 	msg, err := message.NewWinnersTableMessage(&payload)
 	if err != nil {
