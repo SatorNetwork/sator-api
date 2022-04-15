@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -12,6 +13,7 @@ import (
 	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/SatorNetwork/sator-api/svc/profile"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/common"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/db/sql_builder"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/db/sql_executor"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/engine"
@@ -31,6 +33,7 @@ type (
 		ac         authClient
 		pc         profileClient
 		dbClient   *sql.DB
+		qr         interfaces.QuizV2Repository
 
 		serverRSAPrivateKey *rsa.PrivateKey
 	}
@@ -66,11 +69,12 @@ func NewService(
 	qr interfaces.QuizV2Repository,
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
+	quizLobbyLatency time.Duration,
 ) *Service {
 	restrictionManager := restriction_manager.New(challenges)
 
 	s := &Service{
-		engine:              engine.New(challenges, stakeLevels, rewards, qr, restrictionManager, shuffleQuestions),
+		engine:              engine.New(challenges, stakeLevels, rewards, qr, restrictionManager, shuffleQuestions, quizLobbyLatency),
 		restrictionManager:  restrictionManager,
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,
@@ -78,6 +82,7 @@ func NewService(
 		ac:                  ac,
 		pc:                  pc,
 		dbClient:            dbClient,
+		qr:                  qr,
 		serverRSAPrivateKey: serverRSAPrivateKey,
 	}
 
@@ -150,6 +155,17 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 	if err != nil {
 		return challenge_service.Challenge{}, errors.Wrap(err, "can't get challenge by ID")
 	}
+
+	currentPrizePool, err := common.GetCurrentPrizePool(
+		s.qr,
+		challenge.ID,
+		challenge.PrizePoolAmount,
+		challenge.MinimumReward,
+		challenge.PercentForQuiz,
+	)
+
+	challenge.CurrentPrizePool = fmt.Sprintf("%v SAO", currentPrizePool)
+	challenge.CurrentPrizePoolAmount = currentPrizePool
 
 	roomDetails, err := s.engine.GetRoomDetails(challengeID.String())
 	if err != nil {

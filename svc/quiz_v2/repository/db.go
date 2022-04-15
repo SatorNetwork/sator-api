@@ -22,11 +22,20 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.cleanUpStmt, err = db.PrepareContext(ctx, cleanUp); err != nil {
+		return nil, fmt.Errorf("error preparing query CleanUp: %w", err)
+	}
 	if q.countPlayersInRoomStmt, err = db.PrepareContext(ctx, countPlayersInRoom); err != nil {
 		return nil, fmt.Errorf("error preparing query CountPlayersInRoom: %w", err)
 	}
+	if q.getDistributedRewardsByChallengeIDStmt, err = db.PrepareContext(ctx, getDistributedRewardsByChallengeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetDistributedRewardsByChallengeID: %w", err)
+	}
 	if q.registerNewPlayerStmt, err = db.PrepareContext(ctx, registerNewPlayer); err != nil {
 		return nil, fmt.Errorf("error preparing query RegisterNewPlayer: %w", err)
+	}
+	if q.registerNewQuizStmt, err = db.PrepareContext(ctx, registerNewQuiz); err != nil {
+		return nil, fmt.Errorf("error preparing query RegisterNewQuiz: %w", err)
 	}
 	if q.unregisterPlayerStmt, err = db.PrepareContext(ctx, unregisterPlayer); err != nil {
 		return nil, fmt.Errorf("error preparing query UnregisterPlayer: %w", err)
@@ -36,14 +45,29 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.cleanUpStmt != nil {
+		if cerr := q.cleanUpStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing cleanUpStmt: %w", cerr)
+		}
+	}
 	if q.countPlayersInRoomStmt != nil {
 		if cerr := q.countPlayersInRoomStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countPlayersInRoomStmt: %w", cerr)
 		}
 	}
+	if q.getDistributedRewardsByChallengeIDStmt != nil {
+		if cerr := q.getDistributedRewardsByChallengeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getDistributedRewardsByChallengeIDStmt: %w", cerr)
+		}
+	}
 	if q.registerNewPlayerStmt != nil {
 		if cerr := q.registerNewPlayerStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing registerNewPlayerStmt: %w", cerr)
+		}
+	}
+	if q.registerNewQuizStmt != nil {
+		if cerr := q.registerNewQuizStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing registerNewQuizStmt: %w", cerr)
 		}
 	}
 	if q.unregisterPlayerStmt != nil {
@@ -88,19 +112,25 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                     DBTX
-	tx                     *sql.Tx
-	countPlayersInRoomStmt *sql.Stmt
-	registerNewPlayerStmt  *sql.Stmt
-	unregisterPlayerStmt   *sql.Stmt
+	db                                     DBTX
+	tx                                     *sql.Tx
+	cleanUpStmt                            *sql.Stmt
+	countPlayersInRoomStmt                 *sql.Stmt
+	getDistributedRewardsByChallengeIDStmt *sql.Stmt
+	registerNewPlayerStmt                  *sql.Stmt
+	registerNewQuizStmt                    *sql.Stmt
+	unregisterPlayerStmt                   *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                     tx,
-		tx:                     tx,
-		countPlayersInRoomStmt: q.countPlayersInRoomStmt,
-		registerNewPlayerStmt:  q.registerNewPlayerStmt,
-		unregisterPlayerStmt:   q.unregisterPlayerStmt,
+		db:                                     tx,
+		tx:                                     tx,
+		cleanUpStmt:                            q.cleanUpStmt,
+		countPlayersInRoomStmt:                 q.countPlayersInRoomStmt,
+		getDistributedRewardsByChallengeIDStmt: q.getDistributedRewardsByChallengeIDStmt,
+		registerNewPlayerStmt:                  q.registerNewPlayerStmt,
+		registerNewQuizStmt:                    q.registerNewQuizStmt,
+		unregisterPlayerStmt:                   q.unregisterPlayerStmt,
 	}
 }

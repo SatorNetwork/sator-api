@@ -5,7 +5,8 @@ WHERE id = $1
 
 -- name: GetFilesByIDs :many
 SELECT * FROM files
-WHERE id = ANY(@ids::uuid[]); 
+WHERE id = ANY(@ids::uuid[])
+ORDER BY created_at DESC; 
 
 -- name: GetFilesList :many
 SELECT * FROM files

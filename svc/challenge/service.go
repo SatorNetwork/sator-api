@@ -19,6 +19,9 @@ const (
 	defaultMaxWinners        = 1
 	defaultQuestionsPerGame  = 5
 	defaultMinCorrectAnswers = 1
+
+	defaultPercentForQuiz = 5
+	defaultMinimumReward  = 1
 )
 
 type (
@@ -99,29 +102,33 @@ type (
 	// Challenge struct
 	// Fields were rearranged to optimize memory usage.
 	Challenge struct {
-		ID                    uuid.UUID  `json:"id"`
-		ShowID                uuid.UUID  `json:"show_id"`
-		Title                 string     `json:"title"`
-		Description           string     `json:"description"`
-		PrizePool             string     `json:"prize_pool"`
-		PrizePoolAmount       float64    `json:"prize_pool_amount"`
-		Players               int32      `json:"players"`
-		Winners               string     `json:"winners"`
-		TimePerQuestion       string     `json:"time_per_question"`
-		TimePerQuestionSec    int32      `json:"time_per_question_sec"`
-		Play                  string     `json:"play"`
-		EpisodeID             *uuid.UUID `json:"episode_id"`
-		Kind                  int32      `json:"kind"`
-		UserMaxAttempts       int32      `json:"user_max_attempts"`
-		AttemptsLeft          int32      `json:"attempts_left"`
-		ReceivedReward        float64    `json:"received_reward"`
-		ReceivedRewardStr     string     `json:"received_reward_str"`
-		MaxWinners            int32      `json:"max_winners"`
-		QuestionsPerGame      int32      `json:"questions_per_game"`
-		MinCorrectAnswers     int32      `json:"min_correct_answers"`
-		IsRealmActivated      bool       `json:"is_realm_activated"`
-		RegisteredPlayers     int        `json:"registered_players"`
-		RegisteredPlayersInDB int        `json:"registered_players_in_db"`
+		ID                     uuid.UUID  `json:"id"`
+		ShowID                 uuid.UUID  `json:"show_id"`
+		Title                  string     `json:"title"`
+		Description            string     `json:"description"`
+		PrizePool              string     `json:"prize_pool"`
+		PrizePoolAmount        float64    `json:"prize_pool_amount"`
+		Players                int32      `json:"players"`
+		Winners                string     `json:"winners"`
+		TimePerQuestion        string     `json:"time_per_question"`
+		TimePerQuestionSec     int32      `json:"time_per_question_sec"`
+		Play                   string     `json:"play"`
+		EpisodeID              *uuid.UUID `json:"episode_id"`
+		Kind                   int32      `json:"kind"`
+		UserMaxAttempts        int32      `json:"user_max_attempts"`
+		AttemptsLeft           int32      `json:"attempts_left"`
+		ReceivedReward         float64    `json:"received_reward"`
+		ReceivedRewardStr      string     `json:"received_reward_str"`
+		MaxWinners             int32      `json:"max_winners"`
+		QuestionsPerGame       int32      `json:"questions_per_game"`
+		MinCorrectAnswers      int32      `json:"min_correct_answers"`
+		IsRealmActivated       bool       `json:"is_realm_activated"`
+		RegisteredPlayers      int        `json:"registered_players"`
+		RegisteredPlayersInDB  int        `json:"registered_players_in_db"`
+		PercentForQuiz         float64    `json:"percent_for_quiz"`
+		MinimumReward          float64    `json:"minimum_reward"`
+		CurrentPrizePool       string     `json:"current_prize_pool"`
+		CurrentPrizePoolAmount float64    `json:"current_prize_pool_amount"`
 	}
 
 	RawChallenge struct {
@@ -140,6 +147,8 @@ type (
 		MaxWinners         int32      `json:"max_winners"`
 		QuestionsPerGame   int32      `json:"questions_per_game"`
 		MinCorrectAnswers  int32      `json:"min_correct_answers"`
+		PercentForQuiz     float64    `json:"percent_for_quiz"`
+		MinimumReward      float64    `json:"minimum_reward"`
 	}
 
 	// Question struct
@@ -463,6 +472,8 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		QuestionsPerGame:   c.QuestionsPerGame,
 		MinCorrectAnswers:  c.MinCorrectAnswers,
 		IsRealmActivated:   isActivated,
+		PercentForQuiz:     c.PercentForQuiz,
+		MinimumReward:      c.MinimumReward,
 	}
 
 	if ch.MaxWinners == 0 {
@@ -492,6 +503,8 @@ func castToRawChallenge(c repository.Challenge) RawChallenge {
 		MaxWinners:         c.MaxWinners.Int32,
 		QuestionsPerGame:   c.QuestionsPerGame,
 		MinCorrectAnswers:  c.MinCorrectAnswers,
+		PercentForQuiz:     c.PercentForQuiz,
+		MinimumReward:      c.MinimumReward,
 	}
 
 	if c.EpisodeID.Valid && c.EpisodeID.UUID != uuid.Nil {
@@ -515,6 +528,12 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 	}
 	if ch.MinCorrectAnswers == 0 {
 		ch.MinCorrectAnswers = defaultMinCorrectAnswers
+	}
+	if ch.PercentForQuiz == 0 {
+		ch.PercentForQuiz = defaultPercentForQuiz
+	}
+	if ch.MinimumReward == 0 {
+		ch.MinimumReward = defaultMinimumReward
 	}
 
 	params := repository.AddChallengeParams{
@@ -542,6 +561,8 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		},
 		QuestionsPerGame:  ch.QuestionsPerGame,
 		MinCorrectAnswers: ch.MinCorrectAnswers,
+		PercentForQuiz:    ch.PercentForQuiz,
+		MinimumReward:     ch.MinimumReward,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {
@@ -580,6 +601,12 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 	if ch.MinCorrectAnswers == 0 {
 		ch.MinCorrectAnswers = defaultMinCorrectAnswers
 	}
+	if ch.PercentForQuiz == 0 {
+		ch.PercentForQuiz = defaultPercentForQuiz
+	}
+	if ch.MinimumReward == 0 {
+		ch.MinimumReward = defaultMinimumReward
+	}
 
 	params := repository.UpdateChallengeParams{
 		ID:     ch.ID,
@@ -603,6 +630,8 @@ func (s *Service) UpdateChallenge(ctx context.Context, ch Challenge) error {
 		},
 		QuestionsPerGame:  ch.QuestionsPerGame,
 		MinCorrectAnswers: ch.MinCorrectAnswers,
+		PercentForQuiz:    ch.PercentForQuiz,
+		MinimumReward:     ch.MinimumReward,
 	}
 
 	if ch.EpisodeID != nil && *ch.EpisodeID != uuid.Nil {

@@ -1,4 +1,4 @@
-package two_players
+package quiz_latency
 
 import (
 	"context"
@@ -20,18 +20,17 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/utils"
 )
 
-func TestCorrectAnswers(t *testing.T) {
+func TestQuizLatency(t *testing.T) {
 	defer app_config.RunAndWait()()
 
 	err := utils.BootstrapIfNeeded(context.Background(), t)
 	require.NoError(t, err)
 
 	c := client.NewClient()
-	defaultChallengeID, err := c.DB.ChallengeDB().DefaultChallengeID(context.Background())
+	challengeID, err := c.DB.ChallengeDB().ChallengeIDByTitle(context.Background(), "custom1")
 	require.NoError(t, err)
 
 	playersNum := 4
-	playersInRoom := 2
 	users := make([]*user.User, playersNum)
 	for i := 0; i < playersNum; i++ {
 		users[i] = user.NewInitializedUser(auth.RandomSignUpRequest(), t)
@@ -39,40 +38,23 @@ func TestCorrectAnswers(t *testing.T) {
 
 	userExpectedMessages := make([][]*message.Message, playersNum)
 	{
-		mc := message_container.New(defaultUserExpectedMessages).
-			Modify(
-				message_container.PFuncIndex(0),
+		mc := message_container.New(defaultUserExpectedMessages)
+		for i := 0; i < playersNum; i++ {
+			mc.Modify(
+				message_container.PFuncIndex(i),
 				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = users[0].Username()
-				}).
-			Modify(
-				message_container.PFuncIndex(1),
-				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = users[1].Username()
+					msg.PlayerIsJoinedMessage.Username = users[i].Username()
 				})
-		userExpectedMessages[0] = mc.Copy().Messages()
-		userExpectedMessages[1] = mc.Copy().Messages()
-	}
+		}
 
-	{
-		mc := message_container.New(defaultUserExpectedMessages).
-			Modify(
-				message_container.PFuncIndex(0),
-				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = users[2].Username()
-				}).
-			Modify(
-				message_container.PFuncIndex(1),
-				func(msg *message.Message) {
-					msg.PlayerIsJoinedMessage.Username = users[3].Username()
-				})
-		userExpectedMessages[2] = mc.Copy().Messages()
-		userExpectedMessages[3] = mc.Copy().Messages()
+		for i := 0; i < playersNum; i++ {
+			userExpectedMessages[i] = mc.Copy().Messages()
+		}
 	}
 
 	messageVerifiers := make([]*message_verifier.MessageVerifier, playersNum)
 	for i := 0; i < playersNum; i++ {
-		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[i].AccessToken(), defaultChallengeID.String())
+		getQuizLinkResp, err := c.QuizV2Client.GetQuizLink(users[i].AccessToken(), challengeID.String())
 		require.NoError(t, err)
 
 		sendMessageSubj := getQuizLinkResp.Data.SendMessageSubj
@@ -86,6 +68,7 @@ func TestCorrectAnswers(t *testing.T) {
 		natsSubscriber.SetQuestionMessageCallback(nats_subscriber.ReplyWithCorrectAnswerCallback)
 		natsSubscriber.SetEncryptor(envelope.NewEncryptor(serverPublicKey))
 		natsSubscriber.SetDecryptor(envelope.NewDecryptor(users[i].PrivateKey()))
+
 		err = natsSubscriber.Start()
 		require.NoError(t, err)
 		defer func() {
@@ -96,29 +79,16 @@ func TestCorrectAnswers(t *testing.T) {
 		messageVerifiers[i] = message_verifier.New(userExpectedMessages[i], natsSubscriber.GetMessageChan(), t)
 		go messageVerifiers[i].Start()
 		defer messageVerifiers[i].Close()
-
-		// Wait until room will be closed
-		if (i+1)%playersInRoom == 0 {
-			time.Sleep(3*time.Second + app_config.AppConfigForTests.QuizLobbyLatency)
-		}
-
-		// TODO(evg): investigate and remove
-		time.Sleep(time.Second * 2)
 	}
 
-	time.Sleep(time.Second * 25)
+	time.Sleep(time.Second*10 + app_config.AppConfigForTests.QuizLobbyLatency)
 
-	//for _, mv := range messageVerifiers {
-	//	err := mv.Verify()
-	//	require.NoError(t, err)
-	//}
-
-	err = messageVerifiers[0].Verify()
+	err = messageVerifiers[0].NonStrictVerify()
 	require.NoError(t, err)
-	err = messageVerifiers[1].Verify()
+	err = messageVerifiers[1].NonStrictVerify()
 	require.NoError(t, err)
-	err = messageVerifiers[2].Verify()
+	err = messageVerifiers[2].NonStrictVerify()
 	require.NoError(t, err)
-	err = messageVerifiers[3].Verify()
+	err = messageVerifiers[3].NonStrictVerify()
 	require.NoError(t, err)
 }
