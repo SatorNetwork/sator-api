@@ -429,7 +429,7 @@ func (r *defaultRoom) sendWinnersTable() {
 		Winners:               msgWinners,
 		Losers:                msgLosers,
 		PrizePoolDistribution: usernameIDToPrize,
-		CurrentPrizePool:      fmt.Sprintf("%v", r.quizEngine.GetCurrentPrizePool()),
+		CurrentPrizePool:      fmt.Sprintf("%v SAO", r.quizEngine.GetCurrentPrizePool()),
 	}
 	msg, err := message.NewWinnersTableMessage(&payload)
 	if err != nil {
