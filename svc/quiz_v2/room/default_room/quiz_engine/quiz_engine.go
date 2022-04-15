@@ -1,14 +1,12 @@
 package quiz_engine
 
 import (
-	"context"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/common"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/question_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
@@ -16,6 +14,7 @@ import (
 )
 
 type QuizEngine interface {
+	GetCurrentPrizePool() float64
 	GetChallenge() *challenge.RawChallenge
 	GetNumberOfQuestions() int
 	GetQuestions() []challenge.Question
@@ -33,6 +32,8 @@ type QuizEngine interface {
 type quizEngine struct {
 	questionContainer question_container.QuestionContainer
 	resultTable       result_table.ResultTable
+
+	currentPrizePool float64
 }
 
 func New(
@@ -65,35 +66,23 @@ func New(
 	return &quizEngine{
 		questionContainer: qc,
 		resultTable:       rt,
+		currentPrizePool:  currentPrizePool,
 	}, nil
 }
 
 func getCurrentPrizePool(qc question_container.QuestionContainer, qr interfaces.QuizV2Repository) (float64, error) {
 	challenge := qc.GetChallenge()
+	return common.GetCurrentPrizePool(
+		qr,
+		challenge.ID,
+		challenge.PrizePoolAmount,
+		challenge.MinimumReward,
+		challenge.PercentForQuiz,
+	)
+}
 
-	ctxb := context.Background()
-	distributedRewards, err := qr.GetDistributedRewardsByChallengeID(ctxb, qc.GetChallenge().ID)
-	if err != nil && !strings.Contains(err.Error(), "converting NULL to float64 is unsupported") {
-		return 0, errors.Wrap(err, "can't get distributed rewards by challenge id")
-	}
-	if err != nil && strings.Contains(err.Error(), "converting NULL to float64 is unsupported") {
-		distributedRewards = 0
-	}
-	leftInPool := challenge.PrizePoolAmount - distributedRewards
-	if leftInPool <= 0 {
-		return 0, errors.Wrap(err, "no money left in pool")
-	}
-	if leftInPool <= challenge.MinimumReward {
-		return leftInPool, nil
-	}
-
-	currentPrizePool := leftInPool / 100 * challenge.PercentForQuiz
-	if currentPrizePool < challenge.MinimumReward {
-		currentPrizePool = challenge.MinimumReward
-	}
-
-	return currentPrizePool, nil
-
+func (e *quizEngine) GetCurrentPrizePool() float64 {
+	return e.currentPrizePool
 }
 
 func (e *quizEngine) GetChallenge() *challenge.RawChallenge {
