@@ -22,7 +22,7 @@ type (
 		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ wallet.Transactions, err error)
 		PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error
 		PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error
-		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, fee float64, info string) error
+		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error
 		GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error)
 	}
 )
