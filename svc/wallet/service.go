@@ -84,7 +84,7 @@ type (
 		NewAccount() types.Account
 		AccountFromPrivateKeyBytes(pk []byte) types.Account
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr, tokenHolderAddr string, amount, fee float64) (string, error)
+		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, fee float64) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
@@ -564,7 +564,6 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
 			s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey),
 			recipientAddr,
-			s.tokenHolderSolanaAddr,
 			amount,
 			percentToCharge,
 		); err != nil {

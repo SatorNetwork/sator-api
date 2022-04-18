@@ -391,6 +391,7 @@ func (a *app) Run() {
 			SysvarClock:    a.cfg.SolanaSysvarClock,
 			SplToken:       a.cfg.SolanaSplToken,
 			StakeProgramID: a.cfg.SolanaStakeProgramID,
+			TokenHolderAddr: a.cfg.SolanaTokenHolderAddr,
 		})
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)

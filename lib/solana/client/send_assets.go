@@ -60,7 +60,7 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 	return txHash, nil
 }
 
-func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr, tokenHolderAddr string, amount, percentToCharge float64) (string, error) {
+func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64) (string, error) {
 	fee := amount*percentToCharge
 	amount -= fee
 	amountToSend := uint64(amount * float64(c.mltpl))
@@ -104,7 +104,7 @@ func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 	))
 
 	if fee > 0 {
-		tokenHolderPublicKey := common.PublicKeyFromString(tokenHolderAddr)
+		tokenHolderPublicKey := common.PublicKeyFromString(c.config.TokenHolderAddr)
 		tokenHolderAta, err := c.deriveATAPublicKey(ctx, tokenHolderPublicKey, asset)
 		if err != nil {
 			return "", err
