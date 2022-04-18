@@ -191,7 +191,7 @@ type (
 	}
 
 	// Simple function
-	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount, fee float64, info string) error
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error
 )
 
 // NewService is a factory function,
@@ -1073,7 +1073,7 @@ func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid
 		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
 	}
 
-	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, amount * s.tipsPercent, fmt.Sprintf("tips for episode review: %s", reviewID))
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, s.tipsPercent, fmt.Sprintf("tips for episode review: %s", reviewID))
 	if err != nil {
 		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
 	}

@@ -537,7 +537,7 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 	return s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, 0)
 }
 
-func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount, fee float64) error {
+func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount, percentToCharge float64) error {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return fmt.Errorf("could not get solana account: %w", err)
@@ -566,7 +566,7 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			recipientAddr,
 			s.tokenHolderSolanaAddr,
 			amount,
-			fee,
+			percentToCharge,
 		); err != nil {
 			if i < 4 {
 				log.Println(err)
@@ -892,7 +892,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 }
 
 // P2PTransfer draft
-func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, fee float64, info string) error {
+func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error {
 	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     uid,
 		WalletType: WalletTypeSator,
@@ -934,7 +934,7 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 		return fmt.Errorf("could not get recipient solana account for this wallet: %w", err)
 	}
 
-	if err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, fee); err != nil {
+	if err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, percentToCharge); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
