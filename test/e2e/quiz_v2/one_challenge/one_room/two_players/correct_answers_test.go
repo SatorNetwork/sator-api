@@ -118,8 +118,8 @@ func TestCorrectAnswers(t *testing.T) {
 			require.NoError(t, err)
 			_ = challengesWithPlayer
 			// TODO(evg): debug && uncomment
-			//require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
-			//require.Equal(t, 1, challengesWithPlayer[0].PlayersNumber)
+			require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
+			require.Equal(t, 1, challengesWithPlayer[0].PlayersNumber)
 		}
 	}
 
