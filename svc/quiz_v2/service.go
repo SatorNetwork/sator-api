@@ -206,7 +206,7 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("Serialized SQL challenges: %v\n", serializedChallenges)
+		log.Printf("Serialized SQL challenges: %s\n", serializedChallenges)
 	}
 	challenges := NewChallengesFromSQL(sqlChallenges)
 	{
@@ -214,7 +214,7 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("Serialized challenges: %v\n", serializedChallenges)
+		log.Printf("Serialized challenges: %s\n", serializedChallenges)
 	}
 
 	return challenges, nil
