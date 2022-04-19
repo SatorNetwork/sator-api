@@ -18,6 +18,9 @@ GROUP BY
 	id
 ORDER BY
 	players_num DESC
+),
+passed_challenges_data AS (
+	SELECT DISTINCT * FROM passed_challenges_data
 )
 SELECT
 	challenges.id AS id,
