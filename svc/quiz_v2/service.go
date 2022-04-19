@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rsa"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -184,12 +186,36 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error) {
 	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(userID, limit, offset)
+	{
+		tmpl := `
+		Challenges sorted by players params:
+		User's ID: %v
+		Limit:     %v
+		Offset:    %v
+		`
+		log.Printf(tmpl, userID, limit, offset)
+		log.Printf("Challenges sorted by players query: %v", query)
+	}
 	sqlExecutor := sql_executor.New(s.dbClient)
 	sqlChallenges, err := sqlExecutor.ExecuteGetChallengesSortedByPlayersQuery(query, nil)
 	if err != nil {
 		return nil, err
 	}
+	{
+		serializedChallenges, err := json.Marshal(sqlChallenges)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("Serialized SQL challenges: %v\n", serializedChallenges)
+	}
 	challenges := NewChallengesFromSQL(sqlChallenges)
+	{
+		serializedChallenges, err := json.Marshal(challenges)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("Serialized challenges: %v\n", serializedChallenges)
+	}
 
 	return challenges, nil
 }
