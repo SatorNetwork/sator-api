@@ -6,11 +6,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
@@ -215,6 +216,12 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 			return nil, err
 		}
 		log.Printf("Serialized challenges: %s\n", serializedChallenges)
+		if err := os.Stderr.Sync(); err != nil {
+			return nil, err
+		}
+		if err := os.Stdout.Sync(); err != nil {
+			return nil, err
+		}
 	}
 
 	return challenges, nil
