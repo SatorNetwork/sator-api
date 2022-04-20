@@ -18,15 +18,23 @@ GROUP BY
 	id
 ORDER BY
 	players_num DESC
+),
+user_attempts_per_challenge AS (
+	SELECT challenge_id, COUNT(*) as attempts FROM passed_challenges_data WHERE user_id='%v' GROUP BY challenge_id
+),
+passed_challenges_data AS (
+	SELECT DISTINCT * FROM passed_challenges_data
 )
 SELECT
 	challenges.id AS id,
-	challenges.title AS title,
+	CONCAT(shows.title, '. ', episodes.title) AS title,
 	challenges.players_to_start AS players_to_start,
 	sorted_challenges.players_num AS players_num,
 	challenges.prize_pool AS prize_pool,
 	COALESCE((episode_access.activated_before > NOW())::BOOLEAN, FALSE) AS is_activated,
-	episodes.cover AS cover
+	episodes.cover AS cover,
+	user_attempts_per_challenge.attempts AS attempts,
+	challenges.user_max_attempts AS user_max_attempts
 FROM
 	challenges
 	JOIN sorted_challenges ON sorted_challenges.id = challenges.id
@@ -38,10 +46,12 @@ FROM
 		AND episode_access.user_id = '%v'
 		AND episode_access.activated_before > NOW()
 	JOIN shows ON episodes.show_id = shows.id
+	LEFT JOIN user_attempts_per_challenge ON user_attempts_per_challenge.challenge_id = challenges.id
 WHERE (passed_challenges_data.reward_amount = 0
 	OR passed_challenges_data.reward_amount IS NULL)
 AND episodes.archived = FALSE
 AND shows.archived = FALSE
+AND (attempts IS NULL OR user_max_attempts - attempts > 0)
 ORDER BY
 	(challenges.players_to_start - sorted_challenges.players_num) ASC,
 	sorted_challenges.players_num DESC,
@@ -50,5 +60,5 @@ LIMIT %v OFFSET %v;
 `
 
 func ConstructGetChallengesSortedByPlayersQuery(userID uuid.UUID, limit, offset int32) string {
-	return fmt.Sprintf(queryTemplate, userID, userID, limit, offset)
+	return fmt.Sprintf(queryTemplate, userID, userID, userID, limit, offset)
 }
