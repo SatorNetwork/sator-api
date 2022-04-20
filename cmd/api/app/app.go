@@ -386,11 +386,11 @@ func (a *app) Run() {
 		}
 
 		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:  a.cfg.SolanaSystemProgram,
-			SysvarRent:     a.cfg.SolanaSysvarRent,
-			SysvarClock:    a.cfg.SolanaSysvarClock,
-			SplToken:       a.cfg.SolanaSplToken,
-			StakeProgramID: a.cfg.SolanaStakeProgramID,
+			SystemProgram:   a.cfg.SolanaSystemProgram,
+			SysvarRent:      a.cfg.SolanaSysvarRent,
+			SysvarClock:     a.cfg.SolanaSysvarClock,
+			SplToken:        a.cfg.SolanaSplToken,
+			StakeProgramID:  a.cfg.SolanaStakeProgramID,
 			TokenHolderAddr: a.cfg.SolanaTokenHolderAddr,
 		})
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
