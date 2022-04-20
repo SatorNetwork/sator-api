@@ -27,7 +27,7 @@ passed_challenges_data AS (
 )
 SELECT
 	challenges.id AS id,
-	challenges.title AS title,
+	CONCAT(shows.title, '. ', episodes.title) AS title,
 	challenges.players_to_start AS players_to_start,
 	sorted_challenges.players_num AS players_num,
 	challenges.prize_pool AS prize_pool,
