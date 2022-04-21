@@ -6,6 +6,7 @@ replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompat
 
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1
+	github.com/SatorNetwork/gopuzzlegame v0.0.0-20220421065141-ef26916b9d56
 	github.com/anytypeio/go-slip10 v0.0.0-20200330114100-25f30c832993
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/cenkalti/backoff v2.2.1+incompatible

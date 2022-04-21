@@ -103,6 +103,7 @@ var (
 		QuizV2ShuffleQuestions:      false,
 		ServerRSAPrivateKey:         serverRSAPrivateKey,
 		SatorAPIKey:                 "582e89d8-69ca-4206-8e7f-1fc822b41307",
+		PuzzleGameShuffle: 			 false,
 	}
 )
 
