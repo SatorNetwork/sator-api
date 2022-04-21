@@ -44,4 +44,4 @@ INSERT INTO puzzle_games_to_images(file_id, puzzle_game_id) VALUES
 ('a706620b-a179-41f8-9217-830327dea1f5', '7801d5d3-2d2c-4f85-9190-3fa82527f2af');
 
 INSERT INTO public.puzzle_game_unlock_options (id, steps, amount, disabled, updated_at, created_at, locked) VALUES
-('899fcefd-9b4b-4c67-905f-b1e580fcaf78', 32, 0.1, false, null, '2022-04-21 05:27:55.628799', false);
+('899fcefd-9b4b-4c67-905f-b1e580fcaf78', 32, 0, false, null, '2022-04-21 05:27:55.628799', false);
