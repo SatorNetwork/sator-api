@@ -139,7 +139,7 @@ type Config struct {
 	NatsWSURL                   string
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
-	TipsPercent					float64
+	TipsPercent                 float64
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
@@ -252,7 +252,7 @@ func ConfigFromEnv() *Config {
 		QuizV2ShuffleQuestions: env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true),
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
 
-		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.005),
+		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
 
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
 	}
