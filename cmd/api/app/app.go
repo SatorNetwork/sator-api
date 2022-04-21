@@ -140,7 +140,7 @@ type Config struct {
 	NatsWSURL                   string
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
-	PuzzleGameShuffle 			bool
+	PuzzleGameShuffle           bool
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool

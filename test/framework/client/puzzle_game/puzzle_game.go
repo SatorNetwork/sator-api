@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/SatorNetwork/gopuzzlegame"
 	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"net/http"
 )
 
-type PuzzleGameClient struct {}
+type PuzzleGameClient struct{}
 
 func New() *PuzzleGameClient {
 	return new(PuzzleGameClient)
@@ -36,11 +37,11 @@ type PuzzleGame struct {
 	BonusRewards float64   `json:"bonus_rewards,omitempty"`
 	PartsX       int32     `json:"parts_x"`
 	// PartsY     int32     `json:"parts_y"`
-	Steps      int32 `json:"steps"`
-	StepsTaken int32 `json:"steps_taken,omitempty"`
-	Status     int32 `json:"status"`
-	Result     int32 `json:"result,omitempty"`
-	Tiles	   []*gopuzzlegame.Tile `json:"tiles,omitempty"`
+	Steps      int32                `json:"steps"`
+	StepsTaken int32                `json:"steps_taken,omitempty"`
+	Status     int32                `json:"status"`
+	Result     int32                `json:"result,omitempty"`
+	Tiles      []*gopuzzlegame.Tile `json:"tiles,omitempty"`
 
 	// depends on user role
 	Images []PuzzleGameImage `json:"images,omitempty"`

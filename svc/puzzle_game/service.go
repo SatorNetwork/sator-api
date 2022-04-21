@@ -39,7 +39,7 @@ type (
 		chargeForUnlock            chargeForUnlockFunc          // function to charge user for unlocking puzzle game
 		rewardsFn                  rewardsFunc                  // function to send rewards for puzzle game
 		getUserRewardsMultiplierFn getUserRewardsMultiplierFunc // function to get user rewards multiplier
-		puzzleGameShuffle		   bool
+		puzzleGameShuffle          bool
 	}
 
 	puzzleGameRepository interface {
@@ -89,11 +89,11 @@ type (
 		BonusRewards float64   `json:"bonus_rewards,omitempty"`
 		PartsX       int32     `json:"parts_x"`
 		// PartsY     int32     `json:"parts_y"`
-		Steps      int32 `json:"steps"`
-		StepsTaken int32 `json:"steps_taken,omitempty"`
-		Status     int32 `json:"status"`
-		Result     int32 `json:"result,omitempty"`
-		Tiles	   []*gopuzzlegame.Tile `json:"tiles,omitempty"`
+		Steps      int32                `json:"steps"`
+		StepsTaken int32                `json:"steps_taken,omitempty"`
+		Status     int32                `json:"status"`
+		Result     int32                `json:"result,omitempty"`
+		Tiles      []*gopuzzlegame.Tile `json:"tiles,omitempty"`
 
 		// depends on user role
 		Images []PuzzleGameImage `json:"images,omitempty"`
@@ -355,7 +355,7 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		PuzzleGameID: puzzleGameID,
 		UserID:       userID,
 		Image:        sql.NullString{Valid: true, String: img},
-		Tiles: 		  sql.NullString{String: string(rawTiles), Valid: true},
+		Tiles:        sql.NullString{String: string(rawTiles), Valid: true},
 	}); err != nil {
 		fmt.Println(err.Error())
 		return PuzzleGame{}, errors.Wrap(err, "can't start puzzle game")
@@ -584,7 +584,7 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		StepsTaken:   att.StepsTaken,
 		Status:       att.Status,
 		Result:       att.Result,
-		Tiles: 		  controller.Puzzle.Tiles,
+		Tiles:        controller.Puzzle.Tiles,
 		Images:       images,
 		Image:        att.Image.String,
 	}

@@ -1,12 +1,13 @@
 package puzzle_game
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/puzzle_game"
 	"github.com/google/uuid"
-	"reflect"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"

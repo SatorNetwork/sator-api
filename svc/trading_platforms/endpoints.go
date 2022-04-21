@@ -2,6 +2,7 @@ package trading_platforms
 
 import (
 	"context"
+
 	"github.com/SatorNetwork/sator-api/lib/rbac"
 
 	"github.com/go-kit/kit/endpoint"

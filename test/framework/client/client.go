@@ -20,7 +20,7 @@ type Client struct {
 	ChallengesClient       *challenge.ChallengesClient
 	ShowsClient            *shows.ShowsClient
 	TradingPlatformsClient *trading_platforms.TradingPlatformsClient
-	PuzzleGame 			   *puzzle_game.PuzzleGameClient
+	PuzzleGame             *puzzle_game.PuzzleGameClient
 
 	DB *db.DB
 }

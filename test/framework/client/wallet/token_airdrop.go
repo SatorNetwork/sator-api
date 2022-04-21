@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+
 	"github.com/SatorNetwork/sator-api/test/framework/accounts"
 )
 

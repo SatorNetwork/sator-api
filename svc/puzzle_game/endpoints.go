@@ -3,6 +3,7 @@ package puzzle_game
 import (
 	"context"
 	"fmt"
+
 	"github.com/SatorNetwork/gopuzzlegame"
 
 	"github.com/SatorNetwork/sator-api/lib/jwt"
@@ -29,7 +30,7 @@ type (
 		FinishPuzzleGame     endpoint.Endpoint
 
 		GetPuzzleGameUnlockOptions endpoint.Endpoint
-		TapTile					   endpoint.Endpoint
+		TapTile                    endpoint.Endpoint
 	}
 
 	service interface {
@@ -80,8 +81,8 @@ type (
 
 	TapTileRequest struct {
 		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
-		X int `json:"x" validate:"min=0"`
-		Y int `json:"y" validate:"min=0"`
+		X            int    `json:"x" validate:"min=0"`
+		Y            int    `json:"y" validate:"min=0"`
 	}
 )
 
@@ -103,7 +104,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		FinishPuzzleGame:     MakeFinishPuzzleGameEndpoint(s, validateFunc),
 
 		GetPuzzleGameUnlockOptions: MakeGetPuzzleGameUnlockOptionsEndpoint(s),
-		TapTile: MakeTapTile(s, validateFunc),
+		TapTile:                    MakeTapTile(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
