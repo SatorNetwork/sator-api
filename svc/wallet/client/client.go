@@ -68,8 +68,8 @@ func (c *Client) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, i
 }
 
 // P2PTransfer ...
-func (c *Client) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, fee float64, info string) error {
-	return c.s.P2PTransfer(ctx, uid, recipientID, amount, fee, info)
+func (c *Client) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error {
+	return c.s.P2PTransfer(ctx, uid, recipientID, amount, percentToCharge, info)
 }
 
 // GetMultiplier ...

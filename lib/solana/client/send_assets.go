@@ -61,7 +61,11 @@ func (c *Client) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string,
 }
 
 func (c *Client) SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64) (string, error) {
-	fee := amount * percentToCharge
+	if !(percentToCharge >= 0 && percentToCharge <= 100) {
+		return "", fmt.Errorf("percent to charge fees invalid: %v", percentToCharge)
+	}
+
+	fee := amount * percentToCharge / 100
 	amount -= fee
 	amountToSend := uint64(amount * float64(c.mltpl))
 	asset := common.PublicKeyFromString(assetAddr)
