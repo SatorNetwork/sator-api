@@ -81,8 +81,8 @@ type (
 		MaxWinners         int     `json:"max_winners"`
 		QuestionsPerGame   int     `json:"questions_per_game"`
 		MinCorrectAnswers  int     `json:"min_correct_answers"`
-		PercentForQuiz     float64 `json:"percent_for_quiz" validate:"required,gt=0"`
-		MinimumReward      float64 `json:"minimum_reward" validate:"required,gt=0"`
+		PercentForQuiz     float64 `json:"percent_for_quiz"`
+		MinimumReward      float64 `json:"minimum_reward"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -97,10 +97,10 @@ type (
 		EpisodeID          string  `json:"episode_id"`
 		Kind               int     `json:"kind"`
 		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
-		MaxWinners         int     `json:"max_winners"`
-		QuestionsPerGame   int     `json:"questions_per_game"`
-		MinCorrectAnswers  int     `json:"min_correct_answers"`
-		PercentForQuiz     float64 `json:"percent_for_quiz" validate:"required,gt=0"`
+		MaxWinners         int     `json:"max_winners" validate:"required,gt=0"`
+		QuestionsPerGame   int     `json:"questions_per_game" validate:"required,gt=0"`
+		MinCorrectAnswers  int     `json:"min_correct_answers" validate:"required,gt=0"`
+		PercentForQuiz     float64 `json:"percent_for_quiz" validate:"required,gt=0,lte=100"`
 		MinimumReward      float64 `json:"minimum_reward" validate:"required,gt=0"`
 	}
 

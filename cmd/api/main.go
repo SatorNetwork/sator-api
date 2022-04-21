@@ -1,10 +1,11 @@
 package main
 
 import (
+	"log"
+
 	"github.com/SatorNetwork/sator-api/cmd/api/app"
 	_ "github.com/golang/mock/mockgen/model"
 	_ "github.com/lib/pq" // init pg driver
-	"log"
 )
 
 func main() {
