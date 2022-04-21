@@ -12,3 +12,4 @@ CREATE TABLE IF NOT EXISTS invitations (
     reward_received BOOLEAN
 );
 -- +migrate Down
+DROP TABLE IF EXISTS invitations;
