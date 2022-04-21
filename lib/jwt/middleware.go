@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"database/sql"
+
 	"github.com/google/uuid"
 
 	kitjwt "github.com/go-kit/kit/auth/jwt"

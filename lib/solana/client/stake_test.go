@@ -57,7 +57,7 @@ func TestScNew(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 2)
+		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 2, 0)
 		if err == nil {
 			break
 		}

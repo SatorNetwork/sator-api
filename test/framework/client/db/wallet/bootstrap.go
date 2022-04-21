@@ -3,6 +3,7 @@ package wallet
 import (
 	"context"
 	"database/sql"
+
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"

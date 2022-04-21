@@ -140,6 +140,7 @@ type Config struct {
 	NatsWSURL                   string
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
+	TipsPercent                 float64
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
@@ -252,6 +253,8 @@ func ConfigFromEnv() *Config {
 
 		QuizV2ShuffleQuestions: env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true),
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
+
+		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
 
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
 	}
@@ -383,11 +386,12 @@ func (a *app) Run() {
 		}
 
 		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:  a.cfg.SolanaSystemProgram,
-			SysvarRent:     a.cfg.SolanaSysvarRent,
-			SysvarClock:    a.cfg.SolanaSysvarClock,
-			SplToken:       a.cfg.SolanaSplToken,
-			StakeProgramID: a.cfg.SolanaStakeProgramID,
+			SystemProgram:   a.cfg.SolanaSystemProgram,
+			SysvarRent:      a.cfg.SolanaSysvarRent,
+			SysvarClock:     a.cfg.SolanaSysvarClock,
+			SplToken:        a.cfg.SolanaSplToken,
+			StakeProgramID:  a.cfg.SolanaStakeProgramID,
+			TokenHolderAddr: a.cfg.SolanaTokenHolderAddr,
 		})
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
@@ -573,7 +577,7 @@ func (a *app) Run() {
 			logger,
 		))
 
-		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient)
+		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient, a.cfg.TipsPercent)
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(showsService, jwtMdw),
 			logger,
