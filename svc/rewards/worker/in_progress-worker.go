@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"log"
 
+	"github.com/SatorNetwork/sator-api/svc/rewards/consts"
+
 	"github.com/google/uuid"
 
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
@@ -59,9 +61,9 @@ LOOP:
 				continue
 			}
 
-			if !(resp.Meta.Err == nil) {
+			if resp.Meta.Err != nil {
 				err := w.repo.UpdateTransactionStatusByTxHash(w.ctx, repository.UpdateTransactionStatusByTxHashParams{
-					Status: 3, // TransactionStatusFailed
+					Status: consts.TransactionStatusFailed.String(),
 					TxHash: sql.NullString{
 						String: transaction.TxHash,
 						Valid:  true,
@@ -75,7 +77,7 @@ LOOP:
 			}
 
 			err = w.repo.UpdateTransactionStatusByTxHash(w.ctx, repository.UpdateTransactionStatusByTxHashParams{
-				Status: 4, // TransactionStatusDone
+				Status: consts.TransactionStatusWithdrawn.String(),
 				TxHash: sql.NullString{
 					String: transaction.TxHash,
 					Valid:  true,

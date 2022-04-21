@@ -41,7 +41,7 @@ type AddTransactionParams struct {
 	TransactionType int32          `json:"transaction_type"`
 	Amount          float64        `json:"amount"`
 	TxHash          sql.NullString `json:"tx_hash"`
-	Status          int32          `json:"status"`
+	Status          string         `json:"status"`
 }
 
 func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) error {
@@ -61,7 +61,7 @@ const getAmountAvailableToWithdraw = `-- name: GetAmountAvailableToWithdraw :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = $1
-AND status = 0
+AND status = 'TransactionStatusAvailable'
 AND transaction_type = 1
 AND created_at < $2
 GROUP BY user_id
@@ -82,7 +82,7 @@ func (q *Queries) GetAmountAvailableToWithdraw(ctx context.Context, arg GetAmoun
 const getFailedTransactions = `-- name: GetFailedTransactions :many
 SELECT id, user_id, relation_id, amount, updated_at, created_at, transaction_type, relation_type, tx_hash, status
 FROM rewards
-WHERE status = 3
+WHERE status = 'TransactionStatusFailed'
 AND transaction_type = 1
 `
 
@@ -155,7 +155,7 @@ const getTotalAmount = `-- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = $1
-AND status = 0
+AND status = 'TransactionStatusAvailable'
 AND transaction_type = 1
 GROUP BY user_id
 `
@@ -217,10 +217,10 @@ func (q *Queries) GetTransactionsByUserIDPaginated(ctx context.Context, arg GetT
 
 const requestTransactionsByUserID = `-- name: RequestTransactionsByUserID :exec
 UPDATE rewards
-SET status = 1
+SET status = 'TransactionStatusRequested'
 WHERE user_id = $1
 AND transaction_type = 1
-AND status = 0
+AND status = 'TransactionStatusAvailable'
 `
 
 func (q *Queries) RequestTransactionsByUserID(ctx context.Context, userID uuid.UUID) error {
@@ -230,10 +230,10 @@ func (q *Queries) RequestTransactionsByUserID(ctx context.Context, userID uuid.U
 
 const setInProgressTransaction = `-- name: SetInProgressTransaction :exec
 UPDATE rewards
-SET status = 2, tx_hash = $1
+SET status = 'TransactionStatusInProgress', tx_hash = $1
 WHERE user_id = $2
 AND transaction_type = 1
-AND status = 1
+AND status = 'TransactionStatusRequested'
 `
 
 type SetInProgressTransactionParams struct {
@@ -253,7 +253,7 @@ WHERE tx_hash = $2
 `
 
 type UpdateTransactionStatusByTxHashParams struct {
-	Status int32          `json:"status"`
+	Status string         `json:"status"`
 	TxHash sql.NullString `json:"tx_hash"`
 }
 
@@ -264,10 +264,10 @@ func (q *Queries) UpdateTransactionStatusByTxHash(ctx context.Context, arg Updat
 
 const withdraw = `-- name: Withdraw :exec
 UPDATE rewards
-SET status = 4
+SET status = 'TransactionStatusWithdrawn'
 WHERE user_id = $1
 AND transaction_type = 1
-AND status = 1
+AND status = 'TransactionStatusRequested'
 `
 
 func (q *Queries) Withdraw(ctx context.Context, userID uuid.UUID) error {

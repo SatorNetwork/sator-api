@@ -53,7 +53,15 @@ func (w *FailedTransactionStatusWorker) Start() {
 				String: txHash,
 				Valid:  true,
 			},
-			Status: 2, // TransactionStatusInProgress
+			Status: "TransactionStatusInProgress", // TransactionStatusInProgress
+		}); err != nil {
+			log.Println(err)
+			continue
+		}
+
+		if err := w.repo.UpdateTransactionStatusByTxHash(context.Background(), repository.UpdateTransactionStatusByTxHashParams{
+			Status: "",
+			TxHash: transactions[i].TxHash,
 		}); err != nil {
 			log.Println(err)
 			continue

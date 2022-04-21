@@ -3,7 +3,8 @@ package client
 import (
 	"context"
 
-	"github.com/SatorNetwork/sator-api/svc/rewards"
+	"github.com/SatorNetwork/sator-api/svc/rewards/consts"
+
 	"github.com/google/uuid"
 )
 
@@ -27,12 +28,12 @@ func New(s service) *Client {
 
 // AddDepositTransaction ...
 func (c *Client) AddDepositTransaction(ctx context.Context, userID, relationID uuid.UUID, relationType string, amount float64) error {
-	return c.s.AddTransaction(ctx, userID, relationID, relationType, amount, rewards.TransactionTypeDeposit)
+	return c.s.AddTransaction(ctx, userID, relationID, relationType, amount, consts.TransactionTypeDeposit)
 }
 
 // AddWithdrawTransaction ...
 func (c *Client) AddWithdrawTransaction(ctx context.Context, userID uuid.UUID, amount float64) error {
-	return c.s.AddTransaction(ctx, userID, uuid.Nil, "", amount, rewards.TransactionTypeWithdraw)
+	return c.s.AddTransaction(ctx, userID, uuid.Nil, "", amount, consts.TransactionTypeWithdraw)
 }
 
 // GetUserRewards ...

@@ -6,7 +6,7 @@
 --   4 - Done
 -- +migrate Up
 ALTER TABLE rewards
-    ADD COLUMN status INTEGER NOT NULL DEFAULT 0;
+    ADD COLUMN status VARCHAR NOT NULL DEFAULT 'TransactionStatusAvailable';
 -- +migrate Down
 ALTER TABLE rewards
 DROP COLUMN status;

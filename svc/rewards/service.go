@@ -10,29 +10,10 @@ import (
 
 	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
+	"github.com/SatorNetwork/sator-api/svc/rewards/consts"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
-)
-
-const (
-	// TransactionTypeDeposit indicates that transaction type deposit.
-	TransactionTypeDeposit = iota + 1
-	// TransactionTypeWithdraw indicates that transaction type withdraw.
-	TransactionTypeWithdraw
-)
-
-const (
-	// TransactionStatusAvailable indicates that transaction available to withdraw
-	TransactionStatusAvailable = iota
-	// TransactionStatusRequested indicates that transaction requested to withdraw
-	TransactionStatusRequested
-	// TransactionStatusInProgress indicates that transaction in progress to withdraw
-	TransactionStatusInProgress
-	// TransactionStatusFailed indicates that transaction failed to withdraw
-	TransactionStatusFailed
-	// TransactionStatusDone indicates that transaction withdrawn
-	TransactionStatusDone
 )
 
 //go:generate mockgen -destination=mock_repository.go -package=rewards github.com/SatorNetwork/sator-api/svc/rewards RewardsRepository
@@ -192,12 +173,9 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
 		Amount:          amount,
-		TransactionType: TransactionTypeWithdraw,
-		TxHash: sql.NullString{
-			String: txHash,
-			Valid:  true,
-		},
-		Status: TransactionStatusInProgress,
+		TransactionType: consts.TransactionTypeWithdraw,
+		TxHash:          sql.NullString{String: txHash, Valid: true},
+		Status:          consts.TransactionStatusInProgress.String(),
 	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}
@@ -261,7 +239,7 @@ func (s *Service) GetTransactions(ctx context.Context, userID, walletID uuid.UUI
 	result := wallet.Transactions{}
 	for _, tx := range txList {
 		amount := tx.Amount
-		if tx.TransactionType == TransactionTypeWithdraw {
+		if tx.TransactionType == consts.TransactionTypeWithdraw {
 			amount = amount * (-1)
 		}
 		desc := tx.RelationType.String

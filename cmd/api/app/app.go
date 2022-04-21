@@ -115,7 +115,7 @@ type Config struct {
 	CompanyName                 string
 	CompanyAddress              string
 	HoldRewardsPeriod           time.Duration
-	RewardsFWorkerPeriod		time.Duration
+	RewardsFWorkerPeriod        time.Duration
 	InvitationReward            float64
 	InvitationURL               string
 	FileStorageKey              string
@@ -214,8 +214,8 @@ func ConfigFromEnv() *Config {
 		CompanyAddress: env.GetString("COMPANY_ADDRESS", "New York"),
 
 		// Rewards
-		HoldRewardsPeriod: env.GetDuration("HOLD_REWARDS_PERIOD", 0),
-		RewardsFWorkerPeriod: env.GetDuration("REWARDS_WORKER_PERIOD", time.Minute * 30),
+		HoldRewardsPeriod:    env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		RewardsFWorkerPeriod: env.GetDuration("REWARDS_WORKER_PERIOD", time.Minute*30),
 
 		// Invitation
 		InvitationReward: env.GetFloat("INVITATION_REWARD", 0),

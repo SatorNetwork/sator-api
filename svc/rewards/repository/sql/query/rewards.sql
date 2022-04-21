@@ -20,16 +20,16 @@ VALUES (
 
 -- name: Withdraw :exec
 UPDATE rewards
-SET status = 4
+SET status = 'TransactionStatusWithdrawn'
 WHERE user_id = @user_id
 AND transaction_type = 1
-AND status = 1;
+AND status = 'TransactionStatusRequested';
 
 -- name: GetTotalAmount :one
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = @user_id
-AND status = 0
+AND status = 'TransactionStatusAvailable'
 AND transaction_type = 1
 GROUP BY user_id;
 
@@ -37,7 +37,7 @@ GROUP BY user_id;
 SELECT SUM(amount)::DOUBLE PRECISION
 FROM rewards
 WHERE user_id = @user_id
-AND status = 0
+AND status = 'TransactionStatusAvailable'
 AND transaction_type = 1
 AND created_at < @not_after_date
 GROUP BY user_id;
@@ -57,17 +57,17 @@ WHERE user_id = $1 AND relation_id = $2 AND relation_type =$3
 
 -- name: RequestTransactionsByUserID :exec
 UPDATE rewards
-SET status = 1
+SET status = 'TransactionStatusRequested'
 WHERE user_id = @user_id
 AND transaction_type = 1
-AND status = 0;
+AND status = 'TransactionStatusAvailable';
 
 -- name: SetInProgressTransaction :exec
 UPDATE rewards
-SET status = 2, tx_hash = @tx_hash
+SET status = 'TransactionStatusInProgress', tx_hash = @tx_hash
 WHERE user_id = @user_id
 AND transaction_type = 1
-AND status = 1;
+AND status = 'TransactionStatusRequested';
 
 -- name: UpdateTransactionStatusByTxHash :exec
 UPDATE rewards
@@ -77,5 +77,5 @@ WHERE tx_hash = @tx_hash;
 -- name: GetFailedTransactions :many
 SELECT *
 FROM rewards
-WHERE status = 3
+WHERE status = 'TransactionStatusFailed'
 AND transaction_type = 1;

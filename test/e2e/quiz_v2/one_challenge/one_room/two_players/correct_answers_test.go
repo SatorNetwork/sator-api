@@ -2,11 +2,12 @@ package two_players
 
 import (
 	"context"
-	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
-	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"strings"
 	"testing"
 	"time"
+
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
+	"github.com/SatorNetwork/sator-api/lib/sumsub"
 
 	"github.com/stretchr/testify/require"
 

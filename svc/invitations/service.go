@@ -7,10 +7,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/SatorNetwork/sator-api/svc/rewards/consts"
+
 	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/svc/invitations/repository"
-	"github.com/SatorNetwork/sator-api/svc/rewards"
-
 	"github.com/google/uuid"
 )
 
@@ -109,7 +109,7 @@ func (s *Service) SendReward(sendRewards func(ctx context.Context, uid, relation
 			quizID,
 			RelationTypeInvitation,
 			s.config.InvitationReward,
-			rewards.TransactionTypeDeposit,
+			consts.TransactionTypeDeposit,
 		); err != nil {
 			log.Printf("could not send invitation reward: %v", err)
 			return
