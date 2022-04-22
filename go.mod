@@ -35,9 +35,11 @@ require (
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/portto/solana-go-sdk v0.1.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.7.0
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
 	github.com/stretchr/testify v1.7.0
+	github.com/superoo7/go-gecko v1.0.0
 	github.com/thedevsaddam/govalidator v1.9.10
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/zeebo/errs v1.2.2

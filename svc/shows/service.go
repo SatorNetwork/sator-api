@@ -34,6 +34,7 @@ type (
 		ac           authClient
 		sentTipsFunc sentTipsFunction
 		nc           nftClient
+		tipsPercent  float64
 	}
 
 	// Show struct
@@ -190,12 +191,12 @@ type (
 	}
 
 	// Simple function
-	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient, tipsPercent float64) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -215,7 +216,7 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 		log.Fatalln("nft client is not set")
 	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc, tipsPercent: tipsPercent}
 }
 
 // GetShows returns shows.
@@ -1072,7 +1073,7 @@ func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid
 		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
 	}
 
-	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, fmt.Sprintf("tips for episode review: %s", reviewID))
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, s.tipsPercent, fmt.Sprintf("tips for episode review: %s", reviewID))
 	if err != nil {
 		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
 	}

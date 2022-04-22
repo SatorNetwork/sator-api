@@ -42,6 +42,9 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
+	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
+	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
@@ -141,6 +144,7 @@ type Config struct {
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
 	PuzzleGameShuffle           bool
+	TipsPercent                 float64
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
@@ -257,6 +261,8 @@ func ConfigFromEnv() *Config {
 		// Puzzle Game
 		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
 
+		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
+
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
 	}
 }
@@ -369,6 +375,23 @@ func (a *app) Run() {
 		return a.cfg.KycSkip
 	})
 
+	var exchangeRatesClient *exchange_rates_client.Client
+	{
+		exchangeRatesRepository, err := exchange_rates_repository.Prepare(context.Background(), db)
+		if err != nil {
+			log.Fatalf("can't prepare exchange rates repository: %v", err)
+		}
+
+		exchangeRatesServer, err := exchange_rates.NewExchangeRatesServer(
+			exchangeRatesRepository,
+		)
+		if err != nil {
+			log.Fatalf("can't create exchange rates server: %v\n", err)
+		}
+		exchangeRatesClient = exchange_rates_client.New(exchangeRatesServer)
+	}
+	_ = exchangeRatesClient
+
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
@@ -387,11 +410,12 @@ func (a *app) Run() {
 		}
 
 		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:  a.cfg.SolanaSystemProgram,
-			SysvarRent:     a.cfg.SolanaSysvarRent,
-			SysvarClock:    a.cfg.SolanaSysvarClock,
-			SplToken:       a.cfg.SolanaSplToken,
-			StakeProgramID: a.cfg.SolanaStakeProgramID,
+			SystemProgram:   a.cfg.SolanaSystemProgram,
+			SysvarRent:      a.cfg.SolanaSysvarRent,
+			SysvarClock:     a.cfg.SolanaSysvarClock,
+			SplToken:        a.cfg.SolanaSplToken,
+			StakeProgramID:  a.cfg.SolanaStakeProgramID,
+			TokenHolderAddr: a.cfg.SolanaTokenHolderAddr,
 		})
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
@@ -577,7 +601,7 @@ func (a *app) Run() {
 			logger,
 		))
 
-		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient)
+		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient, a.cfg.TipsPercent)
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(showsService, jwtMdw),
 			logger,

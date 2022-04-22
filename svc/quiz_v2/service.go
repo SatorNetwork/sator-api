@@ -165,6 +165,9 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 		challenge.MinimumReward,
 		challenge.PercentForQuiz,
 	)
+	if err != nil {
+		return challenge_service.Challenge{}, err
+	}
 
 	challenge.CurrentPrizePool = fmt.Sprintf("%v SAO", currentPrizePool)
 	challenge.CurrentPrizePoolAmount = currentPrizePool
@@ -208,7 +211,10 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 		}
 		log.Printf("Serialized SQL challenges: %s\n", serializedChallenges)
 	}
-	challenges := NewChallengesFromSQL(sqlChallenges)
+	challenges, err := s.NewChallengesFromSQL(ctx, sqlChallenges, userID)
+	if err != nil {
+		return nil, err
+	}
 	{
 		serializedChallenges, err := json.Marshal(challenges)
 		if err != nil {
@@ -220,23 +226,52 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 	return challenges, nil
 }
 
-func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
+func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Challenge, userID uuid.UUID) (*Challenge, error) {
+	var currentPrizePool float64
+	{
+		challengeUID, err := uuid.Parse(c.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO(evg): get rid of extra database call
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeUID, userID)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't get challenge by ID")
+		}
+
+		currentPrizePool, err = common.GetCurrentPrizePool(
+			s.qr,
+			challenge.ID,
+			challenge.PrizePoolAmount,
+			challenge.MinimumReward,
+			challenge.PercentForQuiz,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Challenge{
 		ID:               c.ID,
 		Title:            c.Title,
 		PlayersToStart:   c.PlayersToStart,
 		PlayersNumber:    c.PlayersNum,
-		PrizePool:        fmt.Sprintf("%.2f SAO", c.PrizePool),
+		PrizePool:        fmt.Sprintf("%.2f SAO", currentPrizePool),
 		IsRealmActivated: c.IsActivated,
 		Cover:            c.Cover.String,
-	}
+	}, nil
 }
 
-func NewChallengesFromSQL(sqlChallenges []*sql_executor.Challenge) []*Challenge {
+func (s *Service) NewChallengesFromSQL(ctx context.Context, sqlChallenges []*sql_executor.Challenge, userID uuid.UUID) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for _, c := range sqlChallenges {
-		challenges = append(challenges, NewChallengeFromSQL(c))
+		challenge, err := s.NewChallengeFromSQL(ctx, c, userID)
+		if err != nil {
+			return nil, err
+		}
+		challenges = append(challenges, challenge)
 	}
 
-	return challenges
+	return challenges, nil
 }
