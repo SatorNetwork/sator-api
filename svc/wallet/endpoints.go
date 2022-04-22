@@ -36,7 +36,7 @@ type (
 		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
-		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
+		ConfirmTransfer(ctx context.Context, uid, senderWalletID uuid.UUID, tx string) error
 		GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
@@ -233,12 +233,17 @@ func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) end
 			return false, err
 		}
 
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		walletID, err := uuid.Parse(req.SenderWalletID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid sender wallet id: %w", err)
 		}
 
-		if err := s.ConfirmTransfer(ctx, walletID, req.TransactionHash); err != nil {
+		if err := s.ConfirmTransfer(ctx, uid, walletID, req.TransactionHash); err != nil {
 			return false, err
 		}
 

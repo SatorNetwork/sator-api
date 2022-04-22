@@ -34,6 +34,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addStakeLevelStmt, err = db.PrepareContext(ctx, addStakeLevel); err != nil {
 		return nil, fmt.Errorf("error preparing query AddStakeLevel: %w", err)
 	}
+	if q.addTokenTransferStmt, err = db.PrepareContext(ctx, addTokenTransfer); err != nil {
+		return nil, fmt.Errorf("error preparing query AddTokenTransfer: %w", err)
+	}
 	if q.createWalletStmt, err = db.PrepareContext(ctx, createWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateWallet: %w", err)
 	}
@@ -103,6 +106,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateStakeLevelStmt, err = db.PrepareContext(ctx, updateStakeLevel); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStakeLevel: %w", err)
 	}
+	if q.updateTokenTransferStmt, err = db.PrepareContext(ctx, updateTokenTransfer); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTokenTransfer: %w", err)
+	}
 	return &q, nil
 }
 
@@ -126,6 +132,11 @@ func (q *Queries) Close() error {
 	if q.addStakeLevelStmt != nil {
 		if cerr := q.addStakeLevelStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addStakeLevelStmt: %w", cerr)
+		}
+	}
+	if q.addTokenTransferStmt != nil {
+		if cerr := q.addTokenTransferStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addTokenTransferStmt: %w", cerr)
 		}
 	}
 	if q.createWalletStmt != nil {
@@ -243,6 +254,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateStakeLevelStmt: %w", cerr)
 		}
 	}
+	if q.updateTokenTransferStmt != nil {
+		if cerr := q.updateTokenTransferStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTokenTransferStmt: %w", cerr)
+		}
+	}
 	return err
 }
 
@@ -286,6 +302,7 @@ type Queries struct {
 	addSolanaAccountStmt                  *sql.Stmt
 	addStakeStmt                          *sql.Stmt
 	addStakeLevelStmt                     *sql.Stmt
+	addTokenTransferStmt                  *sql.Stmt
 	createWalletStmt                      *sql.Stmt
 	deleteStakeByUserIDStmt               *sql.Stmt
 	deleteWalletByIDStmt                  *sql.Stmt
@@ -309,6 +326,7 @@ type Queries struct {
 	getWalletsByUserIDStmt                *sql.Stmt
 	updateStakeStmt                       *sql.Stmt
 	updateStakeLevelStmt                  *sql.Stmt
+	updateTokenTransferStmt               *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -319,6 +337,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addSolanaAccountStmt:                  q.addSolanaAccountStmt,
 		addStakeStmt:                          q.addStakeStmt,
 		addStakeLevelStmt:                     q.addStakeLevelStmt,
+		addTokenTransferStmt:                  q.addTokenTransferStmt,
 		createWalletStmt:                      q.createWalletStmt,
 		deleteStakeByUserIDStmt:               q.deleteStakeByUserIDStmt,
 		deleteWalletByIDStmt:                  q.deleteWalletByIDStmt,
@@ -342,5 +361,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getWalletsByUserIDStmt:                q.getWalletsByUserIDStmt,
 		updateStakeStmt:                       q.updateStakeStmt,
 		updateStakeLevelStmt:                  q.updateStakeLevelStmt,
+		updateTokenTransferStmt:               q.updateTokenTransferStmt,
 	}
 }

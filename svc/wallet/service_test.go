@@ -19,6 +19,14 @@ type walletRepoMock struct {
 	GetStakeLevelByAmountErr error
 }
 
+func (r *walletRepoMock) AddTokenTransfer(ctx context.Context, arg repository.AddTokenTransferParams) (repository.TokenTransfer, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (r *walletRepoMock) UpdateTokenTransfer(ctx context.Context, arg repository.UpdateTokenTransferParams) error {
+	panic("not implemented") // TODO: Implement
+}
+
 func (r *walletRepoMock) CreateWallet(ctx context.Context, arg repository.CreateWalletParams) (repository.Wallet, error) {
 	panic("not implemented") // TODO: Implement
 }

@@ -76,6 +76,9 @@ type (
 		GetAllEnabledStakeLevels(ctx context.Context) ([]repository.StakeLevel, error)
 		GetStakeLevelByAmount(ctx context.Context, amount float64) (repository.GetStakeLevelByAmountRow, error)
 		GetMinimalStakeLevel(ctx context.Context) (repository.StakeLevel, error)
+
+		AddTokenTransfer(ctx context.Context, arg repository.AddTokenTransferParams) (repository.TokenTransfer, error)
+		UpdateTokenTransfer(ctx context.Context, arg repository.UpdateTokenTransferParams) error
 	}
 
 	solanaClient interface {
@@ -518,7 +521,7 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	}, nil
 }
 
-func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encodedData string) error {
+func (s *Service) ConfirmTransfer(ctx context.Context, uid, walletID uuid.UUID, encodedData string) error {
 	decoded, err := base58.Decode(encodedData)
 	if err != nil {
 		return fmt.Errorf("could not decode from base58: %w", err)
@@ -528,33 +531,74 @@ func (s *Service) ConfirmTransfer(ctx context.Context, walletID uuid.UUID, encod
 		Amount        float64
 		RecipientAddr string
 	}
-
-	err = json.Unmarshal(decoded, &toDecode)
-	if err != nil {
+	if err := json.Unmarshal(decoded, &toDecode); err != nil {
 		return fmt.Errorf("could not unmarshal: %w", err)
 	}
 
-	return s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, 0)
+	solAcc, err := s.wr.GetSolanaAccountByUserIDAndType(ctx, repository.GetSolanaAccountByUserIDAndTypeParams{
+		UserID:     uid,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return fmt.Errorf("could not get user token account: %w", err)
+	}
+
+	tr, err := s.wr.AddTokenTransfer(ctx, repository.AddTokenTransferParams{
+		UserID:           uid,
+		SenderAddress:    solAcc.PublicKey,
+		RecipientAddress: toDecode.RecipientAddr,
+		Amount:           toDecode.Amount,
+		Status:           TokenTransferStatusPending,
+	})
+	if err != nil {
+		log.Printf("could not add token transfer: %v", err)
+	}
+
+	tx, err := s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, 0)
+	if err != nil {
+		if tr.ID != uuid.Nil {
+			if err := s.wr.UpdateTokenTransfer(ctx, repository.UpdateTokenTransferParams{
+				ID:     tr.ID,
+				Status: TokenTransferStatusFailed,
+			}); err != nil {
+				log.Printf("could not update token transfer: %v", err)
+			}
+		}
+
+		return fmt.Errorf("could not confirm transfer: %w", err)
+	}
+
+	if tr.ID != uuid.Nil {
+		if err := s.wr.UpdateTokenTransfer(ctx, repository.UpdateTokenTransferParams{
+			ID:     tr.ID,
+			Status: TokenTransferStatusSuccess,
+			TxHash: sql.NullString{String: tx, Valid: true},
+		}); err != nil {
+			log.Printf("could not update token transfer: %v", err)
+		}
+	}
+
+	return nil
 }
 
-func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount, percentToCharge float64) error {
+func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount, percentToCharge float64) (string, error) {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
-		return fmt.Errorf("could not get solana account: %w", err)
+		return "", fmt.Errorf("could not get solana account: %w", err)
 	}
 
 	solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
 	if err != nil {
-		return fmt.Errorf("could not get solana account: %w", err)
+		return "", fmt.Errorf("could not get solana account: %w", err)
 	}
 
 	balance, err := s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, solanaAcc.PublicKey)
 	if err != nil {
-		return fmt.Errorf("could not get current balance: %w", err)
+		return "", fmt.Errorf("could not get current balance: %w", err)
 	}
 
 	if balance < amount {
-		return ErrNotEnoughBalance
+		return "", ErrNotEnoughBalance
 	}
 
 	for i := 0; i < 5; i++ {
@@ -570,16 +614,16 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			if i < 4 {
 				log.Println(err)
 			} else {
-				return fmt.Errorf("transaction: %w", err)
+				return "", fmt.Errorf("transaction: %w", err)
 			}
 			time.Sleep(time.Second * 5)
 		} else {
 			log.Printf("successful transaction: %s", tx)
-			break
+			return tx, nil
 		}
 	}
 
-	return err
+	return "", err
 }
 
 // GetStake Mocked method for stake
@@ -831,7 +875,7 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("not enough balance for payment: %v", bal)
 	}
 
-	if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount, 0); err != nil {
+	if _, err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount, 0); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
@@ -874,7 +918,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 	if creatorShare > 0 && creatorAddr != "" {
 		creatorAmount := amount / 100 * float64(creatorShare)
 
-		if err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount, 0); err != nil {
+		if _, err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount, 0); err != nil {
 			return fmt.Errorf("could not make payment for %s: %w", info, err)
 		}
 
@@ -882,7 +926,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 	}
 
 	if satorShare > 0 {
-		if err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare, 0); err != nil {
+		if _, err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare, 0); err != nil {
 			return fmt.Errorf("could not make payment for %s: %w", info, err)
 		}
 	}
@@ -933,7 +977,7 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 		return fmt.Errorf("could not get recipient solana account for this wallet: %w", err)
 	}
 
-	if err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, percentToCharge); err != nil {
+	if _, err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, percentToCharge); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
