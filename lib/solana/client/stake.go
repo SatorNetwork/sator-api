@@ -44,33 +44,35 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, issuer types
 
 	tokenAccountStakePool := common.CreateWithSeed(stakeAuthority, "ViewerStakePool::token_account", splToken)
 
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			{
-				ProgramID: programID,
-				Accounts: []types.AccountMeta{
-					{PubKey: systemProgram, IsSigner: false, IsWritable: false},
-					{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
-					{PubKey: splToken, IsSigner: false, IsWritable: false},
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
-					{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
-					{PubKey: stakePool.PublicKey, IsSigner: true, IsWritable: true},
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
-					{PubKey: tokenAccountStakePool, IsSigner: false, IsWritable: true},
-					{PubKey: asset, IsSigner: false, IsWritable: false},
+	tx, err := types.NewTransaction(types.NewTransactionParam{
+		Message: types.NewMessage(types.NewMessageParam{
+			FeePayer: feePayer.PublicKey,
+			Instructions: []types.Instruction{
+				{
+					ProgramID: programID,
+					Accounts: []types.AccountMeta{
+						{PubKey: systemProgram, IsSigner: false, IsWritable: false},
+						{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
+						{PubKey: splToken, IsSigner: false, IsWritable: false},
+						{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
+						{PubKey: issuer.PublicKey, IsSigner: true, IsWritable: false},
+						{PubKey: stakePool.PublicKey, IsSigner: true, IsWritable: true},
+						{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+						{PubKey: tokenAccountStakePool, IsSigner: false, IsWritable: true},
+						{PubKey: asset, IsSigner: false, IsWritable: false},
+					},
+					Data: data,
 				},
-				Data: data,
 			},
-		},
-		Signers:         []types.Account{feePayer, issuer, stakePool},
-		FeePayer:        feePayer.PublicKey,
-		RecentBlockHash: res.Blockhash,
+			RecentBlockhash: res.Blockhash,
+		}),
+		Signers: []types.Account{feePayer, issuer, stakePool},
 	})
 	if err != nil {
-		return "", types.Account{}, fmt.Errorf("could not create new raw transaction: %w", err)
+		return "", types.Account{}, err
 	}
 
-	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
+	txhash, err := c.solana.SendTransaction(ctx, tx)
 	if err != nil {
 		return "", types.Account{}, fmt.Errorf("could not send raw transaction: %w", err)
 	}
@@ -119,35 +121,37 @@ func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, 
 		return "", fmt.Errorf("could not derive ATA pub key: %w", err)
 	}
 
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			{
-				ProgramID: programID,
-				Accounts: []types.AccountMeta{
-					{PubKey: systemProgram, IsSigner: false, IsWritable: false},
-					{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
-					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
-					{PubKey: splToken, IsSigner: false, IsWritable: false},
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
-					{PubKey: pool, IsSigner: false, IsWritable: false},
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
-					{PubKey: ataPub, IsSigner: false, IsWritable: true},
-					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
-					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
-					{PubKey: userWallet.PublicKey, IsSigner: true, IsWritable: false},
+	tx, err := types.NewTransaction(types.NewTransactionParam{
+		Message: types.NewMessage(types.NewMessageParam{
+			FeePayer: feePayer.PublicKey,
+			Instructions: []types.Instruction{
+				{
+					ProgramID: programID,
+					Accounts: []types.AccountMeta{
+						{PubKey: systemProgram, IsSigner: false, IsWritable: false},
+						{PubKey: sysvarRent, IsSigner: false, IsWritable: false},
+						{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
+						{PubKey: splToken, IsSigner: false, IsWritable: false},
+						{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: false},
+						{PubKey: pool, IsSigner: false, IsWritable: false},
+						{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+						{PubKey: ataPub, IsSigner: false, IsWritable: true},
+						{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
+						{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
+						{PubKey: userWallet.PublicKey, IsSigner: true, IsWritable: false},
+					},
+					Data: data,
 				},
-				Data: data,
 			},
-		},
-		Signers:         []types.Account{feePayer, userWallet},
-		FeePayer:        feePayer.PublicKey,
-		RecentBlockHash: res.Blockhash,
+			RecentBlockhash: res.Blockhash,
+		}),
+		Signers: []types.Account{feePayer, userWallet},
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not create new raw transaction: %w", err)
+		return "", fmt.Errorf("could not create new transaction: %w", err)
 	}
 
-	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
+	txhash, err := c.solana.SendTransaction(ctx, tx)
 	if err != nil {
 		return "", fmt.Errorf("could not send raw transaction: %w", err)
 	}
@@ -189,33 +193,35 @@ func (c *Client) Unstake(ctx context.Context, feePayer, userWallet types.Account
 		return "", fmt.Errorf("could not derive ATA pub key: %w", err)
 	}
 
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			{
-				ProgramID: c.PublicKeyFromString(c.config.StakeProgramID),
-				Accounts: []types.AccountMeta{
-					{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
-					{PubKey: splToken, IsSigner: false, IsWritable: false},
-					{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: true},
-					{PubKey: stakePool, IsSigner: false, IsWritable: false},
-					{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
-					{PubKey: ataPub, IsSigner: false, IsWritable: true},
-					{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
-					{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
-					{PubKey: userWallet.PublicKey, IsSigner: true, IsWritable: false},
+	tx, err := types.NewTransaction(types.NewTransactionParam{
+		Message: types.NewMessage(types.NewMessageParam{
+			FeePayer: feePayer.PublicKey,
+			Instructions: []types.Instruction{
+				{
+					ProgramID: c.PublicKeyFromString(c.config.StakeProgramID),
+					Accounts: []types.AccountMeta{
+						{PubKey: sysvarClock, IsSigner: false, IsWritable: false},
+						{PubKey: splToken, IsSigner: false, IsWritable: false},
+						{PubKey: feePayer.PublicKey, IsSigner: true, IsWritable: true},
+						{PubKey: stakePool, IsSigner: false, IsWritable: false},
+						{PubKey: stakeAuthority, IsSigner: false, IsWritable: false},
+						{PubKey: ataPub, IsSigner: false, IsWritable: true},
+						{PubKey: tokenAccountStakeTarget, IsSigner: false, IsWritable: true},
+						{PubKey: stakeAccount, IsSigner: false, IsWritable: true},
+						{PubKey: userWallet.PublicKey, IsSigner: true, IsWritable: false},
+					},
+					Data: data,
 				},
-				Data: data,
 			},
-		},
-		Signers:         []types.Account{feePayer, userWallet},
-		FeePayer:        feePayer.PublicKey,
-		RecentBlockHash: res.Blockhash,
+			RecentBlockhash: res.Blockhash,
+		}),
+		Signers: []types.Account{feePayer, userWallet},
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
-	txhash, err := c.solana.SendRawTransaction(ctx, rawTx)
+	txhash, err := c.solana.SendTransaction(ctx, tx)
 	if err != nil {
 		return "", fmt.Errorf("could not send raw transaction: %w", err)
 	}

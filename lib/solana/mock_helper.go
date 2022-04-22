@@ -22,8 +22,8 @@ func (m *MockInterface) ExpectNewAccountAny() *gomock.Call {
 func (m *MockInterface) ExpectAccountFromPrivateKeyBytesAny() *gomock.Call {
 	return m.EXPECT().
 		AccountFromPrivateKeyBytes(gomock.Any()).
-		DoAndReturn(func(pk []byte) types.Account {
-			return types.AccountFromPrivateKeyBytes(pk)
+		DoAndReturn(func(pk []byte) (types.Account, error) {
+			return types.AccountFromBytes(pk)
 		}).
 		AnyTimes()
 }

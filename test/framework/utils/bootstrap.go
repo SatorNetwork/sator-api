@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 
@@ -22,7 +23,7 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 
 	needed, err := CheckIfBootstrapNeeded(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "can't check if bootstrap is needed")
 	}
 	if !needed {
 		return nil
@@ -55,8 +56,11 @@ func CheckIfBootstrapNeeded(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	balance, err := sc.GetTokenAccountBalance(ctx, tokenHolderAta.ToBase58())
+	if err != nil && strings.Contains(err.Error(), `{"code":-32602,"message":"Invalid param: could not find account"}`) {
+		return true, nil
+	}
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "can't get token account balance for token holder")
 	}
 
 	return balance == 0, nil
@@ -109,9 +113,9 @@ func createAsset(ctx context.Context, t *testing.T) {
 
 	_, err := solanaClient.CreateAsset(
 		ctx,
-		solanaClient.AccountFromPrivateKeyBytes(feePayer.PrivateKey),
-		solanaClient.AccountFromPrivateKeyBytes(tokenHolder.PrivateKey),
-		solanaClient.AccountFromPrivateKeyBytes(asset.PrivateKey),
+		feePayer,
+		tokenHolder,
+		asset,
 	)
 	require.NoError(t, err)
 }
@@ -138,9 +142,9 @@ func issueTokensToTokenHolder(ctx context.Context, t *testing.T) {
 	BackoffRetry(t, func() error {
 		_, err := solanaClient.IssueAsset(
 			ctx,
-			solanaClient.AccountFromPrivateKeyBytes(feePayer.PrivateKey),
-			solanaClient.AccountFromPrivateKeyBytes(tokenHolder.PrivateKey),
-			solanaClient.AccountFromPrivateKeyBytes(asset.PrivateKey),
+			feePayer,
+			tokenHolder,
+			asset,
 			tokenHolderAta,
 			tokensToIssue,
 		)

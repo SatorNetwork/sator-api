@@ -82,9 +82,9 @@ type (
 		GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
 		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
 		NewAccount() types.Account
-		AccountFromPrivateKeyBytes(pk []byte) types.Account
+		AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64) (string, error)
+		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64, chargeSolanaFeeFromSender bool) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
@@ -383,13 +383,22 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		return "", ErrTokenHolderBalance
 	}
 
+	feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	if err != nil {
+		return "", err
+	}
+	tokenHolder, err := s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey)
+	if err != nil {
+		return "", err
+	}
+
 	// sends token
 	for i := 0; i < 5; i++ {
 		if tx, err = s.sc.GiveAssetsWithAutoDerive(
 			ctx,
 			s.satorAssetSolanaAddr,
-			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
-			s.sc.AccountFromPrivateKeyBytes(s.tokenHolderSolanaPrivateKey),
+			feePayer,
+			tokenHolder,
 			user.PublicKey,
 			amount,
 		); err != nil {
@@ -557,15 +566,25 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 		return ErrNotEnoughBalance
 	}
 
+	feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	if err != nil {
+		return err
+	}
+	source, err := s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey)
+	if err != nil {
+		return err
+	}
+
 	for i := 0; i < 5; i++ {
 		if tx, err := s.sc.SendAssetsWithAutoDerive(
 			ctx,
 			s.satorAssetSolanaAddr,
-			s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey),
-			s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey),
+			feePayer,
+			source,
 			recipientAddr,
 			amount,
 			percentToCharge,
+			false,
 		); err != nil {
 			if i < 4 {
 				log.Println(err)
@@ -636,7 +655,10 @@ func (s *Service) GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 // SetStake method for set stake
 // duration is in days
 func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error) {
-	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	if err != nil {
+		return false, err
+	}
 	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
 	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
 
@@ -670,7 +692,10 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 		return false, fmt.Errorf("insufficient balance amount. You have %.5f SAO", bal)
 	}
 
-	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+	userWallet, err := types.AccountFromBytes(solanaAccount.PrivateKey)
+	if err != nil {
+		return false, err
+	}
 
 	for i := 0; i < 5; i++ {
 		newCtx, cancel := context.WithCancel(context.Background())
@@ -737,7 +762,10 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 
 // Unstake method for unstake
 func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error {
-	feePayer := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+	if err != nil {
+		return err
+	}
 	stakePool := common.PublicKeyFromString(s.stakePoolSolanaPublicKey)
 	asset := common.PublicKeyFromString(s.satorAssetSolanaAddr)
 
@@ -751,7 +779,10 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		return fmt.Errorf("could not get wallet: %w", err)
 	}
 
-	userWallet := types.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+	userWallet, err := types.AccountFromBytes(solanaAccount.PrivateKey)
+	if err != nil {
+		return err
+	}
 
 	stake, err := s.wr.GetStakeByUserID(ctx, userID)
 	if err != nil {
