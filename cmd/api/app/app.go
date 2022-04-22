@@ -42,6 +42,9 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
+	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
+	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
@@ -367,6 +370,23 @@ func (a *app) Run() {
 	kycMdw := sumsub.KYCStatusMdw(authRepository.GetKYCStatus, func() bool {
 		return a.cfg.KycSkip
 	})
+
+	var exchangeRatesClient *exchange_rates_client.Client
+	{
+		exchangeRatesRepository, err := exchange_rates_repository.Prepare(context.Background(), db)
+		if err != nil {
+			log.Fatalf("can't prepare exchange rates repository: %v", err)
+		}
+
+		exchangeRatesServer, err := exchange_rates.NewExchangeRatesServer(
+			exchangeRatesRepository,
+		)
+		if err != nil {
+			log.Fatalf("can't create exchange rates server: %v\n", err)
+		}
+		exchangeRatesClient = exchange_rates_client.New(exchangeRatesServer)
+	}
+	_ = exchangeRatesClient
 
 	var walletSvcClient *walletClient.Client
 	// Wallet service
