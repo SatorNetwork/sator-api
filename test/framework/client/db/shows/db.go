@@ -3,6 +3,7 @@ package shows
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/pkg/errors"
@@ -12,7 +13,7 @@ import (
 )
 
 type DB struct {
-	dbClient *sql.DB
+	dbClient        *sql.DB
 	showsRepository *shows_repo.Queries
 }
 
@@ -24,7 +25,7 @@ func New(dbClient *sql.DB) (*DB, error) {
 	}
 
 	return &DB{
-		dbClient: dbClient,
+		dbClient:        dbClient,
 		showsRepository: showsRepository,
 	}, nil
 }

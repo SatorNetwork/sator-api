@@ -3,12 +3,13 @@ package puzzle_game
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+
 	files_repository "github.com/SatorNetwork/sator-api/svc/files/repository"
 	puzzle_game_repository "github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 	shows_repository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
-	"strings"
 )
 
 var createGameUnlockOptionQuery = `INSERT INTO public.puzzle_game_unlock_options (id, steps, amount, disabled, updated_at, created_at, locked) VALUES
@@ -56,16 +57,15 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 	}
 
 	var episode shows_repository.Episode
-	if err := db.dbClient.QueryRowContext(ctx, "SELECT id FROM public.episodes WHERE title = $1 AND show_id = $2", "test-episode-ep", show.ID).Scan(&episode.ID);
-	err != nil {
+	if err := db.dbClient.QueryRowContext(ctx, "SELECT id FROM public.episodes WHERE title = $1 AND show_id = $2", "test-episode-ep", show.ID).Scan(&episode.ID); err != nil {
 		if err == sql.ErrNoRows {
 			if _, err := db.dbClient.Exec("DELETE FROM public.episodes WHERE title = $1", "test-episode-ep"); err != nil {
 				return err
 			}
 			episode, err = db.showsRepository.AddEpisode(ctx, shows_repository.AddEpisodeParams{
-				ShowID:                  show.ID,
-				EpisodeNumber:           1,
-				Title:                   "test-episode-ep",
+				ShowID:        show.ID,
+				EpisodeNumber: 1,
+				Title:         "test-episode-ep",
 			})
 			if err != nil {
 				return err

@@ -3,6 +3,7 @@ package puzzle_game
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/pkg/errors"
@@ -14,9 +15,9 @@ import (
 )
 
 type DB struct {
-	dbClient *sql.DB
-	showsRepository 	*showsRepo.Queries
-	filesRepository *filesRepo.Queries
+	dbClient             *sql.DB
+	showsRepository      *showsRepo.Queries
+	filesRepository      *filesRepo.Queries
 	puzzleGameRepository *puzzleGameRepo.Queries
 }
 
@@ -39,9 +40,9 @@ func New(dbClient *sql.DB) (*DB, error) {
 
 	return &DB{
 		puzzleGameRepository: puzzleGameRepository,
-		dbClient: dbClient,
-		showsRepository: showsRepository,
-		filesRepository: filesRepository,
+		dbClient:             dbClient,
+		showsRepository:      showsRepository,
+		filesRepository:      filesRepository,
 	}, nil
 }
 

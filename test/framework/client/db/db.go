@@ -17,11 +17,11 @@ import (
 type DB struct {
 	dbClient *sql.DB
 
-	challengeDB *challenge.DB
-	walletDB    *wallet.DB
-	authDB      *auth.DB
-	showsDB     *shows.DB
-	quizV2DB    *quiz_v2.DB
+	challengeDB  *challenge.DB
+	walletDB     *wallet.DB
+	authDB       *auth.DB
+	showsDB      *shows.DB
+	quizV2DB     *quiz_v2.DB
 	puzzleGameDB *puzzle_game.DB
 }
 
@@ -64,12 +64,12 @@ func New() (*DB, error) {
 	}
 
 	return &DB{
-		dbClient:    dbClient,
-		challengeDB: challengeDB,
-		authDB:      authDB,
-		walletDB:    walletDB,
-		showsDB:     showsDB,
-		quizV2DB:    quizV2DB,
+		dbClient:     dbClient,
+		challengeDB:  challengeDB,
+		authDB:       authDB,
+		walletDB:     walletDB,
+		showsDB:      showsDB,
+		quizV2DB:     quizV2DB,
 		puzzleGameDB: puzzleGameDB,
 	}, nil
 }
