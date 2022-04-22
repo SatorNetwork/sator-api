@@ -20,6 +20,11 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 	bootstrapLock.Lock()
 	defer bootstrapLock.Unlock()
 
+	c := client.NewClient()
+	if err := c.DB.PuzzleGameDB().Bootstrap(ctx); err != nil {
+		return err
+	}
+
 	needed, err := CheckIfBootstrapNeeded(ctx)
 	if err != nil {
 		return err
@@ -32,7 +37,6 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 		return err
 	}
 
-	c := client.NewClient()
 	if err := c.DB.Bootstrap(ctx); err != nil {
 		return err
 	}

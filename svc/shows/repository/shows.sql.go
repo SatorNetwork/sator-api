@@ -300,6 +300,47 @@ func (q *Queries) GetShowsByOldCategory(ctx context.Context, arg GetShowsByOldCa
 	return items, nil
 }
 
+const getShowsByTitle = `-- name: GetShowsByTitle :many
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived FROM shows
+WHERE title = $1
+`
+
+func (q *Queries) GetShowsByTitle(ctx context.Context, title string) ([]Show, error) {
+	rows, err := q.query(ctx, q.getShowsByTitleStmt, getShowsByTitle, title)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Show
+	for rows.Next() {
+		var i Show
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Cover,
+			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Category,
+			&i.Description,
+			&i.RealmsTitle,
+			&i.RealmsSubtitle,
+			&i.Watch,
+			&i.Archived,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateShow = `-- name: UpdateShow :exec
 UPDATE shows
 SET title = $1,

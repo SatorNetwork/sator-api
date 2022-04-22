@@ -7,8 +7,6 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/puzzle_game"
-	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
@@ -35,16 +33,30 @@ func TestTapTile(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	uid, err := uuid.Parse("7801d5d3-2d2c-4f85-9190-3fa82527f2af")
+	shows, err := c.DB.ShowsDB().GetShowsByTitle(context.Background(), "test-title-show")
 	require.NoError(t, err)
 
-	_, err = c.PuzzleGame.UnlockPuzzleGame(signUpResp.AccessToken, uid, &puzzle_game.UnlockPuzzleGameRequest{UnlockOption: "899fcefd-9b4b-4c67-905f-b1e580fcaf78"})
+	if len(shows) != 1 {
+		t.Fatalf("show len is not 1, len : %v", len(shows))
+	}
+
+	episodes, err := c.DB.ShowsDB().GetEpisodesIDByShowID(shows[0].ID)
 	require.NoError(t, err)
 
-	pgBefore, err := c.PuzzleGame.Start(signUpResp.AccessToken, uid)
+	if len(episodes) != 1 {
+		t.Fatalf("episodes len is not 1, len : %v", len(episodes))
+	}
+
+	pg, err := c.DB.PuzzleGameDB().GetPuzzleGameByEpisodeID(context.Background(), episodes[0])
 	require.NoError(t, err)
 
-	pgAfter, err := c.PuzzleGame.TapTile(signUpResp.AccessToken, uid, &puzzle_game.TapTileRequest{
+	_, err = c.PuzzleGameClient.UnlockPuzzleGame(signUpResp.AccessToken, pg.ID, &puzzle_game.UnlockPuzzleGameRequest{UnlockOption: "899fcefd-9b4b-4c67-905f-b1e580fcaf78"})
+	require.NoError(t, err)
+
+	pgBefore, err := c.PuzzleGameClient.Start(signUpResp.AccessToken, pg.ID)
+	require.NoError(t, err)
+
+	pgAfter, err := c.PuzzleGameClient.TapTile(signUpResp.AccessToken, pg.ID, &puzzle_game.TapTileRequest{
 		X: 4,
 		Y: 1,
 	})
@@ -52,5 +64,20 @@ func TestTapTile(t *testing.T) {
 
 	if !reflect.DeepEqual(pgBefore.Tiles, pgAfter.Tiles) {
 		t.Fatalf("no effect from tap tile")
+	}
+
+	for _, tile := range pgAfter.Tiles {
+		if tile.IsWhitespace {
+			require.Equal(t, tile.CurrentPosition.X, 4)
+			require.Equal(t, tile.CurrentPosition.Y, 1)
+		}
+		if tile.CurrentPosition.X == 4 && tile.CurrentPosition.Y == 2 {
+			require.Equal(t, tile.CurrentPosition.X, 4)
+			require.Equal(t, tile.CurrentPosition.Y, 3)
+		}
+		if tile.CurrentPosition.X == 4 && tile.CurrentPosition.Y == 3 {
+			require.Equal(t, tile.CurrentPosition.X, 4)
+			require.Equal(t, tile.CurrentPosition.Y, 4)
+		}
 	}
 }

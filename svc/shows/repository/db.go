@@ -129,6 +129,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getShowsByOldCategoryStmt, err = db.PrepareContext(ctx, getShowsByOldCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShowsByOldCategory: %w", err)
 	}
+	if q.getShowsByTitleStmt, err = db.PrepareContext(ctx, getShowsByTitle); err != nil {
+		return nil, fmt.Errorf("error preparing query GetShowsByTitle: %w", err)
+	}
 	if q.getUserEpisodeReviewStmt, err = db.PrepareContext(ctx, getUserEpisodeReview); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserEpisodeReview: %w", err)
 	}
@@ -342,6 +345,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getShowsByOldCategoryStmt: %w", cerr)
 		}
 	}
+	if q.getShowsByTitleStmt != nil {
+		if cerr := q.getShowsByTitleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getShowsByTitleStmt: %w", cerr)
+		}
+	}
 	if q.getUserEpisodeReviewStmt != nil {
 		if cerr := q.getUserEpisodeReviewStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserEpisodeReviewStmt: %w", cerr)
@@ -471,6 +479,7 @@ type Queries struct {
 	getShowsStmt                              *sql.Stmt
 	getShowsByCategoryStmt                    *sql.Stmt
 	getShowsByOldCategoryStmt                 *sql.Stmt
+	getShowsByTitleStmt                       *sql.Stmt
 	getUserEpisodeReviewStmt                  *sql.Stmt
 	getUsersEpisodeRatingByIDStmt             *sql.Stmt
 	isUserRatedReviewStmt                     *sql.Stmt
@@ -523,6 +532,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getShowsStmt:                              q.getShowsStmt,
 		getShowsByCategoryStmt:                    q.getShowsByCategoryStmt,
 		getShowsByOldCategoryStmt:                 q.getShowsByOldCategoryStmt,
+		getShowsByTitleStmt:                       q.getShowsByTitleStmt,
 		getUserEpisodeReviewStmt:                  q.getUserEpisodeReviewStmt,
 		getUsersEpisodeRatingByIDStmt:             q.getUsersEpisodeRatingByIDStmt,
 		isUserRatedReviewStmt:                     q.isUserRatedReviewStmt,
