@@ -623,7 +623,7 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 		}
 	}
 
-	return "", err
+	return "", ErrTransactionFailed
 }
 
 // GetStake Mocked method for stake
