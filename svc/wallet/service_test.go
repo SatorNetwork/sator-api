@@ -132,6 +132,14 @@ func (r *walletRepoMock) GetStakeLevelByAmount(ctx context.Context, amount float
 	}, nil
 }
 
+func (r *walletRepoMock) CheckRecipientAddress(ctx context.Context, arg repository.CheckRecipientAddressParams) (int64, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (r *walletRepoMock) DoesUserHaveFraudulentTransfers(ctx context.Context, userID uuid.UUID) (bool, error) {
+	panic("not implemented") // TODO: Implement
+}
+
 func TestService_GetMultiplier(t *testing.T) {
 	type fields struct {
 		wr                          walletRepository

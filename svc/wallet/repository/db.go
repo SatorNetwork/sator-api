@@ -37,6 +37,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addTokenTransferStmt, err = db.PrepareContext(ctx, addTokenTransfer); err != nil {
 		return nil, fmt.Errorf("error preparing query AddTokenTransfer: %w", err)
 	}
+	if q.checkRecipientAddressStmt, err = db.PrepareContext(ctx, checkRecipientAddress); err != nil {
+		return nil, fmt.Errorf("error preparing query CheckRecipientAddress: %w", err)
+	}
 	if q.createWalletStmt, err = db.PrepareContext(ctx, createWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateWallet: %w", err)
 	}
@@ -45,6 +48,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.deleteWalletByIDStmt, err = db.PrepareContext(ctx, deleteWalletByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteWalletByID: %w", err)
+	}
+	if q.doesUserHaveFraudulentTransfersStmt, err = db.PrepareContext(ctx, doesUserHaveFraudulentTransfers); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserHaveFraudulentTransfers: %w", err)
 	}
 	if q.getAllEnabledStakeLevelsStmt, err = db.PrepareContext(ctx, getAllEnabledStakeLevels); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllEnabledStakeLevels: %w", err)
@@ -139,6 +145,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addTokenTransferStmt: %w", cerr)
 		}
 	}
+	if q.checkRecipientAddressStmt != nil {
+		if cerr := q.checkRecipientAddressStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing checkRecipientAddressStmt: %w", cerr)
+		}
+	}
 	if q.createWalletStmt != nil {
 		if cerr := q.createWalletStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createWalletStmt: %w", cerr)
@@ -152,6 +163,11 @@ func (q *Queries) Close() error {
 	if q.deleteWalletByIDStmt != nil {
 		if cerr := q.deleteWalletByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteWalletByIDStmt: %w", cerr)
+		}
+	}
+	if q.doesUserHaveFraudulentTransfersStmt != nil {
+		if cerr := q.doesUserHaveFraudulentTransfersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserHaveFraudulentTransfersStmt: %w", cerr)
 		}
 	}
 	if q.getAllEnabledStakeLevelsStmt != nil {
@@ -303,9 +319,11 @@ type Queries struct {
 	addStakeStmt                          *sql.Stmt
 	addStakeLevelStmt                     *sql.Stmt
 	addTokenTransferStmt                  *sql.Stmt
+	checkRecipientAddressStmt             *sql.Stmt
 	createWalletStmt                      *sql.Stmt
 	deleteStakeByUserIDStmt               *sql.Stmt
 	deleteWalletByIDStmt                  *sql.Stmt
+	doesUserHaveFraudulentTransfersStmt   *sql.Stmt
 	getAllEnabledStakeLevelsStmt          *sql.Stmt
 	getAllStakeLevelsStmt                 *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
@@ -338,9 +356,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addStakeStmt:                          q.addStakeStmt,
 		addStakeLevelStmt:                     q.addStakeLevelStmt,
 		addTokenTransferStmt:                  q.addTokenTransferStmt,
+		checkRecipientAddressStmt:             q.checkRecipientAddressStmt,
 		createWalletStmt:                      q.createWalletStmt,
 		deleteStakeByUserIDStmt:               q.deleteStakeByUserIDStmt,
 		deleteWalletByIDStmt:                  q.deleteWalletByIDStmt,
+		doesUserHaveFraudulentTransfersStmt:   q.doesUserHaveFraudulentTransfersStmt,
 		getAllEnabledStakeLevelsStmt:          q.getAllEnabledStakeLevelsStmt,
 		getAllStakeLevelsStmt:                 q.getAllStakeLevelsStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,

@@ -36,3 +36,10 @@ func WithMinAmountToTransfer(amount float64) ServiceOption {
 		s.minAmountToTransfer = amount
 	}
 }
+
+// WithFraudDetectionMode ...
+func WithFraudDetectionMode(mode bool) ServiceOption {
+	return func(s *Service) {
+		s.fraudDetectionMode = mode
+	}
+}

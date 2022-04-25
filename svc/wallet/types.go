@@ -134,4 +134,5 @@ const (
 	TokenTransferStatusPending int32 = iota
 	TokenTransferStatusSuccess
 	TokenTransferStatusFailed
+	TokenTransferStatusFraud
 )
