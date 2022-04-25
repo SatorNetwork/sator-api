@@ -84,6 +84,7 @@ type (
 
 		CheckRecipientAddress(ctx context.Context, arg repository.CheckRecipientAddressParams) (int64, error)
 		DoesUserHaveFraudulentTransfers(ctx context.Context, userID uuid.UUID) (bool, error)
+		DoesUserMakeTransferForLastMinute(ctx context.Context, userID uuid.UUID) (bool, error)
 	}
 
 	solanaClient interface {
@@ -474,6 +475,10 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 	w, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return PreparedTransferTransaction{}, fmt.Errorf("could not find wallet: %w", err)
+	}
+
+	if tooManyRequests, _ := s.wr.DoesUserMakeTransferForLastMinute(ctx, w.UserID); tooManyRequests {
+		return PreparedTransferTransaction{}, ErrTooManyRequests
 	}
 
 	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)

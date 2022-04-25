@@ -13,4 +13,5 @@ var (
 	ErrCouldNotLock        = errors.New("could not lock tokens, try again later")
 	ErrTransactionFailed   = errors.New("transaction failed")
 	ErrFraudDetection      = errors.New("fraud detection")
+	ErrTooManyRequests     = errors.New("too many requests, please try again later")
 )

@@ -88,6 +88,20 @@ func (q *Queries) DoesUserHaveFraudulentTransfers(ctx context.Context, userID uu
 	return fraud_detected, err
 }
 
+const doesUserMakeTransferForLastMinute = `-- name: DoesUserMakeTransferForLastMinute :one
+SELECT (count(*) > 0)::BOOLEAN as found_transfer
+FROM token_transfers 
+WHERE user_id = $1
+    AND created_at > now() - interval '1 minute'
+`
+
+func (q *Queries) DoesUserMakeTransferForLastMinute(ctx context.Context, userID uuid.UUID) (bool, error) {
+	row := q.queryRow(ctx, q.doesUserMakeTransferForLastMinuteStmt, doesUserMakeTransferForLastMinute, userID)
+	var found_transfer bool
+	err := row.Scan(&found_transfer)
+	return found_transfer, err
+}
+
 const updateTokenTransfer = `-- name: UpdateTokenTransfer :exec
 UPDATE token_transfers
 SET status = $1,
