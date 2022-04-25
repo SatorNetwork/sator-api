@@ -55,6 +55,39 @@ func (q *Queries) AddTokenTransfer(ctx context.Context, arg AddTokenTransferPara
 	return i, err
 }
 
+const checkRecipientAddress = `-- name: CheckRecipientAddress :one
+SELECT count(DISTINCT user_id)
+FROM token_transfers 
+WHERE recipient_address = $1
+    AND user_id != $2
+`
+
+type CheckRecipientAddressParams struct {
+	RecipientAddress string    `json:"recipient_address"`
+	UserID           uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CheckRecipientAddress(ctx context.Context, arg CheckRecipientAddressParams) (int64, error) {
+	row := q.queryRow(ctx, q.checkRecipientAddressStmt, checkRecipientAddress, arg.RecipientAddress, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const doesUserHaveFraudulentTransfers = `-- name: DoesUserHaveFraudulentTransfers :one
+SELECT (count(DISTINCT user_id) > 0)::BOOLEAN as fraud_detected
+FROM token_transfers 
+WHERE user_id = $1
+    AND status = 3
+`
+
+func (q *Queries) DoesUserHaveFraudulentTransfers(ctx context.Context, userID uuid.UUID) (bool, error) {
+	row := q.queryRow(ctx, q.doesUserHaveFraudulentTransfersStmt, doesUserHaveFraudulentTransfers, userID)
+	var fraud_detected bool
+	err := row.Scan(&fraud_detected)
+	return fraud_detected, err
+}
+
 const updateTokenTransfer = `-- name: UpdateTokenTransfer :exec
 UPDATE token_transfers
 SET status = $1,

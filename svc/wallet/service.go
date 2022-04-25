@@ -43,6 +43,8 @@ type (
 		rewardsTransactionsURL  string // url template to get rewards wallet type transactions list
 
 		minAmountToTransfer float64 // minimum amount to transfer request
+
+		fraudDetectionMode bool // fraud detection mode
 	}
 
 	// ServiceOption function
@@ -79,6 +81,9 @@ type (
 
 		AddTokenTransfer(ctx context.Context, arg repository.AddTokenTransferParams) (repository.TokenTransfer, error)
 		UpdateTokenTransfer(ctx context.Context, arg repository.UpdateTokenTransferParams) error
+
+		CheckRecipientAddress(ctx context.Context, arg repository.CheckRecipientAddressParams) (int64, error)
+		DoesUserHaveFraudulentTransfers(ctx context.Context, userID uuid.UUID) (bool, error)
 	}
 
 	solanaClient interface {
@@ -552,6 +557,28 @@ func (s *Service) ConfirmTransfer(ctx context.Context, uid, walletID uuid.UUID, 
 	})
 	if err != nil {
 		log.Printf("could not add token transfer: %v", err)
+	}
+
+	if s.fraudDetectionMode {
+		fraudDetected, _ := s.wr.DoesUserHaveFraudulentTransfers(ctx, uid)
+		i, _ := s.wr.CheckRecipientAddress(ctx, repository.CheckRecipientAddressParams{
+			RecipientAddress: toDecode.RecipientAddr,
+			UserID:           uid,
+		})
+		if i > 0 || fraudDetected {
+			log.Printf("%v: transfer %s", ErrFraudDetection, tr.ID.String())
+
+			if tr.ID != uuid.Nil {
+				if err := s.wr.UpdateTokenTransfer(ctx, repository.UpdateTokenTransferParams{
+					ID:     tr.ID,
+					Status: TokenTransferStatusFraud,
+				}); err != nil {
+					log.Printf("could not update token transfer: %v", err)
+				}
+			}
+
+			return ErrTransactionFailed
+		}
 	}
 
 	tx, err := s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, 0)
