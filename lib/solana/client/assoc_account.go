@@ -5,8 +5,8 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 
+	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/assotokenprog"
 	"github.com/portto/solana-go-sdk/types"
