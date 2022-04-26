@@ -147,6 +147,7 @@ type Config struct {
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
+	FraudDetectionMode          bool
 }
 
 var buildTag string
@@ -260,6 +261,8 @@ func ConfigFromEnv() *Config {
 		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
 
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
+
+		FraudDetectionMode: env.GetBool("FRAUD_DETECTION_MODE", false),
 	}
 }
 
@@ -429,6 +432,7 @@ func (a *app) Run() {
 			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolderPk),
 			wallet.WithMinAmountToTransfer(a.cfg.MinAmountToTransfer),
 			wallet.WithStakePoolSolanaAddress(a.cfg.SolanaStakePoolAddr),
+			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
