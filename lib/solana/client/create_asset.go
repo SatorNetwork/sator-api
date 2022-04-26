@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
-	"github.com/portto/solana-go-sdk/sysprog"
-	"github.com/portto/solana-go-sdk/tokenprog"
+	"github.com/portto/solana-go-sdk/program/sysprog"
+	"github.com/portto/solana-go-sdk/program/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -21,19 +21,19 @@ func (c *Client) CreateAsset(ctx context.Context, feePayer, issuer, asset types.
 	tx, err := c.SendTransaction(
 		ctx,
 		feePayer, asset,
-		sysprog.CreateAccount(
-			feePayer.PublicKey,
-			asset.PublicKey,
-			common.TokenProgramID,
-			rentExemptionBalance,
-			tokenprog.MintAccountSize,
-		),
-		tokenprog.InitializeMint(
-			c.decimals,
-			asset.PublicKey,
-			issuer.PublicKey,
-			common.PublicKey{},
-		),
+		sysprog.CreateAccount(sysprog.CreateAccountParam{
+			From:     feePayer.PublicKey,
+			New:      asset.PublicKey,
+			Owner:    common.TokenProgramID,
+			Lamports: rentExemptionBalance,
+			Space:    tokenprog.MintAccountSize,
+		}),
+		tokenprog.InitializeMint(tokenprog.InitializeMintParam{
+			Decimals:   c.decimals,
+			Mint:       asset.PublicKey,
+			MintAuth:   issuer.PublicKey,
+			FreezeAuth: nil,
+		}),
 	)
 	if err != nil {
 		return "", fmt.Errorf("could not issue new asset: %w", err)

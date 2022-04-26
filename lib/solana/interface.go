@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 )
@@ -17,7 +16,7 @@ type Interface interface {
 	GetConfirmedTransactionForAccount(ctx context.Context, accPubKey, txhash string) (ConfirmedTransactionResponse, error)
 	NewAccount() types.Account
 	PublicKeyFromString(pk string) common.PublicKey
-	AccountFromPrivateKeyBytes(pk []byte) types.Account
+	AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 	CheckPrivateKey(addr string, pk []byte) error
 	RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 	SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error)
@@ -29,7 +28,7 @@ type Interface interface {
 	CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
 	InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
 	GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-	SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64) (string, error)
+	SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64, chargeSolanaFeeFromSender bool) (string, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
@@ -38,10 +37,10 @@ type Interface interface {
 type (
 	// GetConfirmedTransactionResponse ...
 	GetConfirmedTransactionResponse struct {
-		BlockTime   int64              `json:"blockTime"`
-		Slot        uint64             `json:"slot"`
-		Meta        TransactionMeta    `json:"meta"`
-		Transaction client.Transaction `json:"transaction"`
+		BlockTime   int64             `json:"blockTime"`
+		Slot        uint64            `json:"slot"`
+		Meta        TransactionMeta   `json:"meta"`
+		Transaction types.Transaction `json:"transaction"`
 	}
 
 	// TransactionMeta ...
@@ -51,8 +50,8 @@ type (
 		PostBalances      []int64  `json:"postBalances"`
 		LogMessages       []string `json:"logMesssages"`
 		InnerInstructions []struct {
-			Index        uint64               `json:"index"`
-			Instructions []client.Instruction `json:"instructions"`
+			Index        uint64              `json:"index"`
+			Instructions []types.Instruction `json:"instructions"`
 		} `json:"innerInstructions"`
 		Err    interface{}            `json:"err"`
 		Status map[string]interface{} `json:"status"`
