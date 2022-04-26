@@ -153,6 +153,9 @@ func (c *Client) GetTokenAccountBalance(ctx context.Context, accPubKey string) (
 	accBalance, _, err := c.solana.GetTokenAccountBalanceWithConfig(ctx, accPubKey, rpc.GetTokenAccountBalanceConfig{
 		Commitment: rpc.CommitmentFinalized,
 	})
+	if err != nil && strings.Contains(err.Error(), `{"code":-32602,"message":"Invalid param: could not find account"}`) {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, fmt.Errorf("could not get token account balance: %w", err)
 	}
