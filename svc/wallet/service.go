@@ -644,11 +644,11 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 
 	feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
 	if err != nil {
-		return err
+		return "", err
 	}
 	source, err := s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for i := 0; i < 5; i++ {
