@@ -37,11 +37,12 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // AccountFromPrivateKeyBytes mocks base method.
-func (m *MockInterface) AccountFromPrivateKeyBytes(arg0 []byte) types.Account {
+func (m *MockInterface) AccountFromPrivateKeyBytes(arg0 []byte) (types.Account, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AccountFromPrivateKeyBytes", arg0)
 	ret0, _ := ret[0].(types.Account)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AccountFromPrivateKeyBytes indicates an expected call of AccountFromPrivateKeyBytes.
@@ -304,18 +305,18 @@ func (mr *MockInterfaceMockRecorder) RequestAirdrop(arg0, arg1, arg2 interface{}
 }
 
 // SendAssetsWithAutoDerive mocks base method.
-func (m *MockInterface) SendAssetsWithAutoDerive(arg0 context.Context, arg1 string, arg2, arg3 types.Account, arg4 string, arg5, arg6 float64) (string, error) {
+func (m *MockInterface) SendAssetsWithAutoDerive(arg0 context.Context, arg1 string, arg2, arg3 types.Account, arg4 string, arg5, arg6 float64, arg7 bool) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendAssetsWithAutoDerive", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "SendAssetsWithAutoDerive", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SendAssetsWithAutoDerive indicates an expected call of SendAssetsWithAutoDerive.
-func (mr *MockInterfaceMockRecorder) SendAssetsWithAutoDerive(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SendAssetsWithAutoDerive(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAssetsWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).SendAssetsWithAutoDerive), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAssetsWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).SendAssetsWithAutoDerive), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 }
 
 // SendTransaction mocks base method.
