@@ -2,7 +2,7 @@ name: Go
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, SAT-790-tx-fee]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [main, develop]

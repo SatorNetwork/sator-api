@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 
 	shows_repo "github.com/SatorNetwork/sator-api/svc/shows/repository"
+	shows_repository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 )
 
 type DB struct {
@@ -23,4 +24,8 @@ func New(dbClient *sql.DB) (*DB, error) {
 	return &DB{
 		showsRepository: showsRepository,
 	}, nil
+}
+
+func (db *DB) Repository() *shows_repository.Queries {
+	return db.showsRepository
 }

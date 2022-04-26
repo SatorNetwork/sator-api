@@ -389,6 +389,34 @@ func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UU
 	return items, nil
 }
 
+const getRawEpisodeByID = `-- name: GetRawEpisodeByID :one
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, archived FROM episodes
+WHERE episodes.id = $1 AND episodes.archived = FALSE
+`
+
+func (q *Queries) GetRawEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, error) {
+	row := q.queryRow(ctx, q.getRawEpisodeByIDStmt, getRawEpisodeByID, id)
+	var i Episode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonID,
+		&i.EpisodeNumber,
+		&i.Cover,
+		&i.Title,
+		&i.Description,
+		&i.ReleaseDate,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.ChallengeID,
+		&i.VerificationChallengeID,
+		&i.HintText,
+		&i.Watch,
+		&i.Archived,
+	)
+	return i, err
+}
+
 const updateEpisode = `-- name: UpdateEpisode :exec
 UPDATE episodes
 SET episode_number = $1,

@@ -28,6 +28,10 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = $1 AND episodes.archived = FALSE;
 
+-- name: GetRawEpisodeByID :one
+SELECT * FROM episodes
+WHERE episodes.id = $1 AND episodes.archived = FALSE;
+
 -- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,

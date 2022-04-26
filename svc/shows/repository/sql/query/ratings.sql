@@ -86,6 +86,10 @@ AND review IS NOT NULL
 ORDER BY likes_number DESC
 LIMIT $2 OFFSET $3;
 
+-- name: AllReviewsList :many
+SELECT * FROM ratings
+LIMIT $1 OFFSET $2;
+
 -- name: GetReviewByID :one
 SELECT * FROM ratings
 WHERE id = $1;

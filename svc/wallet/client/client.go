@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 )
 
@@ -22,7 +23,7 @@ type (
 		GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ wallet.Transactions, err error)
 		PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error
 		PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error
-		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error
+		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 		GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error)
 	}
 )
@@ -68,8 +69,8 @@ func (c *Client) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, i
 }
 
 // P2PTransfer ...
-func (c *Client) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error {
-	return c.s.P2PTransfer(ctx, uid, recipientID, amount, percentToCharge, info)
+func (c *Client) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error {
+	return c.s.P2PTransfer(ctx, uid, recipientID, amount, cfg, info)
 }
 
 // GetMultiplier ...

@@ -28,7 +28,24 @@ type Interface interface {
 	CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
 	InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)
 	GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-	SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64, chargeSolanaFeeFromSender bool) (string, error)
+	PrepareSendAssetsTx(
+		ctx context.Context,
+		assetAddr string,
+		feePayer types.Account,
+		source types.Account,
+		recipientAddr string,
+		amount float64,
+		cfg *SendAssetsConfig,
+	) (*PrepareTxResponse, error)
+	SendAssetsWithAutoDerive(
+		ctx context.Context,
+		assetAddr string,
+		feePayer types.Account,
+		source types.Account,
+		recipientAddr string,
+		amount float64,
+		cfg *SendAssetsConfig,
+	) (string, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
@@ -83,5 +100,18 @@ type (
 		AmountString  string    `json:"amount_string"`
 		CreatedAtUnix int64     `json:"created_at_unix"`
 		CreatedAt     time.Time `json:"created_at"`
+	}
+
+	PrepareTxResponse struct {
+		Tx                      types.Transaction
+		FeeInSAO                float64
+		BlockchainFeeInSOLMltpl uint64
+	}
+
+	SendAssetsConfig struct {
+		PercentToCharge           float64
+		ChargeSolanaFeeFromSender bool
+		AllowFallbackToDefaultFee bool
+		DefaultFee                uint64
 	}
 )

@@ -82,6 +82,10 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 	return nil
 }
 
+func (db *DB) Client() *sql.DB {
+	return db.dbClient
+}
+
 func (db *DB) ChallengeDB() *challenge.DB {
 	return db.challengeDB
 }
@@ -92,6 +96,10 @@ func (db *DB) AuthDB() *auth.DB {
 
 func (db *DB) WalletDB() *wallet.DB {
 	return db.walletDB
+}
+
+func (db *DB) ShowsDB() *shows.DB {
+	return db.showsDB
 }
 
 func (db *DB) QuizV2DB() *quiz_v2.DB {

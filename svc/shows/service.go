@@ -7,12 +7,13 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/SatorNetwork/sator-api/lib/db"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -191,7 +192,7 @@ type (
 	}
 
 	// Simple function
-	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 )
 
 // NewService is a factory function,
@@ -1073,7 +1074,11 @@ func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid
 		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
 	}
 
-	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, s.tipsPercent, fmt.Sprintf("tips for episode review: %s", reviewID))
+	cfg := lib_solana.SendAssetsConfig{
+		PercentToCharge:           s.tipsPercent,
+		ChargeSolanaFeeFromSender: true,
+	}
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, &cfg, fmt.Sprintf("tips for episode review: %s", reviewID))
 	if err != nil {
 		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
 	}

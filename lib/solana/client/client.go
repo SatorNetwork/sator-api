@@ -8,32 +8,36 @@ import (
 	"log"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/rpc"
 	"github.com/portto/solana-go-sdk/types"
 
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
 )
 
 type (
 	Client struct {
-		solana   *client.Client
-		endpoint string
-		decimals uint8
-		mltpl    uint64
-		config   Config
+		solana              *client.Client
+		endpoint            string
+		decimals            uint8
+		mltpl               uint64
+		config              Config
+		exchangeRatesClient *exchange_rates_client.Client
 	}
 )
 
 // New creates new solana client wrapper
-func New(endpoint string, config Config) lib_solana.Interface {
+func New(endpoint string, config Config, exchangeRatesClient *exchange_rates_client.Client) lib_solana.Interface {
 	return &Client{
-		solana:   client.NewClient(endpoint),
-		endpoint: endpoint,
-		decimals: 9,
-		mltpl:    1e9,
-		config:   config,
+		solana:              client.NewClient(endpoint),
+		endpoint:            endpoint,
+		decimals:            9,
+		mltpl:               1e9,
+		config:              config,
+		exchangeRatesClient: exchangeRatesClient,
 	}
 }
 
@@ -209,4 +213,19 @@ func (c *Client) GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, a
 
 func (c *Client) FindAssociatedTokenAddress(walletAddress, tokenMintAddress common.PublicKey) (common.PublicKey, int, error) {
 	return common.FindAssociatedTokenAddress(walletAddress, tokenMintAddress)
+}
+
+func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, allowFallbackToDefaultFee bool, defaultFee uint64) (uint64, error) {
+	fee, err := c.solana.GetFeeForMessage(ctx, message)
+	if err != nil && strings.Contains(err.Error(), `{"code":-32601,"message":"Method not found"}`) && allowFallbackToDefaultFee {
+		return defaultFee, nil
+	}
+	if err != nil {
+		return 0, errors.Wrap(err, "can't get fee for message")
+	}
+	if fee == nil {
+		return 0, errors.Errorf("can't get fee for message: fee is nil")
+	}
+
+	return *fee, nil
 }
