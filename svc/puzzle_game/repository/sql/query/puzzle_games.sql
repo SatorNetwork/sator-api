@@ -76,7 +76,7 @@ VALUES (
 
 -- name: StartPuzzleGame :one
 UPDATE puzzle_games_attempts
-SET status = 1, image = @image
+SET status = 1, image = @image, tiles = @tiles
 WHERE puzzle_game_id = @puzzle_game_id 
 AND user_id = @user_id
 AND status = 0
@@ -104,3 +104,14 @@ WHERE id = $1;
 SELECT * FROM puzzle_game_unlock_options
 WHERE disabled = FALSE
 ORDER BY locked ASC, amount ASC;
+
+-- name: UpdatePuzzleGameAttempt :one
+UPDATE puzzle_games_attempts
+SET
+    status = @status,
+    steps = @steps,
+    steps_taken = @steps_taken,
+    result = @result,
+    tiles = @tiles
+WHERE id = @id
+    RETURNING *;

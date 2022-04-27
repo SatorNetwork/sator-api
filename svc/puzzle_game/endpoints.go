@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/gopuzzlegame"
+
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/validator"
@@ -28,6 +30,7 @@ type (
 		FinishPuzzleGame     endpoint.Endpoint
 
 		GetPuzzleGameUnlockOptions endpoint.Endpoint
+		TapTile                    endpoint.Endpoint
 	}
 
 	service interface {
@@ -45,6 +48,7 @@ type (
 		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (PuzzleGame, error)
 
 		GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error)
+		TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, position gopuzzlegame.Position) (PuzzleGame, error)
 	}
 
 	CreatePuzzleGameRequest struct {
@@ -74,6 +78,12 @@ type (
 		Result       int    `json:"result" validate:"oneof=0 1 2"`
 		StepsTaken   int    `json:"steps_taken" validate:"min=0"`
 	}
+
+	TapTileRequest struct {
+		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
+		X            int    `json:"x" validate:"min=0"`
+		Y            int    `json:"y" validate:"min=0"`
+	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -94,6 +104,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		FinishPuzzleGame:     MakeFinishPuzzleGameEndpoint(s, validateFunc),
 
 		GetPuzzleGameUnlockOptions: MakeGetPuzzleGameUnlockOptionsEndpoint(s),
+		TapTile:                    MakeTapTile(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -113,6 +124,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.FinishPuzzleGame = mdw(e.FinishPuzzleGame)
 
 			e.GetPuzzleGameUnlockOptions = mdw(e.GetPuzzleGameUnlockOptions)
+			e.TapTile = mdw(e.TapTile)
 		}
 	}
 
@@ -332,6 +344,34 @@ func MakeGetPuzzleGameUnlockOptionsEndpoint(s service) endpoint.Endpoint {
 		}
 
 		res, err := s.GetPuzzleGameUnlockOptions(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
+	}
+}
+
+func MakeTapTile(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+
+		req := request.(TapTileRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		res, err := s.TapTile(ctx, uid, uuid.MustParse(req.PuzzleGameID), gopuzzlegame.Position{
+			X: req.X,
+			Y: req.Y,
+		})
 		if err != nil {
 			return nil, err
 		}

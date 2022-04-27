@@ -85,3 +85,7 @@ WHERE id = @id;
 UPDATE shows
 SET archived = true
 WHERE id = @id;
+
+-- name: GetShowsByTitle :many
+SELECT * FROM shows
+WHERE title = @title;
