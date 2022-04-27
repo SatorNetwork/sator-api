@@ -48,6 +48,10 @@ type PuzzleGame struct {
 	Image  string            `json:"image,omitempty"`
 }
 
+type PuzzleGameResponse struct {
+	Data PuzzleGame `json:"data"`
+}
+
 type PuzzleGameImage struct {
 	ID      uuid.UUID `json:"id"`
 	FileURL string    `json:"file_url"`
@@ -76,12 +80,12 @@ func (a *PuzzleGameClient) UnlockPuzzleGame(accessToken string, puzzleGameID uui
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp PuzzleGame
+	var resp PuzzleGameResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
 
-	return &resp, nil
+	return &resp.Data, nil
 }
 
 func (a *PuzzleGameClient) Start(accessToken string, puzzleGameID uuid.UUID) (*PuzzleGame, error) {
@@ -103,12 +107,13 @@ func (a *PuzzleGameClient) Start(accessToken string, puzzleGameID uuid.UUID) (*P
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp PuzzleGame
+	fmt.Println(string(rawBody))
+	var resp PuzzleGameResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
 
-	return &resp, nil
+	return &resp.Data, nil
 }
 
 func (a *PuzzleGameClient) TapTile(accessToken string, puzzleGameID uuid.UUID, req *TapTileRequest) (*PuzzleGame, error) {
@@ -134,10 +139,10 @@ func (a *PuzzleGameClient) TapTile(accessToken string, puzzleGameID uuid.UUID, r
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp PuzzleGame
+	var resp PuzzleGameResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
 
-	return &resp, nil
+	return &resp.Data, nil
 }
