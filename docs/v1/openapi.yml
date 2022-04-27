@@ -4121,6 +4121,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4153,6 +4159,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4185,6 +4197,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4217,6 +4235,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: user_id
+          in: path
+          description: User ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
