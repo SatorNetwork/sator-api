@@ -289,13 +289,6 @@ components:
                           type: string
                     value:
                       type: integer
-                    correct_position:
-                      type: object
-                      properties:
-                        x:
-                          type: integer
-                        y:
-                          type: integer
                     current_position:
                       type: object
                       properties:
