@@ -366,6 +366,7 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game for user")
 	}
 
+	result.Tiles = p.Tiles
 	return result, nil
 }
 
