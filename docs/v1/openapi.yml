@@ -275,6 +275,37 @@ components:
                 type: number
                 enum: [0, 1, 2]
                 description: Game result. 0 - not finished, 1 - user won, 2 - user lost
+              tiles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    image:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        file_url:
+                          type: string
+                    value:
+                      type: integer
+                    correct_position:
+                      type: object
+                      properties:
+                        x:
+                          type: integer
+                        y:
+                          type: integer
+                    current_position:
+                      type: object
+                      properties:
+                        x:
+                          type: integer
+                        y:
+                          type: integer
+                    is_whitespace:
+                      type: boolean
+                description: Tiles of puzzle game
               image:
                 type: string
                 description: Current game image url
@@ -5774,6 +5805,43 @@ paths:
                 steps_taken:
                   type: number
                   description: "Number of steps taken."
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/{puzzle_game_id}/tap-tile:
+    post:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Tapping on tile in puzzle game
+      security:
+          - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  x:
+                    type: integer
+                    description: "x position"
+                  y:
+                    type: integer
+                    description: "y position"
       responses:
         "200":
           $ref: "#/components/responses/PuzzleGame"
