@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	solana_lib "github.com/SatorNetwork/sator-api/lib/solana"
@@ -32,9 +32,23 @@ func TestSendTips(t *testing.T) {
 		GetTokenAccountBalanceWithAutoDerive(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(100.0, nil).
 		AnyTimes()
+	sendAssetsCallback := func(
+		ctx context.Context,
+		assetAddr string,
+		feePayer types.Account,
+		source types.Account,
+		recipientAddr string,
+		amount float64,
+		cfg *solana_lib.SendAssetsConfig,
+	) (string, error) {
+		require.Equal(t, float64(1), amount)
+		require.Equal(t, app_config.AppConfigForTests.TipsPercent, cfg.PercentToCharge)
+		require.Equal(t, true, cfg.ChargeSolanaFeeFromSender)
+		return "", nil
+	}
 	solanaMock.EXPECT().
 		SendAssetsWithAutoDerive(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil).
+		DoAndReturn(sendAssetsCallback).
 		AnyTimes()
 
 	defer app_config.RunAndWait()()
@@ -53,20 +67,11 @@ func TestSendTips(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = c.DB.ShowsDB().Repository().ReviewEpisode(context.Background(), shows_repository.ReviewEpisodeParams{
+	rating, err := c.DB.ShowsDB().Repository().ReviewEpisode(context.Background(), shows_repository.ReviewEpisodeParams{
 		EpisodeID: episodeID,
 		UserID:    userID,
 		Rating:    1,
 	})
-	require.NoError(t, err)
-
-	ratings, err := c.DB.ShowsDB().Repository().AllReviewsList(context.Background(), shows_repository.AllReviewsListParams{
-		Limit:  100,
-		Offset: 0,
-	})
-	require.NoError(t, err)
-
-	rating, err := getRatingByUserID(ratings, userID)
 	require.NoError(t, err)
 
 	err = c.ShowsClient.SendTipsToReviewAuthor(user.AccessToken(), &shows.SendTipsRequest{
@@ -74,14 +79,4 @@ func TestSendTips(t *testing.T) {
 		Amount:   1,
 	})
 	require.NoError(t, err)
-}
-
-func getRatingByUserID(ratings []shows_repository.Rating, userID uuid.UUID) (shows_repository.Rating, error) {
-	for _, r := range ratings {
-		if r.UserID.String() == userID.String() {
-			return r, nil
-		}
-	}
-
-	return shows_repository.Rating{}, errors.Errorf("can't get rating with user's ID: %v", userID.String())
 }

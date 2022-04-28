@@ -140,7 +140,7 @@ type (
 
 		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
-		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
+		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) (repository.Rating, error)
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.ReviewsListRow, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.ReviewsListByUserIDRow, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
@@ -882,7 +882,7 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 
 // ReviewEpisode ...
 func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
-	if err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
+	if _, err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
 		EpisodeID: episodeID,
 		UserID:    userID,
 		Username:  sql.NullString{String: username, Valid: true},

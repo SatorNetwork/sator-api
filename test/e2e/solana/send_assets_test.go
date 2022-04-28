@@ -2,12 +2,10 @@ package solana
 
 import (
 	"context"
-	"database/sql"
 	"encoding/base64"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/types"
 	"github.com/stretchr/testify/require"
 
@@ -15,10 +13,8 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/fee_accumulator"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
-	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
 	exchange_rates_svc "github.com/SatorNetwork/sator-api/svc/exchange_rates"
 	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
-	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/mock"
@@ -51,7 +47,7 @@ func TestSendAssets(t *testing.T) {
 
 	c := client.NewClient()
 
-	exchangeRatesClient, err := getExchangeRatesClient(c.DB.Client())
+	exchangeRatesClient, err := exchange_rates_client.Easy(c.DB.Client())
 	require.NoError(t, err)
 	_, err = exchangeRatesClient.SyncExchangeRates(context.Background(), &exchange_rates_svc.Empty{})
 	require.NoError(t, err)
@@ -105,24 +101,4 @@ func TestSendAssets(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, 5+float64(resp.BlockchainFeeInSOLMltpl)/fee_accumulator.SolMltpl*solanaPriceInUSD/satorPriceInUSD, resp.FeeInSAO)
-}
-
-func getExchangeRatesClient(dbClient *sql.DB) (*exchange_rates_client.Client, error) {
-	var exchangeRatesClient *exchange_rates_client.Client
-	{
-		exchangeRatesRepository, err := exchange_rates_repository.Prepare(context.Background(), dbClient)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't prepare exchange rates repository")
-		}
-
-		exchangeRatesServer, err := exchange_rates.NewExchangeRatesServer(
-			exchangeRatesRepository,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't create exchange rates server")
-		}
-		exchangeRatesClient = exchange_rates_client.New(exchangeRatesServer)
-	}
-
-	return exchangeRatesClient, nil
 }
