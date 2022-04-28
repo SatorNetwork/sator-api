@@ -107,7 +107,6 @@ func (a *PuzzleGameClient) Start(accessToken string, puzzleGameID uuid.UUID) (*P
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	fmt.Println(string(rawBody))
 	var resp PuzzleGameResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
