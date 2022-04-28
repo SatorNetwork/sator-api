@@ -111,6 +111,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{puzzle_game_id}/tap-tile", httptransport.NewServer(
+		e.TapTile,
+		decodeTapTileRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -245,6 +252,21 @@ func decodeStartPuzzleGameRequest(ctx context.Context, r *http.Request) (interfa
 
 func decodeFinishPuzzleGameRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	var req FinishPuzzleGameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("could not decode request body: %w", err)
+	}
+
+	id := chi.URLParam(r, "puzzle_game_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed puzzle game id", ErrInvalidParameter)
+	}
+	req.PuzzleGameID = id
+
+	return req, nil
+}
+
+func decodeTapTileRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req TapTileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}

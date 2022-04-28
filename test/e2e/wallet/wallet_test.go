@@ -231,7 +231,6 @@ func TestSPLTokenPayment(t *testing.T) {
 
 	{
 		_, err := c.Wallet.CreateTransfer(signUpResp.AccessToken, &createTransferRequest)
-		//fmt.Println(err.Error())
 		require.Error(t, err)
 	}
 

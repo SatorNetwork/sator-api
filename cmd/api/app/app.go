@@ -143,6 +143,7 @@ type Config struct {
 	NatsWSURL                   string
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
+	PuzzleGameShuffle           bool
 	TipsPercent                 float64
 	SatorAPIKey                 string
 	WhitelistMode               bool
@@ -257,6 +258,9 @@ func ConfigFromEnv() *Config {
 
 		QuizV2ShuffleQuestions: env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true),
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
+
+		// Puzzle Game
+		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
 
 		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
 
@@ -712,6 +716,7 @@ func (a *app) Run() {
 
 		puzzleGameSvc := puzzle_game.NewService(
 			puzzleGameRepository,
+			a.cfg.PuzzleGameShuffle,
 			puzzle_game.WithChargeFunction(walletSvcClient.PayForService),
 			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
 			puzzle_game.WithFileServiceClient(fileSvc),
