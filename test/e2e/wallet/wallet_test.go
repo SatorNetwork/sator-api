@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -11,10 +10,8 @@ import (
 
 	lib_coingecko "github.com/SatorNetwork/sator-api/lib/coingecko"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
-	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
 	exchange_rates_svc "github.com/SatorNetwork/sator-api/svc/exchange_rates"
 	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
-	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	wallet_svc "github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
@@ -170,7 +167,7 @@ func TestSPLTokenPayment(t *testing.T) {
 
 	c := client.NewClient()
 
-	exchangeRatesClient, err := getExchangeRatesClient(c.DB.Client())
+	exchangeRatesClient, err := exchange_rates_client.Easy(c.DB.Client())
 	require.NoError(t, err)
 	_, err = exchangeRatesClient.SyncExchangeRates(context.Background(), &exchange_rates_svc.Empty{})
 	require.NoError(t, err)
@@ -260,24 +257,4 @@ func TestSPLTokenPayment(t *testing.T) {
 
 		return nil
 	})
-}
-
-func getExchangeRatesClient(dbClient *sql.DB) (*exchange_rates_client.Client, error) {
-	var exchangeRatesClient *exchange_rates_client.Client
-	{
-		exchangeRatesRepository, err := exchange_rates_repository.Prepare(context.Background(), dbClient)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't prepare exchange rates repository")
-		}
-
-		exchangeRatesServer, err := exchange_rates.NewExchangeRatesServer(
-			exchangeRatesRepository,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't create exchange rates server")
-		}
-		exchangeRatesClient = exchange_rates_client.New(exchangeRatesServer)
-	}
-
-	return exchangeRatesClient, nil
 }

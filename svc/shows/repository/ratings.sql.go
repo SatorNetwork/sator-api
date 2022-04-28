@@ -189,7 +189,7 @@ func (q *Queries) RateEpisode(ctx context.Context, arg RateEpisodeParams) error 
 	return err
 }
 
-const reviewEpisode = `-- name: ReviewEpisode :exec
+const reviewEpisode = `-- name: ReviewEpisode :one
 INSERT INTO ratings (
     episode_id,
     user_id,
@@ -210,6 +210,7 @@ UPDATE SET
     title = EXCLUDED.title, 
     review = EXCLUDED.review,
     username = EXCLUDED.username
+RETURNING episode_id, user_id, rating, created_at, id, title, review, username
 `
 
 type ReviewEpisodeParams struct {
@@ -221,8 +222,8 @@ type ReviewEpisodeParams struct {
 	Review    sql.NullString `json:"review"`
 }
 
-func (q *Queries) ReviewEpisode(ctx context.Context, arg ReviewEpisodeParams) error {
-	_, err := q.exec(ctx, q.reviewEpisodeStmt, reviewEpisode,
+func (q *Queries) ReviewEpisode(ctx context.Context, arg ReviewEpisodeParams) (Rating, error) {
+	row := q.queryRow(ctx, q.reviewEpisodeStmt, reviewEpisode,
 		arg.EpisodeID,
 		arg.UserID,
 		arg.Username,
@@ -230,7 +231,18 @@ func (q *Queries) ReviewEpisode(ctx context.Context, arg ReviewEpisodeParams) er
 		arg.Title,
 		arg.Review,
 	)
-	return err
+	var i Rating
+	err := row.Scan(
+		&i.EpisodeID,
+		&i.UserID,
+		&i.Rating,
+		&i.CreatedAt,
+		&i.ID,
+		&i.Title,
+		&i.Review,
+		&i.Username,
+	)
+	return i, err
 }
 
 const reviewsList = `-- name: ReviewsList :many

@@ -24,7 +24,7 @@ SELECT rating FROM ratings
 WHERE episode_id = $1
   AND user_id = $2;
 
--- name: ReviewEpisode :exec
+-- name: ReviewEpisode :one
 INSERT INTO ratings (
     episode_id,
     user_id,
@@ -44,7 +44,8 @@ UPDATE SET
     rating = EXCLUDED.rating, 
     title = EXCLUDED.title, 
     review = EXCLUDED.review,
-    username = EXCLUDED.username;
+    username = EXCLUDED.username
+RETURNING *;
 
 -- name: DidUserRateEpisode :one
 SELECT EXISTS(
