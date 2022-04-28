@@ -93,7 +93,7 @@ type (
 		NewAccount() types.Account
 		AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
-		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount, percentToCharge float64, chargeSolanaFeeFromSender bool) (string, error)
+		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64, cfg *lib_solana.SendAssetsConfig) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
@@ -595,7 +595,7 @@ func (s *Service) ConfirmTransfer(ctx context.Context, uid, walletID uuid.UUID, 
 		}
 	}
 
-	tx, err := s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, 0)
+	tx, err := s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, &lib_solana.SendAssetsConfig{})
 	if err != nil {
 		if tr.ID != uuid.Nil {
 			if err := s.wr.UpdateTokenTransfer(ctx, repository.UpdateTokenTransferParams{
@@ -622,7 +622,7 @@ func (s *Service) ConfirmTransfer(ctx context.Context, uid, walletID uuid.UUID, 
 	return nil
 }
 
-func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount, percentToCharge float64) (string, error) {
+func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipientAddr string, amount float64, cfg *lib_solana.SendAssetsConfig) (string, error) {
 	wallet, err := s.wr.GetWalletByID(ctx, walletID)
 	if err != nil {
 		return "", fmt.Errorf("could not get solana account: %w", err)
@@ -659,8 +659,7 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			source,
 			recipientAddr,
 			amount,
-			percentToCharge,
-			false,
+			cfg,
 		); err != nil {
 			if i < 4 {
 				log.Println(err)
@@ -938,7 +937,7 @@ func (s *Service) PayForService(ctx context.Context, uid uuid.UUID, amount float
 		return fmt.Errorf("not enough balance for payment: %v", bal)
 	}
 
-	if _, err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount, 0); err != nil {
+	if _, err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, amount, &lib_solana.SendAssetsConfig{}); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 
@@ -981,7 +980,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 	if creatorShare > 0 && creatorAddr != "" {
 		creatorAmount := amount / 100 * float64(creatorShare)
 
-		if _, err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount, 0); err != nil {
+		if _, err := s.execTransfer(ctx, w.ID, creatorAddr, creatorAmount, &lib_solana.SendAssetsConfig{}); err != nil {
 			return fmt.Errorf("could not make payment for %s: %w", info, err)
 		}
 
@@ -989,7 +988,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 	}
 
 	if satorShare > 0 {
-		if _, err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare, 0); err != nil {
+		if _, err := s.execTransfer(ctx, w.ID, s.tokenHolderSolanaAddr, satorShare, &lib_solana.SendAssetsConfig{}); err != nil {
 			return fmt.Errorf("could not make payment for %s: %w", info, err)
 		}
 	}
@@ -998,7 +997,7 @@ func (s *Service) PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, 
 }
 
 // P2PTransfer draft
-func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount, percentToCharge float64, info string) error {
+func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error {
 	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
 		UserID:     uid,
 		WalletType: WalletTypeSator,
@@ -1040,7 +1039,7 @@ func (s *Service) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, a
 		return fmt.Errorf("could not get recipient solana account for this wallet: %w", err)
 	}
 
-	if _, err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, percentToCharge); err != nil {
+	if _, err := s.execTransfer(ctx, w.ID, sar.PublicKey, amount, cfg); err != nil {
 		return fmt.Errorf("could not make payment for %s: %w", info, err)
 	}
 

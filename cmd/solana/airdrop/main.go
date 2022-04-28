@@ -29,7 +29,7 @@ func main() {
 		SysvarClock:    solanaSysvarClock,
 		SplToken:       solanaSplToken,
 		StakeProgramID: solanaStakeProgramID,
-	})
+	}, nil)
 
 	for i := 0; i < 66; i++ {
 		tx, err := c.RequestAirdrop(context.TODO(), feePayerTestnet, 1)

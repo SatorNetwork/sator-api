@@ -28,7 +28,7 @@ func New() *WalletClient {
 			SysvarClock:    common.SysVarClockPubkey.ToBase58(),
 			SplToken:       common.TokenProgramID.ToBase58(),
 			StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-		}),
+		}, nil),
 	}
 }
 

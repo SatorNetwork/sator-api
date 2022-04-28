@@ -102,7 +102,7 @@ func main() {
 							// SysvarClock:    solanaSysvarClock,
 							// SplToken:       solanaSplToken,
 							// StakeProgramID: solanaStakeProgramID,
-						}),
+						}, nil),
 						user.ID,
 					)
 				}); err != nil {

@@ -52,7 +52,7 @@ func CheckIfBootstrapNeeded(ctx context.Context) (bool, error) {
 		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
 		SplToken:       common.TokenProgramID.ToBase58(),
 		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-	})
+	}, nil)
 	_, tokenHolder, asset := accounts.GetAccounts()
 
 	tokenHolderAta, _, err := common.FindAssociatedTokenAddress(tokenHolder.PublicKey, asset.PublicKey)
@@ -85,7 +85,7 @@ func airdropSolToFeePayer(ctx context.Context, t *testing.T) {
 		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
 		SplToken:       common.TokenProgramID.ToBase58(),
 		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-	})
+	}, nil)
 	feePayer := accounts.GetFeePayer()
 	const solToAirdrop = 1
 
@@ -112,7 +112,7 @@ func createAsset(ctx context.Context, t *testing.T) {
 		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
 		SplToken:       common.TokenProgramID.ToBase58(),
 		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-	})
+	}, nil)
 	feePayer, tokenHolder, asset := accounts.GetAccounts()
 
 	_, err := solanaClient.CreateAsset(
@@ -131,7 +131,7 @@ func issueTokensToTokenHolder(ctx context.Context, t *testing.T) {
 		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
 		SplToken:       common.TokenProgramID.ToBase58(),
 		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-	})
+	}, nil)
 	feePayer, tokenHolder, asset := accounts.GetAccounts()
 	const tokensToIssue = 500000000
 

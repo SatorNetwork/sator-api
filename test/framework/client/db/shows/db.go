@@ -1,15 +1,15 @@
 package shows
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
-
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 
 	shows_repo "github.com/SatorNetwork/sator-api/svc/shows/repository"
+	shows_repository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 )
 
 type DB struct {
@@ -28,6 +28,10 @@ func New(dbClient *sql.DB) (*DB, error) {
 		dbClient:        dbClient,
 		showsRepository: showsRepository,
 	}, nil
+}
+
+func (db *DB) Repository() *shows_repository.Queries {
+	return db.showsRepository
 }
 
 func (db *DB) GetShowsByTitle(ctx context.Context, title string) ([]shows_repo.Show, error) {
