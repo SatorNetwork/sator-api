@@ -323,25 +323,12 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		return PuzzleGame{}, errors.Wrap(err, "could not start puzzle game")
 	}
 
-	images, err := s.GetPuzzleGameImages(ctx, puzzleGameID)
-	if err != nil {
-		return PuzzleGame{}, err
-	}
-
 	pg, err := s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
 	if err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
 	}
 
-	var pgImages []gopuzzlegame.Image
-	for _, image := range images {
-		pgImages = append(pgImages, gopuzzlegame.Image{
-			ID:      image.ID,
-			FileURL: image.FileURL,
-		})
-	}
-
-	p, err := gopuzzlegame.GeneratePuzzle(pgImages, int(pg.PartsX), s.puzzleGameShuffle)
+	p, err := gopuzzlegame.GeneratePuzzle(int(pg.PartsX), s.puzzleGameShuffle)
 	if err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "can't generate puzzle")
 	}
