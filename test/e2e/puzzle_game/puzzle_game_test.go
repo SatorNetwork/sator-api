@@ -68,4 +68,18 @@ func TestTapTile(t *testing.T) {
 			require.Equal(t, tile.CurrentPosition.Y, 1)
 		}
 	}
+
+	pgBefore = pgAfter
+	pgAfter, err = c.PuzzleGameClient.TapTile(signUpResp.AccessToken, pg.ID, &puzzle_game.TapTileRequest{
+		X: 1,
+		Y: 1,
+	})
+	require.NoError(t, err)
+
+	for _, tile := range pgAfter.Tiles {
+		if tile.IsWhitespace {
+			require.Equal(t, tile.CurrentPosition.X, 1)
+			require.Equal(t, tile.CurrentPosition.Y, 1)
+		}
+	}
 }

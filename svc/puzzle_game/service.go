@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
 
@@ -23,13 +22,6 @@ const (
 	PuzzleGameStatusInProgress
 	PuzzleGameStatusFinished
 	PuzzleStatusReachedStepLimit
-)
-
-// Predefined puzzle game results
-const (
-	PuzzleGameResultUndefined = iota
-	PuzzleGameResultWon
-	PuzzleGameResultLost
 )
 
 type (
@@ -57,7 +49,6 @@ type (
 		GetUserAvailableSteps(ctx context.Context, arg repository.GetUserAvailableStepsParams) (int32, error)
 		UnlockPuzzleGame(ctx context.Context, arg repository.UnlockPuzzleGameParams) (repository.PuzzleGamesAttempt, error)
 		StartPuzzleGame(ctx context.Context, arg repository.StartPuzzleGameParams) (repository.PuzzleGamesAttempt, error)
-		FinishPuzzleGame(ctx context.Context, arg repository.FinishPuzzleGameParams) error
 
 		GetPuzzleGameUnlockOption(ctx context.Context, id string) (repository.PuzzleGameUnlockOption, error)
 		GetPuzzleGameUnlockOptions(ctx context.Context) ([]repository.PuzzleGameUnlockOption, error)
@@ -66,10 +57,6 @@ type (
 	filesService interface {
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 		GetImagesListByIDs(ctx context.Context, ids []uuid.UUID) ([]files.File, error)
-	}
-
-	puzzleGameController interface {
-		TapTile(tile *gopuzzlegame.Tile)
 	}
 
 	chargeForUnlockFunc          func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -357,65 +344,6 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 	return result, nil
 }
 
-func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, stepsTaken int32) (PuzzleGame, error) {
-	pg, err := s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
-	}
-
-	var rewardsAmount, lockRewardsAmount float64 = 0, 0
-	if result == PuzzleGameResultWon && pg.PrizePool > 0 {
-		rewardsAmount = pg.PrizePool
-
-		if s.getUserRewardsMultiplierFn != nil {
-			mltp, _ := s.getUserRewardsMultiplierFn(ctx, userID)
-			if mltp > 0 {
-				lockRewardsAmount = (float64(mltp) / 100) * rewardsAmount
-				rewardsAmount = rewardsAmount + lockRewardsAmount
-			}
-		}
-
-		if s.rewardsFn != nil {
-			att, err := s.pgr.GetPuzzleGameCurrentAttempt(ctx, repository.GetPuzzleGameCurrentAttemptParams{
-				PuzzleGameID: puzzleGameID,
-				UserID:       userID,
-				Status:       PuzzleGameStatusInProgress,
-			})
-			if err != nil {
-				return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game current attempt")
-			}
-
-		retrySendReward:
-			for i := 0; i < 5; i++ {
-				if err := s.rewardsFn(ctx, userID, att.ID, "puzzle_games", rewardsAmount); err != nil {
-					log.Printf("can't add rewards for puzzle game: %v", err)
-					time.Sleep(time.Second * 3)
-				} else {
-					break retrySendReward
-				}
-			}
-		}
-	}
-
-	if err := s.pgr.FinishPuzzleGame(ctx, repository.FinishPuzzleGameParams{
-		PuzzleGameID:  puzzleGameID,
-		UserID:        userID,
-		StepsTaken:    stepsTaken,
-		RewardsAmount: rewardsAmount,
-		BonusAmount:   lockRewardsAmount,
-		Result:        result,
-	}); err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't finish puzzle game")
-	}
-
-	pg, err = s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
-	}
-
-	return s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusFinished)
-}
-
 func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame repository.PuzzleGame, status int32) (PuzzleGame, error) {
 	pg := NewPuzzleGameFromSQLC(puzzleGame)
 
@@ -429,7 +357,6 @@ func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, pu
 	pg.StepsTaken = att.StepsTaken
 	pg.Rewards = att.RewardsAmount
 	pg.BonusRewards = att.BonusAmount
-	pg.Result = att.Result
 	pg.Status = att.Status
 
 	if !att.Image.Valid {
@@ -548,7 +475,6 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		Status:     att.Status,
 		Steps:      att.Steps,
 		StepsTaken: att.StepsTaken,
-		Result:     att.Result,
 		Tiles:      sql.NullString{String: string(tilesBytes), Valid: true},
 		ID:         att.ID,
 	})
@@ -571,7 +497,6 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		Steps:        att.Steps,
 		StepsTaken:   att.StepsTaken,
 		Status:       att.Status,
-		Result:       att.Result,
 		Tiles:        controller.Puzzle.Tiles,
 		Images:       images,
 		Image:        att.Image.String,

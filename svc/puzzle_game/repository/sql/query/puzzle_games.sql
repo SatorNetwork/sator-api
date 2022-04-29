@@ -88,9 +88,8 @@ UPDATE puzzle_games_attempts
 SET status = 2,
     steps_taken = @steps_taken,
     rewards_amount = @rewards_amount,
-    bonus_amount = @bonus_amount,
-    result = @result
-WHERE puzzle_game_id = @puzzle_game_id 
+    bonus_amount = @bonus_amount
+WHERE puzzle_game_id = @puzzle_game_id
 AND user_id = @user_id
 AND status = 1
 AND image IS NOT NULL
@@ -111,7 +110,6 @@ SET
     status = @status,
     steps = @steps,
     steps_taken = @steps_taken,
-    result = @result,
     tiles = @tiles
 WHERE id = @id
     RETURNING *;

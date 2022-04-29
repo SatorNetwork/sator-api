@@ -39,7 +39,6 @@ type PuzzleGamesAttempt struct {
 	Steps         int32          `json:"steps"`
 	StepsTaken    int32          `json:"steps_taken"`
 	RewardsAmount float64        `json:"rewards_amount"`
-	Result        int32          `json:"result"`
 	Image         sql.NullString `json:"image"`
 	UpdatedAt     sql.NullTime   `json:"updated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
