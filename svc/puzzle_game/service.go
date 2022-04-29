@@ -79,7 +79,6 @@ type (
 		Steps      int32                `json:"steps"`
 		StepsTaken int32                `json:"steps_taken,omitempty"`
 		Status     int32                `json:"status"`
-		Result     int32                `json:"result,omitempty"`
 		Tiles      []*gopuzzlegame.Tile `json:"tiles,omitempty"`
 
 		// depends on user role
@@ -99,6 +98,13 @@ type (
 		IsLocked bool    `json:"is_locked"`
 	}
 )
+
+func (pg *PuzzleGame) HideCorrectPositions() PuzzleGame {
+	for _, tile := range pg.Tiles {
+		tile.CorrectPosition = nil
+	}
+	return *pg
+}
 
 func NewService(pgr puzzleGameRepository, puzzleGameShuffle bool, opt ...ServiceOption) *Service {
 	s := &Service{pgr: pgr, puzzleGameShuffle: puzzleGameShuffle}
@@ -341,7 +347,7 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 	}
 
 	result.Tiles = p.Tiles
-	return result, nil
+	return result.HideCorrectPositions(), nil
 }
 
 func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame repository.PuzzleGame, status int32) (PuzzleGame, error) {
@@ -501,5 +507,5 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		Images:       images,
 		Image:        att.Image.String,
 	}
-	return response, nil
+	return response.HideCorrectPositions(), nil
 }
