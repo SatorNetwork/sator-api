@@ -53,12 +53,13 @@ func TestSendAssets(t *testing.T) {
 	require.NoError(t, err)
 
 	solanaClient := solana_client.New(app_config.AppConfigForTests.SolanaApiBaseUrl, solana_client.Config{
-		SystemProgram:   app_config.AppConfigForTests.SolanaSystemProgram,
-		SysvarRent:      app_config.AppConfigForTests.SolanaSysvarRent,
-		SysvarClock:     app_config.AppConfigForTests.SolanaSysvarClock,
-		SplToken:        app_config.AppConfigForTests.SolanaSplToken,
-		StakeProgramID:  app_config.AppConfigForTests.SolanaStakeProgramID,
-		TokenHolderAddr: app_config.AppConfigForTests.SolanaTokenHolderAddr,
+		SystemProgram:         app_config.AppConfigForTests.SolanaSystemProgram,
+		SysvarRent:            app_config.AppConfigForTests.SolanaSysvarRent,
+		SysvarClock:           app_config.AppConfigForTests.SolanaSysvarClock,
+		SplToken:              app_config.AppConfigForTests.SolanaSplToken,
+		StakeProgramID:        app_config.AppConfigForTests.SolanaStakeProgramID,
+		TokenHolderAddr:       app_config.AppConfigForTests.SolanaTokenHolderAddr,
+		FeeAccumulatorAddress: app_config.AppConfigForTests.FeeAccumulatorAddress,
 	}, exchangeRatesClient)
 
 	solanaFeePayerPrivateKeyBytes, err := base64.StdEncoding.DecodeString(app_config.AppConfigForTests.SolanaFeePayerPrivateKey)
