@@ -76,6 +76,7 @@ func Bootstrap(ctx context.Context, t *testing.T, sc lib_solana.Interface) error
 	airdropSolToFeePayer(ctx, t, sc)
 	createAsset(ctx, t, sc)
 	issueTokensToTokenHolder(ctx, t, sc)
+	createAtaForFeeAccumulator(ctx, t, sc)
 
 	return nil
 }
@@ -145,5 +146,14 @@ func issueTokensToTokenHolder(ctx context.Context, t *testing.T, solanaClient li
 		}
 
 		return nil
+	})
+}
+
+func createAtaForFeeAccumulator(ctx context.Context, t *testing.T, solanaClient lib_solana.Interface) {
+	feePayer, _, asset := accounts.GetAccounts()
+
+	BackoffRetry(t, func() error {
+		_, err := solanaClient.CreateAccountWithATA(ctx, asset.PublicKey.ToBase58(), solanaClient.FeeAccumulatorAddress(), feePayer)
+		return err
 	})
 }

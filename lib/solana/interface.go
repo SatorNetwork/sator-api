@@ -18,6 +18,7 @@ type Interface interface {
 	PublicKeyFromString(pk string) common.PublicKey
 	AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 	CheckPrivateKey(addr string, pk []byte) error
+	FeeAccumulatorAddress() string
 	RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
 	SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error)
 	GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)

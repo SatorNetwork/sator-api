@@ -98,6 +98,10 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 	return common.PublicKey{}, ErrATANotCreated
 }
 
+func (c *Client) FeeAccumulatorAddress() string {
+	return c.config.FeeAccumulatorAddress
+}
+
 // RequestAirdrop working only in test and dev environment
 func (c *Client) RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error) {
 	if amount > 10 {
