@@ -13,6 +13,7 @@ import (
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
+	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/accounts"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 )
@@ -28,11 +29,13 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 	exchangeRatesClient, err := exchange_rates_client.Easy(c.DB.Client())
 	require.NoError(t, err)
 	sc := solana_client.New("http://localhost:8899", solana_client.Config{
-		SystemProgram:  common.SystemProgramID.ToBase58(),
-		SysvarRent:     common.SysVarRentPubkey.ToBase58(),
-		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
-		SplToken:       common.TokenProgramID.ToBase58(),
-		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		SystemProgram:         common.SystemProgramID.ToBase58(),
+		SysvarRent:            common.SysVarRentPubkey.ToBase58(),
+		SysvarClock:           common.SysVarClockPubkey.ToBase58(),
+		SplToken:              common.TokenProgramID.ToBase58(),
+		StakeProgramID:        "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
+		TokenHolderAddr:       app_config.AppConfigForTests.SolanaTokenHolderAddr,
+		FeeAccumulatorAddress: app_config.AppConfigForTests.FeeAccumulatorAddress,
 	}, exchangeRatesClient)
 
 	needed, err := CheckIfBootstrapNeeded(ctx, sc)
