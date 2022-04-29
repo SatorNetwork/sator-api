@@ -40,7 +40,6 @@ type PuzzleGame struct {
 	Steps      int32                `json:"steps"`
 	StepsTaken int32                `json:"steps_taken,omitempty"`
 	Status     int32                `json:"status"`
-	Result     int32                `json:"result,omitempty"`
 	Tiles      []*gopuzzlegame.Tile `json:"tiles,omitempty"`
 
 	// depends on user role
