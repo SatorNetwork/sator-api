@@ -35,10 +35,6 @@ func BootstrapIfNeeded(ctx context.Context, t *testing.T) error {
 		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
 	}, exchangeRatesClient)
 
-	if err := c.DB.PuzzleGameDB().Bootstrap(ctx); err != nil {
-		return err
-	}
-
 	needed, err := CheckIfBootstrapNeeded(ctx, sc)
 	if err != nil {
 		return errors.Wrap(err, "can't check if bootstrap is needed")

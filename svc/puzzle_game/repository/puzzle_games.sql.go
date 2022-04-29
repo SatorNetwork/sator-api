@@ -53,20 +53,18 @@ UPDATE puzzle_games_attempts
 SET status = 2,
     steps_taken = $1,
     rewards_amount = $2,
-    bonus_amount = $3,
-    result = $4
-WHERE puzzle_game_id = $5 
-AND user_id = $6
+    bonus_amount = $3
+WHERE puzzle_game_id = $4
+AND user_id = $5
 AND status = 1
 AND image IS NOT NULL
-RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount, tiles
+RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, image, updated_at, created_at, bonus_amount, tiles
 `
 
 type FinishPuzzleGameParams struct {
 	StepsTaken    int32     `json:"steps_taken"`
 	RewardsAmount float64   `json:"rewards_amount"`
 	BonusAmount   float64   `json:"bonus_amount"`
-	Result        int32     `json:"result"`
 	PuzzleGameID  uuid.UUID `json:"puzzle_game_id"`
 	UserID        uuid.UUID `json:"user_id"`
 }
@@ -76,7 +74,6 @@ func (q *Queries) FinishPuzzleGame(ctx context.Context, arg FinishPuzzleGamePara
 		arg.StepsTaken,
 		arg.RewardsAmount,
 		arg.BonusAmount,
-		arg.Result,
 		arg.PuzzleGameID,
 		arg.UserID,
 	)
@@ -126,7 +123,7 @@ func (q *Queries) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 }
 
 const getPuzzleGameCurrentAttempt = `-- name: GetPuzzleGameCurrentAttempt :one
-SELECT id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount, tiles
+SELECT id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, image, updated_at, created_at, bonus_amount, tiles
 FROM puzzle_games_attempts
 WHERE user_id = $1 AND puzzle_game_id = $2 AND status = $3
 ORDER BY created_at DESC
@@ -150,7 +147,6 @@ func (q *Queries) GetPuzzleGameCurrentAttempt(ctx context.Context, arg GetPuzzle
 		&i.Steps,
 		&i.StepsTaken,
 		&i.RewardsAmount,
-		&i.Result,
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,
@@ -292,7 +288,7 @@ WHERE puzzle_game_id = $3
 AND user_id = $4
 AND status = 0
 AND image IS NULL
-RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount, tiles
+RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, image, updated_at, created_at, bonus_amount, tiles
 `
 
 type StartPuzzleGameParams struct {
@@ -318,7 +314,6 @@ func (q *Queries) StartPuzzleGame(ctx context.Context, arg StartPuzzleGameParams
 		&i.Steps,
 		&i.StepsTaken,
 		&i.RewardsAmount,
-		&i.Result,
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,
@@ -353,7 +348,7 @@ VALUES (
     $1,
     $2,
     $3
-) RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount, tiles
+) RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, image, updated_at, created_at, bonus_amount, tiles
 `
 
 type UnlockPuzzleGameParams struct {
@@ -373,7 +368,6 @@ func (q *Queries) UnlockPuzzleGame(ctx context.Context, arg UnlockPuzzleGamePara
 		&i.Steps,
 		&i.StepsTaken,
 		&i.RewardsAmount,
-		&i.Result,
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,
@@ -420,17 +414,15 @@ SET
     status = $1,
     steps = $2,
     steps_taken = $3,
-    result = $4,
-    tiles = $5
-WHERE id = $6
-    RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, result, image, updated_at, created_at, bonus_amount, tiles
+    tiles = $4
+WHERE id = $5
+    RETURNING id, puzzle_game_id, user_id, status, steps, steps_taken, rewards_amount, image, updated_at, created_at, bonus_amount, tiles
 `
 
 type UpdatePuzzleGameAttemptParams struct {
 	Status     int32          `json:"status"`
 	Steps      int32          `json:"steps"`
 	StepsTaken int32          `json:"steps_taken"`
-	Result     int32          `json:"result"`
 	Tiles      sql.NullString `json:"tiles"`
 	ID         uuid.UUID      `json:"id"`
 }
@@ -440,7 +432,6 @@ func (q *Queries) UpdatePuzzleGameAttempt(ctx context.Context, arg UpdatePuzzleG
 		arg.Status,
 		arg.Steps,
 		arg.StepsTaken,
-		arg.Result,
 		arg.Tiles,
 		arg.ID,
 	)
@@ -453,7 +444,6 @@ func (q *Queries) UpdatePuzzleGameAttempt(ctx context.Context, arg UpdatePuzzleG
 		&i.Steps,
 		&i.StepsTaken,
 		&i.RewardsAmount,
-		&i.Result,
 		&i.Image,
 		&i.UpdatedAt,
 		&i.CreatedAt,

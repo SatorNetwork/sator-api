@@ -27,7 +27,6 @@ type (
 		GetPuzzleGameForUser endpoint.Endpoint
 		UnlockPuzzleGame     endpoint.Endpoint
 		StartPuzzleGame      endpoint.Endpoint
-		FinishPuzzleGame     endpoint.Endpoint
 
 		GetPuzzleGameUnlockOptions endpoint.Endpoint
 		TapTile                    endpoint.Endpoint
@@ -45,7 +44,6 @@ type (
 		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (PuzzleGame, error)
 		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (PuzzleGame, error)
 		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (PuzzleGame, error)
-		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (PuzzleGame, error)
 
 		GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error)
 		TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, position gopuzzlegame.Position) (PuzzleGame, error)
@@ -101,7 +99,6 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetPuzzleGameForUser: MakeGetPuzzleGameForUserEndpoint(s),
 		UnlockPuzzleGame:     MakeUnlockPuzzleGameEndpoint(s, validateFunc),
 		StartPuzzleGame:      MakeStartPuzzleGameEndpoint(s),
-		FinishPuzzleGame:     MakeFinishPuzzleGameEndpoint(s, validateFunc),
 
 		GetPuzzleGameUnlockOptions: MakeGetPuzzleGameUnlockOptionsEndpoint(s),
 		TapTile:                    MakeTapTile(s, validateFunc),
@@ -121,7 +118,6 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetPuzzleGameForUser = mdw(e.GetPuzzleGameForUser)
 			e.UnlockPuzzleGame = mdw(e.UnlockPuzzleGame)
 			e.StartPuzzleGame = mdw(e.StartPuzzleGame)
-			e.FinishPuzzleGame = mdw(e.FinishPuzzleGame)
 
 			e.GetPuzzleGameUnlockOptions = mdw(e.GetPuzzleGameUnlockOptions)
 			e.TapTile = mdw(e.TapTile)
@@ -304,31 +300,6 @@ func MakeStartPuzzleGameEndpoint(s service) endpoint.Endpoint {
 		}
 
 		res, err := s.StartPuzzleGame(ctx, uid, uuid.MustParse(request.(string)))
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-	}
-}
-
-func MakeFinishPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
-
-		uid, err := jwt.UserIDFromContext(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not get user id: %w", err)
-		}
-
-		req := request.(FinishPuzzleGameRequest)
-		if err := validateFunc(req); err != nil {
-			return nil, err
-		}
-
-		res, err := s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), int32(req.Result), int32(req.StepsTaken))
 		if err != nil {
 			return nil, err
 		}
