@@ -255,7 +255,7 @@ func TestSPLTokenPayment(t *testing.T) {
 		// TODO(evg): calculate it properly
 		expectedBalance := 0.00099245
 		if satorTokenBalance != expectedBalance {
-			return errors.Errorf("unexpected sator token balance, want: %v, got: %v", 0.001, satorTokenBalance)
+			return errors.Errorf("unexpected sator token balance, want: %v, got: %v", expectedBalance, satorTokenBalance)
 		}
 
 		return nil
