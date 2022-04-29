@@ -167,6 +167,10 @@ func (c *Client) prepareSendAssetsMessage(
 	}))
 
 	if satorFee > 0 {
+		if c.config.FeeAccumulatorAddress == "" {
+			return types.Message{}, pkg_errors.Errorf("Fee accumulator address is empty")
+		}
+
 		feeAccumulatorPublicKey := common.PublicKeyFromString(c.config.FeeAccumulatorAddress)
 		feeAccumulatorAta, err := c.deriveATAPublicKey(ctx, feeAccumulatorPublicKey, asset)
 		if err != nil {
