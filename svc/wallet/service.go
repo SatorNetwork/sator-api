@@ -45,6 +45,9 @@ type (
 		minAmountToTransfer float64 // minimum amount to transfer request
 
 		fraudDetectionMode bool // fraud detection mode
+
+		tokenTransferPercent float64
+		claimRewardsPercent  float64
 	}
 
 	// ServiceOption function
@@ -403,13 +406,17 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 
 	// sends token
 	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.GiveAssetsWithAutoDerive(
+		if tx, err = s.sc.SendAssetsWithAutoDerive(
 			ctx,
 			s.satorAssetSolanaAddr,
 			feePayer,
 			tokenHolder,
 			user.PublicKey,
 			amount,
+			&lib_solana.SendAssetsConfig{
+				PercentToCharge:           s.claimRewardsPercent,
+				ChargeSolanaFeeFromSender: true,
+			},
 		); err != nil {
 			if i < 4 {
 				log.Println(err)
@@ -595,7 +602,12 @@ func (s *Service) ConfirmTransfer(ctx context.Context, uid, walletID uuid.UUID, 
 		}
 	}
 
-	tx, err := s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, &lib_solana.SendAssetsConfig{})
+	tx, err := s.execTransfer(ctx, walletID, toDecode.RecipientAddr, toDecode.Amount, &lib_solana.SendAssetsConfig{
+		PercentToCharge:           s.tokenTransferPercent,
+		ChargeSolanaFeeFromSender: true,
+		AllowFallbackToDefaultFee: true,
+		DefaultFee:                1,
+	})
 	if err != nil {
 		if tr.ID != uuid.Nil {
 			if err := s.wr.UpdateTokenTransfer(ctx, repository.UpdateTokenTransferParams{

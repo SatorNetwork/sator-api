@@ -145,6 +145,8 @@ type Config struct {
 	ServerRSAPrivateKey         string
 	PuzzleGameShuffle           bool
 	TipsPercent                 float64
+	TokenTransferPercent        float64
+	ClaimRewardsPercent         float64
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
@@ -262,7 +264,9 @@ func ConfigFromEnv() *Config {
 		// Puzzle Game
 		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
 
-		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
+		TipsPercent:          env.GetFloat("TIPS_PERCENT", 0.5),
+		TokenTransferPercent: env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
+		ClaimRewardsPercent:  env.GetFloat("CLAIM_REWARDS_PERCENT", 0.75),
 
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
 
@@ -437,6 +441,8 @@ func (a *app) Run() {
 			wallet.WithMinAmountToTransfer(a.cfg.MinAmountToTransfer),
 			wallet.WithStakePoolSolanaAddress(a.cfg.SolanaStakePoolAddr),
 			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
+			wallet.WithTokenTransferPercent(a.cfg.TokenTransferPercent),
+			wallet.WithClaimRewardsPercent(a.cfg.ClaimRewardsPercent),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
