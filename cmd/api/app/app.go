@@ -147,6 +147,7 @@ type Config struct {
 	TipsPercent                 float64
 	TokenTransferPercent        float64
 	ClaimRewardsPercent         float64
+	FeeAccumulatorAddress       string
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
@@ -264,9 +265,10 @@ func ConfigFromEnv() *Config {
 		// Puzzle Game
 		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
 
-		TipsPercent:          env.GetFloat("TIPS_PERCENT", 0.5),
-		TokenTransferPercent: env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
-		ClaimRewardsPercent:  env.GetFloat("CLAIM_REWARDS_PERCENT", 0.75),
+		TipsPercent:           env.GetFloat("TIPS_PERCENT", 0.5),
+		TokenTransferPercent:  env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
+		ClaimRewardsPercent:   env.GetFloat("CLAIM_REWARDS_PERCENT", 0.75),
+		FeeAccumulatorAddress: env.GetString("FEE_ACCUMULATOR_ADDRESS", "96P3ugPEP6osg2R5RGRApikWLPzsgm1FRU3hiuc8WnMh"),
 
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
 
@@ -417,12 +419,13 @@ func (a *app) Run() {
 		}
 
 		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:   a.cfg.SolanaSystemProgram,
-			SysvarRent:      a.cfg.SolanaSysvarRent,
-			SysvarClock:     a.cfg.SolanaSysvarClock,
-			SplToken:        a.cfg.SolanaSplToken,
-			StakeProgramID:  a.cfg.SolanaStakeProgramID,
-			TokenHolderAddr: a.cfg.SolanaTokenHolderAddr,
+			SystemProgram:         a.cfg.SolanaSystemProgram,
+			SysvarRent:            a.cfg.SolanaSysvarRent,
+			SysvarClock:           a.cfg.SolanaSysvarClock,
+			SplToken:              a.cfg.SolanaSplToken,
+			StakeProgramID:        a.cfg.SolanaStakeProgramID,
+			TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+			FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
 		}, exchangeRatesClient)
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)

@@ -95,6 +95,20 @@ func (mr *MockInterfaceMockRecorder) CreateAsset(arg0, arg1, arg2, arg3 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAsset", reflect.TypeOf((*MockInterface)(nil).CreateAsset), arg0, arg1, arg2, arg3)
 }
 
+// FeeAccumulatorAddress mocks base method.
+func (m *MockInterface) FeeAccumulatorAddress() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FeeAccumulatorAddress")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// FeeAccumulatorAddress indicates an expected call of FeeAccumulatorAddress.
+func (mr *MockInterfaceMockRecorder) FeeAccumulatorAddress() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeAccumulatorAddress", reflect.TypeOf((*MockInterface)(nil).FeeAccumulatorAddress))
+}
+
 // GetAccountBalanceSOL mocks base method.
 func (m *MockInterface) GetAccountBalanceSOL(arg0 context.Context, arg1 string) (float64, error) {
 	m.ctrl.T.Helper()

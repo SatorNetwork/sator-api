@@ -150,10 +150,10 @@ func (c *Client) prepareSendAssetsMessage(
 	asset common.PublicKey,
 	sourcePublicKey common.PublicKey,
 	amount float64,
-	tokenHolderFee float64,
+	satorFee float64,
 ) (types.Message, error) {
 	amountToSend := uint64(amount * float64(c.mltpl))
-	tokenHolderFeeToSend := uint64(tokenHolderFee * float64(c.mltpl))
+	satorFeeToSend := uint64(satorFee * float64(c.mltpl))
 
 	instructions := make([]types.Instruction, 0, 2)
 	instructions = append(instructions, tokenprog.TransferChecked(tokenprog.TransferCheckedParam{
@@ -166,20 +166,24 @@ func (c *Client) prepareSendAssetsMessage(
 		Decimals: c.decimals,
 	}))
 
-	if tokenHolderFee > 0 {
-		tokenHolderPublicKey := common.PublicKeyFromString(c.config.TokenHolderAddr)
-		tokenHolderAta, err := c.deriveATAPublicKey(ctx, tokenHolderPublicKey, asset)
+	if satorFee > 0 {
+		if c.config.FeeAccumulatorAddress == "" {
+			return types.Message{}, pkg_errors.Errorf("Fee accumulator address is empty")
+		}
+
+		feeAccumulatorPublicKey := common.PublicKeyFromString(c.config.FeeAccumulatorAddress)
+		feeAccumulatorAta, err := c.deriveATAPublicKey(ctx, feeAccumulatorPublicKey, asset)
 		if err != nil {
 			return types.Message{}, err
 		}
 
 		instructions = append(instructions, tokenprog.TransferChecked(tokenprog.TransferCheckedParam{
 			From:     sourceAta,
-			To:       tokenHolderAta,
+			To:       feeAccumulatorAta,
 			Mint:     asset,
 			Auth:     sourcePublicKey,
 			Signers:  []common.PublicKey{},
-			Amount:   tokenHolderFeeToSend,
+			Amount:   satorFeeToSend,
 			Decimals: c.decimals,
 		}))
 	}

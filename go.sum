@@ -41,8 +41,6 @@ github.com/Masterminds/goutils v1.1.0/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy86
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/sprig v2.22.0+incompatible/go.mod h1:y6hNFY5UBTIWBxnzTeuNhlNS5hqE0NB0E6fgfo2Br3o=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
-github.com/SatorNetwork/gopuzzlegame v0.0.0-20220428115422-a3fff696d65e h1:h678mhtKX+baZ3suUgQfePUeTvCZrS/MdK5yiJUUmVI=
-github.com/SatorNetwork/gopuzzlegame v0.0.0-20220428115422-a3fff696d65e/go.mod h1:Wd1YKPPBcJnT8cPGs9ocTErxW4Mtn0g4il3xRz4cEaE=
 github.com/SatorNetwork/gopuzzlegame v0.0.0-20220429082423-1449331ae62a h1:YT/rXvW03ZaH++fAqQBEorRZJOkxQtU5E+sz//tNdGY=
 github.com/SatorNetwork/gopuzzlegame v0.0.0-20220429082423-1449331ae62a/go.mod h1:Wd1YKPPBcJnT8cPGs9ocTErxW4Mtn0g4il3xRz4cEaE=
 github.com/SatorNetwork/gopuzzlegame v0.0.0-20220429113459-e0ae698bfb8a h1:2xQAboG62tf8sdCFPwbSlFqSEvjNnhi8CMQ1yo5k50I=
