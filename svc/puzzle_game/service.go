@@ -479,8 +479,8 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 	att.Status = controller.PuzzleStatus
 	att.Tiles = sql.NullString{String: string(tilesBytes), Valid: true}
 
+	var rewardsAmount, lockRewardsAmount float64 = 0, 0
 	if att.Status == PuzzleGameStatusFinished {
-		var rewardsAmount, lockRewardsAmount float64 = 0, 0
 		if pg.PrizePool > 0 {
 			rewardsAmount = pg.PrizePool
 
@@ -545,8 +545,8 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		ID:           pg.ID,
 		EpisodeID:    pg.EpisodeID,
 		PrizePool:    pg.PrizePool,
-		Rewards:      att.RewardsAmount,
-		BonusRewards: att.BonusAmount,
+		Rewards:      rewardsAmount,
+		BonusRewards: lockRewardsAmount,
 		PartsX:       pg.PartsX,
 		Steps:        att.Steps,
 		StepsTaken:   att.StepsTaken,
