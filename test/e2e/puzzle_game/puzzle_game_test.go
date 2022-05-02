@@ -97,6 +97,15 @@ func TestTapTile(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, pgsvc.PuzzleGameStatusFinished, int(pgAfter.Status))
+
+	wallet, err := c.Wallet.GetWalletByType(signUpResp.AccessToken, "rewards")
+	require.NoError(t, err)
+
+	rewardsWallet, err := c.RewardsClient.GetRewardsWallet(signUpResp.AccessToken, wallet.Id)
+	require.NoError(t, err)
+	require.Len(t, rewardsWallet.Balance, 1)
+	require.Equal(t, "UNCLAIMED", rewardsWallet.Balance[0].Currency)
+	require.Equal(t, float64(100), rewardsWallet.Balance[0].Amount)
 }
 
 func TestTapTileStepLimit(t *testing.T) {
