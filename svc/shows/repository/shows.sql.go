@@ -75,7 +75,8 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 }
 
 const deleteShowByID = `-- name: DeleteShowByID :exec
-DELETE FROM shows
+UPDATE shows
+SET archived = true
 WHERE id = $1
 `
 
@@ -196,6 +197,7 @@ WHERE id IN(
               JOIN show_categories ON show_categories.id = shows_to_categories.category_id
         WHERE show_categories.disabled = FALSE
           AND show_categories.id = $1)
+AND archived = FALSE
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
@@ -263,6 +265,47 @@ type GetShowsByOldCategoryParams struct {
 
 func (q *Queries) GetShowsByOldCategory(ctx context.Context, arg GetShowsByOldCategoryParams) ([]Show, error) {
 	rows, err := q.query(ctx, q.getShowsByOldCategoryStmt, getShowsByOldCategory, arg.Category, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Show
+	for rows.Next() {
+		var i Show
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Cover,
+			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Category,
+			&i.Description,
+			&i.RealmsTitle,
+			&i.RealmsSubtitle,
+			&i.Watch,
+			&i.Archived,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getShowsByTitle = `-- name: GetShowsByTitle :many
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, archived FROM shows
+WHERE title = $1
+`
+
+func (q *Queries) GetShowsByTitle(ctx context.Context, title string) ([]Show, error) {
+	rows, err := q.query(ctx, q.getShowsByTitleStmt, getShowsByTitle, title)
 	if err != nil {
 		return nil, err
 	}

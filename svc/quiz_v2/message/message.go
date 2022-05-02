@@ -257,6 +257,7 @@ type WinnersTableMessage struct {
 	Winners               []*Winner          `json:"winners"`
 	Losers                []*Loser           `json:"losers"`
 	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
+	CurrentPrizePool      string             `json:"current_prize_pool"`
 }
 
 type Winner struct {

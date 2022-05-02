@@ -39,8 +39,10 @@ type Challenge struct {
 	Kind               int         `json:"kind"`
 	UserMaxAttempts    int         `json:"user_max_attempts"`
 	AttemptsLeft       int         `json:"attempts_left"`
-	ReceivedReward     int         `json:"received_reward"`
+	ReceivedReward     float64     `json:"received_reward"`
 	ReceivedRewardStr  string      `json:"received_reward_str"`
+	PercentForQuiz     float64     `json:"percent_for_quiz"`
+	MinimumReward      float64     `json:"minimum_reward"`
 }
 
 func (a *ChallengesClient) GetChallengeById(accessToken, challengeID string) (*Challenge, error) {

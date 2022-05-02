@@ -15,10 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dmitrymomot/distlock"
-	"github.com/dmitrymomot/distlock/inmem"
 	"github.com/dmitrymomot/go-env"
-	signature "github.com/dmitrymomot/go-signature"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	kitlog "github.com/go-kit/kit/log"
@@ -46,6 +43,9 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
+	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
+	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
@@ -58,10 +58,10 @@ import (
 	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	profileRepo "github.com/SatorNetwork/sator-api/svc/profile/repository"
+	"github.com/SatorNetwork/sator-api/svc/puzzle_game"
+	puzzleGameRepo "github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 	qrcodesRepo "github.com/SatorNetwork/sator-api/svc/qrcodes/repository"
-	"github.com/SatorNetwork/sator-api/svc/quiz"
-	quizRepo "github.com/SatorNetwork/sator-api/svc/quiz/repository"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2"
 	quizV2Repo "github.com/SatorNetwork/sator-api/svc/quiz_v2/repository"
 	"github.com/SatorNetwork/sator-api/svc/referrals"
@@ -93,6 +93,7 @@ type Config struct {
 	MasterOTPHash               string
 	QuizWsConnURL               string
 	QuizBotsTimeout             time.Duration
+	QuizLobbyLatency            time.Duration
 	TokenCirculatingSupply      float64
 	SolanaEnv                   string
 	SolanaApiBaseUrl            string
@@ -145,9 +146,15 @@ type Config struct {
 	NatsWSURL                   string
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
+	PuzzleGameShuffle           bool
+	TipsPercent                 float64
+	TokenTransferPercent        float64
+	ClaimRewardsPercent         float64
+	FeeAccumulatorAddress       string
 	SatorAPIKey                 string
 	WhitelistMode               bool
 	BlacklistMode               bool
+	FraudDetectionMode          bool
 }
 
 var buildTag string
@@ -179,8 +186,9 @@ func ConfigFromEnv() *Config {
 		JwtTTL:        env.GetDuration("JWT_TTL", 24*time.Hour),
 
 		// Quiz
-		QuizWsConnURL:   env.MustString("QUIZ_WS_CONN_URL"),
-		QuizBotsTimeout: env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second),
+		QuizWsConnURL:    env.MustString("QUIZ_WS_CONN_URL"),
+		QuizBotsTimeout:  env.GetDuration("QUIZ_BOTS_TIMEOUT", 5*time.Second),
+		QuizLobbyLatency: env.GetDuration("QUIZ_LOBBY_LATENCY", 5*time.Second),
 
 		// Solana
 		TokenCirculatingSupply:      env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844),
@@ -257,7 +265,17 @@ func ConfigFromEnv() *Config {
 		QuizV2ShuffleQuestions: env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true),
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
 
+		// Puzzle Game
+		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
+
+		TipsPercent:           env.GetFloat("TIPS_PERCENT", 0.5),
+		TokenTransferPercent:  env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
+		ClaimRewardsPercent:   env.GetFloat("CLAIM_REWARDS_PERCENT", 0.75),
+		FeeAccumulatorAddress: env.GetString("FEE_ACCUMULATOR_ADDRESS", "96P3ugPEP6osg2R5RGRApikWLPzsgm1FRU3hiuc8WnMh"),
+
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
+
+		FraudDetectionMode: env.GetBool("FRAUD_DETECTION_MODE", false),
 	}
 }
 
@@ -294,11 +312,6 @@ func (a *app) Run() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	mutex := distlock.New(
-		distlock.WithStorageDrivers(inmem.New()),
-		distlock.WithTries(10),
-	)
 
 	// runtime group
 	var g run.Group
@@ -374,17 +387,36 @@ func (a *app) Run() {
 		return a.cfg.KycSkip
 	})
 
+	var exchangeRatesClient *exchange_rates_client.Client
+	{
+		exchangeRatesRepository, err := exchange_rates_repository.Prepare(context.Background(), db)
+		if err != nil {
+			log.Fatalf("can't prepare exchange rates repository: %v", err)
+		}
+
+		exchangeRatesServer, err := exchange_rates.NewExchangeRatesServer(
+			exchangeRatesRepository,
+		)
+		if err != nil {
+			log.Fatalf("can't create exchange rates server: %v\n", err)
+		}
+		exchangeRatesClient = exchange_rates_client.New(exchangeRatesServer)
+	}
+	_ = exchangeRatesClient
+
 	walletRepository, err := walletRepo.Prepare(ctx, db)
 	if err != nil {
 		log.Fatalf("can't prepare wallet repository: %v", err)
 	}
 	solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-		SystemProgram:  a.cfg.SolanaSystemProgram,
-		SysvarRent:     a.cfg.SolanaSysvarRent,
-		SysvarClock:    a.cfg.SolanaSysvarClock,
-		SplToken:       a.cfg.SolanaSplToken,
-		StakeProgramID: a.cfg.SolanaStakeProgramID,
-	})
+		SystemProgram:         a.cfg.SolanaSystemProgram,
+		SysvarRent:            a.cfg.SolanaSysvarRent,
+		SysvarClock:           a.cfg.SolanaSysvarClock,
+		SplToken:              a.cfg.SolanaSplToken,
+		StakeProgramID:        a.cfg.SolanaStakeProgramID,
+		TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+		FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+	}, exchangeRatesClient)
 
 	var feePayer types.Account
 	{
@@ -395,7 +427,10 @@ func (a *app) Run() {
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
 		}
-		feePayer = types.AccountFromPrivateKeyBytes(feePayerPk)
+		feePayer, err = types.AccountFromBytes(feePayerPk)
+		if err != nil {
+			log.Fatalf("can't get fee payer account from bytes")
+		}
 	}
 
 	var tokenHolder types.Account
@@ -407,7 +442,10 @@ func (a *app) Run() {
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, tokenHolderPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
 		}
-		tokenHolder = types.AccountFromPrivateKeyBytes(tokenHolderPk)
+		tokenHolder, err = types.AccountFromBytes(tokenHolderPk)
+		if err != nil {
+			log.Fatalf("can't get token holder account from bytes")
+		}
 	}
 
 	var walletSvcClient *walletClient.Client
@@ -422,6 +460,9 @@ func (a *app) Run() {
 			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey),
 			wallet.WithMinAmountToTransfer(a.cfg.MinAmountToTransfer),
 			wallet.WithStakePoolSolanaAddress(a.cfg.SolanaStakePoolAddr),
+			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
+			wallet.WithTokenTransferPercent(a.cfg.TokenTransferPercent),
+			wallet.WithClaimRewardsPercent(a.cfg.ClaimRewardsPercent),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -590,7 +631,7 @@ func (a *app) Run() {
 			logger,
 		))
 
-		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient)
+		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient, a.cfg.TipsPercent)
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(showsService, jwtMdw),
 			logger,
@@ -602,6 +643,7 @@ func (a *app) Run() {
 	}
 
 	// files service
+	var fileSvc *files.Service
 	{
 		opt := storage.Options{
 			Key:            a.cfg.FileStorageKey,
@@ -619,8 +661,11 @@ func (a *app) Run() {
 		if err != nil {
 			log.Fatalf("mediaServiceRepo error: %v", err)
 		}
+
+		fileSvc = files.NewService(mediaServiceRepo, stor, resizer.Resize)
+
 		r.Mount("/files", files.MakeHTTPHandler(
-			files.MakeEndpoints(files.NewService(mediaServiceRepo, stor, resizer.Resize), jwtMdw),
+			files.MakeEndpoints(fileSvc, jwtMdw),
 			logger,
 		))
 	}
@@ -645,42 +690,6 @@ func (a *app) Run() {
 		))
 	}
 
-	// Quiz service
-	{
-		// Quiz service
-		quizRepository, err := quizRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("quizRepo error: %v", err)
-		}
-		quizSvc := quiz.NewService(
-			mutex,
-			quizRepository,
-			rewardsSvcClient,
-			challengeSvcClient,
-			a.cfg.QuizWsConnURL,
-			quiz.WithCustomTokenGenerateFunction(signature.NewTemporary),
-			quiz.WithCustomTokenParseFunction(signature.Parse),
-		)
-		r.Mount("/quiz", quiz.MakeHTTPHandler(
-			quiz.MakeEndpoints(quizSvc, jwtMdw),
-			logger,
-			quiz.QuizWsHandler(
-				quizSvc,
-				invitationsService.SendReward(rewardService.AddTransaction),
-				challengeSvcClient,
-				profileSvc,
-				a.cfg.QuizBotsTimeout,
-			),
-		))
-
-		// run quiz service
-		g.Add(func() error {
-			return quizSvc.Serve(ctx)
-		}, func(err error) {
-			//log.Fatalf("quiz service: %v", err)
-		})
-	}
-
 	{
 		quizV2Repository, err := quizV2Repo.Prepare(ctx, db)
 		if err != nil {
@@ -699,6 +708,7 @@ func (a *app) Run() {
 			quizV2Repository,
 			serverRSAPrivateKey,
 			a.cfg.QuizV2ShuffleQuestions,
+			a.cfg.QuizLobbyLatency,
 		)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),
@@ -724,6 +734,7 @@ func (a *app) Run() {
 		))
 	}
 
+	// In-app purchases service
 	{
 		iapRepository, err := iap_repository.Prepare(ctx, db)
 		if err != nil {
@@ -740,6 +751,27 @@ func (a *app) Run() {
 		)
 		r.Mount("/iap", iap_svc.MakeHTTPHandler(
 			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	{
+		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare puzzle game repository: %v", err)
+		}
+
+		puzzleGameSvc := puzzle_game.NewService(
+			puzzleGameRepository,
+			a.cfg.PuzzleGameShuffle,
+			puzzle_game.WithChargeFunction(walletSvcClient.PayForService),
+			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
+			puzzle_game.WithFileServiceClient(fileSvc),
+			puzzle_game.WithUserMultiplierFunction(walletSvcClient.GetMultiplier),
+		)
+
+		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(
+			puzzle_game.MakeEndpoints(puzzleGameSvc, jwtMdw),
 			logger,
 		))
 	}

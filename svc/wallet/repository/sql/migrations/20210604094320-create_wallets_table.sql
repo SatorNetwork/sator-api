@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS wallets (
 CREATE UNIQUE INDEX wallets_user_id ON wallets USING BTREE (user_id, solana_account_id);
 CREATE TRIGGER update_wallets_modtime BEFORE
 UPDATE ON wallets FOR EACH ROW EXECUTE PROCEDURE wallets_update_updated_at_column();
+
 -- +migrate Down
 DROP TRIGGER IF EXISTS update_wallets_modtime ON wallets;
 DROP TABLE IF EXISTS wallets;

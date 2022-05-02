@@ -28,6 +28,10 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = $1 AND episodes.archived = FALSE;
 
+-- name: GetRawEpisodeByID :one
+SELECT * FROM episodes
+WHERE episodes.id = $1 AND episodes.archived = FALSE;
+
 -- name: AddEpisode :one
 INSERT INTO episodes (
     show_id,
@@ -96,3 +100,8 @@ JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY(@episode_ids::uuid[])
 AND episodes.archived = FALSE
 ORDER BY episodes.episode_number DESC;
+
+-- name: GetAllEpisodes :many
+SELECT *
+FROM episodes
+WHERE archived = FALSE;

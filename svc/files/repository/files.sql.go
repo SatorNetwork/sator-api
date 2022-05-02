@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const addFile = `-- name: AddFile :one
@@ -67,6 +68,41 @@ func (q *Queries) GetFileByID(ctx context.Context, id uuid.UUID) (File, error) {
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getFilesByIDs = `-- name: GetFilesByIDs :many
+SELECT id, file_name, file_path, file_url, created_at FROM files
+WHERE id = ANY($1::uuid[])
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetFilesByIDs(ctx context.Context, ids []uuid.UUID) ([]File, error) {
+	rows, err := q.query(ctx, q.getFilesByIDsStmt, getFilesByIDs, pq.Array(ids))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []File
+	for rows.Next() {
+		var i File
+		if err := rows.Scan(
+			&i.ID,
+			&i.FileName,
+			&i.FilePath,
+			&i.FileUrl,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getFilesList = `-- name: GetFilesList :many

@@ -29,6 +29,8 @@ func TestCorrectAnswers(t *testing.T) {
 	c := client.NewClient()
 	defaultChallengeID, err := c.DB.ChallengeDB().DefaultChallengeID(context.Background())
 	require.NoError(t, err)
+	err = c.DB.QuizV2DB().Repository().CleanUp(context.Background())
+	require.NoError(t, err)
 	totalRewards := float64(250)
 
 	user1 := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
@@ -107,14 +109,17 @@ func TestCorrectAnswers(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 2, challenge.Players)
 			require.Equal(t, 1, challenge.RegisteredPlayersInDB)
+
+			require.Equal(t, "250 SAO", challenge.CurrentPrizePool)
+			require.Equal(t, float64(250), challenge.CurrentPrizePoolAmount)
 		}
 		{
 			challengesWithPlayer, err := c.QuizV2Client.GetChallengesSortedByPlayers(user1.AccessToken())
 			require.NoError(t, err)
 			_ = challengesWithPlayer
 			// TODO(evg): debug && uncomment
-			//require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
-			//require.Equal(t, 1, challengesWithPlayer[0].PlayersNumber)
+			require.GreaterOrEqual(t, len(challengesWithPlayer), 1)
+			require.Equal(t, 1, challengesWithPlayer[0].PlayersNumber)
 		}
 	}
 
@@ -144,7 +149,7 @@ func TestCorrectAnswers(t *testing.T) {
 		go messageVerifier.Start()
 		defer messageVerifier.Close()
 
-		time.Sleep(time.Second * 25)
+		time.Sleep(time.Second*25 + app_config.AppConfigForTests.QuizLobbyLatency)
 
 		err = messageVerifier.Verify()
 		require.NoError(t, err)

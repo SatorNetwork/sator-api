@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
-	"github.com/portto/solana-go-sdk/sysprog"
-	"github.com/portto/solana-go-sdk/tokenprog"
+	"github.com/portto/solana-go-sdk/program/sysprog"
+	"github.com/portto/solana-go-sdk/program/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -22,18 +22,18 @@ func (c *Client) InitAccountToUseAsset(ctx context.Context, feePayer, issuer, as
 	tx, err := c.SendTransaction(
 		ctx,
 		feePayer, initAcc,
-		sysprog.CreateAccount(
-			feePayer.PublicKey,
-			initAcc.PublicKey,
-			common.TokenProgramID,
-			rentExemptionBalanceIssuer,
-			tokenprog.TokenAccountSize,
-		),
-		tokenprog.InitializeAccount(
-			initAcc.PublicKey,
-			asset.PublicKey,
-			issuer.PublicKey,
-		),
+		sysprog.CreateAccount(sysprog.CreateAccountParam{
+			From:     feePayer.PublicKey,
+			New:      initAcc.PublicKey,
+			Owner:    common.TokenProgramID,
+			Lamports: rentExemptionBalanceIssuer,
+			Space:    tokenprog.TokenAccountSize,
+		}),
+		tokenprog.InitializeAccount(tokenprog.InitializeAccountParam{
+			Account: initAcc.PublicKey,
+			Mint:    asset.PublicKey,
+			Owner:   issuer.PublicKey,
+		}),
 	)
 	if err != nil {
 		return "", fmt.Errorf("could not associate account: %w", err)

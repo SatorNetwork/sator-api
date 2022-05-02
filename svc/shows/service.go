@@ -7,12 +7,13 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/SatorNetwork/sator-api/lib/db"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/svc/profile"
 	"github.com/SatorNetwork/sator-api/svc/shows/repository"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -34,6 +35,7 @@ type (
 		ac           authClient
 		sentTipsFunc sentTipsFunction
 		nc           nftClient
+		tipsPercent  float64
 	}
 
 	// Show struct
@@ -138,7 +140,7 @@ type (
 
 		// Episode reviews
 		DidUserReviewEpisode(ctx context.Context, arg repository.DidUserReviewEpisodeParams) (bool, error)
-		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) error
+		ReviewEpisode(ctx context.Context, arg repository.ReviewEpisodeParams) (repository.Rating, error)
 		ReviewsList(ctx context.Context, arg repository.ReviewsListParams) ([]repository.ReviewsListRow, error)
 		ReviewsListByUserID(ctx context.Context, arg repository.ReviewsListByUserIDParams) ([]repository.ReviewsListByUserIDRow, error)
 		DeleteReview(ctx context.Context, id uuid.UUID) error
@@ -190,12 +192,12 @@ type (
 	}
 
 	// Simple function
-	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, info string) error
+	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient) *Service {
+func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient, tipsPercent float64) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -215,7 +217,7 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 		log.Fatalln("nft client is not set")
 	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc}
+	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc, tipsPercent: tipsPercent}
 }
 
 // GetShows returns shows.
@@ -880,7 +882,7 @@ func (s *Service) RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, 
 
 // ReviewEpisode ...
 func (s *Service) ReviewEpisode(ctx context.Context, episodeID, userID uuid.UUID, username string, rating int32, title, review string) error {
-	if err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
+	if _, err := s.sr.ReviewEpisode(ctx, repository.ReviewEpisodeParams{
 		EpisodeID: episodeID,
 		UserID:    userID,
 		Username:  sql.NullString{String: username, Valid: true},
@@ -1072,7 +1074,11 @@ func (s *Service) SendTipsToReviewAuthor(ctx context.Context, reviewID, uid uuid
 		return fmt.Errorf("could not get review by id: %s, error: %w", reviewID, err)
 	}
 
-	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, fmt.Sprintf("tips for episode review: %s", reviewID))
+	cfg := lib_solana.SendAssetsConfig{
+		PercentToCharge:           s.tipsPercent,
+		ChargeSolanaFeeFromSender: true,
+	}
+	err = s.sentTipsFunc(ctx, uid, review.UserID, amount, &cfg, fmt.Sprintf("tips for episode review: %s", reviewID))
 	if err != nil {
 		return fmt.Errorf("sending tips for episode review: %v, error: %w", reviewID, err)
 	}

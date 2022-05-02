@@ -34,6 +34,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addStakeLevelStmt, err = db.PrepareContext(ctx, addStakeLevel); err != nil {
 		return nil, fmt.Errorf("error preparing query AddStakeLevel: %w", err)
 	}
+	if q.addTokenTransferStmt, err = db.PrepareContext(ctx, addTokenTransfer); err != nil {
+		return nil, fmt.Errorf("error preparing query AddTokenTransfer: %w", err)
+	}
+	if q.checkRecipientAddressStmt, err = db.PrepareContext(ctx, checkRecipientAddress); err != nil {
+		return nil, fmt.Errorf("error preparing query CheckRecipientAddress: %w", err)
+	}
 	if q.createWalletStmt, err = db.PrepareContext(ctx, createWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateWallet: %w", err)
 	}
@@ -42,6 +48,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.deleteWalletByIDStmt, err = db.PrepareContext(ctx, deleteWalletByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteWalletByID: %w", err)
+	}
+	if q.doesUserHaveFraudulentTransfersStmt, err = db.PrepareContext(ctx, doesUserHaveFraudulentTransfers); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserHaveFraudulentTransfers: %w", err)
+	}
+	if q.doesUserMakeTransferForLastMinuteStmt, err = db.PrepareContext(ctx, doesUserMakeTransferForLastMinute); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserMakeTransferForLastMinute: %w", err)
 	}
 	if q.getAllEnabledStakeLevelsStmt, err = db.PrepareContext(ctx, getAllEnabledStakeLevels); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllEnabledStakeLevels: %w", err)
@@ -103,6 +115,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateStakeLevelStmt, err = db.PrepareContext(ctx, updateStakeLevel); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStakeLevel: %w", err)
 	}
+	if q.updateTokenTransferStmt, err = db.PrepareContext(ctx, updateTokenTransfer); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTokenTransfer: %w", err)
+	}
 	return &q, nil
 }
 
@@ -128,6 +143,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addStakeLevelStmt: %w", cerr)
 		}
 	}
+	if q.addTokenTransferStmt != nil {
+		if cerr := q.addTokenTransferStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addTokenTransferStmt: %w", cerr)
+		}
+	}
+	if q.checkRecipientAddressStmt != nil {
+		if cerr := q.checkRecipientAddressStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing checkRecipientAddressStmt: %w", cerr)
+		}
+	}
 	if q.createWalletStmt != nil {
 		if cerr := q.createWalletStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createWalletStmt: %w", cerr)
@@ -141,6 +166,16 @@ func (q *Queries) Close() error {
 	if q.deleteWalletByIDStmt != nil {
 		if cerr := q.deleteWalletByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteWalletByIDStmt: %w", cerr)
+		}
+	}
+	if q.doesUserHaveFraudulentTransfersStmt != nil {
+		if cerr := q.doesUserHaveFraudulentTransfersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserHaveFraudulentTransfersStmt: %w", cerr)
+		}
+	}
+	if q.doesUserMakeTransferForLastMinuteStmt != nil {
+		if cerr := q.doesUserMakeTransferForLastMinuteStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserMakeTransferForLastMinuteStmt: %w", cerr)
 		}
 	}
 	if q.getAllEnabledStakeLevelsStmt != nil {
@@ -243,6 +278,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateStakeLevelStmt: %w", cerr)
 		}
 	}
+	if q.updateTokenTransferStmt != nil {
+		if cerr := q.updateTokenTransferStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTokenTransferStmt: %w", cerr)
+		}
+	}
 	return err
 }
 
@@ -286,9 +326,13 @@ type Queries struct {
 	addSolanaAccountStmt                  *sql.Stmt
 	addStakeStmt                          *sql.Stmt
 	addStakeLevelStmt                     *sql.Stmt
+	addTokenTransferStmt                  *sql.Stmt
+	checkRecipientAddressStmt             *sql.Stmt
 	createWalletStmt                      *sql.Stmt
 	deleteStakeByUserIDStmt               *sql.Stmt
 	deleteWalletByIDStmt                  *sql.Stmt
+	doesUserHaveFraudulentTransfersStmt   *sql.Stmt
+	doesUserMakeTransferForLastMinuteStmt *sql.Stmt
 	getAllEnabledStakeLevelsStmt          *sql.Stmt
 	getAllStakeLevelsStmt                 *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
@@ -309,6 +353,7 @@ type Queries struct {
 	getWalletsByUserIDStmt                *sql.Stmt
 	updateStakeStmt                       *sql.Stmt
 	updateStakeLevelStmt                  *sql.Stmt
+	updateTokenTransferStmt               *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -319,9 +364,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addSolanaAccountStmt:                  q.addSolanaAccountStmt,
 		addStakeStmt:                          q.addStakeStmt,
 		addStakeLevelStmt:                     q.addStakeLevelStmt,
+		addTokenTransferStmt:                  q.addTokenTransferStmt,
+		checkRecipientAddressStmt:             q.checkRecipientAddressStmt,
 		createWalletStmt:                      q.createWalletStmt,
 		deleteStakeByUserIDStmt:               q.deleteStakeByUserIDStmt,
 		deleteWalletByIDStmt:                  q.deleteWalletByIDStmt,
+		doesUserHaveFraudulentTransfersStmt:   q.doesUserHaveFraudulentTransfersStmt,
+		doesUserMakeTransferForLastMinuteStmt: q.doesUserMakeTransferForLastMinuteStmt,
 		getAllEnabledStakeLevelsStmt:          q.getAllEnabledStakeLevelsStmt,
 		getAllStakeLevelsStmt:                 q.getAllStakeLevelsStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,
@@ -342,5 +391,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getWalletsByUserIDStmt:                q.getWalletsByUserIDStmt,
 		updateStakeStmt:                       q.updateStakeStmt,
 		updateStakeLevelStmt:                  q.updateStakeLevelStmt,
+		updateTokenTransferStmt:               q.updateTokenTransferStmt,
 	}
 }

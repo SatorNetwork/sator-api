@@ -49,6 +49,7 @@ var (
 		MasterOTPHash:               "$2a$04$JEj1CnjccUr237U8lOWMVOUPcm4xG/a3SHcJM00uNQKAx.ujaP5Pa",
 		QuizWsConnURL:               "https://aec45cb3e117.ngrok.io/quiz",
 		QuizBotsTimeout:             5 * time.Second,
+		QuizLobbyLatency:            5 * time.Second,
 		TokenCirculatingSupply:      11839844,
 		SolanaEnv:                   "devnet",
 		SolanaApiBaseUrl:            "http://localhost:8899/",
@@ -102,6 +103,11 @@ var (
 		QuizV2ShuffleQuestions:      false,
 		ServerRSAPrivateKey:         serverRSAPrivateKey,
 		SatorAPIKey:                 "582e89d8-69ca-4206-8e7f-1fc822b41307",
+		PuzzleGameShuffle:           false,
+		TipsPercent:                 0.5,
+		TokenTransferPercent:        0.75,
+		ClaimRewardsPercent:         0.75,
+		FeeAccumulatorAddress:       "5HWrR1KpvbBA6QU4pMzJ3XGzj7y69qkkyPnLqRjQbTNT",
 	}
 )
 

@@ -104,7 +104,7 @@ func main() {
 				SysvarClock:    solanaSysvarClock,
 				SplToken:       solanaSplToken,
 				StakeProgramID: solanaStakeProgramID,
-			}),
+			}, nil),
 			user.ID,
 			feePayerPk,
 			tokenHolderPk,
@@ -172,11 +172,15 @@ func createSolanaWalletIfNotExists(ctx context.Context, repo *repository.Queries
 		}
 	}
 
+	feePayer, err := sc.AccountFromPrivateKeyBytes(feePayerPk)
+	if err != nil {
+		return err
+	}
 	txHash, err := sc.CreateAccountWithATA(
 		ctx,
 		solanaAssetAddr,
 		acc.PublicKey.ToBase58(),
-		sc.AccountFromPrivateKeyBytes(feePayerPk),
+		feePayer,
 	)
 	if err != nil {
 		return fmt.Errorf("could not init token holder account: %w", err)

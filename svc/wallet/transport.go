@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
@@ -170,6 +171,11 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 
 	if errors.Is(err, ErrInvalidParameter) {
 		return http.StatusBadRequest, err.Error()
+	}
+
+	if errors.Is(err, ErrTransactionFailed) {
+		log.Printf("%v", err)
+		return http.StatusInternalServerError, ErrTransactionFailed
 	}
 
 	return httpencoder.CodeAndMessageFrom(err)

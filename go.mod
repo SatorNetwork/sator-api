@@ -6,11 +6,11 @@ replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompat
 
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1
+	github.com/SatorNetwork/gopuzzlegame v0.0.0-20220429113459-e0ae698bfb8a
 	github.com/anytypeio/go-slip10 v0.0.0-20200330114100-25f30c832993
 	github.com/awa/go-iap v1.3.16
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dmitrymomot/distlock v0.1.1
 	github.com/dmitrymomot/go-env v0.1.1
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
 	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
@@ -31,14 +31,16 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.9.1
-	github.com/near/borsh-go v0.3.0
+	github.com/near/borsh-go v0.3.1-0.20210831082424-4377deff6791
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/portto/solana-go-sdk v0.1.0
+	github.com/portto/solana-go-sdk v1.16.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.7.0
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
 	github.com/stretchr/testify v1.7.0
+	github.com/superoo7/go-gecko v1.0.0
 	github.com/thedevsaddam/govalidator v1.9.10
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/zeebo/errs v1.2.2
@@ -65,7 +67,6 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
-	github.com/teserakt-io/golang-ed25519 v0.0.0-20210104091850-3888c087a4c8 // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect

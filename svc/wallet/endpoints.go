@@ -6,15 +6,14 @@ import (
 	"log"
 	"net/url"
 
-	"filippo.io/edwards25519"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/solana/client"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
-	"github.com/portto/solana-go-sdk/common"
 )
 
 type (
@@ -37,7 +36,7 @@ type (
 		GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error)
 		GetWalletByID(ctx context.Context, userID, walletID uuid.UUID) (Wallet, error)
 		CreateTransfer(ctx context.Context, senderWalletID uuid.UUID, recipientAddr, asset string, amount float64) (PreparedTransferTransaction, error)
-		ConfirmTransfer(ctx context.Context, senderWalletID uuid.UUID, tx string) error
+		ConfirmTransfer(ctx context.Context, uid, senderWalletID uuid.UUID, tx string) error
 		GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
@@ -234,12 +233,17 @@ func MakeConfirmTransferRequestEndpoint(s service, v validator.ValidateFunc) end
 			return false, err
 		}
 
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
 		walletID, err := uuid.Parse(req.SenderWalletID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid sender wallet id: %w", err)
 		}
 
-		if err := s.ConfirmTransfer(ctx, walletID, req.TransactionHash); err != nil {
+		if err := s.ConfirmTransfer(ctx, uid, walletID, req.TransactionHash); err != nil {
 			return false, err
 		}
 
@@ -373,9 +377,8 @@ func MakeGetStakeLevelsEndpoint(s service) endpoint.Endpoint {
 }
 
 func validateSolanaWalletAddr(fieldName, addr string) error {
-	p := common.PublicKeyFromString(addr)
-	if _, err := new(edwards25519.Point).SetBytes(p.Bytes()); err != nil {
-		log.Printf("invalid solana wallet address: %v", err)
+	if err := client.ValidateSolanaWalletAddr(addr); err != nil {
+		log.Printf("invalid solana wallet address=%s, error: %v", addr, err)
 		return validator.NewValidationError(url.Values{
 			fieldName: []string{"invalid solana wallet address"},
 		})

@@ -25,23 +25,27 @@ INSERT INTO challenges (
     user_max_attempts,
     max_winners,
     questions_per_game,
-    min_correct_answers
+    min_correct_answers,
+    percent_for_quiz,
+    minimum_reward
 )
 VALUES (
-           @show_id,
-           @title,
-           @description,
-           @prize_pool,
-           @players_to_start,
-           @time_per_question,
-           @updated_at,
-           @episode_id,
-           @kind,
-           @user_max_attempts,
-           @max_winners,
-           @questions_per_game,
-           @min_correct_answers
-       ) RETURNING *;
+    @show_id,
+    @title,
+    @description,
+    @prize_pool,
+    @players_to_start,
+    @time_per_question,
+    @updated_at,
+    @episode_id,
+    @kind,
+    @user_max_attempts,
+    @max_winners,
+    @questions_per_game,
+    @min_correct_answers,
+    @percent_for_quiz,
+    @minimum_reward
+) RETURNING *;
 -- name: UpdateChallenge :exec
 UPDATE challenges
 SET show_id = @show_id,
@@ -56,7 +60,9 @@ SET show_id = @show_id,
     user_max_attempts = @user_max_attempts,
     max_winners = @max_winners,
     questions_per_game = @questions_per_game,
-    min_correct_answers = @min_correct_answers
+    min_correct_answers = @min_correct_answers,
+    percent_for_quiz = @percent_for_quiz,
+    minimum_reward = @minimum_reward
 WHERE id = @id;
 -- name: DeleteChallengeByID :exec
 DELETE FROM challenges

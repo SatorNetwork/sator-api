@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getFileByIDStmt, err = db.PrepareContext(ctx, getFileByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetFileByID: %w", err)
 	}
+	if q.getFilesByIDsStmt, err = db.PrepareContext(ctx, getFilesByIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetFilesByIDs: %w", err)
+	}
 	if q.getFilesListStmt, err = db.PrepareContext(ctx, getFilesList); err != nil {
 		return nil, fmt.Errorf("error preparing query GetFilesList: %w", err)
 	}
@@ -52,6 +55,11 @@ func (q *Queries) Close() error {
 	if q.getFileByIDStmt != nil {
 		if cerr := q.getFileByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getFileByIDStmt: %w", cerr)
+		}
+	}
+	if q.getFilesByIDsStmt != nil {
+		if cerr := q.getFilesByIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getFilesByIDsStmt: %w", cerr)
 		}
 	}
 	if q.getFilesListStmt != nil {
@@ -101,6 +109,7 @@ type Queries struct {
 	addFileStmt        *sql.Stmt
 	deleteFileByIDStmt *sql.Stmt
 	getFileByIDStmt    *sql.Stmt
+	getFilesByIDsStmt  *sql.Stmt
 	getFilesListStmt   *sql.Stmt
 }
 
@@ -111,6 +120,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addFileStmt:        q.addFileStmt,
 		deleteFileByIDStmt: q.deleteFileByIDStmt,
 		getFileByIDStmt:    q.getFileByIDStmt,
+		getFilesByIDsStmt:  q.getFilesByIDsStmt,
 		getFilesListStmt:   q.getFilesListStmt,
 	}
 }

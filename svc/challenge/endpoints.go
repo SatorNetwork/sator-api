@@ -81,6 +81,8 @@ type (
 		MaxWinners         int     `json:"max_winners"`
 		QuestionsPerGame   int     `json:"questions_per_game"`
 		MinCorrectAnswers  int     `json:"min_correct_answers"`
+		PercentForQuiz     float64 `json:"percent_for_quiz"`
+		MinimumReward      float64 `json:"minimum_reward"`
 	}
 
 	// UpdateChallengeRequest struct
@@ -95,9 +97,11 @@ type (
 		EpisodeID          string  `json:"episode_id"`
 		Kind               int     `json:"kind"`
 		UserMaxAttempts    int     `json:"user_max_attempts" validate:"required,gt=0"`
-		MaxWinners         int     `json:"max_winners"`
-		QuestionsPerGame   int     `json:"questions_per_game"`
-		MinCorrectAnswers  int     `json:"min_correct_answers"`
+		MaxWinners         int     `json:"max_winners" validate:"required,gt=0"`
+		QuestionsPerGame   int     `json:"questions_per_game" validate:"required,gt=0"`
+		MinCorrectAnswers  int     `json:"min_correct_answers" validate:"required,gt=0"`
+		PercentForQuiz     float64 `json:"percent_for_quiz" validate:"required,gt=0,lte=100"`
+		MinimumReward      float64 `json:"minimum_reward" validate:"required,gt=0"`
 	}
 
 	CheckAnswerRequest struct {
@@ -357,6 +361,8 @@ func MakeAddChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.Endp
 			MaxWinners:         int32(req.MaxWinners),
 			QuestionsPerGame:   int32(req.QuestionsPerGame),
 			MinCorrectAnswers:  int32(req.MinCorrectAnswers),
+			PercentForQuiz:     req.PercentForQuiz,
+			MinimumReward:      req.MinimumReward,
 		}
 
 		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
@@ -432,6 +438,8 @@ func MakeUpdateChallengeEndpoint(s service, v validator.ValidateFunc) endpoint.E
 			MaxWinners:         int32(req.MaxWinners),
 			QuestionsPerGame:   int32(req.QuestionsPerGame),
 			MinCorrectAnswers:  int32(req.MinCorrectAnswers),
+			PercentForQuiz:     req.PercentForQuiz,
+			MinimumReward:      req.MinimumReward,
 		}
 
 		if req.EpisodeID != "" && req.EpisodeID != uuid.Nil.String() {
@@ -749,7 +757,6 @@ func MakeCheckAnswerEndpoint(s service, v validator.ValidateFunc) endpoint.Endpo
 // TODO: remove it, added for demo
 func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		// FIXME: is allowed roles correct???
 		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
 		}
@@ -785,6 +792,10 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 // MakeGetAttemptsLeftForVerificationQuestionEndpoint ...
 func MakeGetAttemptsLeftForVerificationQuestionEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)

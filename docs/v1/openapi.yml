@@ -207,6 +207,121 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/TradingPlatformLinks"
+    PuzzleGameAdmin:
+      description: Puzzle game object
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              episode_id:
+                type: string
+              prize_pool:
+                type: number
+                description: Game's prize pool amount
+              parts_x:
+                type: number
+                description: Number of parts in x axis
+              steps:
+                type: number
+                description: Number of steps in the puzzle game
+              images:
+                type: array
+                description: All game images
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    file_url:
+                      type: string
+
+    PuzzleGame:
+      description: Puzzle game object
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              episode_id:
+                type: string
+              prize_pool:
+                type: number
+                description: Game's prize pool amount
+              rewards:
+                type: number
+                description: User's rewards for this puzzle game
+              bonus_rewards:
+                type: number
+                description: User's bonus rewards for locked tokens.
+              parts_x:
+                type: number
+                description: Number of parts in x axis
+              steps:
+                type: number
+                description: Number of steps in the puzzle game
+              steps_taken:
+                type: number
+                description: Number of steps taken by the user
+              status:
+                type: number
+                enum: [0, 1, 2]
+                description: Game status. 0 - not started, 1 - in progress, 2 - finished
+              result:
+                type: number
+                enum: [0, 1, 2]
+                description: Game result. 0 - not finished, 1 - user won, 2 - user lost
+              tiles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    image:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        file_url:
+                          type: string
+                    value:
+                      type: integer
+                    current_position:
+                      type: object
+                      properties:
+                        x:
+                          type: integer
+                        y:
+                          type: integer
+                    is_whitespace:
+                      type: boolean
+                description: Tiles of puzzle game
+              image:
+                type: string
+                description: Current game image url
+
+    UnlockOptions:
+      description: Unlock options
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Unlock option id
+              amount:
+                type: number
+                description: Unlock option price
+              steps:
+                type: number
+                description: Number of steps in the puzzle game
+              is_locked:
+                type: boolean
+                description: Is this option locked?
 paths:
   /:
     get:
@@ -4006,6 +4121,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4038,6 +4159,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4070,6 +4197,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4102,6 +4235,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: user_id
+          in: path
+          description: User ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -5375,6 +5514,354 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/admin:
+    post:
+      tags:
+        - "Puzzle game (admin part)"
+      summary: Create new puzzle game.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                episode_id:
+                  type: string
+                  description: Episode ID.
+                prize_pool:
+                  type: number
+                  description: Prize pool.
+                parts_x:
+                  type: number
+                  description: Number of parts in X axis.
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGameAdmin"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/admin/{puzzle_game_id}:
+    get:
+      tags:
+        - "Puzzle game (admin part)"
+      summary: Get puzzle game by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGameAdmin"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    put:
+      tags:
+        - "Puzzle game (admin part)"
+      summary: Update puzzle game.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prize_pool:
+                  type: number
+                  description: Prize pool.
+                parts_x:
+                  type: number
+                  description: Number of parts in X axis.
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGameAdmin"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/admin/episode/{episode_id}:
+    get:
+      tags:
+        - "Puzzle game (admin part)"
+      summary: Get puzzle game by episode id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGameAdmin"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/admin/{puzzle_game_id}/images/{image_id}:
+    post:
+      tags:
+        - "Puzzle game (admin part)"
+      summary: Add puzzle game image.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+        - name: image_id
+          in: path
+          description: Image ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Puzzle game (admin part)"
+      summary: Delete puzzle game image.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+        - name: image_id
+          in: path
+          description: Image ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/unlock-options:
+    get:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Get available unlock options.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/UnlockOptions"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/episode/{episode_id}:
+    get:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Get puzzle game by episode id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/{puzzle_game_id}/unlock:
+    post:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Unlock puzzle game.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                unlock_option:
+                  type: string
+                  description: Unlock option.
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/{puzzle_game_id}/start:
+    post:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Start puzzle game.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/{puzzle_game_id}/finish:
+    post:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Finish puzzle game.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                result:
+                  type: number
+                  description: "Result game. Available values: 1 - win, 2 - lose."
+                steps_taken:
+                  type: number
+                  description: "Number of steps taken."
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/{puzzle_game_id}/tap-tile:
+    post:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Tapping on tile in puzzle game
+      security:
+          - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  x:
+                    type: integer
+                    description: "x position"
+                  y:
+                    type: integer
+                    description: "y position"
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

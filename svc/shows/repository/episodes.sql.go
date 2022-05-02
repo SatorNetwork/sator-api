@@ -100,6 +100,51 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAllEpisodes = `-- name: GetAllEpisodes :many
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, archived
+FROM episodes
+WHERE archived = FALSE
+`
+
+func (q *Queries) GetAllEpisodes(ctx context.Context) ([]Episode, error) {
+	rows, err := q.query(ctx, q.getAllEpisodesStmt, getAllEpisodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Episode
+	for rows.Next() {
+		var i Episode
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.SeasonID,
+			&i.EpisodeNumber,
+			&i.Cover,
+			&i.Title,
+			&i.Description,
+			&i.ReleaseDate,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.ChallengeID,
+			&i.VerificationChallengeID,
+			&i.HintText,
+			&i.Watch,
+			&i.Archived,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEpisodeByID = `-- name: GetEpisodeByID :one
 SELECT 
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.archived, 
@@ -342,6 +387,34 @@ func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const getRawEpisodeByID = `-- name: GetRawEpisodeByID :one
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, archived FROM episodes
+WHERE episodes.id = $1 AND episodes.archived = FALSE
+`
+
+func (q *Queries) GetRawEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, error) {
+	row := q.queryRow(ctx, q.getRawEpisodeByIDStmt, getRawEpisodeByID, id)
+	var i Episode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonID,
+		&i.EpisodeNumber,
+		&i.Cover,
+		&i.Title,
+		&i.Description,
+		&i.ReleaseDate,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.ChallengeID,
+		&i.VerificationChallengeID,
+		&i.HintText,
+		&i.Watch,
+		&i.Archived,
+	)
+	return i, err
 }
 
 const updateEpisode = `-- name: UpdateEpisode :exec

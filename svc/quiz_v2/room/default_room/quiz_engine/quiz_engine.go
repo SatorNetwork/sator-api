@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
+	"github.com/SatorNetwork/sator-api/svc/quiz_v2/common"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/interfaces"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/question_container"
 	"github.com/SatorNetwork/sator-api/svc/quiz_v2/room/default_room/quiz_engine/result_table"
@@ -13,6 +14,7 @@ import (
 )
 
 type QuizEngine interface {
+	GetCurrentPrizePool() float64
 	GetChallenge() *challenge.RawChallenge
 	GetNumberOfQuestions() int
 	GetQuestions() []challenge.Question
@@ -24,16 +26,20 @@ type QuizEngine interface {
 	GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error)
 	GetWinnersAndLosers() ([]*result_table.Winner, []*result_table.Loser, error)
 	GetWinners() ([]*result_table.Winner, error)
+	DistributedPrizePool() float64
 }
 
 type quizEngine struct {
 	questionContainer question_container.QuestionContainer
 	resultTable       result_table.ResultTable
+
+	currentPrizePool float64
 }
 
 func New(
 	challengeID string,
 	challengesSvc interfaces.ChallengesService,
+	qr interfaces.QuizV2Repository,
 	stakeLevels interfaces.StakeLevels,
 	shuffleQuestions bool,
 ) (*quizEngine, error) {
@@ -43,10 +49,15 @@ func New(
 	}
 	challenge := qc.GetChallenge()
 
+	currentPrizePool, err := getCurrentPrizePool(qc, qr)
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := result_table.Config{
 		QuestionNum:        qc.GetNumberOfQuestions(),
 		WinnersNum:         int(challenge.MaxWinners),
-		PrizePool:          challenge.PrizePoolAmount,
+		PrizePool:          currentPrizePool,
 		TimePerQuestionSec: int(challenge.TimePerQuestionSec),
 		MinCorrectAnswers:  challenge.MinCorrectAnswers,
 	}
@@ -55,7 +66,23 @@ func New(
 	return &quizEngine{
 		questionContainer: qc,
 		resultTable:       rt,
+		currentPrizePool:  currentPrizePool,
 	}, nil
+}
+
+func getCurrentPrizePool(qc question_container.QuestionContainer, qr interfaces.QuizV2Repository) (float64, error) {
+	challenge := qc.GetChallenge()
+	return common.GetCurrentPrizePool(
+		qr,
+		challenge.ID,
+		challenge.PrizePoolAmount,
+		challenge.MinimumReward,
+		challenge.PercentForQuiz,
+	)
+}
+
+func (e *quizEngine) GetCurrentPrizePool() float64 {
+	return e.currentPrizePool
 }
 
 func (e *quizEngine) GetChallenge() *challenge.RawChallenge {
@@ -118,4 +145,8 @@ func (e *quizEngine) GetWinnersAndLosers() ([]*result_table.Winner, []*result_ta
 
 func (e *quizEngine) GetWinners() ([]*result_table.Winner, error) {
 	return e.resultTable.GetWinners()
+}
+
+func (e *quizEngine) DistributedPrizePool() float64 {
+	return e.resultTable.DistributedPrizePool()
 }

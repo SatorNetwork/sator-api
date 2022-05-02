@@ -32,6 +32,7 @@ func TestCorrectAnswers(t *testing.T) {
 	require.NoError(t, err)
 
 	playersNum := 30
+	playersInRoom := 10
 	users := make([]*user.User, playersNum)
 	for i := 0; i < playersNum; i++ {
 		users[i] = user.NewInitializedUser(auth.RandomSignUpRequest(), t)
@@ -74,6 +75,11 @@ func TestCorrectAnswers(t *testing.T) {
 		messageVerifiers[i] = message_verifier.New(userExpectedMessages[i], natsSubscriber.GetMessageChan(), t)
 		go messageVerifiers[i].Start()
 		defer messageVerifiers[i].Close()
+
+		// Wait until room will be closed
+		if (i+1)%playersInRoom == 0 {
+			time.Sleep(3*time.Second + app_config.AppConfigForTests.QuizLobbyLatency)
+		}
 
 		// TODO(evg): investigate and remove
 		time.Sleep(time.Second * 2)

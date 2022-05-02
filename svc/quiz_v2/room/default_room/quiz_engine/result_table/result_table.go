@@ -26,6 +26,7 @@ type ResultTable interface {
 	GetPrizePoolDistribution() (map[uuid.UUID]UserReward, error)
 	GetWinnersAndLosers() ([]*Winner, []*Loser, error)
 	GetWinners() ([]*Winner, error)
+	DistributedPrizePool() float64
 
 	calcWinnersMap() map[uuid.UUID]uint32
 	calcPTSMap() map[uuid.UUID]uint32
@@ -237,6 +238,17 @@ func (rt *resultTable) calcPTSMap() map[uuid.UUID]uint32 {
 	}
 
 	return ptsMap
+}
+
+func (rt *resultTable) DistributedPrizePool() float64 {
+	rt.tableMutex.Lock()
+	defer rt.tableMutex.Unlock()
+
+	if len(rt.getWinnerIDs()) != 0 {
+		return rt.cfg.PrizePool
+	}
+
+	return 0
 }
 
 func (rt *resultTable) getWinnerIDs() []uuid.UUID {

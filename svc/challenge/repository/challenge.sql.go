@@ -24,23 +24,27 @@ INSERT INTO challenges (
     user_max_attempts,
     max_winners,
     questions_per_game,
-    min_correct_answers
+    min_correct_answers,
+    percent_for_quiz,
+    minimum_reward
 )
 VALUES (
-           $1,
-           $2,
-           $3,
-           $4,
-           $5,
-           $6,
-           $7,
-           $8,
-           $9,
-           $10,
-           $11,
-           $12,
-           $13
-       ) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11,
+    $12,
+    $13,
+    $14,
+    $15
+) RETURNING id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers, percent_for_quiz, minimum_reward
 `
 
 type AddChallengeParams struct {
@@ -57,6 +61,8 @@ type AddChallengeParams struct {
 	MaxWinners        sql.NullInt32  `json:"max_winners"`
 	QuestionsPerGame  int32          `json:"questions_per_game"`
 	MinCorrectAnswers int32          `json:"min_correct_answers"`
+	PercentForQuiz    float64        `json:"percent_for_quiz"`
+	MinimumReward     float64        `json:"minimum_reward"`
 }
 
 func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Challenge, error) {
@@ -74,6 +80,8 @@ func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Cha
 		arg.MaxWinners,
 		arg.QuestionsPerGame,
 		arg.MinCorrectAnswers,
+		arg.PercentForQuiz,
+		arg.MinimumReward,
 	)
 	var i Challenge
 	err := row.Scan(
@@ -92,6 +100,8 @@ func (q *Queries) AddChallenge(ctx context.Context, arg AddChallengeParams) (Cha
 		&i.MaxWinners,
 		&i.QuestionsPerGame,
 		&i.MinCorrectAnswers,
+		&i.PercentForQuiz,
+		&i.MinimumReward,
 	)
 	return i, err
 }
@@ -107,7 +117,7 @@ func (q *Queries) DeleteChallengeByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getChallengeByEpisodeID = `-- name: GetChallengeByEpisodeID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers, percent_for_quiz, minimum_reward
 FROM challenges
 WHERE episode_id = $1
 ORDER BY created_at DESC
@@ -133,12 +143,14 @@ func (q *Queries) GetChallengeByEpisodeID(ctx context.Context, episodeID uuid.Nu
 		&i.MaxWinners,
 		&i.QuestionsPerGame,
 		&i.MinCorrectAnswers,
+		&i.PercentForQuiz,
+		&i.MinimumReward,
 	)
 	return i, err
 }
 
 const getChallengeByID = `-- name: GetChallengeByID :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers, percent_for_quiz, minimum_reward
 FROM challenges
 WHERE id = $1
 ORDER BY created_at DESC
@@ -164,12 +176,14 @@ func (q *Queries) GetChallengeByID(ctx context.Context, id uuid.UUID) (Challenge
 		&i.MaxWinners,
 		&i.QuestionsPerGame,
 		&i.MinCorrectAnswers,
+		&i.PercentForQuiz,
+		&i.MinimumReward,
 	)
 	return i, err
 }
 
 const getChallengeByTitle = `-- name: GetChallengeByTitle :one
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers, percent_for_quiz, minimum_reward
 FROM challenges
 WHERE title = $1
 ORDER BY created_at DESC
@@ -195,12 +209,14 @@ func (q *Queries) GetChallengeByTitle(ctx context.Context, title string) (Challe
 		&i.MaxWinners,
 		&i.QuestionsPerGame,
 		&i.MinCorrectAnswers,
+		&i.PercentForQuiz,
+		&i.MinimumReward,
 	)
 	return i, err
 }
 
 const getChallenges = `-- name: GetChallenges :many
-SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers
+SELECT id, show_id, title, description, prize_pool, players_to_start, time_per_question, updated_at, created_at, episode_id, kind, user_max_attempts, max_winners, questions_per_game, min_correct_answers, percent_for_quiz, minimum_reward
 FROM challenges
 WHERE show_id = $1
 ORDER BY updated_at DESC,
@@ -239,6 +255,8 @@ func (q *Queries) GetChallenges(ctx context.Context, arg GetChallengesParams) ([
 			&i.MaxWinners,
 			&i.QuestionsPerGame,
 			&i.MinCorrectAnswers,
+			&i.PercentForQuiz,
+			&i.MinimumReward,
 		); err != nil {
 			return nil, err
 		}
@@ -267,8 +285,10 @@ SET show_id = $1,
     user_max_attempts = $10,
     max_winners = $11,
     questions_per_game = $12,
-    min_correct_answers = $13
-WHERE id = $14
+    min_correct_answers = $13,
+    percent_for_quiz = $14,
+    minimum_reward = $15
+WHERE id = $16
 `
 
 type UpdateChallengeParams struct {
@@ -285,6 +305,8 @@ type UpdateChallengeParams struct {
 	MaxWinners        sql.NullInt32  `json:"max_winners"`
 	QuestionsPerGame  int32          `json:"questions_per_game"`
 	MinCorrectAnswers int32          `json:"min_correct_answers"`
+	PercentForQuiz    float64        `json:"percent_for_quiz"`
+	MinimumReward     float64        `json:"minimum_reward"`
 	ID                uuid.UUID      `json:"id"`
 }
 
@@ -303,6 +325,8 @@ func (q *Queries) UpdateChallenge(ctx context.Context, arg UpdateChallengeParams
 		arg.MaxWinners,
 		arg.QuestionsPerGame,
 		arg.MinCorrectAnswers,
+		arg.PercentForQuiz,
+		arg.MinimumReward,
 		arg.ID,
 	)
 	return err

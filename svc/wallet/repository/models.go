@@ -50,6 +50,18 @@ type StakeLevel struct {
 	Disabled       sql.NullBool    `json:"disabled"`
 }
 
+type TokenTransfer struct {
+	ID               uuid.UUID      `json:"id"`
+	UserID           uuid.UUID      `json:"user_id"`
+	SenderAddress    string         `json:"sender_address"`
+	RecipientAddress string         `json:"recipient_address"`
+	TxHash           sql.NullString `json:"tx_hash"`
+	Amount           float64        `json:"amount"`
+	Status           int32          `json:"status"`
+	UpdatedAt        sql.NullTime   `json:"updated_at"`
+	CreatedAt        time.Time      `json:"created_at"`
+}
+
 type Wallet struct {
 	ID                uuid.UUID     `json:"id"`
 	UserID            uuid.UUID     `json:"user_id"`

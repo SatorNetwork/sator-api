@@ -40,6 +40,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addShowToCategoryStmt, err = db.PrepareContext(ctx, addShowToCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query AddShowToCategory: %w", err)
 	}
+	if q.allReviewsListStmt, err = db.PrepareContext(ctx, allReviewsList); err != nil {
+		return nil, fmt.Errorf("error preparing query AllReviewsList: %w", err)
+	}
 	if q.countUserClapsStmt, err = db.PrepareContext(ctx, countUserClaps); err != nil {
 		return nil, fmt.Errorf("error preparing query CountUserClaps: %w", err)
 	}
@@ -70,6 +73,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.didUserReviewEpisodeStmt, err = db.PrepareContext(ctx, didUserReviewEpisode); err != nil {
 		return nil, fmt.Errorf("error preparing query DidUserReviewEpisode: %w", err)
 	}
+	if q.getAllEpisodesStmt, err = db.PrepareContext(ctx, getAllEpisodes); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllEpisodes: %w", err)
+	}
 	if q.getCategoriesByShowIDStmt, err = db.PrepareContext(ctx, getCategoriesByShowID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCategoriesByShowID: %w", err)
 	}
@@ -90,6 +96,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getListEpisodesByIDsStmt, err = db.PrepareContext(ctx, getListEpisodesByIDs); err != nil {
 		return nil, fmt.Errorf("error preparing query GetListEpisodesByIDs: %w", err)
+	}
+	if q.getRawEpisodeByIDStmt, err = db.PrepareContext(ctx, getRawEpisodeByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetRawEpisodeByID: %w", err)
 	}
 	if q.getReviewByIDStmt, err = db.PrepareContext(ctx, getReviewByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetReviewByID: %w", err)
@@ -123,6 +132,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getShowsByOldCategoryStmt, err = db.PrepareContext(ctx, getShowsByOldCategory); err != nil {
 		return nil, fmt.Errorf("error preparing query GetShowsByOldCategory: %w", err)
+	}
+	if q.getShowsByTitleStmt, err = db.PrepareContext(ctx, getShowsByTitle); err != nil {
+		return nil, fmt.Errorf("error preparing query GetShowsByTitle: %w", err)
 	}
 	if q.getUserEpisodeReviewStmt, err = db.PrepareContext(ctx, getUserEpisodeReview); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserEpisodeReview: %w", err)
@@ -192,6 +204,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addShowToCategoryStmt: %w", cerr)
 		}
 	}
+	if q.allReviewsListStmt != nil {
+		if cerr := q.allReviewsListStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing allReviewsListStmt: %w", cerr)
+		}
+	}
 	if q.countUserClapsStmt != nil {
 		if cerr := q.countUserClapsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countUserClapsStmt: %w", cerr)
@@ -242,6 +259,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing didUserReviewEpisodeStmt: %w", cerr)
 		}
 	}
+	if q.getAllEpisodesStmt != nil {
+		if cerr := q.getAllEpisodesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllEpisodesStmt: %w", cerr)
+		}
+	}
 	if q.getCategoriesByShowIDStmt != nil {
 		if cerr := q.getCategoriesByShowIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getCategoriesByShowIDStmt: %w", cerr)
@@ -275,6 +297,11 @@ func (q *Queries) Close() error {
 	if q.getListEpisodesByIDsStmt != nil {
 		if cerr := q.getListEpisodesByIDsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getListEpisodesByIDsStmt: %w", cerr)
+		}
+	}
+	if q.getRawEpisodeByIDStmt != nil {
+		if cerr := q.getRawEpisodeByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getRawEpisodeByIDStmt: %w", cerr)
 		}
 	}
 	if q.getReviewByIDStmt != nil {
@@ -330,6 +357,11 @@ func (q *Queries) Close() error {
 	if q.getShowsByOldCategoryStmt != nil {
 		if cerr := q.getShowsByOldCategoryStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getShowsByOldCategoryStmt: %w", cerr)
+		}
+	}
+	if q.getShowsByTitleStmt != nil {
+		if cerr := q.getShowsByTitleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getShowsByTitleStmt: %w", cerr)
 		}
 	}
 	if q.getUserEpisodeReviewStmt != nil {
@@ -432,6 +464,7 @@ type Queries struct {
 	addShowStmt                               *sql.Stmt
 	addShowCategoryStmt                       *sql.Stmt
 	addShowToCategoryStmt                     *sql.Stmt
+	allReviewsListStmt                        *sql.Stmt
 	countUserClapsStmt                        *sql.Stmt
 	deleteEpisodeByIDStmt                     *sql.Stmt
 	deleteReviewStmt                          *sql.Stmt
@@ -442,6 +475,7 @@ type Queries struct {
 	deleteUserEpisodeReviewStmt               *sql.Stmt
 	didUserRateEpisodeStmt                    *sql.Stmt
 	didUserReviewEpisodeStmt                  *sql.Stmt
+	getAllEpisodesStmt                        *sql.Stmt
 	getCategoriesByShowIDStmt                 *sql.Stmt
 	getEpisodeByIDStmt                        *sql.Stmt
 	getEpisodeIDByQuizChallengeIDStmt         *sql.Stmt
@@ -449,6 +483,7 @@ type Queries struct {
 	getEpisodeRatingByIDStmt                  *sql.Stmt
 	getEpisodesByShowIDStmt                   *sql.Stmt
 	getListEpisodesByIDsStmt                  *sql.Stmt
+	getRawEpisodeByIDStmt                     *sql.Stmt
 	getReviewByIDStmt                         *sql.Stmt
 	getReviewRatingStmt                       *sql.Stmt
 	getSeasonByIDStmt                         *sql.Stmt
@@ -460,6 +495,7 @@ type Queries struct {
 	getShowsStmt                              *sql.Stmt
 	getShowsByCategoryStmt                    *sql.Stmt
 	getShowsByOldCategoryStmt                 *sql.Stmt
+	getShowsByTitleStmt                       *sql.Stmt
 	getUserEpisodeReviewStmt                  *sql.Stmt
 	getUsersEpisodeRatingByIDStmt             *sql.Stmt
 	isUserRatedReviewStmt                     *sql.Stmt
@@ -483,6 +519,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addShowStmt:                       q.addShowStmt,
 		addShowCategoryStmt:               q.addShowCategoryStmt,
 		addShowToCategoryStmt:             q.addShowToCategoryStmt,
+		allReviewsListStmt:                q.allReviewsListStmt,
 		countUserClapsStmt:                q.countUserClapsStmt,
 		deleteEpisodeByIDStmt:             q.deleteEpisodeByIDStmt,
 		deleteReviewStmt:                  q.deleteReviewStmt,
@@ -493,6 +530,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteUserEpisodeReviewStmt:       q.deleteUserEpisodeReviewStmt,
 		didUserRateEpisodeStmt:            q.didUserRateEpisodeStmt,
 		didUserReviewEpisodeStmt:          q.didUserReviewEpisodeStmt,
+		getAllEpisodesStmt:                q.getAllEpisodesStmt,
 		getCategoriesByShowIDStmt:         q.getCategoriesByShowIDStmt,
 		getEpisodeByIDStmt:                q.getEpisodeByIDStmt,
 		getEpisodeIDByQuizChallengeIDStmt: q.getEpisodeIDByQuizChallengeIDStmt,
@@ -500,6 +538,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getEpisodeRatingByIDStmt:                  q.getEpisodeRatingByIDStmt,
 		getEpisodesByShowIDStmt:                   q.getEpisodesByShowIDStmt,
 		getListEpisodesByIDsStmt:                  q.getListEpisodesByIDsStmt,
+		getRawEpisodeByIDStmt:                     q.getRawEpisodeByIDStmt,
 		getReviewByIDStmt:                         q.getReviewByIDStmt,
 		getReviewRatingStmt:                       q.getReviewRatingStmt,
 		getSeasonByIDStmt:                         q.getSeasonByIDStmt,
@@ -511,6 +550,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getShowsStmt:                              q.getShowsStmt,
 		getShowsByCategoryStmt:                    q.getShowsByCategoryStmt,
 		getShowsByOldCategoryStmt:                 q.getShowsByOldCategoryStmt,
+		getShowsByTitleStmt:                       q.getShowsByTitleStmt,
 		getUserEpisodeReviewStmt:                  q.getUserEpisodeReviewStmt,
 		getUsersEpisodeRatingByIDStmt:             q.getUsersEpisodeRatingByIDStmt,
 		isUserRatedReviewStmt:                     q.isUserRatedReviewStmt,

@@ -2,6 +2,7 @@ package result_table
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 )
 
