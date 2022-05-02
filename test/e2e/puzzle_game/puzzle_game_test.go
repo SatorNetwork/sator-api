@@ -193,7 +193,6 @@ func TestTapTileStepLimit(t *testing.T) {
 		}
 	}
 
-
 	pgAfter, err = c.PuzzleGameClient.TapTile(signUpResp.AccessToken, pg.ID, &puzzle_game.TapTileRequest{
 		X: 1,
 		Y: 1,

@@ -3,10 +3,11 @@ package rewards
 import (
 	"encoding/json"
 	"fmt"
-	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
+
+	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
+	"github.com/pkg/errors"
 )
 
 type RewardsClient struct{}
