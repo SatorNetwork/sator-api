@@ -97,7 +97,7 @@ func (c *Client) PrepareSendAssetsTx(
 		feeAccumulator.GetFeeInSAO(),
 	)
 	if err != nil {
-		return nil, pkg_errors.Wrap(err, "can't prepare send assets message")
+		return nil, pkg_errors.Wrap(err, "can't prepare send assets message (before adding blockchain fee)")
 	}
 
 	var solanaTxFee uint64
@@ -123,7 +123,7 @@ func (c *Client) PrepareSendAssetsTx(
 			feeAccumulator.GetFeeInSAO(),
 		)
 		if err != nil {
-			return nil, pkg_errors.Wrap(err, "can't prepare send assets message")
+			return nil, pkg_errors.Wrap(err, "can't prepare send assets message (after adding blockchain fee)")
 		}
 	}
 
@@ -174,7 +174,7 @@ func (c *Client) prepareSendAssetsMessage(
 		feeAccumulatorPublicKey := common.PublicKeyFromString(c.config.FeeAccumulatorAddress)
 		feeAccumulatorAta, err := c.deriveATAPublicKey(ctx, feeAccumulatorPublicKey, asset)
 		if err != nil {
-			return types.Message{}, err
+			return types.Message{}, pkg_errors.Wrapf(err, "can't derive ata public key for fee accumulator, addr: %v", c.config.FeeAccumulatorAddress)
 		}
 
 		instructions = append(instructions, tokenprog.TransferChecked(tokenprog.TransferCheckedParam{
