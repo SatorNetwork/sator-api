@@ -83,7 +83,12 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 	// Getting of the recipient ATA
 	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPK, assetPK)
 	if err != nil {
-		return common.PublicKey{}, err
+		return common.PublicKey{}, errors.Wrapf(
+			err,
+			"can't find associated token address, recipient address: %v, asset address: %v",
+			recipientPK.ToBase58(),
+			assetPK.ToBase58(),
+		)
 	}
 	// Check if the ATA already created
 	ataInfo, err := c.solana.GetAccountInfo(ctx, recipientAta.ToBase58())
