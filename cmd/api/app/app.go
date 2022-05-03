@@ -153,6 +153,7 @@ type Config struct {
 	WhitelistMode               bool
 	BlacklistMode               bool
 	FraudDetectionMode          bool
+	SkipDeviceIDCheck           bool
 }
 
 var buildTag string
@@ -271,8 +272,9 @@ func ConfigFromEnv() *Config {
 		ClaimRewardsPercent:   env.GetFloat("CLAIM_REWARDS_PERCENT", 0.75),
 		FeeAccumulatorAddress: env.GetString("FEE_ACCUMULATOR_ADDRESS", "96P3ugPEP6osg2R5RGRApikWLPzsgm1FRU3hiuc8WnMh"),
 
-		SatorAPIKey:     env.MustString("SATOR_API_KEY"),
-		SkipAPIKeyCheck: env.GetBool("SKIP_API_KEY_CHECK", false),
+		SatorAPIKey:       env.MustString("SATOR_API_KEY"),
+		SkipAPIKeyCheck:   env.GetBool("SKIP_API_KEY_CHECK", false),
+		SkipDeviceIDCheck: env.GetBool("SKIP_DEVICE_ID_CHECK", false),
 
 		FraudDetectionMode: env.GetBool("FRAUD_DETECTION_MODE", false),
 	}
@@ -510,6 +512,7 @@ func (a *app) Run() {
 			auth.WithMailService(mailer),
 			auth.WithBlacklistMode(a.cfg.BlacklistMode),
 			auth.WithWhitelistMode(a.cfg.WhitelistMode),
+			auth.WithSkipDeviceIDCheck(a.cfg.SkipDeviceIDCheck),
 		)
 
 		// Auth service
