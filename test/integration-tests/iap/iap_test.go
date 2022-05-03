@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	lib_appstore "github.com/SatorNetwork/sator-api/lib/appstore"
+	lib_nft_marketplace "github.com/SatorNetwork/sator-api/lib/nft_marketplace"
 	solana_lib "github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
@@ -32,9 +33,14 @@ func TestIAP(t *testing.T) {
 	mock.RegisterMockObject(mock.SolanaProvider, solanaMock)
 	appStoreMock := lib_appstore.NewMockInterface(ctrl)
 	mock.RegisterMockObject(mock.AppStoreProvider, appStoreMock)
+	nftMarketplaceMock := lib_nft_marketplace.NewMockInterface(ctrl)
+	mock.RegisterMockObject(mock.NftMarketplaceProvider, nftMarketplaceMock)
 
 	solanaMock.ExpectCheckPrivateKeyAny()
 	solanaMock.ExpectNewAccountAny()
+	solanaMock.ExpectAccountFromPrivateKeyBytesAny()
+	solanaMock.ExpectTransactionDeserializeAny()
+	solanaMock.ExpectSerializeTxMessageAny()
 	solanaMock.EXPECT().
 		GiveAssetsWithAutoDerive(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return("", nil).
@@ -51,6 +57,15 @@ func TestIAP(t *testing.T) {
 		Verify(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(callback).
 		Times(2)
+
+	nftMarketplaceMock.EXPECT().
+		PrepareBuyTx(gomock.Any()).
+		Return(&lib_nft_marketplace.PrepareBuyTxResponse{}, nil).
+		Times(1)
+	nftMarketplaceMock.EXPECT().
+		SendPreparedBuyTx(gomock.Any()).
+		Return(&lib_nft_marketplace.SendPreparedBuyTxResponse{}, nil).
+		Times(1)
 
 	defer app_config.RunAndWait()()
 

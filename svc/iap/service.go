@@ -3,6 +3,7 @@ package iap
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 	lib_appstore "github.com/SatorNetwork/sator-api/lib/appstore"
 	appstore_client "github.com/SatorNetwork/sator-api/lib/appstore/client"
+	lib_nft_marketplace "github.com/SatorNetwork/sator-api/lib/nft_marketplace"
 	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
@@ -23,17 +25,15 @@ import (
 const (
 	maxRetries      = 5
 	constantBackOff = 10 * time.Second
-
-	testProductID   = "test2"
-	testTokenAmount = 0
 )
 
 type (
 	Service struct {
-		client lib_appstore.Interface
-		ir     iapRepository
-		wr     walletRepository
-		sc     solanaClient
+		client         lib_appstore.Interface
+		nftMarketplace lib_nft_marketplace.Interface
+		ir             iapRepository
+		wr             walletRepository
+		sc             solanaClient
 
 		satorAssetSolanaAddr string
 		feePayer             types.Account
@@ -43,6 +43,7 @@ type (
 	iapRepository interface {
 		CreateIAPReceipt(ctx context.Context, arg iap_repository.CreateIAPReceiptParams) (iap_repository.IapReceipt, error)
 		GetIAPReceiptByTxID(ctx context.Context, transactionID string) (iap_repository.IapReceipt, error)
+		GetIapProductByID(ctx context.Context, id string) (iap_repository.IapProduct, error)
 	}
 
 	walletRepository interface {
@@ -53,6 +54,7 @@ type (
 	}
 
 	solanaClient interface {
+		AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 		GiveAssetsWithAutoDerive(
 			ctx context.Context,
 			assetAddr string,
@@ -61,16 +63,20 @@ type (
 			recipientAddr string,
 			amount float64,
 		) (string, error)
+		TransactionDeserialize(tx []byte) (types.Transaction, error)
+		SerializeTxMessage(message types.Message) ([]byte, error)
 	}
 
 	Empty struct{}
 
 	RegisterInAppPurchaseRequest struct {
 		ReceiptData string `json:"receipt_data"`
+		MintAddress string `json:"mint_address"`
 	}
 )
 
 func NewService(
+	nftMarketplace lib_nft_marketplace.Interface,
 	ir iapRepository,
 	wr walletRepository,
 	sc solanaClient,
@@ -79,10 +85,11 @@ func NewService(
 	tokenHolder types.Account,
 ) *Service {
 	s := &Service{
-		client: appstore_client.New(),
-		ir:     ir,
-		wr:     wr,
-		sc:     sc,
+		client:         appstore_client.New(),
+		nftMarketplace: nftMarketplace,
+		ir:             ir,
+		wr:             wr,
+		sc:             sc,
 
 		satorAssetSolanaAddr: satorAssetSolanaAddr,
 		feePayer:             feePayer,
@@ -126,29 +133,28 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		return nil, errors.Errorf("receipt already processed")
 	}
 
-	ctxb := context.Background()
-	switch purchase.ProductID {
-	case testProductID:
-		err := backoff.Retry(func() error {
-			_, err = s.sc.GiveAssetsWithAutoDerive(
-				ctxb,
-				s.satorAssetSolanaAddr,
-				s.feePayer,
-				s.tokenHolder,
-				solanaAccount.PublicKey,
-				testTokenAmount,
-			)
-			if err != nil {
-				return errors.Wrap(err, "can't send sator tokens")
-			}
-			return nil
-		}, backoff.WithMaxRetries(backoff.NewConstantBackOff(constantBackOff), maxRetries))
-		if err != nil {
-			return nil, err
-		}
+	iapProduct, err := s.ir.GetIapProductByID(ctx, purchase.ProductID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get iap product by id")
+	}
 
-	default:
-		return nil, errors.Errorf("unknown product id: %v", purchase.ProductID)
+	ctxb := context.Background()
+	err = backoff.Retry(func() error {
+		_, err := s.sc.GiveAssetsWithAutoDerive(
+			ctxb,
+			s.satorAssetSolanaAddr,
+			s.feePayer,
+			s.tokenHolder,
+			solanaAccount.PublicKey,
+			iapProduct.PriceInSao,
+		)
+		if err != nil {
+			return errors.Wrap(err, "can't send sator tokens")
+		}
+		return nil
+	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(constantBackOff), maxRetries))
+	if err != nil {
+		return nil, err
 	}
 
 	receiptInJson, err := json.Marshal(iapResp)
@@ -165,5 +171,52 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		return nil, errors.Wrap(err, "can't create IAP receipt")
 	}
 
+	prepareBuyTxResp, err := s.nftMarketplace.PrepareBuyTx(&lib_nft_marketplace.PrepareBuyTxRequest{
+		MintAddress:      req.MintAddress,
+		ChargeTokensFrom: solanaAccount.PublicKey,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't prepare buy tx")
+	}
+
+	nftBuyer, err := s.sc.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get account from private key bytes")
+	}
+
+	nftBuyerSignature, err := s.getNFTBuyerSignature(nftBuyer, prepareBuyTxResp.EncodedTx)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get nft buyer signature")
+	}
+
+	_, err = s.nftMarketplace.SendPreparedBuyTx(&lib_nft_marketplace.SendPreparedBuyTxRequest{
+		PreparedBuyTxId: prepareBuyTxResp.PreparedBuyTxId,
+		BuyerSignature:  base64.StdEncoding.EncodeToString(nftBuyerSignature),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't send prepared buy tx")
+	}
+
 	return &Empty{}, nil
+}
+
+func (s *Service) getNFTBuyerSignature(nftBuyer types.Account, encodedTx string) ([]byte, error) {
+	var nftBuyerSignature []byte
+	{
+		serializedTx, err := base64.StdEncoding.DecodeString(encodedTx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't decode transaction")
+		}
+		tx, err := s.sc.TransactionDeserialize(serializedTx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize transaction")
+		}
+		serializedMessage, err := s.sc.SerializeTxMessage(tx.Message)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't serialize message")
+		}
+		nftBuyerSignature = nftBuyer.Sign(serializedMessage)
+	}
+
+	return nftBuyerSignature, nil
 }

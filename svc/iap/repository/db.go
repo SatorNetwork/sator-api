@@ -25,8 +25,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createIAPReceiptStmt, err = db.PrepareContext(ctx, createIAPReceipt); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateIAPReceipt: %w", err)
 	}
+	if q.createIapProductStmt, err = db.PrepareContext(ctx, createIapProduct); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateIapProduct: %w", err)
+	}
 	if q.getIAPReceiptByTxIDStmt, err = db.PrepareContext(ctx, getIAPReceiptByTxID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetIAPReceiptByTxID: %w", err)
+	}
+	if q.getIapProductByIDStmt, err = db.PrepareContext(ctx, getIapProductByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetIapProductByID: %w", err)
 	}
 	return &q, nil
 }
@@ -38,9 +44,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createIAPReceiptStmt: %w", cerr)
 		}
 	}
+	if q.createIapProductStmt != nil {
+		if cerr := q.createIapProductStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createIapProductStmt: %w", cerr)
+		}
+	}
 	if q.getIAPReceiptByTxIDStmt != nil {
 		if cerr := q.getIAPReceiptByTxIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getIAPReceiptByTxIDStmt: %w", cerr)
+		}
+	}
+	if q.getIapProductByIDStmt != nil {
+		if cerr := q.getIapProductByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getIapProductByIDStmt: %w", cerr)
 		}
 	}
 	return err
@@ -83,7 +99,9 @@ type Queries struct {
 	db                      DBTX
 	tx                      *sql.Tx
 	createIAPReceiptStmt    *sql.Stmt
+	createIapProductStmt    *sql.Stmt
 	getIAPReceiptByTxIDStmt *sql.Stmt
+	getIapProductByIDStmt   *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -91,6 +109,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                      tx,
 		tx:                      tx,
 		createIAPReceiptStmt:    q.createIAPReceiptStmt,
+		createIapProductStmt:    q.createIapProductStmt,
 		getIAPReceiptByTxIDStmt: q.getIAPReceiptByTxIDStmt,
+		getIapProductByIDStmt:   q.getIapProductByIDStmt,
 	}
 }

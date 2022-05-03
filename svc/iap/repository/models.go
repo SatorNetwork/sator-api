@@ -9,6 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type IapProduct struct {
+	ID         string       `json:"id"`
+	PriceInSao float64      `json:"price_in_sao"`
+	UpdatedAt  sql.NullTime `json:"updated_at"`
+	CreatedAt  time.Time    `json:"created_at"`
+}
+
 type IapReceipt struct {
 	ID            uuid.UUID    `json:"id"`
 	TransactionID string       `json:"transaction_id"`

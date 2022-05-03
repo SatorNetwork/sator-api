@@ -47,6 +47,8 @@ type Interface interface {
 		amount float64,
 		cfg *SendAssetsConfig,
 	) (string, error)
+	TransactionDeserialize(tx []byte) (types.Transaction, error)
+	SerializeTxMessage(message types.Message) ([]byte, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)

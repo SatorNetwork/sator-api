@@ -32,6 +32,7 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/firebase"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
+	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
@@ -155,6 +156,8 @@ type Config struct {
 	WhitelistMode               bool
 	BlacklistMode               bool
 	FraudDetectionMode          bool
+	NftMarketplaceServerHost    string
+	NftMarketplaceServerPort    int
 }
 
 var buildTag string
@@ -276,6 +279,9 @@ func ConfigFromEnv() *Config {
 		SatorAPIKey: env.MustString("SATOR_API_KEY"),
 
 		FraudDetectionMode: env.GetBool("FRAUD_DETECTION_MODE", false),
+
+		NftMarketplaceServerHost: env.MustString("NFT_MARKETPLACE_SERVER_HOST"),
+		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
 	}
 }
 
@@ -741,7 +747,16 @@ func (a *app) Run() {
 			log.Fatalf("can't prepare iap repository: %v", err)
 		}
 
+		if a.cfg.NftMarketplaceServerHost == "" {
+			log.Fatalf("nft marketplace server host isn't specified")
+		}
+		if a.cfg.NftMarketplaceServerPort == 0 {
+			log.Fatalf("nft marketplace server port isn't specified")
+		}
+		nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
+
 		iapSvc := iap_svc.NewService(
+			nftMarketplaceClient,
 			iapRepository,
 			walletRepository,
 			solanaClient,
