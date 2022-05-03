@@ -95,6 +95,7 @@ type (
 		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
 		NewAccount() types.Account
 		AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
+		FeeAccumulatorAddress() string
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64, cfg *lib_solana.SendAssetsConfig) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
@@ -674,7 +675,7 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			cfg,
 		); err != nil {
 			if i < 4 {
-				log.Println(err)
+				log.Printf("can't send assets with auto derive: %v, fee accumulator address: %v\n", err, s.sc.FeeAccumulatorAddress())
 			} else {
 				return "", fmt.Errorf("transaction: %w", err)
 			}
