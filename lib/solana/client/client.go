@@ -73,7 +73,7 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 	recipientAddr := recipientPK.ToBase58()
 	resp, err := c.solana.GetAccountInfo(ctx, recipientAddr)
 	if err != nil {
-		return common.PublicKey{}, err
+		return common.PublicKey{}, errors.Wrapf(err, "can't get account info by addr %v", recipientAddr)
 	}
 	if resp.Owner == common.TokenProgramID.ToBase58() {
 		// given recipient public key is already an SPL token account
@@ -83,12 +83,17 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 	// Getting of the recipient ATA
 	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPK, assetPK)
 	if err != nil {
-		return common.PublicKey{}, err
+		return common.PublicKey{}, errors.Wrapf(
+			err,
+			"can't find associated token address, recipient address: %v, asset address: %v",
+			recipientPK.ToBase58(),
+			assetPK.ToBase58(),
+		)
 	}
 	// Check if the ATA already created
 	ataInfo, err := c.solana.GetAccountInfo(ctx, recipientAta.ToBase58())
 	if err != nil {
-		return common.PublicKey{}, err
+		return common.PublicKey{}, errors.Wrapf(err, "can't get account info by ata addr %v", recipientAta.ToBase58())
 	}
 	if ataInfo.Owner == common.TokenProgramID.ToBase58() {
 		// given recipient public key is already an SPL token account

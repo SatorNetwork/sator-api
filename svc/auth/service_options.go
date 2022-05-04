@@ -47,3 +47,11 @@ func WithBlacklistMode(enabled bool) ServiceOption {
 		s.blacklistEnabled = enabled
 	}
 }
+
+// WithSkipDeviceIDCheck option
+// Skip device ID check
+func WithSkipDeviceIDCheck(skip bool) ServiceOption {
+	return func(s *Service) {
+		s.skipDeviceIDCheck = skip
+	}
+}

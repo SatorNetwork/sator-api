@@ -28,7 +28,7 @@ func (c *Client) SendAssetsWithAutoDerive(
 ) (string, error) {
 	resp, err := c.PrepareSendAssetsTx(ctx, assetAddr, feePayer, source, recipientAddr, amount, cfg)
 	if err != nil {
-		return "", err
+		return "", pkg_errors.Wrap(err, "can't prepare send assets tx")
 	}
 
 	txHash, err := c.solana.SendTransaction(ctx, resp.Tx)
@@ -62,7 +62,7 @@ func (c *Client) PrepareSendAssetsTx(
 
 	sourceAta, _, err := common.FindAssociatedTokenAddress(source.PublicKey, asset)
 	if err != nil {
-		return nil, err
+		return nil, pkg_errors.Wrap(err, "can't find associated token address for source account")
 	}
 
 	recipientPublicKey := common.PublicKeyFromString(recipientAddr)
@@ -97,14 +97,14 @@ func (c *Client) PrepareSendAssetsTx(
 		feeAccumulator.GetFeeInSAO(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, pkg_errors.Wrap(err, "can't prepare send assets message (before adding blockchain fee)")
 	}
 
 	var solanaTxFee uint64
 	if cfg.ChargeSolanaFeeFromSender {
 		solanaTxFee, err = c.GetFeeForMessage(ctx, message, cfg.AllowFallbackToDefaultFee, cfg.DefaultFee)
 		if err != nil {
-			return nil, err
+			return nil, pkg_errors.Wrap(err, "can't get fee for message")
 		}
 		feeAccumulator.AddSOL(float64(solanaTxFee) / fee_accumulator.SolMltpl)
 
@@ -123,7 +123,7 @@ func (c *Client) PrepareSendAssetsTx(
 			feeAccumulator.GetFeeInSAO(),
 		)
 		if err != nil {
-			return nil, err
+			return nil, pkg_errors.Wrap(err, "can't prepare send assets message (after adding blockchain fee)")
 		}
 	}
 
@@ -174,7 +174,7 @@ func (c *Client) prepareSendAssetsMessage(
 		feeAccumulatorPublicKey := common.PublicKeyFromString(c.config.FeeAccumulatorAddress)
 		feeAccumulatorAta, err := c.deriveATAPublicKey(ctx, feeAccumulatorPublicKey, asset)
 		if err != nil {
-			return types.Message{}, err
+			return types.Message{}, pkg_errors.Wrapf(err, "can't derive ata public key for fee accumulator, addr: %v", c.config.FeeAccumulatorAddress)
 		}
 
 		instructions = append(instructions, tokenprog.TransferChecked(tokenprog.TransferCheckedParam{
