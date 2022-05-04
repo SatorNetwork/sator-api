@@ -29,7 +29,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Post("/", httptransport.NewServer(
+	r.Post("/register", httptransport.NewServer(
 		e.RegisterInAppPurchase,
 		decodeRegisterInAppPurchaseRequest,
 		httpencoder.EncodeResponse,

@@ -25,7 +25,7 @@ type RegisterInAppPurchaseRequest struct {
 }
 
 func (c *InAppClient) RegisterInAppPurchase(accessToken string, req *RegisterInAppPurchaseRequest) (*Empty, error) {
-	url := "http://localhost:8080/iap"
+	url := "http://localhost:8080/iap/register"
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
