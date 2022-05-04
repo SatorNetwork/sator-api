@@ -19,6 +19,14 @@ type walletRepoMock struct {
 	GetStakeLevelByAmountErr error
 }
 
+func (r *walletRepoMock) AddTokenTransfer(ctx context.Context, arg repository.AddTokenTransferParams) (repository.TokenTransfer, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (r *walletRepoMock) UpdateTokenTransfer(ctx context.Context, arg repository.UpdateTokenTransferParams) error {
+	panic("not implemented") // TODO: Implement
+}
+
 func (r *walletRepoMock) CreateWallet(ctx context.Context, arg repository.CreateWalletParams) (repository.Wallet, error) {
 	panic("not implemented") // TODO: Implement
 }
@@ -122,6 +130,18 @@ func (r *walletRepoMock) GetStakeLevelByAmount(ctx context.Context, amount float
 			Valid: true,
 		},
 	}, nil
+}
+
+func (r *walletRepoMock) CheckRecipientAddress(ctx context.Context, arg repository.CheckRecipientAddressParams) (int64, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (r *walletRepoMock) DoesUserHaveFraudulentTransfers(ctx context.Context, userID uuid.UUID) (bool, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (r *walletRepoMock) DoesUserMakeTransferForLastMinute(ctx context.Context, userID uuid.UUID) (bool, error) {
+	panic("not implemented") // TODO: Implement
 }
 
 func TestService_GetMultiplier(t *testing.T) {

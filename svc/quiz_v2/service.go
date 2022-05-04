@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rsa"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -163,6 +165,9 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 		challenge.MinimumReward,
 		challenge.PercentForQuiz,
 	)
+	if err != nil {
+		return challenge_service.Challenge{}, err
+	}
 
 	challenge.CurrentPrizePool = fmt.Sprintf("%v SAO", currentPrizePool)
 	challenge.CurrentPrizePoolAmount = currentPrizePool
@@ -184,33 +189,89 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error) {
 	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(userID, limit, offset)
+	{
+		tmpl := `
+		Challenges sorted by players params:
+		User's ID: %v
+		Limit:     %v
+		Offset:    %v
+		`
+		log.Printf(tmpl, userID, limit, offset)
+		log.Printf("Challenges sorted by players query: %v", query)
+	}
 	sqlExecutor := sql_executor.New(s.dbClient)
 	sqlChallenges, err := sqlExecutor.ExecuteGetChallengesSortedByPlayersQuery(query, nil)
 	if err != nil {
 		return nil, err
 	}
-	challenges := NewChallengesFromSQL(sqlChallenges)
+	{
+		serializedChallenges, err := json.Marshal(sqlChallenges)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("Serialized SQL challenges: %s\n", serializedChallenges)
+	}
+	challenges, err := s.NewChallengesFromSQL(ctx, sqlChallenges, userID)
+	if err != nil {
+		return nil, err
+	}
+	{
+		serializedChallenges, err := json.Marshal(challenges)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("Serialized challenges: %s\n", serializedChallenges)
+	}
 
 	return challenges, nil
 }
 
-func NewChallengeFromSQL(c *sql_executor.Challenge) *Challenge {
+func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Challenge, userID uuid.UUID) (*Challenge, error) {
+	var currentPrizePool float64
+	{
+		challengeUID, err := uuid.Parse(c.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO(evg): get rid of extra database call
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeUID, userID)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't get challenge by ID")
+		}
+
+		currentPrizePool, err = common.GetCurrentPrizePool(
+			s.qr,
+			challenge.ID,
+			challenge.PrizePoolAmount,
+			challenge.MinimumReward,
+			challenge.PercentForQuiz,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Challenge{
 		ID:               c.ID,
 		Title:            c.Title,
 		PlayersToStart:   c.PlayersToStart,
 		PlayersNumber:    c.PlayersNum,
-		PrizePool:        fmt.Sprintf("%.2f SAO", c.PrizePool),
+		PrizePool:        fmt.Sprintf("%.2f SAO", currentPrizePool),
 		IsRealmActivated: c.IsActivated,
 		Cover:            c.Cover.String,
-	}
+	}, nil
 }
 
-func NewChallengesFromSQL(sqlChallenges []*sql_executor.Challenge) []*Challenge {
+func (s *Service) NewChallengesFromSQL(ctx context.Context, sqlChallenges []*sql_executor.Challenge, userID uuid.UUID) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for _, c := range sqlChallenges {
-		challenges = append(challenges, NewChallengeFromSQL(c))
+		challenge, err := s.NewChallengeFromSQL(ctx, c, userID)
+		if err != nil {
+			return nil, err
+		}
+		challenges = append(challenges, challenge)
 	}
 
-	return challenges
+	return challenges, nil
 }

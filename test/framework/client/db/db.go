@@ -8,6 +8,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/challenge"
+	"github.com/SatorNetwork/sator-api/test/framework/client/db/puzzle_game"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/quiz_v2"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/rewards"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/shows"
@@ -17,11 +18,12 @@ import (
 type DB struct {
 	dbClient *sql.DB
 
-	challengeDB *challenge.DB
-	walletDB    *wallet.DB
-	authDB      *auth.DB
-	showsDB     *shows.DB
-	quizV2DB    *quiz_v2.DB
+	challengeDB  *challenge.DB
+	walletDB     *wallet.DB
+	authDB       *auth.DB
+	showsDB      *shows.DB
+	quizV2DB     *quiz_v2.DB
+	puzzleGameDB *puzzle_game.DB
 	rewardsDB	*rewards.DB
 }
 
@@ -58,18 +60,24 @@ func New() (*DB, error) {
 		return nil, errors.Wrap(err, "can't create quiz v2 db")
 	}
 
+	puzzleGameDB, err := puzzle_game.New(dbClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create puzzle game db")
+	}
+
 	rewardsDB, err := rewards.New(dbClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create rewards db")
 	}
 
 	return &DB{
-		dbClient:    dbClient,
-		challengeDB: challengeDB,
-		authDB:      authDB,
-		walletDB:    walletDB,
-		showsDB:     showsDB,
-		quizV2DB:    quizV2DB,
+		dbClient:     dbClient,
+		challengeDB:  challengeDB,
+		authDB:       authDB,
+		walletDB:     walletDB,
+		showsDB:      showsDB,
+		quizV2DB:     quizV2DB,
+		puzzleGameDB: puzzleGameDB,
 		rewardsDB:   rewardsDB,
 	}, nil
 }
@@ -87,7 +95,15 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 		return errors.Wrap(err, "can't bootstrap shows db")
 	}
 
+	if err := db.puzzleGameDB.Bootstrap(ctx); err != nil {
+		return errors.Wrap(err, "can't bootstrap puzzle game db")
+	}
+
 	return nil
+}
+
+func (db *DB) Client() *sql.DB {
+	return db.dbClient
 }
 
 func (db *DB) ChallengeDB() *challenge.DB {
@@ -102,8 +118,16 @@ func (db *DB) WalletDB() *wallet.DB {
 	return db.walletDB
 }
 
+func (db *DB) ShowsDB() *shows.DB {
+	return db.showsDB
+}
+
 func (db *DB) QuizV2DB() *quiz_v2.DB {
 	return db.quizV2DB
+}
+
+func (db *DB) PuzzleGameDB() *puzzle_game.DB {
+	return db.puzzleGameDB
 }
 
 func (db *DB) RewardsDB() *rewards.DB {

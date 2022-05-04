@@ -17,7 +17,10 @@ func GetFeePayer() types.Account {
 	if err != nil {
 		panic(err)
 	}
-	feePayer := types.AccountFromPrivateKeyBytes(feePayerPrivateKeyBytes)
+	feePayer, err := types.AccountFromBytes(feePayerPrivateKeyBytes)
+	if err != nil {
+		panic(err)
+	}
 	return feePayer
 }
 
@@ -26,7 +29,10 @@ func GetTokenHolder() types.Account {
 	if err != nil {
 		panic(err)
 	}
-	tokenHolder := types.AccountFromPrivateKeyBytes(tokenHolderPrivateKeyBytes)
+	tokenHolder, err := types.AccountFromBytes(tokenHolderPrivateKeyBytes)
+	if err != nil {
+		panic(err)
+	}
 	return tokenHolder
 }
 
@@ -35,7 +41,10 @@ func GetAsset() types.Account {
 	if err != nil {
 		panic(err)
 	}
-	asset := types.AccountFromPrivateKeyBytes(assetPrivateKeyBytes)
+	asset, err := types.AccountFromBytes(assetPrivateKeyBytes)
+	if err != nil {
+		panic(err)
+	}
 	return asset
 }
 

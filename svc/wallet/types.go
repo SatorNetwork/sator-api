@@ -128,3 +128,11 @@ type Stake struct {
 	CurrentMultiplier int32
 	AvailableToLock   float64
 }
+
+// Predefined token transfer statuses
+const (
+	TokenTransferStatusPending int32 = iota
+	TokenTransferStatusSuccess
+	TokenTransferStatusFailed
+	TokenTransferStatusFraud
+)

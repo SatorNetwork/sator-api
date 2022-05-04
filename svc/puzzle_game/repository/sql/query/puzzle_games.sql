@@ -76,7 +76,7 @@ VALUES (
 
 -- name: StartPuzzleGame :one
 UPDATE puzzle_games_attempts
-SET status = 1, image = @image
+SET status = 1, image = @image, tiles = @tiles
 WHERE puzzle_game_id = @puzzle_game_id 
 AND user_id = @user_id
 AND status = 0
@@ -88,9 +88,8 @@ UPDATE puzzle_games_attempts
 SET status = 2,
     steps_taken = @steps_taken,
     rewards_amount = @rewards_amount,
-    bonus_amount = @bonus_amount,
-    result = @result
-WHERE puzzle_game_id = @puzzle_game_id 
+    bonus_amount = @bonus_amount
+WHERE puzzle_game_id = @puzzle_game_id
 AND user_id = @user_id
 AND status = 1
 AND image IS NOT NULL
@@ -104,3 +103,13 @@ WHERE id = $1;
 SELECT * FROM puzzle_game_unlock_options
 WHERE disabled = FALSE
 ORDER BY locked ASC, amount ASC;
+
+-- name: UpdatePuzzleGameAttempt :one
+UPDATE puzzle_games_attempts
+SET
+    status = @status,
+    steps = @steps,
+    steps_taken = @steps_taken,
+    tiles = @tiles
+WHERE id = @id
+    RETURNING *;

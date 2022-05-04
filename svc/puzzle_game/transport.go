@@ -104,9 +104,9 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
-	r.Post("/{puzzle_game_id}/finish", httptransport.NewServer(
-		e.FinishPuzzleGame,
-		decodeFinishPuzzleGameRequest,
+	r.Post("/{puzzle_game_id}/tap-tile", httptransport.NewServer(
+		e.TapTile,
+		decodeTapTileRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -243,8 +243,8 @@ func decodeStartPuzzleGameRequest(ctx context.Context, r *http.Request) (interfa
 	return id, nil
 }
 
-func decodeFinishPuzzleGameRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	var req FinishPuzzleGameRequest
+func decodeTapTileRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req TapTileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, fmt.Errorf("could not decode request body: %w", err)
 	}

@@ -41,6 +41,7 @@ WHERE id IN(
               JOIN show_categories ON show_categories.id = shows_to_categories.category_id
         WHERE show_categories.disabled = FALSE
           AND show_categories.id = @category_id)
+AND archived = FALSE
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
@@ -84,3 +85,7 @@ WHERE id = @id;
 UPDATE shows
 SET archived = true
 WHERE id = @id;
+
+-- name: GetShowsByTitle :many
+SELECT * FROM shows
+WHERE title = @title;

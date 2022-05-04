@@ -13,5 +13,5 @@ CREATE TABLE IF NOT EXISTS shows_to_categories (
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
     );
 -- +migrate Down
-DROP TABLE IF EXISTS show_categories;
 DROP TABLE IF EXISTS shows_to_categories;
+DROP TABLE IF EXISTS show_categories;

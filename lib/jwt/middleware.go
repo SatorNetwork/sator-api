@@ -114,9 +114,13 @@ func NewParser(signingKey string, checkUser checkUserFunc, ur userRepository) en
 	}, defaultSigningMethod, ClaimsFactory, checkUser, ur)
 }
 
-func NewAPIKeyMdw(apiKey string) endpoint.Middleware {
+func NewAPIKeyMdw(apiKey string, skip bool) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			if skip {
+				return next(ctx, request)
+			}
+
 			// API_KEY is stored in the context from the transport handlers.
 			ctxAPIKey, ok := ctx.Value(kitjwt.JWTTokenContextKey).(string)
 			if !ok {

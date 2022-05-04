@@ -36,3 +36,22 @@ func WithMinAmountToTransfer(amount float64) ServiceOption {
 		s.minAmountToTransfer = amount
 	}
 }
+
+// WithFraudDetectionMode ...
+func WithFraudDetectionMode(mode bool) ServiceOption {
+	return func(s *Service) {
+		s.fraudDetectionMode = mode
+	}
+}
+
+func WithTokenTransferPercent(tokenTransferPercent float64) ServiceOption {
+	return func(s *Service) {
+		s.tokenTransferPercent = tokenTransferPercent
+	}
+}
+
+func WithClaimRewardsPercent(claimRewardsPercent float64) ServiceOption {
+	return func(s *Service) {
+		s.claimRewardsPercent = claimRewardsPercent
+	}
+}

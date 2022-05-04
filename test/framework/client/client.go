@@ -6,6 +6,7 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/challenge"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db"
+	"github.com/SatorNetwork/sator-api/test/framework/client/puzzle_game"
 	"github.com/SatorNetwork/sator-api/test/framework/client/quiz_v2"
 	"github.com/SatorNetwork/sator-api/test/framework/client/rewards"
 	"github.com/SatorNetwork/sator-api/test/framework/client/shows"
@@ -20,6 +21,7 @@ type Client struct {
 	ChallengesClient       *challenge.ChallengesClient
 	ShowsClient            *shows.ShowsClient
 	TradingPlatformsClient *trading_platforms.TradingPlatformsClient
+	PuzzleGameClient       *puzzle_game.PuzzleGameClient
 	RewardsClient          *rewards.RewardsClient
 
 	DB *db.DB

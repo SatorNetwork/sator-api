@@ -45,8 +45,8 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 	}
 
 	var accountIndex int
-	for idx, acc := range tx.Transaction.Message.AccountKeys {
-		if acc == accPubKey {
+	for idx, acc := range tx.Transaction.Message.Accounts {
+		if acc.ToBase58() == accPubKey {
 			accountIndex = idx
 			break
 		}
