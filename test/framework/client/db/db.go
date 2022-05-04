@@ -8,6 +8,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/challenge"
+	"github.com/SatorNetwork/sator-api/test/framework/client/db/iap"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/puzzle_game"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/quiz_v2"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/shows"
@@ -23,6 +24,7 @@ type DB struct {
 	showsDB      *shows.DB
 	quizV2DB     *quiz_v2.DB
 	puzzleGameDB *puzzle_game.DB
+	iapDB        *iap.DB
 }
 
 func New() (*DB, error) {
@@ -63,6 +65,11 @@ func New() (*DB, error) {
 		return nil, errors.Wrap(err, "can't create puzzle game db")
 	}
 
+	iapDB, err := iap.New(dbClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create iap db")
+	}
+
 	return &DB{
 		dbClient:     dbClient,
 		challengeDB:  challengeDB,
@@ -71,6 +78,7 @@ func New() (*DB, error) {
 		showsDB:      showsDB,
 		quizV2DB:     quizV2DB,
 		puzzleGameDB: puzzleGameDB,
+		iapDB:        iapDB,
 	}, nil
 }
 
@@ -89,6 +97,10 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 
 	if err := db.puzzleGameDB.Bootstrap(ctx); err != nil {
 		return errors.Wrap(err, "can't bootstrap puzzle game db")
+	}
+
+	if err := db.iapDB.Bootstrap(ctx); err != nil {
+		return errors.Wrap(err, "can't bootstrap iap db")
 	}
 
 	return nil

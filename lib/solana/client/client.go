@@ -224,6 +224,14 @@ func (c *Client) FindAssociatedTokenAddress(walletAddress, tokenMintAddress comm
 	return common.FindAssociatedTokenAddress(walletAddress, tokenMintAddress)
 }
 
+func (c *Client) TransactionDeserialize(tx []byte) (types.Transaction, error) {
+	return types.TransactionDeserialize(tx)
+}
+
+func (c *Client) SerializeTxMessage(message types.Message) ([]byte, error) {
+	return message.Serialize()
+}
+
 func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, allowFallbackToDefaultFee bool, defaultFee uint64) (uint64, error) {
 	fee, err := c.solana.GetFeeForMessage(ctx, message)
 	if err != nil && strings.Contains(err.Error(), `{"code":-32601,"message":"Method not found"}`) && allowFallbackToDefaultFee {

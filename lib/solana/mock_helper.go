@@ -27,3 +27,17 @@ func (m *MockInterface) ExpectAccountFromPrivateKeyBytesAny() *gomock.Call {
 		}).
 		AnyTimes()
 }
+
+func (m *MockInterface) ExpectTransactionDeserializeAny() *gomock.Call {
+	return m.EXPECT().
+		TransactionDeserialize(gomock.Any()).
+		Return(types.Transaction{}, nil).
+		AnyTimes()
+}
+
+func (m *MockInterface) ExpectSerializeTxMessageAny() *gomock.Call {
+	return m.EXPECT().
+		SerializeTxMessage(gomock.Any()).
+		Return([]byte{}, nil).
+		AnyTimes()
+}
