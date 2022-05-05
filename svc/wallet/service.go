@@ -423,33 +423,6 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		return "", fmt.Errorf("could not claim rewards: %w", err)
 	}
 
-	//// sends token
-	//for i := 0; i < 5; i++ {
-	//	if tx, err = s.sc.SendConfirmedAssetsWithAutoDerive(
-	//		ctx,
-	//		s.satorAssetSolanaAddr,
-	//		feePayer,
-	//		tokenHolder,
-	//		user.PublicKey,
-	//		amount,
-	//		&lib_solana.SendAssetsConfig{
-	//			PercentToCharge:           s.claimRewardsPercent,
-	//			ChargeSolanaFeeFromSender: true,
-	//		},
-	//		5,
-	//	); err != nil {
-	//		if i < 4 {
-	//			log.Println(err)
-	//		} else {
-	//			return "", fmt.Errorf("could not claim rewards: %w", err)
-	//		}
-	//		time.Sleep(time.Second * 10)
-	//	} else {
-	//		log.Printf("user %s: successful transaction: rewards withdraw: %s", userID.String(), tx)
-	//		break
-	//	}
-	//}
-
 	return tx, nil
 }
 
