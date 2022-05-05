@@ -12,7 +12,6 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/qrcodes"
 	"github.com/SatorNetwork/sator-api/svc/rewards/consts"
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
-	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 )
 
@@ -27,7 +26,6 @@ type (
 		explorerURLTmpl   string
 		holdRewardsPeriod time.Duration
 		minAmountToClaim  float64 // minimum amount to claim rewards
-		worker            inProgressWorker
 	}
 
 	Winner struct {
@@ -58,11 +56,6 @@ type (
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
 	}
 
-	inProgressWorker interface {
-		AddTransaction(transaction worker.InProgressTransactionStatusWorkerJob)
-		Start()
-	}
-
 	// Option func to set custom service options
 	Option func(*Service)
 )
@@ -73,7 +66,6 @@ func NewService(
 	repo RewardsRepository,
 	ws walletService,
 	getLocker db.GetLocker,
-	worker *worker.InProgressTransactionStatusWorker,
 	opt ...Option,
 ) *Service {
 	s := &Service{
@@ -84,7 +76,6 @@ func NewService(
 		explorerURLTmpl:   "https://explorer.solana.com/tx/%s?cluster=devnet",
 		holdRewardsPeriod: time.Hour * 24 * 30,
 		minAmountToClaim:  0,
-		worker:            worker,
 	}
 
 	for _, fn := range opt {
@@ -185,12 +176,6 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}
 
-	s.worker.AddTransaction(worker.InProgressTransactionStatusWorkerJob{
-		UserID: uid,
-		Amount: amount,
-		TxHash: txHash,
-	})
-
 	// We should release a lock in any case, even if context was cancelled
 	// TODO(evg): get timeout from config
 	// ctxt, _ := context.WithTimeout(context.Background(), 15 * time.Second)
@@ -285,8 +270,4 @@ func (s *Service) IsQRCodeScanned(ctx context.Context, userID, qrcodeID uuid.UUI
 	}
 
 	return true, nil
-}
-
-func (s *Service) StartWorker() {
-	s.worker.Start()
 }

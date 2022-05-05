@@ -2,7 +2,6 @@ package rewards
 
 import (
 	"fmt"
-	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"github.com/SatorNetwork/sator-api/test/framework/user"
 	"testing"
@@ -28,36 +27,8 @@ func TestClaimRewards(t *testing.T) {
 	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), user.Email(), sumsub.KYCStatusApproved)
 	require.NoError(t, err)
 
-	sc := solana_client.New(app_config.AppConfigForTests.SolanaApiBaseUrl, solana_client.Config{
-		SystemProgram:  app_config.AppConfigForTests.SolanaSystemProgram,
-		SysvarRent:     app_config.AppConfigForTests.SolanaSysvarRent,
-		SysvarClock:    app_config.AppConfigForTests.SolanaSysvarClock,
-		SplToken:       app_config.AppConfigForTests.SolanaSplToken,
-		StakeProgramID: app_config.AppConfigForTests.SolanaStakeProgramID,
-	}, nil)
-	_ = sc
-
 	id, err := c.DB.AuthDB().GetUserIDByEmail(context.Background(), user.Email())
 	require.NoError(t, err)
-
-	{
-		//feePayerPk, err := base64.StdEncoding.DecodeString(app_config.AppConfigForTests.SolanaFeePayerPrivateKey)
-		//require.NoError(t, err)
-		//feePayer, err := sc.AccountFromPrivateKeyBytes(feePayerPk)
-		//require.NoError(t, err)
-		//
-		//feeAccumulatorPublicKey := common.PublicKeyFromString(app_config.AppConfigForTests.FeeAccumulatorAddress)
-		//txHash, err := sc.CreateAccountWithATA(context.Background(), app_config.AppConfigForTests.SolanaAssetAddr, feeAccumulatorPublicKey.ToBase58(), feePayer)
-		//require.NoError(t, err)
-		//fmt.Println(txHash)
-		//
-		//addr, err := c.Wallet.GetSatorTokenAddress(user.AccessToken())
-		//require.NoError(t, err)
-		//fmt.Println(addr)
-		//c.DB.WalletDB().
-		//balance, err := sc.GetTokenAccountBalance(context.Background(), acc.PublicKey.ToBase58())
-		//require.NoError(t, err)
-	}
 
 	err = c.DB.RewardsDB().DepositRewards(context.Background(), id, 100)
 	require.NoError(t, err)
