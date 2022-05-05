@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"log"
 	"strings"
 	"time"
 
@@ -171,6 +172,7 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		return nil, errors.Wrap(err, "can't create IAP receipt")
 	}
 
+	log.Printf("Preparing buy tx, mint address: %v, charge tokens from: %v", req.MintAddress, solanaAccount.PublicKey)
 	prepareBuyTxResp, err := s.nftMarketplace.PrepareBuyTx(&lib_nft_marketplace.PrepareBuyTxRequest{
 		MintAddress:      req.MintAddress,
 		ChargeTokensFrom: solanaAccount.PublicKey,
@@ -189,6 +191,7 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		return nil, errors.Wrap(err, "can't get nft buyer signature")
 	}
 
+	log.Printf("Sending prepared buy tx, txid: %v", prepareBuyTxResp.PreparedBuyTxId)
 	_, err = s.nftMarketplace.SendPreparedBuyTx(&lib_nft_marketplace.SendPreparedBuyTxRequest{
 		PreparedBuyTxId: prepareBuyTxResp.PreparedBuyTxId,
 		BuyerSignature:  base64.StdEncoding.EncodeToString(nftBuyerSignature),
