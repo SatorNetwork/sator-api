@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/client"
@@ -149,6 +150,38 @@ func (c *Client) SendTransaction(ctx context.Context, feePayer, signer types.Acc
 	}
 
 	return txhash, nil
+}
+
+func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Transaction, retries int) (string, bool, error) {
+	bh, err := c.solana.GetLatestBlockhash(ctx)
+	txhash, err := c.solana.SendTransaction(ctx, tx)
+	if err != nil {
+		return "", false, fmt.Errorf("could not send transaction: %w", err)
+	}
+
+	var ok bool
+	for i := 0; i < retries; i++ {
+		cbh, err := c.GetBlockHeight(ctx)
+		if err != nil {
+			return "", false, fmt.Errorf("could not get block height: %w", err)
+		}
+
+		if cbh < bh.LatestValidBlockHeight {
+			ss, err := c.solana.GetSignatureStatus(ctx, txhash)
+			if err != nil {
+				return "", false, fmt.Errorf("could not get signature status: %w", err)
+			}
+
+			if ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentConfirmed {
+				ok = true
+				break
+			}
+		}
+
+		time.Sleep(time.Millisecond * 300)
+	}
+
+	return txhash, ok, nil
 }
 
 // GetAccountBalanceSOL returns account's SOL balance

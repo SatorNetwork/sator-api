@@ -14,7 +14,7 @@ type (
 	}
 
 	service interface {
-		AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error
+		AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType, status string, amount float64, trType int32) error
 		GetUserRewards(ctx context.Context, uid uuid.UUID) (total float64, available float64, err error)
 		IsQRCodeScanned(ctx context.Context, userID, qrcodeID uuid.UUID) (bool, error)
 	}
@@ -27,12 +27,12 @@ func New(s service) *Client {
 
 // AddDepositTransaction ...
 func (c *Client) AddDepositTransaction(ctx context.Context, userID, relationID uuid.UUID, relationType string, amount float64) error {
-	return c.s.AddTransaction(ctx, userID, relationID, relationType, amount, rewards.TransactionTypeDeposit)
+	return c.s.AddTransaction(ctx, userID, relationID, relationType, "TransactionStatusAvailable", amount, rewards.TransactionTypeDeposit)
 }
 
 // AddWithdrawTransaction ...
 func (c *Client) AddWithdrawTransaction(ctx context.Context, userID uuid.UUID, amount float64) error {
-	return c.s.AddTransaction(ctx, userID, uuid.Nil, "", amount, rewards.TransactionTypeWithdraw)
+	return c.s.AddTransaction(ctx, userID, uuid.Nil, "", "", amount, rewards.TransactionTypeWithdraw)
 }
 
 // GetUserRewards ...

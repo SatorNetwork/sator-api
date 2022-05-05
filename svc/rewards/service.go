@@ -15,13 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	// TransactionTypeDeposit indicates that transaction type deposit.
-	TransactionTypeDeposit = iota + 1
-	// TransactionTypeWithdraw indicates that transaction type withdraw.
-	TransactionTypeWithdraw
-)
-
 type (
 	// Service struct
 	Service struct {
@@ -46,6 +39,8 @@ type (
 		GetTransactionsByUserIDPaginated(ctx context.Context, arg repository.GetTransactionsByUserIDPaginatedParams) ([]repository.Reward, error)
 		// GetAmountAvailableToWithdraw(ctx context.Context, arg repository.GetAmountAvailableToWithdrawParams) (float64, error)
 		GetScannedQRCodeByUserID(ctx context.Context, arg repository.GetScannedQRCodeByUserIDParams) (repository.Reward, error)
+		RequestTransactionsByUserID(ctx context.Context, userID uuid.UUID) error
+		UpdateTransactionStatusByTxHash(ctx context.Context, arg repository.UpdateTransactionStatusByTxHashParams) error
 	}
 
 	ClaimRewardsResult struct {
@@ -111,13 +106,14 @@ func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UU
 }
 
 // AddTransaction ...
-func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType string, amount float64, trType int32) error {
+func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID, relationType, status string, amount float64, trType int32) error {
 	if err := s.repo.AddTransaction(ctx, repository.AddTransactionParams{
 		UserID:          uid,
 		RelationID:      uuid.NullUUID{UUID: relationID, Valid: true},
 		Amount:          amount,
 		TransactionType: trType,
 		RelationType:    sql.NullString{String: relationType, Valid: true},
+		Status:  		 status,
 	}); err != nil {
 		return fmt.Errorf("could not add transaction for user_id=%s, relation_id=%s, relation_type=%s: %w", uid.String(), relationID.String(), relationType, err)
 	}
@@ -154,6 +150,10 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		return ClaimRewardsResult{}, fmt.Errorf("%w: %.2f", ErrNotEnoughBalance, s.minAmountToClaim)
 	}
 
+	if err = s.repo.RequestTransactionsByUserID(ctx, uid); err != nil {
+		return ClaimRewardsResult{}, fmt.Errorf("%w", ErrInternalServerError)
+	}
+
 	txHash, err := s.ws.WithdrawRewards(ctx, uid, amount)
 	if err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not create blockchain transaction: %w", err)
@@ -167,6 +167,8 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		UserID:          uid,
 		Amount:          amount,
 		TransactionType: TransactionTypeWithdraw,
+		TxHash:          sql.NullString{String: txHash, Valid: true},
+		Status:          TransactionStatusWithdrawn.String(),
 	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}

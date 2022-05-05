@@ -83,3 +83,16 @@ func getTransactionAmountForAccountIdx(pre, post []lib_solana.TokenBalance, acco
 
 	return float64(postTokenBalance-preTokenBalance) / 1e9, nil
 }
+
+func (c *Client) GetBlockHeight(ctx context.Context) (uint64, error) {
+	res := struct {
+		GeneralResponse
+		Result uint64 `json:"result"`
+	}{}
+
+	if err := c.request(ctx, "getBlockHeight", nil, &res); err != nil {
+		return 0, err
+	}
+
+	return res.Result, nil
+}

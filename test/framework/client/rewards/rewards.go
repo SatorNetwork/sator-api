@@ -38,6 +38,13 @@ type Balance struct {
 	Amount   float64 `json:"amount"`
 }
 
+type ClaimRewardsResult struct {
+	DisplayAmount   string  `json:"amount"`
+	TransactionURL  string  `json:"transaction_url"`
+	Amount          float64 `json:"-"`
+	TransactionHash string  `json:"-"`
+}
+
 func (a *RewardsClient) GetRewardsWallet(accessToken, walletID string) (*Wallet, error) {
 	url := fmt.Sprintf("http://localhost:8080/rewards/wallet/%s", walletID)
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
@@ -59,6 +66,35 @@ func (a *RewardsClient) GetRewardsWallet(accessToken, walletID string) (*Wallet,
 
 	var resp struct {
 		Data Wallet `json:"data"`
+	}
+	if err := json.Unmarshal(rawBody, &resp); err != nil {
+		return nil, errors.Wrap(err, "can't unmarshal response body")
+	}
+
+	return &resp.Data, nil
+}
+
+func (a *RewardsClient) ClaimRewards(accessToken string) (*ClaimRewardsResult, error) {
+	url := fmt.Sprint("http://localhost:8080/rewards/claim")
+	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+
+	var resp struct {
+		Data ClaimRewardsResult `json:"data"`
 	}
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
