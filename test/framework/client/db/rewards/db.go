@@ -3,6 +3,7 @@ package rewards
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/SatorNetwork/sator-api/svc/rewards/consts"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/google/uuid"

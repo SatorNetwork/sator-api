@@ -26,7 +26,7 @@ type DB struct {
 	quizV2DB     *quiz_v2.DB
 	puzzleGameDB *puzzle_game.DB
 	iapDB        *iap.DB
-	rewardsDB	*rewards.DB
+	rewardsDB    *rewards.DB
 }
 
 func New() (*DB, error) {
@@ -86,7 +86,7 @@ func New() (*DB, error) {
 		quizV2DB:     quizV2DB,
 		puzzleGameDB: puzzleGameDB,
 		iapDB:        iapDB,
-		rewardsDB:   rewardsDB,
+		rewardsDB:    rewardsDB,
 	}, nil
 }
 

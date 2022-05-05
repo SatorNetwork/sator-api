@@ -228,7 +228,7 @@ func ConfigFromEnv() *Config {
 		CompanyAddress: env.GetString("COMPANY_ADDRESS", "New York"),
 
 		// Rewards
-		HoldRewardsPeriod:    env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		HoldRewardsPeriod: env.GetDuration("HOLD_REWARDS_PERIOD", 0),
 
 		// Invitation
 		InvitationReward: env.GetFloat("INVITATION_REWARD", 0),

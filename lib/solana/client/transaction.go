@@ -109,6 +109,3 @@ func (c *Client) GetBlockHeight(ctx context.Context) (uint64, error) {
 
 	return res.Result, nil
 }
-
-// Ismail Ibragim
-// Backend Developer at Sator with competencies in payment transactions, acquiring, banking and blockchain.

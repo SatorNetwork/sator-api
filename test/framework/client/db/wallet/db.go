@@ -26,7 +26,7 @@ func New(dbClient *sql.DB) (*DB, error) {
 }
 
 func (db *DB) AddSolanaAccount(ctx context.Context, accountType, publicKey string, privateKey []byte) (walletRepo.SolanaAccount, error) {
-	 return db.walletRepository.AddSolanaAccount(ctx, walletRepo.AddSolanaAccountParams{
+	return db.walletRepository.AddSolanaAccount(ctx, walletRepo.AddSolanaAccountParams{
 		AccountType: accountType,
 		PublicKey:   publicKey,
 		PrivateKey:  privateKey,

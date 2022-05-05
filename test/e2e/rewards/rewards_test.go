@@ -2,9 +2,10 @@ package rewards
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"github.com/SatorNetwork/sator-api/test/framework/user"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
