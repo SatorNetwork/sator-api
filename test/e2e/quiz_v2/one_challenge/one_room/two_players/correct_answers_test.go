@@ -43,7 +43,7 @@ func TestCorrectAnswers(t *testing.T) {
 		SysvarClock:    app_config.AppConfigForTests.SolanaSysvarClock,
 		SplToken:       app_config.AppConfigForTests.SolanaSplToken,
 		StakeProgramID: app_config.AppConfigForTests.SolanaStakeProgramID,
-	})
+	}, nil)
 
 	user1SignUpRequest := auth.RandomSignUpRequest()
 	user1 := user.NewInitializedUser(user1SignUpRequest, t)

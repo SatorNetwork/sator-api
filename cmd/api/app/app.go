@@ -34,7 +34,6 @@ import (
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
 	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
-	"github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
