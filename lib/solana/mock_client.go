@@ -414,6 +414,21 @@ func (mr *MockInterfaceMockRecorder) SendTransaction(arg0, arg1, arg2 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransaction", reflect.TypeOf((*MockInterface)(nil).SendTransaction), varargs...)
 }
 
+// SerializeTxMessage mocks base method.
+func (m *MockInterface) SerializeTxMessage(arg0 types.Message) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SerializeTxMessage", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SerializeTxMessage indicates an expected call of SerializeTxMessage.
+func (mr *MockInterfaceMockRecorder) SerializeTxMessage(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializeTxMessage", reflect.TypeOf((*MockInterface)(nil).SerializeTxMessage), arg0)
+}
+
 // SendTransactionUntilConfirmed mocks base method.
 func (m *MockInterface) SendTransactionUntilConfirmed(arg0 context.Context, arg1 types.Transaction, arg2 int) (string, bool, error) {
 	m.ctrl.T.Helper()
@@ -443,6 +458,21 @@ func (m *MockInterface) Stake(arg0 context.Context, arg1, arg2 types.Account, ar
 func (mr *MockInterfaceMockRecorder) Stake(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stake", reflect.TypeOf((*MockInterface)(nil).Stake), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+}
+
+// TransactionDeserialize mocks base method.
+func (m *MockInterface) TransactionDeserialize(arg0 []byte) (types.Transaction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TransactionDeserialize", arg0)
+	ret0, _ := ret[0].(types.Transaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TransactionDeserialize indicates an expected call of TransactionDeserialize.
+func (mr *MockInterfaceMockRecorder) TransactionDeserialize(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TransactionDeserialize", reflect.TypeOf((*MockInterface)(nil).TransactionDeserialize), arg0)
 }
 
 // Unstake mocks base method.

@@ -22,6 +22,7 @@ import (
 	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
+	"github.com/portto/solana-go-sdk/types"
 	"github.com/rs/cors"
 	"github.com/zeebo/errs"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/firebase"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
+	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
 	"github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
@@ -48,6 +50,8 @@ import (
 	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
+	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
@@ -156,6 +160,8 @@ type Config struct {
 	WhitelistMode               bool
 	BlacklistMode               bool
 	FraudDetectionMode          bool
+	NftMarketplaceServerHost    string
+	NftMarketplaceServerPort    int
 	SkipDeviceIDCheck           bool
 }
 
@@ -281,6 +287,9 @@ func ConfigFromEnv() *Config {
 		SkipDeviceIDCheck: env.GetBool("SKIP_DEVICE_ID_CHECK", false),
 
 		FraudDetectionMode: env.GetBool("FRAUD_DETECTION_MODE", false),
+
+		NftMarketplaceServerHost: env.MustString("NFT_MARKETPLACE_SERVER_HOST"),
+		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
 	}
 }
 
@@ -409,47 +418,61 @@ func (a *app) Run() {
 	}
 	_ = exchangeRatesClient
 
-	var walletSvcClient *walletClient.Client
-	var solanaClient solana.Interface
-	// Wallet service
-	{
-		walletRepository, err := walletRepo.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("walletRepo error: %v", err)
-		}
+	solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
+		SystemProgram:         a.cfg.SolanaSystemProgram,
+		SysvarRent:            a.cfg.SolanaSysvarRent,
+		SysvarClock:           a.cfg.SolanaSysvarClock,
+		SplToken:              a.cfg.SolanaSplToken,
+		StakeProgramID:        a.cfg.SolanaStakeProgramID,
+		TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+		FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+	}, exchangeRatesClient)
 
+	walletRepository, err := walletRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("can't prepare wallet repository: %v", err)
+	}
+
+	var feePayer types.Account
+	{
 		feePayerPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaFeePayerPrivateKey)
 		if err != nil {
 			log.Fatalf("feePayerPk base64 decoding error: %v", err)
 		}
+		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
+		}
+		feePayer, err = types.AccountFromBytes(feePayerPk)
+		if err != nil {
+			log.Fatalf("can't get fee payer account from bytes")
+		}
+	}
+
+	var tokenHolder types.Account
+	{
 		tokenHolderPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaTokenHolderPrivateKey)
 		if err != nil {
 			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
 		}
-
-		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:         a.cfg.SolanaSystemProgram,
-			SysvarRent:            a.cfg.SolanaSysvarRent,
-			SysvarClock:           a.cfg.SolanaSysvarClock,
-			SplToken:              a.cfg.SolanaSplToken,
-			StakeProgramID:        a.cfg.SolanaStakeProgramID,
-			TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
-			FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
-		}, exchangeRatesClient)
-		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
-			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
-		}
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, tokenHolderPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
 		}
+		tokenHolder, err = types.AccountFromBytes(tokenHolderPk)
+		if err != nil {
+			log.Fatalf("can't get token holder account from bytes")
+		}
+	}
 
+	var walletSvcClient *walletClient.Client
+	// Wallet service
+	{
 		walletService := wallet.NewService(
 			walletRepository,
 			solanaClient,
 			ethereumClient,
 			wallet.WithAssetSolanaAddress(a.cfg.SolanaAssetAddr),
-			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayerPk),
-			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolderPk),
+			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayer.PrivateKey),
+			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey),
 			wallet.WithMinAmountToTransfer(a.cfg.MinAmountToTransfer),
 			wallet.WithStakePoolSolanaAddress(a.cfg.SolanaStakePoolAddr),
 			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
@@ -749,6 +772,36 @@ func (a *app) Run() {
 		)
 		r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
 			trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	// In-app purchases service
+	{
+		iapRepository, err := iap_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare iap repository: %v", err)
+		}
+
+		if a.cfg.NftMarketplaceServerHost == "" {
+			log.Fatalf("nft marketplace server host isn't specified")
+		}
+		if a.cfg.NftMarketplaceServerPort == 0 {
+			log.Fatalf("nft marketplace server port isn't specified")
+		}
+		nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
+
+		iapSvc := iap_svc.NewService(
+			nftMarketplaceClient,
+			iapRepository,
+			walletRepository,
+			solanaClient,
+			a.cfg.SolanaAssetAddr,
+			feePayer,
+			tokenHolder,
+		)
+		r.Mount("/iap", iap_svc.MakeHTTPHandler(
+			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
 			logger,
 		))
 	}

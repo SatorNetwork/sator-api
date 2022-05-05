@@ -109,6 +109,8 @@ var (
 		TokenTransferPercent:        0.75,
 		ClaimRewardsPercent:         0.75,
 		FeeAccumulatorAddress:       "5HWrR1KpvbBA6QU4pMzJ3XGzj7y69qkkyPnLqRjQbTNT",
+		NftMarketplaceServerHost:    "http://localhost",
+		NftMarketplaceServerPort:    8080,
 	}
 )
 
