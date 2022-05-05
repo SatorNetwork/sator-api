@@ -27,7 +27,7 @@ type (
 		explorerURLTmpl   string
 		holdRewardsPeriod time.Duration
 		minAmountToClaim  float64 // minimum amount to claim rewards
-		worker            *worker.InProgressTransactionStatusWorker
+		worker            inProgressWorker
 	}
 
 	Winner struct {
@@ -56,6 +56,11 @@ type (
 
 	walletService interface {
 		WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (string, error)
+	}
+
+	inProgressWorker interface {
+		AddTransaction(transaction worker.InProgressTransactionStatusWorkerJob)
+		Start()
 	}
 
 	// Option func to set custom service options

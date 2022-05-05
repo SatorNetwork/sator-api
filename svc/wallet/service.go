@@ -98,6 +98,7 @@ type (
 		FeeAccumulatorAddress() string
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64, cfg *lib_solana.SendAssetsConfig) (string, error)
+		SendConfirmedAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer types.Account, source types.Account, recipientAddr string, amount float64, cfg *lib_solana.SendAssetsConfig, retries int) (string, bool, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
@@ -405,31 +406,49 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		return "", err
 	}
 
-	// sends token
-	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.SendAssetsWithAutoDerive(
-			ctx,
-			s.satorAssetSolanaAddr,
-			feePayer,
-			tokenHolder,
-			user.PublicKey,
-			amount,
-			&lib_solana.SendAssetsConfig{
-				PercentToCharge:           s.claimRewardsPercent,
-				ChargeSolanaFeeFromSender: true,
-			},
-		); err != nil {
-			if i < 4 {
-				log.Println(err)
-			} else {
-				return "", fmt.Errorf("could not claim rewards: %w", err)
-			}
-			time.Sleep(time.Second * 10)
-		} else {
-			log.Printf("user %s: successful transaction: rewards withdraw: %s", userID.String(), tx)
-			break
-		}
+	var ok bool
+	if tx, ok, err = s.sc.SendConfirmedAssetsWithAutoDerive(
+		ctx,
+		s.satorAssetSolanaAddr,
+		feePayer,
+		tokenHolder,
+		user.PublicKey,
+		amount,
+		&lib_solana.SendAssetsConfig{
+			PercentToCharge:           s.claimRewardsPercent,
+			ChargeSolanaFeeFromSender: true,
+		},
+		5,
+	); err != nil || !ok {
+		return "", fmt.Errorf("could not claim rewards: %w", err)
 	}
+
+	//// sends token
+	//for i := 0; i < 5; i++ {
+	//	if tx, err = s.sc.SendConfirmedAssetsWithAutoDerive(
+	//		ctx,
+	//		s.satorAssetSolanaAddr,
+	//		feePayer,
+	//		tokenHolder,
+	//		user.PublicKey,
+	//		amount,
+	//		&lib_solana.SendAssetsConfig{
+	//			PercentToCharge:           s.claimRewardsPercent,
+	//			ChargeSolanaFeeFromSender: true,
+	//		},
+	//		5,
+	//	); err != nil {
+	//		if i < 4 {
+	//			log.Println(err)
+	//		} else {
+	//			return "", fmt.Errorf("could not claim rewards: %w", err)
+	//		}
+	//		time.Sleep(time.Second * 10)
+	//	} else {
+	//		log.Printf("user %s: successful transaction: rewards withdraw: %s", userID.String(), tx)
+	//		break
+	//	}
+	//}
 
 	return tx, nil
 }

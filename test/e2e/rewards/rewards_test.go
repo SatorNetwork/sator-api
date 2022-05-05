@@ -1,7 +1,10 @@
 package rewards
 
 import (
+	"fmt"
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
+	"github.com/SatorNetwork/sator-api/test/framework/user"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,31 +23,47 @@ func TestClaimRewards(t *testing.T) {
 	require.NoError(t, err)
 
 	c := client.NewClient()
+	user := user.NewInitializedUser(auth.RandomSignUpRequest(), t)
 
-	signUpRequest := auth.RandomSignUpRequest()
-	signUpResp, err := c.Auth.SignUp(signUpRequest)
-	require.NoError(t, err)
-	require.NotNil(t, signUpResp)
-	require.NotEmpty(t, signUpResp.AccessToken)
-
-	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), signUpRequest.Email, sumsub.KYCStatusApproved)
+	err = c.DB.AuthDB().UpdateKYCStatus(context.TODO(), user.Email(), sumsub.KYCStatusApproved)
 	require.NoError(t, err)
 
-	id, err := c.DB.AuthDB().GetUserIDByEmail(context.Background(), signUpRequest.Email)
+	sc := solana_client.New(app_config.AppConfigForTests.SolanaApiBaseUrl, solana_client.Config{
+		SystemProgram:  app_config.AppConfigForTests.SolanaSystemProgram,
+		SysvarRent:     app_config.AppConfigForTests.SolanaSysvarRent,
+		SysvarClock:    app_config.AppConfigForTests.SolanaSysvarClock,
+		SplToken:       app_config.AppConfigForTests.SolanaSplToken,
+		StakeProgramID: app_config.AppConfigForTests.SolanaStakeProgramID,
+	}, nil)
+	_ = sc
+
+	id, err := c.DB.AuthDB().GetUserIDByEmail(context.Background(), user.Email())
 	require.NoError(t, err)
 
-	err = c.Auth.VerifyAcount(signUpResp.AccessToken, &auth.VerifyAccountRequest{
-		OTP: "12345",
-	})
-	require.NoError(t, err)
+	{
+		//feePayerPk, err := base64.StdEncoding.DecodeString(app_config.AppConfigForTests.SolanaFeePayerPrivateKey)
+		//require.NoError(t, err)
+		//feePayer, err := sc.AccountFromPrivateKeyBytes(feePayerPk)
+		//require.NoError(t, err)
+		//
+		//feeAccumulatorPublicKey := common.PublicKeyFromString(app_config.AppConfigForTests.FeeAccumulatorAddress)
+		//txHash, err := sc.CreateAccountWithATA(context.Background(), app_config.AppConfigForTests.SolanaAssetAddr, feeAccumulatorPublicKey.ToBase58(), feePayer)
+		//require.NoError(t, err)
+		//fmt.Println(txHash)
+		//
+		//addr, err := c.Wallet.GetSatorTokenAddress(user.AccessToken())
+		//require.NoError(t, err)
+		//fmt.Println(addr)
+		//c.DB.WalletDB().
+		//balance, err := sc.GetTokenAccountBalance(context.Background(), acc.PublicKey.ToBase58())
+		//require.NoError(t, err)
+	}
 
 	err = c.DB.RewardsDB().DepositRewards(context.Background(), id, 100)
 	require.NoError(t, err)
 
-	resp, err := c.RewardsClient.ClaimRewards(signUpResp.AccessToken)
+	resp, err := c.RewardsClient.ClaimRewards(user.AccessToken())
 	require.NoError(t, err)
-	require.NotEqual(t, resp.TransactionURL, "")
-
-	_, err = c.RewardsClient.ClaimRewards(signUpResp.AccessToken)
-	require.Error(t, err)
+	require.NotEqual(t, "", resp.TransactionURL)
+	fmt.Println(resp.TransactionURL)
 }

@@ -124,6 +124,21 @@ func (mr *MockInterfaceMockRecorder) GetAccountBalanceSOL(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountBalanceSOL", reflect.TypeOf((*MockInterface)(nil).GetAccountBalanceSOL), arg0, arg1)
 }
 
+// GetBlockHeight mocks base method.
+func (m *MockInterface) GetBlockHeight(arg0 context.Context) (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlockHeight", arg0)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlockHeight indicates an expected call of GetBlockHeight.
+func (mr *MockInterfaceMockRecorder) GetBlockHeight(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHeight", reflect.TypeOf((*MockInterface)(nil).GetBlockHeight), arg0)
+}
+
 // GetConfirmedTransaction mocks base method.
 func (m *MockInterface) GetConfirmedTransaction(arg0 context.Context, arg1 string) (GetConfirmedTransactionResponse, error) {
 	m.ctrl.T.Helper()
@@ -363,6 +378,22 @@ func (mr *MockInterfaceMockRecorder) SendAssetsWithAutoDerive(arg0, arg1, arg2, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAssetsWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).SendAssetsWithAutoDerive), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
+// SendConfirmedAssetsWithAutoDerive mocks base method.
+func (m *MockInterface) SendConfirmedAssetsWithAutoDerive(arg0 context.Context, arg1 string, arg2, arg3 types.Account, arg4 string, arg5 float64, arg6 *SendAssetsConfig, arg7 int) (string, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendConfirmedAssetsWithAutoDerive", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SendConfirmedAssetsWithAutoDerive indicates an expected call of SendConfirmedAssetsWithAutoDerive.
+func (mr *MockInterfaceMockRecorder) SendConfirmedAssetsWithAutoDerive(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendConfirmedAssetsWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).SendConfirmedAssetsWithAutoDerive), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+}
+
 // SendTransaction mocks base method.
 func (m *MockInterface) SendTransaction(arg0 context.Context, arg1, arg2 types.Account, arg3 ...types.Instruction) (string, error) {
 	m.ctrl.T.Helper()
@@ -381,6 +412,22 @@ func (mr *MockInterfaceMockRecorder) SendTransaction(arg0, arg1, arg2 interface{
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransaction", reflect.TypeOf((*MockInterface)(nil).SendTransaction), varargs...)
+}
+
+// SendTransactionUntilConfirmed mocks base method.
+func (m *MockInterface) SendTransactionUntilConfirmed(arg0 context.Context, arg1 types.Transaction, arg2 int) (string, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendTransactionUntilConfirmed", arg0, arg1, arg2)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SendTransactionUntilConfirmed indicates an expected call of SendTransactionUntilConfirmed.
+func (mr *MockInterfaceMockRecorder) SendTransactionUntilConfirmed(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransactionUntilConfirmed", reflect.TypeOf((*MockInterface)(nil).SendTransactionUntilConfirmed), arg0, arg1, arg2)
 }
 
 // Stake mocks base method.

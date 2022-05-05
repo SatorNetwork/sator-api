@@ -64,6 +64,10 @@ func (u *User) PrivateKey() *rsa.PrivateKey {
 	return u.privateKey
 }
 
+func (u *User) PublicKey() *rsa.PublicKey {
+	return u.publicKey
+}
+
 func (u *User) SignUp() {
 	signUpResp, err := u.c.Auth.SignUp(u.signUpRequest)
 	require.NoError(u.t, err)
