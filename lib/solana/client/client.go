@@ -21,6 +21,7 @@ import (
 type (
 	Client struct {
 		solana              *client.Client
+		solanaRpc           rpc.RpcClient
 		endpoint            string
 		decimals            uint8
 		mltpl               uint64
@@ -33,6 +34,7 @@ type (
 func New(endpoint string, config Config, exchangeRatesClient *exchange_rates_client.Client) lib_solana.Interface {
 	return &Client{
 		solana:              client.NewClient(endpoint),
+		solanaRpc:           rpc.NewRpcClient(endpoint),
 		endpoint:            endpoint,
 		decimals:            9,
 		mltpl:               1e9,

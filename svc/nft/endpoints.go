@@ -4,30 +4,32 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SatorNetwork/sator-api/lib/jwt"
-	"github.com/SatorNetwork/sator-api/lib/rbac"
-	"github.com/SatorNetwork/sator-api/lib/utils"
-	"github.com/SatorNetwork/sator-api/lib/validator"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
+
+	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+	"github.com/SatorNetwork/sator-api/lib/validator"
 )
 
 type (
 	// Endpoints collection of NFT service
 	Endpoints struct {
-		CreateNFT          endpoint.Endpoint
-		GetNFTs            endpoint.Endpoint
-		GetNFTsByCategory  endpoint.Endpoint
-		GetNFTsByShowID    endpoint.Endpoint
-		GetNFTsByEpisodeID endpoint.Endpoint
-		GetNFTsByUserID    endpoint.Endpoint
-		GetNFTByID         endpoint.Endpoint
-		BuyNFT             endpoint.Endpoint
-		GetCategories      endpoint.Endpoint
-		GetMainScreenData  endpoint.Endpoint
-		DeleteNFTItemByID  endpoint.Endpoint
-		UpdateNFTItem      endpoint.Endpoint
+		CreateNFT              endpoint.Endpoint
+		GetNFTs                endpoint.Endpoint
+		GetNFTsByCategory      endpoint.Endpoint
+		GetNFTsByShowID        endpoint.Endpoint
+		GetNFTsByEpisodeID     endpoint.Endpoint
+		GetNFTsByUserID        endpoint.Endpoint
+		GetNFTByID             endpoint.Endpoint
+		BuyNFT                 endpoint.Endpoint
+		GetCategories          endpoint.Endpoint
+		GetMainScreenData      endpoint.Endpoint
+		DeleteNFTItemByID      endpoint.Endpoint
+		UpdateNFTItem          endpoint.Endpoint
+		GetNFTsByWalletAddress endpoint.Endpoint
 	}
 
 	service interface {
@@ -44,6 +46,7 @@ type (
 		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
 		UpdateNFTItem(ctx context.Context, nft *NFT) error
 		GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error)
+		GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*lib_solana.ArweaveNFTMetadata, error)
 	}
 
 	TransportNFT struct {
@@ -118,6 +121,10 @@ type (
 		Supply      int       `json:"supply"`
 		BuyNowPrice float64   `json:"buy_now_price"`
 		TokenURI    string    `json:"token_uri" validate:"required"`
+	}
+
+	GetNFTsByWalletAddressRequest struct {
+		WalletAddr string `json:"wallet_addr"`
 	}
 )
 
@@ -520,5 +527,27 @@ func MakeUpdateNFTItemEndpoint(s service, v validator.ValidateFunc) endpoint.End
 		}
 
 		return true, nil
+	}
+}
+
+func MakeGetNFTsByWalletAddressEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetNFTsByWalletAddressRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		nfts, err := s.GetNFTsByWalletAddress(context.Background(), &GetNFTsByWalletAddressRequest{
+			WalletAddr: req.WalletAddr,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return nfts, nil
 	}
 }
