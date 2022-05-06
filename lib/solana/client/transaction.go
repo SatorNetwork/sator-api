@@ -38,12 +38,17 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
 
+	var blockTime int64
+	if tx.BlockTime != nil {
+		blockTime = *tx.BlockTime
+	}
+
 	tr := lib_solana.ConfirmedTransactionResponse{
 		TxHash:        txhash,
 		Amount:        amount,
 		AmountString:  fmt.Sprintf("%f", amount),
-		CreatedAtUnix: *tx.BlockTime,
-		CreatedAt:     time.Unix(*tx.BlockTime, 0),
+		CreatedAtUnix: blockTime,
+		CreatedAt:     time.Unix(blockTime, 0),
 	}
 
 	return tr, nil
