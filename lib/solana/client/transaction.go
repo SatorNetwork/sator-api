@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/portto/solana-go-sdk/rpc"
+
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 )
 
@@ -26,39 +28,36 @@ func (c *Client) GetConfirmedTransaction(ctx context.Context, txhash string) (li
 
 // GetConfirmedTransactionForAccount returns transactions list for given account
 func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKey, txhash string) (lib_solana.ConfirmedTransactionResponse, error) {
-	tx, err := c.GetConfirmedTransaction(ctx, txhash)
+	tx, err := c.solana.GetTransaction(ctx, txhash)
 	if err != nil {
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
 
-	var accountIndex int
-	for idx, acc := range tx.Transaction.Message.Accounts {
-		if acc.ToBase58() == accPubKey {
-			accountIndex = idx
-			break
-		}
-	}
-
-	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accountIndex)
+	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accPubKey)
 	if err != nil {
 		return lib_solana.ConfirmedTransactionResponse{}, err
+	}
+
+	var blockTime int64
+	if tx.BlockTime != nil {
+		blockTime = *tx.BlockTime
 	}
 
 	tr := lib_solana.ConfirmedTransactionResponse{
 		TxHash:        txhash,
 		Amount:        amount,
 		AmountString:  fmt.Sprintf("%f", amount),
-		CreatedAtUnix: tx.BlockTime,
-		CreatedAt:     time.Unix(tx.BlockTime, 0),
+		CreatedAtUnix: blockTime,
+		CreatedAt:     time.Unix(blockTime, 0),
 	}
 
 	return tr, nil
 }
 
-func getTransactionAmountForAccountIdx(pre, post []lib_solana.TokenBalance, accountIndex int) (float64, error) {
+func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalance, accPubKey string) (float64, error) {
 	var preTokenBalance, postTokenBalance int64
 	for _, b := range pre {
-		if b.AccountIndex == accountIndex {
+		if b.Owner == accPubKey {
 			a, err := strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
 			if err != nil {
 				return 0, err
@@ -70,7 +69,7 @@ func getTransactionAmountForAccountIdx(pre, post []lib_solana.TokenBalance, acco
 	}
 
 	for _, b := range post {
-		if b.AccountIndex == accountIndex {
+		if b.Owner == accPubKey {
 			a, err := strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
 			if err != nil {
 				return 0, err
