@@ -59,11 +59,11 @@ func MakeRegisterInAppPurchaseEndpoint(s service, v validator.ValidateFunc) endp
 			return nil, err
 		}
 
-		resp, err := s.RegisterInAppPurchase(ctx, userID, typedReq)
+		_, err = s.RegisterInAppPurchase(ctx, userID, typedReq)
 		if err != nil {
 			return nil, err
 		}
 
-		return resp, nil
+		return true, nil
 	}
 }
