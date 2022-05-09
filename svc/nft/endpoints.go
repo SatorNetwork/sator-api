@@ -217,18 +217,19 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		CreateNFT:          MakeCreateNFTEndpoint(s, validateFunc),
-		GetNFTs:            MakeGetNFTsEndpoint(s, validateFunc),
-		GetNFTsByCategory:  MakeGetNFTsByCategoryEndpoint(s, validateFunc),
-		GetNFTsByShowID:    MakeGetNFTsByShowIDEndpoint(s, validateFunc),
-		GetNFTsByEpisodeID: MakeGetNFTsByEpisodeIDEndpoint(s, validateFunc),
-		GetNFTsByUserID:    MakeGetNFTsByUserIDEndpoint(s, validateFunc),
-		GetNFTByID:         MakeGetNFTByIDEndpoint(s),
-		BuyNFT:             MakeBuyNFTEndpoint(s),
-		GetCategories:      MakeGetCategoriesEndpoint(s),
-		GetMainScreenData:  MakeGetMainScreenDataEndpoint(s),
-		DeleteNFTItemByID:  MakeDeleteNFTItemByIDEndpoint(s),
-		UpdateNFTItem:      MakeUpdateNFTItemEndpoint(s, validateFunc),
+		CreateNFT:              MakeCreateNFTEndpoint(s, validateFunc),
+		GetNFTs:                MakeGetNFTsEndpoint(s, validateFunc),
+		GetNFTsByCategory:      MakeGetNFTsByCategoryEndpoint(s, validateFunc),
+		GetNFTsByShowID:        MakeGetNFTsByShowIDEndpoint(s, validateFunc),
+		GetNFTsByEpisodeID:     MakeGetNFTsByEpisodeIDEndpoint(s, validateFunc),
+		GetNFTsByUserID:        MakeGetNFTsByUserIDEndpoint(s, validateFunc),
+		GetNFTByID:             MakeGetNFTByIDEndpoint(s),
+		BuyNFT:                 MakeBuyNFTEndpoint(s),
+		GetCategories:          MakeGetCategoriesEndpoint(s),
+		GetMainScreenData:      MakeGetMainScreenDataEndpoint(s),
+		DeleteNFTItemByID:      MakeDeleteNFTItemByIDEndpoint(s),
+		UpdateNFTItem:          MakeUpdateNFTItemEndpoint(s, validateFunc),
+		GetNFTsByWalletAddress: MakeGetNFTsByWalletAddressEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -246,6 +247,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetMainScreenData = mdw(e.GetMainScreenData)
 			e.DeleteNFTItemByID = mdw(e.DeleteNFTItemByID)
 			e.UpdateNFTItem = mdw(e.UpdateNFTItem)
+			e.GetNFTsByWalletAddress = mdw(e.GetNFTsByWalletAddress)
 		}
 	}
 
@@ -536,13 +538,8 @@ func MakeGetNFTsByWalletAddressEndpoint(s service, v validator.ValidateFunc) end
 			return nil, err
 		}
 
-		req := request.(GetNFTsByWalletAddressRequest)
-		if err := v(req); err != nil {
-			return nil, err
-		}
-
 		nfts, err := s.GetNFTsByWalletAddress(context.Background(), &GetNFTsByWalletAddressRequest{
-			WalletAddr: req.WalletAddr,
+			WalletAddr: request.(string),
 		})
 		if err != nil {
 			return nil, err

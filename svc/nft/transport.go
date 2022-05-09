@@ -265,11 +265,12 @@ func decodeUpdateNFTItemRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func decodeGetNFTsByWalletAddressRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req GetNFTsByWalletAddressRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, fmt.Errorf("could not decode request body: %w", err)
+	walletAddress := chi.URLParam(r, "wallet_address")
+	if walletAddress == "" {
+		return nil, fmt.Errorf("%w: missed wallet address", ErrInvalidParameter)
 	}
-	return req, nil
+
+	return walletAddress, nil
 }
 
 // returns http error code by error type
