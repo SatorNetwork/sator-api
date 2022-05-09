@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/rpc"
 
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
@@ -33,6 +35,10 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
 
+	if err := checkIfTxIsValid(tx); err != nil {
+		return lib_solana.ConfirmedTransactionResponse{}, errors.Wrap(err, "tx is invalid")
+	}
+
 	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accPubKey)
 	if err != nil {
 		return lib_solana.ConfirmedTransactionResponse{}, err
@@ -52,6 +58,20 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 	}
 
 	return tr, nil
+}
+
+func checkIfTxIsValid(tx *client.GetTransactionResponse) error {
+	if tx.Meta == nil {
+		return fmt.Errorf("tx.Meta should not be nil")
+	}
+	if tx.Meta.PreTokenBalances == nil {
+		return fmt.Errorf("tx.Meta.PreTokenBalances should not be nil")
+	}
+	if tx.Meta.PostTokenBalances == nil {
+		return fmt.Errorf("tx.Meta.PostTokenBalances should not be nil")
+	}
+
+	return nil
 }
 
 func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalance, accPubKey string) (float64, error) {
