@@ -441,14 +441,17 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 		return Transactions{}, err
 	}
 
+	var skippedTx uint
 	notEmptyTransactions := make(Transactions, 0, len(transactions))
 	for _, transaction := range transactions {
 		if transaction.Amount != 0 {
 			notEmptyTransactions = append(notEmptyTransactions, transaction)
+		} else {
+			skippedTx++
 		}
 	}
 
-	fmt.Printf("going to return %v transactions\n", notEmptyTransactions)
+	fmt.Printf("going to return %v transactions, skipped tx: %v\n", len(notEmptyTransactions), skippedTx)
 
 	// pagination for solana trannsactions is disabled
 	// transactionsPaginated := paginateTransactions(notEmptyTransactions, int(offset), int(limit))
