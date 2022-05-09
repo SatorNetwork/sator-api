@@ -54,6 +54,7 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 		fmt.Println(err)
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
+	fmt.Printf("amount: %v\n", amount)
 
 	var blockTime int64
 	if tx.BlockTime != nil {
