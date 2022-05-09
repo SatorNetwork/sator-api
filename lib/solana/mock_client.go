@@ -154,6 +154,21 @@ func (mr *MockInterfaceMockRecorder) GetConfirmedTransactionForAccount(arg0, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedTransactionForAccount", reflect.TypeOf((*MockInterface)(nil).GetConfirmedTransactionForAccount), arg0, arg1, arg2)
 }
 
+// GetNFTsByWalletAddress mocks base method.
+func (m *MockInterface) GetNFTsByWalletAddress(arg0 context.Context, arg1 string) ([]*ArweaveNFTMetadata, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNFTsByWalletAddress", arg0, arg1)
+	ret0, _ := ret[0].([]*ArweaveNFTMetadata)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNFTsByWalletAddress indicates an expected call of GetNFTsByWalletAddress.
+func (mr *MockInterfaceMockRecorder) GetNFTsByWalletAddress(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTsByWalletAddress", reflect.TypeOf((*MockInterface)(nil).GetNFTsByWalletAddress), arg0, arg1)
+}
+
 // GetTokenAccountBalance mocks base method.
 func (m *MockInterface) GetTokenAccountBalance(arg0 context.Context, arg1 string) (float64, error) {
 	m.ctrl.T.Helper()

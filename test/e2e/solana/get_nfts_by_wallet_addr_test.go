@@ -15,7 +15,9 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 )
 
-func TestGetTxs(t *testing.T) {
+func TestGetNFTsByWalletAddr(t *testing.T) {
+	t.Skip()
+
 	c := client.NewClient()
 
 	exchangeRatesClient, err := exchange_rates_client.Easy(c.DB.Client())
@@ -36,9 +38,12 @@ func TestGetTxs(t *testing.T) {
 	ctxb := context.Background()
 	addr := "9Qkac1Cyd3bZJ3Hby9N2EWw58q9we3DMYmpft6swoxes"
 
-	txs, err := solanaClient.GetTransactions(ctxb, addr)
-	if err != nil && !strings.Contains(err.Error(), `{"jsonrpc":"2.0","error":{"code":503,"message":"Service unavailable"}`) {
+	nfts, err := solanaClient.GetNFTsByWalletAddress(ctxb, addr)
+	if err != nil &&
+		!strings.Contains(err.Error(), `{"jsonrpc":"2.0","error":{"code":503,"message":"Service unavailable"}`) &&
+		!strings.Contains(err.Error(), `dial tcp: lookup www.arweave.net: No address associated with hostname`) &&
+		!strings.Contains(err.Error(), `dial tcp: lookup www.arweave.net: no such host`) {
 		t.Fatal(err)
 	}
-	_ = txs
+	_ = nfts
 }

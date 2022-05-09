@@ -49,6 +49,7 @@ type Interface interface {
 	) (string, error)
 	TransactionDeserialize(tx []byte) (types.Transaction, error)
 	SerializeTxMessage(message types.Message) ([]byte, error)
+	GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*ArweaveNFTMetadata, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
@@ -116,5 +117,34 @@ type (
 		ChargeSolanaFeeFromSender bool
 		AllowFallbackToDefaultFee bool
 		DefaultFee                uint64
+	}
+
+	ArweaveNFTMetadata struct {
+		Name                 string `json:"name"`
+		Symbol               string `json:"symbol"`
+		Description          string `json:"description"`
+		SellerFeeBasisPoints int    `json:"seller_fee_basis_points"`
+		Image                string `json:"image"`
+		Attributes           []struct {
+			TraitType string `json:"trait_type"`
+			Value     struct {
+				StringValue string `json:"StringValue"`
+			} `json:"value"`
+		} `json:"attributes"`
+		Collection struct {
+			Name   string `json:"name"`
+			Family string `json:"family"`
+		} `json:"collection"`
+		Properties struct {
+			Files []struct {
+				Uri  string `json:"uri"`
+				Type string `json:"type"`
+			} `json:"files"`
+			Category string `json:"category"`
+			Creators []struct {
+				Address string `json:"address"`
+				Share   int    `json:"share"`
+			} `json:"creators"`
+		} `json:"properties"`
 	}
 )

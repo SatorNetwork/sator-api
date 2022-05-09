@@ -7,15 +7,19 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/lib/db"
-	"github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
+
+	"github.com/SatorNetwork/sator-api/lib/db"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	"github.com/SatorNetwork/sator-api/svc/nft/repository"
 )
 
 type (
 	// Service struct
 	Service struct {
 		nftRepo    nftRepository
+		sc         solanaClient
 		buyNFTFunc buyNFTFunction
 	}
 
@@ -73,6 +77,10 @@ type (
 		DoesRelationIDHasRelationNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
 	}
 
+	solanaClient interface {
+		GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*lib_solana.ArweaveNFTMetadata, error)
+	}
+
 	NFTItemRow struct {
 		ID             uuid.UUID      `json:"id"`
 		OwnerID        uuid.NullUUID  `json:"owner_id"`
@@ -95,8 +103,12 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(nftRepo nftRepository, buyNFTFunc buyNFTFunction, opt ...Option) *Service {
-	s := &Service{nftRepo: nftRepo, buyNFTFunc: buyNFTFunc}
+func NewService(nftRepo nftRepository, sc solanaClient, buyNFTFunc buyNFTFunction, opt ...Option) *Service {
+	s := &Service{
+		nftRepo:    nftRepo,
+		sc:         sc,
+		buyNFTFunc: buyNFTFunc,
+	}
 
 	for _, fn := range opt {
 		fn(s)
@@ -472,4 +484,12 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 	}
 
 	return hasRelationID, nil
+}
+
+func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*lib_solana.ArweaveNFTMetadata, error) {
+	nfts, err := s.sc.GetNFTsByWalletAddress(ctx, req.WalletAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get nfts from solana blockchain")
+	}
+	return nfts, nil
 }

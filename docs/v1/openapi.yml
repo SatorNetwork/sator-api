@@ -67,6 +67,20 @@ components:
           items:
             type: string
 
+    ArweaveNFTMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+        symbol:
+          type: string
+        description:
+          type: string
+        seller_fee_basis_points:
+          type: int
+        image:
+          type: string
+
     Category:
       type: object
       properties:
@@ -188,6 +202,22 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/NFT"
+
+    ArweaveNFTMetadata:
+      description: ArweaveNFTMetadata.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ArweaveNFTMetadata"
+    ArweaveNFTMetadatas:
+      description: ArweaveNFTMetadatas.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/ArweaveNFTMetadata"
+
     Categories:
       description: Categories.
       content:
@@ -4108,6 +4138,28 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/NFTs"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /nft/by_wallet_address/{wallet_address}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get all NFTs by wallet address.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wallet_address
+          in: path
+          description: Solana wallet address.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ArweaveNFTMetadatas"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
