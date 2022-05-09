@@ -28,3 +28,4 @@ geth.*
 sator-api.log
 vendor/
 .env
+.vscode
