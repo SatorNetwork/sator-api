@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -118,6 +119,8 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 	}
 	purchase := iapResp.Receipt.InApp[0]
 
+	fmt.Printf("Processing receipt with %v transaction ID\n", purchase.TransactionID)
+
 	solanaAccount, err := s.wr.GetSolanaAccountByUserIDAndType(ctx, repository.GetSolanaAccountByUserIDAndTypeParams{
 		UserID:     userID,
 		WalletType: wallet.WalletTypeSator,
@@ -169,7 +172,7 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		UserID:        userID,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "can't create IAP receipt")
+		return nil, errors.Wrapf(err, "can't create IAP receipt with %v transaction ID", purchase.TransactionID)
 	}
 
 	log.Printf("Preparing buy tx, mint address: %v, charge tokens from: %v", req.MintAddress, solanaAccount.PublicKey)
