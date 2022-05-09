@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -41,16 +40,18 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 	if err != nil {
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
-	fmt.Printf("txInJson: %v\n", txInJson)
+	fmt.Printf("txInJson: %s\n", txInJson)
 
 	if err := checkIfTxIsValid(tx); err != nil {
 		err := errors.Wrap(err, "tx is invalid")
-		log.Println(err)
+		fmt.Println(err)
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
 
 	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accPubKey)
 	if err != nil {
+		err := errors.Wrap(err, "can't get transaction amount for account idx")
+		fmt.Println(err)
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
 
