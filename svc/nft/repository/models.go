@@ -36,6 +36,11 @@ type NFTRelation struct {
 	RelationID uuid.UUID `json:"relation_id"`
 }
 
+type NftCache struct {
+	MintAddr string `json:"mint_addr"`
+	Metadata []byte `json:"metadata"`
+}
+
 type NftOwner struct {
 	NFTItemID uuid.UUID `json:"nft_item_id"`
 	UserID    uuid.UUID `json:"user_id"`

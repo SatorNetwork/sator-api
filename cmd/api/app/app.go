@@ -610,7 +610,6 @@ func (a *app) Run() {
 
 	// Shows service
 	{
-
 		// Show repo
 		// FIXME: remove it when the app will be fixed
 		showRepo, err := showsRepo.Prepare(ctx, db)
