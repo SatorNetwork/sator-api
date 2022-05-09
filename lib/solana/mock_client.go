@@ -169,6 +169,36 @@ func (mr *MockInterfaceMockRecorder) GetNFTsByWalletAddress(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTsByWalletAddress", reflect.TypeOf((*MockInterface)(nil).GetNFTsByWalletAddress), arg0, arg1)
 }
 
+// GetNFTMintAddrs mocks base method.
+func (m *MockInterface) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNFTMintAddrs", walletAddr)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNFTMintAddrs indicates an expected call of GetNFTMintAddrs.
+func (mr *MockInterfaceMockRecorder) GetNFTMintAddrs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTMintAddrs", reflect.TypeOf((*MockInterface)(nil).GetNFTMintAddrs), arg0)
+}
+
+// GetNFTMetadata mocks base method. 
+func (m *MockInterface) GetNFTMetadata(mintAddr string) (*ArweaveNFTMetadata, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNFTMetadata", mintAddr)
+	ret0, _ := ret[0].(*ArweaveNFTMetadata)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNFTMetadata indicates an expected call of GetNFTMetadata.
+func (mr *MockInterfaceMockRecorder) GetNFTMetadata(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTMetadata", reflect.TypeOf((*MockInterface)(nil).GetNFTMetadata), arg0)
+}
+
 // GetTokenAccountBalance mocks base method.
 func (m *MockInterface) GetTokenAccountBalance(arg0 context.Context, arg1 string) (float64, error) {
 	m.ctrl.T.Helper()
