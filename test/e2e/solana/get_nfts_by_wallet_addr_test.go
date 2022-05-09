@@ -37,7 +37,9 @@ func TestGetNFTsByWalletAddr(t *testing.T) {
 	addr := "9Qkac1Cyd3bZJ3Hby9N2EWw58q9we3DMYmpft6swoxes"
 
 	nfts, err := solanaClient.GetNFTsByWalletAddress(ctxb, addr)
-	if err != nil && !strings.Contains(err.Error(), `{"jsonrpc":"2.0","error":{"code":503,"message":"Service unavailable"}`) {
+	if err != nil &&
+		!strings.Contains(err.Error(), `{"jsonrpc":"2.0","error":{"code":503,"message":"Service unavailable"}`) &&
+		!strings.Contains(err.Error(), `dial tcp: lookup www.arweave.net: No address associated with hostname`) {
 		t.Fatal(err)
 	}
 	_ = nfts
