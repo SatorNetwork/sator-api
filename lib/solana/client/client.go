@@ -202,11 +202,15 @@ func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList 
 	for _, signature := range signatures {
 		tx, err := c.GetConfirmedTransactionForAccount(ctx, accPubKey, signature.Signature)
 		if err != nil {
+			err := errors.Wrap(err, "can't get confirmed transaction for account")
+			fmt.Println(err)
 			return nil, err
 		}
 
 		txList = append(txList, tx)
 	}
+
+	fmt.Printf("got %v transactions\n", len(txList))
 
 	return txList, nil
 }
