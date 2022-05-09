@@ -448,6 +448,8 @@ func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, wal
 		}
 	}
 
+	fmt.Printf("going to return %v transactions\n", notEmptyTransactions)
+
 	// pagination for solana trannsactions is disabled
 	// transactionsPaginated := paginateTransactions(notEmptyTransactions, int(offset), int(limit))
 	// return transactionsPaginated, nil
