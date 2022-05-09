@@ -191,6 +191,7 @@ func (c *Client) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, asset
 
 // GetTransactions ...
 func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList []lib_solana.ConfirmedTransactionResponse, err error) {
+	fmt.Printf("accPubKey: %v\n", accPubKey)
 	signatures, err := c.solana.GetSignaturesForAddressWithConfig(ctx, accPubKey, rpc.GetSignaturesForAddressConfig{
 		Limit:      30,
 		Commitment: rpc.CommitmentFinalized,
