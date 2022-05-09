@@ -50,6 +50,8 @@ type Interface interface {
 	TransactionDeserialize(tx []byte) (types.Transaction, error)
 	SerializeTxMessage(message types.Message) ([]byte, error)
 	GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*ArweaveNFTMetadata, error)
+	GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)
+	GetNFTMetadata(mintAddr string) (*ArweaveNFTMetadata, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)

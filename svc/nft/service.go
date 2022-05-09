@@ -3,7 +3,9 @@ package nft
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -57,6 +59,12 @@ type (
 		Title string
 	}
 
+	// NFTMetadata struct extends lib_solana.ArweaveNFTMetadata
+	NFTMetadata struct {
+		MintAddr string `json:"mint_addr"`
+		*lib_solana.ArweaveNFTMetadata
+	}
+
 	// Option func to set custom service options
 	Option func(*Service)
 
@@ -75,10 +83,14 @@ type (
 		DeleteNFTItemByID(ctx context.Context, id uuid.UUID) error
 		AddNFTRelation(ctx context.Context, arg repository.AddNFTRelationParams) error
 		DoesRelationIDHasRelationNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
+
+		AddNFTToCache(ctx context.Context, arg repository.AddNFTToCacheParams) error
+		GetNFTFromCache(ctx context.Context, mintAddr string) (repository.NftCache, error)
 	}
 
 	solanaClient interface {
-		GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*lib_solana.ArweaveNFTMetadata, error)
+		GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)
+		GetNFTMetadata(mintAddr string) (*lib_solana.ArweaveNFTMetadata, error)
 	}
 
 	NFTItemRow struct {
@@ -486,10 +498,43 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 	return hasRelationID, nil
 }
 
-func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*lib_solana.ArweaveNFTMetadata, error) {
-	nfts, err := s.sc.GetNFTsByWalletAddress(ctx, req.WalletAddr)
+// GetNFTsByWalletAddress returns all NFTs that are related to a wallet address
+func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTMetadata, error) {
+	mintAddrs, err := s.sc.GetNFTMintAddrs(ctx, req.WalletAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get nfts from solana blockchain")
 	}
+
+	nfts := make([]*NFTMetadata, 0, len(mintAddrs))
+	for _, mint := range mintAddrs {
+		cachedMeta, err := s.nftRepo.GetNFTFromCache(ctx, mint)
+		if err != nil {
+			meta, err := s.sc.GetNFTMetadata(mint)
+			if err != nil {
+				continue
+			}
+			nfts = append(nfts, &NFTMetadata{mint, meta})
+
+			if b, err := json.Marshal(meta); err == nil {
+				if err = s.nftRepo.AddNFTToCache(ctx, repository.AddNFTToCacheParams{
+					MintAddr: mint,
+					Metadata: b,
+				}); err != nil {
+					log.Printf("could not add nft %s to cache: %v", mint, err)
+				}
+			} else {
+				log.Printf("could not marshal nft %s: %v", mint, err)
+			}
+		} else {
+			meta := &lib_solana.ArweaveNFTMetadata{}
+			if err := json.Unmarshal(cachedMeta.Metadata, meta); err != nil {
+				log.Printf("could not unmarshal nft %s: %v", mint, err)
+				continue
+			}
+
+			nfts = append(nfts, &NFTMetadata{mint, meta})
+		}
+	}
+
 	return nfts, nil
 }

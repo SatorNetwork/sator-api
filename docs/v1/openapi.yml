@@ -70,6 +70,8 @@ components:
     ArweaveNFTMetadata:
       type: object
       properties:
+        mint_addr:
+          type: string
         name:
           type: string
         symbol:
@@ -77,7 +79,7 @@ components:
         description:
           type: string
         seller_fee_basis_points:
-          type: int
+          type: number
         image:
           type: string
 
@@ -4149,7 +4151,7 @@ paths:
         - "NFT"
       summary: Get all NFTs by wallet address.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: wallet_address
           in: path
@@ -5890,7 +5892,7 @@ paths:
         - "Puzzle game (client part)"
       summary: Tapping on tile in puzzle game
       security:
-          - bearerAuth: []
+        - bearerAuth: []
       parameters:
         - name: puzzle_game_id
           in: path
@@ -5899,18 +5901,18 @@ paths:
           schema:
             type: string
       requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  x:
-                    type: integer
-                    description: "x position"
-                  y:
-                    type: integer
-                    description: "y position"
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                x:
+                  type: integer
+                  description: "x position"
+                y:
+                  type: integer
+                  description: "y position"
       responses:
         "200":
           $ref: "#/components/responses/PuzzleGame"

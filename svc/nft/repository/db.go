@@ -34,6 +34,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addNFTRelationStmt, err = db.PrepareContext(ctx, addNFTRelation); err != nil {
 		return nil, fmt.Errorf("error preparing query AddNFTRelation: %w", err)
 	}
+	if q.addNFTToCacheStmt, err = db.PrepareContext(ctx, addNFTToCache); err != nil {
+		return nil, fmt.Errorf("error preparing query AddNFTToCache: %w", err)
+	}
 	if q.deleteNFTCategoryByIDStmt, err = db.PrepareContext(ctx, deleteNFTCategoryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteNFTCategoryByID: %w", err)
 	}
@@ -60,6 +63,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getNFTCategoryByIDStmt, err = db.PrepareContext(ctx, getNFTCategoryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNFTCategoryByID: %w", err)
+	}
+	if q.getNFTFromCacheStmt, err = db.PrepareContext(ctx, getNFTFromCache); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNFTFromCache: %w", err)
 	}
 	if q.getNFTItemByIDStmt, err = db.PrepareContext(ctx, getNFTItemByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNFTItemByID: %w", err)
@@ -107,6 +113,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addNFTRelationStmt: %w", cerr)
 		}
 	}
+	if q.addNFTToCacheStmt != nil {
+		if cerr := q.addNFTToCacheStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addNFTToCacheStmt: %w", cerr)
+		}
+	}
 	if q.deleteNFTCategoryByIDStmt != nil {
 		if cerr := q.deleteNFTCategoryByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteNFTCategoryByIDStmt: %w", cerr)
@@ -150,6 +161,11 @@ func (q *Queries) Close() error {
 	if q.getNFTCategoryByIDStmt != nil {
 		if cerr := q.getNFTCategoryByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getNFTCategoryByIDStmt: %w", cerr)
+		}
+	}
+	if q.getNFTFromCacheStmt != nil {
+		if cerr := q.getNFTFromCacheStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNFTFromCacheStmt: %w", cerr)
 		}
 	}
 	if q.getNFTItemByIDStmt != nil {
@@ -230,6 +246,7 @@ type Queries struct {
 	addNFTItemStmt                   *sql.Stmt
 	addNFTItemOwnerStmt              *sql.Stmt
 	addNFTRelationStmt               *sql.Stmt
+	addNFTToCacheStmt                *sql.Stmt
 	deleteNFTCategoryByIDStmt        *sql.Stmt
 	deleteNFTItemByIDStmt            *sql.Stmt
 	deleteNFTRelationStmt            *sql.Stmt
@@ -239,6 +256,7 @@ type Queries struct {
 	getMainNFTCategoryStmt           *sql.Stmt
 	getNFTCategoriesListStmt         *sql.Stmt
 	getNFTCategoryByIDStmt           *sql.Stmt
+	getNFTFromCacheStmt              *sql.Stmt
 	getNFTItemByIDStmt               *sql.Stmt
 	getNFTItemsListStmt              *sql.Stmt
 	getNFTItemsListByOwnerIDStmt     *sql.Stmt
@@ -256,6 +274,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addNFTItemStmt:                   q.addNFTItemStmt,
 		addNFTItemOwnerStmt:              q.addNFTItemOwnerStmt,
 		addNFTRelationStmt:               q.addNFTRelationStmt,
+		addNFTToCacheStmt:                q.addNFTToCacheStmt,
 		deleteNFTCategoryByIDStmt:        q.deleteNFTCategoryByIDStmt,
 		deleteNFTItemByIDStmt:            q.deleteNFTItemByIDStmt,
 		deleteNFTRelationStmt:            q.deleteNFTRelationStmt,
@@ -265,6 +284,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getMainNFTCategoryStmt:           q.getMainNFTCategoryStmt,
 		getNFTCategoriesListStmt:         q.getNFTCategoriesListStmt,
 		getNFTCategoryByIDStmt:           q.getNFTCategoryByIDStmt,
+		getNFTFromCacheStmt:              q.getNFTFromCacheStmt,
 		getNFTItemByIDStmt:               q.getNFTItemByIDStmt,
 		getNFTItemsListStmt:              q.getNFTItemsListStmt,
 		getNFTItemsListByOwnerIDStmt:     q.getNFTItemsListByOwnerIDStmt,

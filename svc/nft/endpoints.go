@@ -9,7 +9,6 @@ import (
 
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
-	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 )
@@ -46,7 +45,7 @@ type (
 		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
 		UpdateNFTItem(ctx context.Context, nft *NFT) error
 		GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error)
-		GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*lib_solana.ArweaveNFTMetadata, error)
+		GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTMetadata, error)
 	}
 
 	TransportNFT struct {

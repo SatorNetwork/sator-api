@@ -40,6 +40,7 @@ type TokenAccountData struct {
 	Space   int    `json:"space"`
 }
 
+// GetNFTMintAddrs returns mint addrs which owned by walletAddr
 func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error) {
 	resp, err := c.solanaRpc.GetProgramAccountsWithConfig(ctx, common.TokenProgramID.ToBase58(), rpc.GetProgramAccountsConfig{
 		Encoding: rpc.GetProgramAccountsConfigEncodingJsonParsed,
@@ -88,6 +89,7 @@ func isNFT(t TokenAmount) bool {
 		t.UiAmountString == "1"
 }
 
+// GetNFTsByWalletAddress returns NFTs which owned by walletAddr
 func (c *Client) GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*lib_solana.ArweaveNFTMetadata, error) {
 	mintAddrs, err := c.GetNFTMintAddrs(ctx, walletAddr)
 	if err != nil {
@@ -110,6 +112,21 @@ func (c *Client) GetNFTsByWalletAddress(ctx context.Context, walletAddr string) 
 	}
 
 	return nfts, nil
+}
+
+// GetNFTMetadata returns metadata of NFT
+func (c *Client) GetNFTMetadata(mintAddr string) (*lib_solana.ArweaveNFTMetadata, error) {
+	nftMetadata, err := c.getNFTMetadata(mintAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get nft metadata")
+	}
+
+	arweaveNFTMetadata, err := loadArweaveNFTMetadata(nftMetadata.Data.Uri)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't load arweave nft metadata")
+	}
+
+	return arweaveNFTMetadata, nil
 }
 
 func (c *Client) getNFTMetadata(mintAddr string) (*tokenmeta.Metadata, error) {
