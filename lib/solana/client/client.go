@@ -190,9 +190,9 @@ func (c *Client) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, asset
 }
 
 // GetTransactions ...
-func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList []lib_solana.ConfirmedTransactionResponse, err error) {
-	fmt.Printf("accPubKey: %v\n", accPubKey)
-	signatures, err := c.solana.GetSignaturesForAddressWithConfig(ctx, accPubKey, rpc.GetSignaturesForAddressConfig{
+func (c *Client) GetTransactions(ctx context.Context, assetAddr, rootPubKey, ataPubKey string) (txList []lib_solana.ConfirmedTransactionResponse, err error) {
+	fmt.Printf("accPubKey: %v\n", ataPubKey)
+	signatures, err := c.solana.GetSignaturesForAddressWithConfig(ctx, ataPubKey, rpc.GetSignaturesForAddressConfig{
 		Limit:      30,
 		Commitment: rpc.CommitmentFinalized,
 	})
@@ -201,7 +201,7 @@ func (c *Client) GetTransactions(ctx context.Context, accPubKey string) (txList 
 	}
 
 	for _, signature := range signatures {
-		tx, err := c.GetConfirmedTransactionForAccount(ctx, accPubKey, signature.Signature)
+		tx, err := c.GetConfirmedTransactionForAccount(ctx, assetAddr, rootPubKey, signature.Signature)
 		if err != nil {
 			err := errors.Wrap(err, "can't get confirmed transaction for account")
 			fmt.Println(err)
@@ -224,7 +224,7 @@ func (c *Client) GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, a
 		return nil, err
 	}
 
-	return c.GetTransactions(ctx, accountAta.ToBase58())
+	return c.GetTransactions(ctx, assetAddr, accountAddr, accountAta.ToBase58())
 }
 
 func (c *Client) FindAssociatedTokenAddress(walletAddress, tokenMintAddress common.PublicKey) (common.PublicKey, int, error) {
