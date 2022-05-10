@@ -49,6 +49,8 @@ import (
 	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	firebase_svc "github.com/SatorNetwork/sator-api/svc/firebase"
+	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
 	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
@@ -770,6 +772,22 @@ func (a *app) Run() {
 		)
 		r.Mount("/iap", iap_svc.MakeHTTPHandler(
 			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	// Firebase service
+	{
+		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare firebase repository: %v", err)
+		}
+
+		firebaseSvc := firebase_svc.NewService(
+			firebaseRepository,
+		)
+		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
+			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
 			logger,
 		))
 	}
