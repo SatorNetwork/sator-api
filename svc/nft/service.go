@@ -511,6 +511,7 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 		if err != nil {
 			meta, err := s.sc.GetNFTMetadata(mint)
 			if err != nil {
+				log.Printf("could not get nft metadata from solana blockchain: %v\n", err)
 				continue
 			}
 			nfts = append(nfts, &NFTMetadata{mint, meta})
@@ -520,15 +521,15 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 					MintAddr: mint,
 					Metadata: b,
 				}); err != nil {
-					log.Printf("could not add nft %s to cache: %v", mint, err)
+					log.Printf("could not add nft %s to cache: %v\n", mint, err)
 				}
 			} else {
-				log.Printf("could not marshal nft %s: %v", mint, err)
+				log.Printf("could not marshal nft %s: %v\n", mint, err)
 			}
 		} else {
 			meta := &lib_solana.ArweaveNFTMetadata{}
 			if err := json.Unmarshal(cachedMeta.Metadata, meta); err != nil {
-				log.Printf("could not unmarshal nft %s: %v", mint, err)
+				log.Printf("could not unmarshal nft %s: %v\n", mint, err)
 				continue
 			}
 

@@ -161,7 +161,7 @@ func loadArweaveNFTMetadata(uri string) (*lib_solana.ArweaveNFTMetadata, error) 
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "can't read body of uri %v", uri)
 	}
 
 	var arweaveNFTMetadata lib_solana.ArweaveNFTMetadata
