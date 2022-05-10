@@ -65,6 +65,22 @@ type (
 		*lib_solana.ArweaveNFTMetadata
 	}
 
+	NFTList struct {
+		NFTs []NFTListItem `json:"nfts"`
+	}
+
+	NFTListItem struct {
+		MintAddress        string                         `json:"mint_address"`
+		Owner              string                         `json:"owner"`
+		OnSale             bool                           `json:"on_sale"`
+		ByNowPrice         float64                        `json:"by_now_price"`
+		CollectionID       string                         `json:"collection_id"`
+		HasPreview         bool                           `json:"has_preview"`
+		NftLink            string                         `json:"nft_link"`
+		NftPreviewLink     string                         `json:"nft_preview_link"`
+		ArweaveNftMetadata *lib_solana.ArweaveNFTMetadata `json:"arweave_nft_metadata"`
+	}
+
 	// Option func to set custom service options
 	Option func(*Service)
 
@@ -499,13 +515,13 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 }
 
 // GetNFTsByWalletAddress returns all NFTs that are related to a wallet address
-func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTMetadata, error) {
+func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) (*NFTList, error) {
 	mintAddrs, err := s.sc.GetNFTMintAddrs(ctx, req.WalletAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get nfts from solana blockchain")
 	}
 
-	nfts := make([]*NFTMetadata, 0, len(mintAddrs))
+	nfts := make([]NFTListItem, 0, len(mintAddrs))
 	for _, mint := range mintAddrs {
 		cachedMeta, err := s.nftRepo.GetNFTFromCache(ctx, mint)
 		if err != nil {
@@ -514,7 +530,12 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 				log.Printf("could not get nft metadata from solana blockchain: %s: %v\n", mint, err)
 				continue
 			}
-			nfts = append(nfts, &NFTMetadata{mint, meta})
+			nfts = append(nfts, NFTListItem{
+				MintAddress:        mint,
+				Owner:              req.WalletAddr,
+				NftLink:            meta.Image,
+				ArweaveNftMetadata: meta,
+			})
 
 			if b, err := json.Marshal(meta); err == nil {
 				if err = s.nftRepo.AddNFTToCache(ctx, repository.AddNFTToCacheParams{
@@ -533,9 +554,14 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 				continue
 			}
 
-			nfts = append(nfts, &NFTMetadata{mint, meta})
+			nfts = append(nfts, NFTListItem{
+				MintAddress:        mint,
+				Owner:              req.WalletAddr,
+				NftLink:            meta.Image,
+				ArweaveNftMetadata: meta,
+			})
 		}
 	}
 
-	return nfts, nil
+	return &NFTList{NFTs: nfts}, nil
 }
