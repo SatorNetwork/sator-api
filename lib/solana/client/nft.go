@@ -73,9 +73,8 @@ func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]stri
 			return nil, errors.Wrap(err, "can't unmarshal token account data")
 		}
 
-		log.Printf("token %s: %s\n", tokenAccountData.Parsed.Info.Mint, tokenAccountData.Parsed.Type)
-		log.Printf("%+v\n", tokenAccountData.Parsed.Info)
 		if !isNFT(tokenAccountData.Parsed.Info.TokenAmount) {
+			log.Printf("token %s is not nft\ndata: %+v\n", tokenAccountData.Parsed.Info.Mint, tokenAccountData.Parsed.Info.TokenAmount.Amount)
 			continue
 		}
 
@@ -86,7 +85,7 @@ func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]stri
 }
 
 func isNFT(t TokenAmount) bool {
-	return t.Decimals == 0 && t.UiAmount > 0
+	return t.Decimals == 0 && t.UiAmount == 1
 }
 
 // GetNFTsByWalletAddress returns NFTs which owned by walletAddr
