@@ -511,7 +511,7 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 		if err != nil {
 			meta, err := s.sc.GetNFTMetadata(mint)
 			if err != nil {
-				log.Printf("could not get nft metadata from solana blockchain: %v\n", err)
+				log.Printf("could not get nft metadata from solana blockchain: %s: %v\n", mint, err)
 				continue
 			}
 			nfts = append(nfts, &NFTMetadata{mint, meta})

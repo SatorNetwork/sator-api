@@ -74,7 +74,6 @@ func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]stri
 		}
 
 		if !isNFT(tokenAccountData.Parsed.Info.TokenAmount) {
-			log.Printf("token %s is not nft\ndata: %+v\n", tokenAccountData.Parsed.Info.Mint, tokenAccountData)
 			continue
 		}
 
@@ -163,6 +162,8 @@ func loadArweaveNFTMetadata(uri string) (*lib_solana.ArweaveNFTMetadata, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't read body of uri %v", uri)
 	}
+
+	log.Printf("uri: %s\nbody: %v\n", uri, string(body))
 
 	var arweaveNFTMetadata lib_solana.ArweaveNFTMetadata
 	if err := json.Unmarshal(body, &arweaveNFTMetadata); err != nil {
