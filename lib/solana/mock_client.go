@@ -140,18 +140,48 @@ func (mr *MockInterfaceMockRecorder) GetConfirmedTransaction(arg0, arg1 interfac
 }
 
 // GetConfirmedTransactionForAccount mocks base method.
-func (m *MockInterface) GetConfirmedTransactionForAccount(arg0 context.Context, arg1, arg2 string) (ConfirmedTransactionResponse, error) {
+func (m *MockInterface) GetConfirmedTransactionForAccount(arg0 context.Context, arg1, arg2, arg3 string) (ConfirmedTransactionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfirmedTransactionForAccount", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetConfirmedTransactionForAccount", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(ConfirmedTransactionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetConfirmedTransactionForAccount indicates an expected call of GetConfirmedTransactionForAccount.
-func (mr *MockInterfaceMockRecorder) GetConfirmedTransactionForAccount(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) GetConfirmedTransactionForAccount(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedTransactionForAccount", reflect.TypeOf((*MockInterface)(nil).GetConfirmedTransactionForAccount), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedTransactionForAccount", reflect.TypeOf((*MockInterface)(nil).GetConfirmedTransactionForAccount), arg0, arg1, arg2, arg3)
+}
+
+// GetNFTMetadata mocks base method.
+func (m *MockInterface) GetNFTMetadata(arg0 string) (*ArweaveNFTMetadata, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNFTMetadata", arg0)
+	ret0, _ := ret[0].(*ArweaveNFTMetadata)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNFTMetadata indicates an expected call of GetNFTMetadata.
+func (mr *MockInterfaceMockRecorder) GetNFTMetadata(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTMetadata", reflect.TypeOf((*MockInterface)(nil).GetNFTMetadata), arg0)
+}
+
+// GetNFTMintAddrs mocks base method.
+func (m *MockInterface) GetNFTMintAddrs(arg0 context.Context, arg1 string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNFTMintAddrs", arg0, arg1)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNFTMintAddrs indicates an expected call of GetNFTMintAddrs.
+func (mr *MockInterfaceMockRecorder) GetNFTMintAddrs(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTMintAddrs", reflect.TypeOf((*MockInterface)(nil).GetNFTMintAddrs), arg0, arg1)
 }
 
 // GetNFTsByWalletAddress mocks base method.
@@ -167,36 +197,6 @@ func (m *MockInterface) GetNFTsByWalletAddress(arg0 context.Context, arg1 string
 func (mr *MockInterfaceMockRecorder) GetNFTsByWalletAddress(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTsByWalletAddress", reflect.TypeOf((*MockInterface)(nil).GetNFTsByWalletAddress), arg0, arg1)
-}
-
-// GetNFTMintAddrs mocks base method.
-func (m *MockInterface) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNFTMintAddrs", walletAddr)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetNFTMintAddrs indicates an expected call of GetNFTMintAddrs.
-func (mr *MockInterfaceMockRecorder) GetNFTMintAddrs(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTMintAddrs", reflect.TypeOf((*MockInterface)(nil).GetNFTMintAddrs), arg0)
-}
-
-// GetNFTMetadata mocks base method. 
-func (m *MockInterface) GetNFTMetadata(mintAddr string) (*ArweaveNFTMetadata, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNFTMetadata", mintAddr)
-	ret0, _ := ret[0].(*ArweaveNFTMetadata)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetNFTMetadata indicates an expected call of GetNFTMetadata.
-func (mr *MockInterfaceMockRecorder) GetNFTMetadata(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNFTMetadata", reflect.TypeOf((*MockInterface)(nil).GetNFTMetadata), arg0)
 }
 
 // GetTokenAccountBalance mocks base method.
@@ -230,18 +230,18 @@ func (mr *MockInterfaceMockRecorder) GetTokenAccountBalanceWithAutoDerive(arg0, 
 }
 
 // GetTransactions mocks base method.
-func (m *MockInterface) GetTransactions(arg0 context.Context, arg1 string) ([]ConfirmedTransactionResponse, error) {
+func (m *MockInterface) GetTransactions(arg0 context.Context, arg1, arg2, arg3 string) ([]ConfirmedTransactionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTransactions", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetTransactions", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]ConfirmedTransactionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTransactions indicates an expected call of GetTransactions.
-func (mr *MockInterfaceMockRecorder) GetTransactions(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) GetTransactions(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransactions", reflect.TypeOf((*MockInterface)(nil).GetTransactions), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransactions", reflect.TypeOf((*MockInterface)(nil).GetTransactions), arg0, arg1, arg2, arg3)
 }
 
 // GetTransactionsWithAutoDerive mocks base method.

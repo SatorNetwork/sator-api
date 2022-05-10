@@ -13,7 +13,7 @@ type Interface interface {
 	IssueAsset(ctx context.Context, feePayer, issuer, asset types.Account, dest common.PublicKey, amount float64) (string, error)
 	CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error)
 	GetConfirmedTransaction(ctx context.Context, txhash string) (GetConfirmedTransactionResponse, error)
-	GetConfirmedTransactionForAccount(ctx context.Context, accPubKey, txhash string) (ConfirmedTransactionResponse, error)
+	GetConfirmedTransactionForAccount(ctx context.Context, assetAddr string, rootPubKey string, txhash string) (ConfirmedTransactionResponse, error)
 	NewAccount() types.Account
 	PublicKeyFromString(pk string) common.PublicKey
 	AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
@@ -24,7 +24,7 @@ type Interface interface {
 	GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
 	GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
 	GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
-	GetTransactions(ctx context.Context, accPubKey string) (txList []ConfirmedTransactionResponse, err error)
+	GetTransactions(ctx context.Context, assetAddr, rootPubKey, ataPubKey string) (txList []ConfirmedTransactionResponse, err error)
 	GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (txList []ConfirmedTransactionResponse, err error)
 	CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error)
 	InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error)

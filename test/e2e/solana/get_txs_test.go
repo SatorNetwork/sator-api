@@ -34,9 +34,10 @@ func TestGetTxs(t *testing.T) {
 	}, exchangeRatesClient)
 
 	ctxb := context.Background()
-	addr := "9Qkac1Cyd3bZJ3Hby9N2EWw58q9we3DMYmpft6swoxes"
+	assetAddr := "FBDfbe7CFXHHNzDpNBYf4Evcg5GKrThYNjk4wP2xwjwA"
+	addr := "14RZsAAjDVC5hsVKJ7fgsRG4AfPtPTZqgzR6gu1o5G1T"
 
-	txs, err := solanaClient.GetTransactions(ctxb, addr)
+	txs, err := solanaClient.GetTransactionsWithAutoDerive(ctxb, assetAddr, addr)
 	if err != nil && !strings.Contains(err.Error(), `{"jsonrpc":"2.0","error":{"code":503,"message":"Service unavailable"}`) {
 		t.Fatal(err)
 	}

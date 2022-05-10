@@ -30,7 +30,7 @@ func (c *Client) GetConfirmedTransaction(ctx context.Context, txhash string) (li
 }
 
 // GetConfirmedTransactionForAccount returns transactions list for given account
-func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKey, txhash string) (lib_solana.ConfirmedTransactionResponse, error) {
+func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, assetAddr, rootPubKey, txhash string) (lib_solana.ConfirmedTransactionResponse, error) {
 	tx, err := c.solana.GetTransaction(ctx, txhash)
 	if err != nil {
 		return lib_solana.ConfirmedTransactionResponse{}, err
@@ -48,7 +48,7 @@ func (c *Client) GetConfirmedTransactionForAccount(ctx context.Context, accPubKe
 		return lib_solana.ConfirmedTransactionResponse{}, err
 	}
 
-	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, accPubKey)
+	amount, err := getTransactionAmountForAccountIdx(tx.Meta.PreTokenBalances, tx.Meta.PostTokenBalances, assetAddr, rootPubKey)
 	if err != nil {
 		err := errors.Wrap(err, "can't get transaction amount for account idx")
 		fmt.Println(err)
@@ -86,10 +86,10 @@ func checkIfTxIsValid(tx *client.GetTransactionResponse) error {
 	return nil
 }
 
-func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalance, accPubKey string) (float64, error) {
+func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalance, assetAddr, rootPubKey string) (float64, error) {
 	var preTokenBalance, postTokenBalance int64
 	for _, b := range pre {
-		if b.Owner == accPubKey {
+		if b.Owner == rootPubKey && b.Mint == assetAddr {
 			a, err := strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
 			if err != nil {
 				return 0, err
@@ -101,7 +101,7 @@ func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalan
 	}
 
 	for _, b := range post {
-		if b.Owner == accPubKey {
+		if b.Owner == rootPubKey && b.Mint == assetAddr {
 			a, err := strconv.ParseInt(b.UITokenAmount.Amount, 10, 64)
 			if err != nil {
 				return 0, err
