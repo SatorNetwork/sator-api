@@ -74,6 +74,7 @@ func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]stri
 		}
 
 		log.Printf("token %s: %s\n", tokenAccountData.Parsed.Info.Mint, tokenAccountData.Parsed.Type)
+		log.Printf("%+v\n", tokenAccountData.Parsed.Info)
 		if !isNFT(tokenAccountData.Parsed.Info.TokenAmount) {
 			continue
 		}
