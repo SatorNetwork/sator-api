@@ -59,22 +59,46 @@ type (
 		Title string
 	}
 
-	// NFTMetadata struct extends lib_solana.ArweaveNFTMetadata
-	NFTMetadata struct {
-		MintAddr string `json:"mint_addr"`
-		*lib_solana.ArweaveNFTMetadata
+	// NFTListItem represents a single NFT item
+	NFTListItem struct {
+		MintAddress        string              `json:"mint_address"`
+		Owner              string              `json:"owner"`
+		OnSale             bool                `json:"on_sale"`
+		ByNowPrice         float64             `json:"by_now_price"`
+		CollectionID       string              `json:"collection_id"`
+		HasPreview         bool                `json:"has_preview"`
+		NftLink            string              `json:"nft_link"`
+		NftPreviewLink     string              `json:"nft_preview_link"`
+		ArweaveNftMetadata *ArweaveNFTMetadata `json:"arweave_nft_metadata"`
 	}
 
-	NFTListItem struct {
-		MintAddress        string                         `json:"mint_address"`
-		Owner              string                         `json:"owner"`
-		OnSale             bool                           `json:"on_sale"`
-		ByNowPrice         float64                        `json:"by_now_price"`
-		CollectionID       string                         `json:"collection_id"`
-		HasPreview         bool                           `json:"has_preview"`
-		NftLink            string                         `json:"nft_link"`
-		NftPreviewLink     string                         `json:"nft_preview_link"`
-		ArweaveNftMetadata *lib_solana.ArweaveNFTMetadata `json:"arweave_nft_metadata"`
+	// ArweaveNFTMetadata is a custom struct for Arweave NFT metadata
+	// with SellerFeeBasisPoints string instead of int
+	ArweaveNFTMetadata struct {
+		Name                 string `json:"name"`
+		Symbol               string `json:"symbol"`
+		Description          string `json:"description"`
+		SellerFeeBasisPoints string `json:"seller_fee_basis_points"`
+		Image                string `json:"image"`
+		Attributes           []struct {
+			TraitType string      `json:"trait_type"`
+			Value     interface{} `json:"value"`
+		} `json:"attributes"`
+		Collection struct {
+			Name   string `json:"name"`
+			Family string `json:"family"`
+		} `json:"collection"`
+		Properties struct {
+			Files []struct {
+				Uri  string `json:"uri"`
+				Type string `json:"type"`
+			} `json:"files"`
+			Category string `json:"category"`
+			Creators []struct {
+				Address string `json:"address"`
+				Share   int    `json:"share"`
+			} `json:"creators"`
+		} `json:"properties"`
 	}
 
 	// Option func to set custom service options
@@ -530,7 +554,7 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 				MintAddress:        mint,
 				Owner:              req.WalletAddr,
 				NftLink:            meta.Image,
-				ArweaveNftMetadata: meta,
+				ArweaveNftMetadata: castArweaveNFTMetadata(meta),
 			})
 
 			if b, err := json.Marshal(meta); err == nil {
@@ -554,10 +578,23 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 				MintAddress:        mint,
 				Owner:              req.WalletAddr,
 				NftLink:            meta.Image,
-				ArweaveNftMetadata: meta,
+				ArweaveNftMetadata: castArweaveNFTMetadata(meta),
 			})
 		}
 	}
 
 	return nfts, nil
+}
+
+func castArweaveNFTMetadata(meta *lib_solana.ArweaveNFTMetadata) *ArweaveNFTMetadata {
+	return &ArweaveNFTMetadata{
+		Name:                 meta.Name,
+		Symbol:               meta.Symbol,
+		Description:          meta.Description,
+		SellerFeeBasisPoints: fmt.Sprintf("%d", meta.SellerFeeBasisPoints),
+		Image:                meta.Image,
+		Attributes:           meta.Attributes,
+		Collection:           meta.Collection,
+		Properties:           meta.Properties,
+	}
 }

@@ -125,7 +125,7 @@ type (
 		Name                 string `json:"name"`
 		Symbol               string `json:"symbol"`
 		Description          string `json:"description"`
-		SellerFeeBasisPoints string `json:"seller_fee_basis_points"`
+		SellerFeeBasisPoints int    `json:"seller_fee_basis_points"`
 		Image                string `json:"image"`
 		Attributes           []struct {
 			TraitType string      `json:"trait_type"`
