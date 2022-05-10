@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -72,6 +73,7 @@ func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]stri
 			return nil, errors.Wrap(err, "can't unmarshal token account data")
 		}
 
+		log.Printf("token %s: %s\n", tokenAccountData.Parsed.Info.Mint, tokenAccountData.Parsed.Type)
 		if !isNFT(tokenAccountData.Parsed.Info.TokenAmount) {
 			continue
 		}
