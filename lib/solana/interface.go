@@ -128,10 +128,8 @@ type (
 		SellerFeeBasisPoints int    `json:"seller_fee_basis_points"`
 		Image                string `json:"image"`
 		Attributes           []struct {
-			TraitType string `json:"trait_type"`
-			Value     struct {
-				StringValue string `json:"StringValue"`
-			} `json:"value"`
+			TraitType string      `json:"trait_type"`
+			Value     interface{} `json:"value"`
 		} `json:"attributes"`
 		Collection struct {
 			Name   string `json:"name"`
