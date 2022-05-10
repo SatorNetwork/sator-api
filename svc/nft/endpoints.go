@@ -45,7 +45,7 @@ type (
 		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
 		UpdateNFTItem(ctx context.Context, nft *NFT) error
 		GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error)
-		GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTMetadata, error)
+		GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) (*NFTList, error)
 	}
 
 	TransportNFT struct {
