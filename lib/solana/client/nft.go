@@ -83,10 +83,7 @@ func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]stri
 }
 
 func isNFT(t TokenAmount) bool {
-	return t.Amount == "1" &&
-		t.Decimals == 0 &&
-		t.UiAmount == 1 &&
-		t.UiAmountString == "1"
+	return t.Decimals == 0 && t.UiAmount > 0
 }
 
 // GetNFTsByWalletAddress returns NFTs which owned by walletAddr
