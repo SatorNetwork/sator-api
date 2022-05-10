@@ -48,6 +48,10 @@ func NewInitializedUser(signUpRequest *auth.SignUpRequest, t *testing.T) *User {
 	return user
 }
 
+func (u *User) Email() string {
+	return u.email
+}
+
 func (u *User) Username() string {
 	return u.username
 }

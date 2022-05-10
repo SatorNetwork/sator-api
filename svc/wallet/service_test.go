@@ -140,6 +140,10 @@ func (r *walletRepoMock) DoesUserHaveFraudulentTransfers(ctx context.Context, us
 	panic("not implemented") // TODO: Implement
 }
 
+func (r *walletRepoMock) DoesUserMakeTransferForLastMinute(ctx context.Context, userID uuid.UUID) (bool, error) {
+	panic("not implemented") // TODO: Implement
+}
+
 func TestService_GetMultiplier(t *testing.T) {
 	type fields struct {
 		wr                          walletRepository

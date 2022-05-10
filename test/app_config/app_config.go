@@ -103,6 +103,13 @@ var (
 		QuizV2ShuffleQuestions:      false,
 		ServerRSAPrivateKey:         serverRSAPrivateKey,
 		SatorAPIKey:                 "582e89d8-69ca-4206-8e7f-1fc822b41307",
+		PuzzleGameShuffle:           false,
+		TipsPercent:                 0.5,
+		TokenTransferPercent:        0.75,
+		ClaimRewardsPercent:         0.75,
+		FeeAccumulatorAddress:       "5HWrR1KpvbBA6QU4pMzJ3XGzj7y69qkkyPnLqRjQbTNT",
+		NftMarketplaceServerHost:    "http://localhost",
+		NftMarketplaceServerPort:    8080,
 	}
 )
 

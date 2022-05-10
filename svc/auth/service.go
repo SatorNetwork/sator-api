@@ -38,6 +38,7 @@ type (
 		blacklistEmailDomains []string
 		whitelistEnabled      bool
 		blacklistEnabled      bool
+		skipDeviceIDCheck     bool
 	}
 
 	Whitelist struct {
@@ -174,6 +175,10 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 
 // Login by email and password, returns token.
 func (s *Service) Login(ctx context.Context, email, password, deviceID string) (Token, error) {
+	if deviceID == "" && !s.skipDeviceIDCheck {
+		return Token{}, ErrEmptyDeviceID
+	}
+
 	email = strings.ToLower(strings.TrimSpace(email))
 	user, err := s.ur.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -187,15 +192,13 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		return Token{}, ErrUserIsDisabled
 	}
 
-	if deviceID == "" {
-		return Token{}, ErrEmptyDeviceID
-	}
-
-	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
-		UserID:   user.ID,
-		DeviceID: deviceID,
-	}); err != nil {
-		log.Printf("could not link device to user: %v", err)
+	if deviceID != "" {
+		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+			UserID:   user.ID,
+			DeviceID: deviceID,
+		}); err != nil {
+			log.Printf("could not link device to user: %v", err)
+		}
 	}
 
 	if !user.SanitizedEmail.Valid || len(user.SanitizedEmail.String) < 5 {
@@ -258,7 +261,7 @@ func (s *Service) Logout(ctx context.Context, tid string) error {
 
 // RefreshToken returns new jwt string.
 func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error) {
-	if deviceID == "" {
+	if deviceID == "" && !s.skipDeviceIDCheck {
 		return Token{}, ErrEmptyDeviceID
 	}
 
@@ -271,11 +274,13 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 		return Token{}, ErrUserIsDisabled
 	}
 
-	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
-		UserID:   uid,
-		DeviceID: deviceID,
-	}); err != nil {
-		log.Printf("could not link device to user: %v", err)
+	if deviceID != "" {
+		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+			UserID:   uid,
+			DeviceID: deviceID,
+		}); err != nil {
+			log.Printf("could not link device to user: %v", err)
+		}
 	}
 
 	if !u.SanitizedEmail.Valid || len(u.SanitizedEmail.String) < 5 {
@@ -327,6 +332,10 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 
 // SignUp registers account with email, password and username.
 func (s *Service) SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error) {
+	if deviceID == "" && !s.skipDeviceIDCheck {
+		return Token{}, ErrEmptyDeviceID
+	}
+
 	var otpHash []byte
 
 	email = strings.ToLower(strings.TrimSpace(email))
@@ -404,15 +413,13 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 		return Token{}, fmt.Errorf("could not create a new account: %w", err)
 	}
 
-	if deviceID == "" {
-		return Token{}, ErrEmptyDeviceID
-	}
-
-	if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
-		UserID:   u.ID,
-		DeviceID: deviceID,
-	}); err != nil {
-		log.Printf("could not link device to user: %v", err)
+	if deviceID != "" {
+		if err := s.ur.LinkDeviceToUser(ctx, repository.LinkDeviceToUserParams{
+			UserID:   u.ID,
+			DeviceID: deviceID,
+		}); err != nil {
+			log.Printf("could not link device to user: %v", err)
+		}
 	}
 
 	otp := random.String(uint8(s.otpLen), random.Numeric)

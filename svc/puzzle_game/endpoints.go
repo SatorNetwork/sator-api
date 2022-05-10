@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SatorNetwork/gopuzzlegame"
+
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/validator"
@@ -25,9 +27,9 @@ type (
 		GetPuzzleGameForUser endpoint.Endpoint
 		UnlockPuzzleGame     endpoint.Endpoint
 		StartPuzzleGame      endpoint.Endpoint
-		FinishPuzzleGame     endpoint.Endpoint
 
 		GetPuzzleGameUnlockOptions endpoint.Endpoint
+		TapTile                    endpoint.Endpoint
 	}
 
 	service interface {
@@ -42,9 +44,9 @@ type (
 		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (PuzzleGame, error)
 		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (PuzzleGame, error)
 		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (PuzzleGame, error)
-		FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, steps int32) (PuzzleGame, error)
 
 		GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error)
+		TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, position gopuzzlegame.Position) (PuzzleGame, error)
 	}
 
 	CreatePuzzleGameRequest struct {
@@ -74,6 +76,12 @@ type (
 		Result       int    `json:"result" validate:"oneof=0 1 2"`
 		StepsTaken   int    `json:"steps_taken" validate:"min=0"`
 	}
+
+	TapTileRequest struct {
+		PuzzleGameID string `json:"puzzle_game_id" validate:"required,uuid"`
+		X            int    `json:"x" validate:"min=0"`
+		Y            int    `json:"y" validate:"min=0"`
+	}
 )
 
 func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
@@ -91,9 +99,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetPuzzleGameForUser: MakeGetPuzzleGameForUserEndpoint(s),
 		UnlockPuzzleGame:     MakeUnlockPuzzleGameEndpoint(s, validateFunc),
 		StartPuzzleGame:      MakeStartPuzzleGameEndpoint(s),
-		FinishPuzzleGame:     MakeFinishPuzzleGameEndpoint(s, validateFunc),
 
 		GetPuzzleGameUnlockOptions: MakeGetPuzzleGameUnlockOptionsEndpoint(s),
+		TapTile:                    MakeTapTile(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -110,9 +118,9 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetPuzzleGameForUser = mdw(e.GetPuzzleGameForUser)
 			e.UnlockPuzzleGame = mdw(e.UnlockPuzzleGame)
 			e.StartPuzzleGame = mdw(e.StartPuzzleGame)
-			e.FinishPuzzleGame = mdw(e.FinishPuzzleGame)
 
 			e.GetPuzzleGameUnlockOptions = mdw(e.GetPuzzleGameUnlockOptions)
+			e.TapTile = mdw(e.TapTile)
 		}
 	}
 
@@ -300,7 +308,22 @@ func MakeStartPuzzleGameEndpoint(s service) endpoint.Endpoint {
 	}
 }
 
-func MakeFinishPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+func MakeGetPuzzleGameUnlockOptionsEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		res, err := s.GetPuzzleGameUnlockOptions(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
+	}
+}
+
+func MakeTapTile(s service, validateFunc validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
@@ -311,27 +334,15 @@ func MakeFinishPuzzleGameEndpoint(s service, validateFunc validator.ValidateFunc
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		req := request.(FinishPuzzleGameRequest)
+		req := request.(TapTileRequest)
 		if err := validateFunc(req); err != nil {
 			return nil, err
 		}
 
-		res, err := s.FinishPuzzleGame(ctx, uid, uuid.MustParse(req.PuzzleGameID), int32(req.Result), int32(req.StepsTaken))
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-	}
-}
-
-func MakeGetPuzzleGameUnlockOptionsEndpoint(s service) endpoint.Endpoint {
-	return func(ctx context.Context, _ interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-			return nil, err
-		}
-
-		res, err := s.GetPuzzleGameUnlockOptions(ctx)
+		res, err := s.TapTile(ctx, uid, uuid.MustParse(req.PuzzleGameID), gopuzzlegame.Position{
+			X: req.X,
+			Y: req.Y,
+		})
 		if err != nil {
 			return nil, err
 		}

@@ -3,19 +3,25 @@ package nft
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/lib/db"
-	"github.com/SatorNetwork/sator-api/svc/nft/repository"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
+
+	"github.com/SatorNetwork/sator-api/lib/db"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	"github.com/SatorNetwork/sator-api/svc/nft/repository"
 )
 
 type (
 	// Service struct
 	Service struct {
 		nftRepo    nftRepository
+		sc         solanaClient
 		buyNFTFunc buyNFTFunction
 	}
 
@@ -53,6 +59,48 @@ type (
 		Title string
 	}
 
+	// NFTListItem represents a single NFT item
+	NFTListItem struct {
+		MintAddress        string              `json:"mint_address"`
+		Owner              string              `json:"owner"`
+		OnSale             bool                `json:"on_sale"`
+		ByNowPrice         float64             `json:"by_now_price"`
+		CollectionID       string              `json:"collection_id"`
+		HasPreview         bool                `json:"has_preview"`
+		NftLink            string              `json:"nft_link"`
+		NftPreviewLink     string              `json:"nft_preview_link"`
+		ArweaveNftMetadata *ArweaveNFTMetadata `json:"arweave_nft_metadata"`
+	}
+
+	// ArweaveNFTMetadata is a custom struct for Arweave NFT metadata
+	// with SellerFeeBasisPoints string instead of int
+	ArweaveNFTMetadata struct {
+		Name                 string `json:"name"`
+		Symbol               string `json:"symbol"`
+		Description          string `json:"description"`
+		SellerFeeBasisPoints string `json:"seller_fee_basis_points"`
+		Image                string `json:"image"`
+		Attributes           []struct {
+			TraitType string      `json:"trait_type"`
+			Value     interface{} `json:"value"`
+		} `json:"attributes"`
+		Collection struct {
+			Name   string `json:"name"`
+			Family string `json:"family"`
+		} `json:"collection"`
+		Properties struct {
+			Files []struct {
+				Uri  string `json:"uri"`
+				Type string `json:"type"`
+			} `json:"files"`
+			Category string `json:"category"`
+			Creators []struct {
+				Address string `json:"address"`
+				Share   int    `json:"share"`
+			} `json:"creators"`
+		} `json:"properties"`
+	}
+
 	// Option func to set custom service options
 	Option func(*Service)
 
@@ -71,6 +119,14 @@ type (
 		DeleteNFTItemByID(ctx context.Context, id uuid.UUID) error
 		AddNFTRelation(ctx context.Context, arg repository.AddNFTRelationParams) error
 		DoesRelationIDHasRelationNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
+
+		AddNFTToCache(ctx context.Context, arg repository.AddNFTToCacheParams) error
+		GetNFTFromCache(ctx context.Context, mintAddr string) (repository.NftCache, error)
+	}
+
+	solanaClient interface {
+		GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)
+		GetNFTMetadata(mintAddr string) (*lib_solana.ArweaveNFTMetadata, error)
 	}
 
 	NFTItemRow struct {
@@ -95,8 +151,12 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(nftRepo nftRepository, buyNFTFunc buyNFTFunction, opt ...Option) *Service {
-	s := &Service{nftRepo: nftRepo, buyNFTFunc: buyNFTFunc}
+func NewService(nftRepo nftRepository, sc solanaClient, buyNFTFunc buyNFTFunction, opt ...Option) *Service {
+	s := &Service{
+		nftRepo:    nftRepo,
+		sc:         sc,
+		buyNFTFunc: buyNFTFunc,
+	}
 
 	for _, fn := range opt {
 		fn(s)
@@ -472,4 +532,69 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 	}
 
 	return hasRelationID, nil
+}
+
+// GetNFTsByWalletAddress returns all NFTs that are related to a wallet address
+func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTListItem, error) {
+	mintAddrs, err := s.sc.GetNFTMintAddrs(ctx, req.WalletAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get nfts from solana blockchain")
+	}
+
+	nfts := make([]*NFTListItem, 0, len(mintAddrs))
+	for _, mint := range mintAddrs {
+		cachedMeta, err := s.nftRepo.GetNFTFromCache(ctx, mint)
+		if err != nil {
+			meta, err := s.sc.GetNFTMetadata(mint)
+			if err != nil {
+				log.Printf("could not get nft metadata from solana blockchain: %s: %v\n", mint, err)
+				continue
+			}
+			nfts = append(nfts, &NFTListItem{
+				MintAddress:        mint,
+				Owner:              req.WalletAddr,
+				NftLink:            meta.Image,
+				ArweaveNftMetadata: castArweaveNFTMetadata(meta),
+			})
+
+			if b, err := json.Marshal(meta); err == nil {
+				if err = s.nftRepo.AddNFTToCache(ctx, repository.AddNFTToCacheParams{
+					MintAddr: mint,
+					Metadata: b,
+				}); err != nil {
+					log.Printf("could not add nft %s to cache: %v\n", mint, err)
+				}
+			} else {
+				log.Printf("could not marshal nft %s: %v\n", mint, err)
+			}
+		} else {
+			meta := &lib_solana.ArweaveNFTMetadata{}
+			if err := json.Unmarshal(cachedMeta.Metadata, meta); err != nil {
+				log.Printf("could not unmarshal nft %s: %v\n", mint, err)
+				continue
+			}
+
+			nfts = append(nfts, &NFTListItem{
+				MintAddress:        mint,
+				Owner:              req.WalletAddr,
+				NftLink:            meta.Image,
+				ArweaveNftMetadata: castArweaveNFTMetadata(meta),
+			})
+		}
+	}
+
+	return nfts, nil
+}
+
+func castArweaveNFTMetadata(meta *lib_solana.ArweaveNFTMetadata) *ArweaveNFTMetadata {
+	return &ArweaveNFTMetadata{
+		Name:                 meta.Name,
+		Symbol:               meta.Symbol,
+		Description:          meta.Description,
+		SellerFeeBasisPoints: fmt.Sprintf("%d", meta.SellerFeeBasisPoints),
+		Image:                meta.Image,
+		Attributes:           meta.Attributes,
+		Collection:           meta.Collection,
+		Properties:           meta.Properties,
+	}
 }

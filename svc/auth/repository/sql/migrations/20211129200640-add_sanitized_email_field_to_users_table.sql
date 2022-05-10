@@ -4,4 +4,6 @@ ALTER TABLE users
     ADD COLUMN email_hash VARCHAR DEFAULT NULL;
     
 -- +migrate Down
-ALTER TABLE users DROP COLUMN sanitized_email, email_hash;
+ALTER TABLE users
+    DROP COLUMN sanitized_email,
+    DROP COLUMN email_hash;

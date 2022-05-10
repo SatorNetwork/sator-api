@@ -43,3 +43,15 @@ func WithFraudDetectionMode(mode bool) ServiceOption {
 		s.fraudDetectionMode = mode
 	}
 }
+
+func WithTokenTransferPercent(tokenTransferPercent float64) ServiceOption {
+	return func(s *Service) {
+		s.tokenTransferPercent = tokenTransferPercent
+	}
+}
+
+func WithClaimRewardsPercent(claimRewardsPercent float64) ServiceOption {
+	return func(s *Service) {
+		s.claimRewardsPercent = claimRewardsPercent
+	}
+}

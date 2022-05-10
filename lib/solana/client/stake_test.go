@@ -11,6 +11,8 @@ import (
 
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
+
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 )
 
 func TestScNew(t *testing.T) {
@@ -22,7 +24,7 @@ func TestScNew(t *testing.T) {
 		SysvarClock:    common.SysVarClockPubkey.ToBase58(),
 		SplToken:       common.TokenProgramID.ToBase58(),
 		StakeProgramID: "CL9tjeJL38C3eWqd6g7iHMnXaJ17tmL2ygkLEHghrj4u",
-	})
+	}, nil)
 
 	feePayerPrivate, err := base64.StdEncoding.DecodeString("MeFkg3Y/Ssa+CwfoZO6SvunvBDvxc/y/Jk/Ux/7G6F2vhaKpJyy/+5dPzj7iwO4hNlBxa3rtoRmeJzRLPPhZ5A==")
 	if err != nil {
@@ -57,7 +59,7 @@ func TestScNew(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 2, 0)
+		tx, err = c.SendAssetsWithAutoDerive(ctx, asset.ToBase58(), feePayer, issuer, wallet.PublicKey.ToBase58(), 2, &lib_solana.SendAssetsConfig{})
 		if err == nil {
 			break
 		}

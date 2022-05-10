@@ -67,6 +67,22 @@ components:
           items:
             type: string
 
+    ArweaveNFTMetadata:
+      type: object
+      properties:
+        mint_addr:
+          type: string
+        name:
+          type: string
+        symbol:
+          type: string
+        description:
+          type: string
+        seller_fee_basis_points:
+          type: number
+        image:
+          type: string
+
     Category:
       type: object
       properties:
@@ -188,6 +204,22 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/NFT"
+
+    ArweaveNFTMetadata:
+      description: ArweaveNFTMetadata.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ArweaveNFTMetadata"
+    ArweaveNFTMetadatas:
+      description: ArweaveNFTMetadatas.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/ArweaveNFTMetadata"
+
     Categories:
       description: Categories.
       content:
@@ -275,6 +307,30 @@ components:
                 type: number
                 enum: [0, 1, 2]
                 description: Game result. 0 - not finished, 1 - user won, 2 - user lost
+              tiles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    image:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        file_url:
+                          type: string
+                    value:
+                      type: integer
+                    current_position:
+                      type: object
+                      properties:
+                        x:
+                          type: integer
+                        y:
+                          type: integer
+                    is_whitespace:
+                      type: boolean
+                description: Tiles of puzzle game
               image:
                 type: string
                 description: Current game image url
@@ -4089,6 +4145,28 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /nft/by_wallet_address/{wallet_address}:
+    get:
+      tags:
+        - "NFT"
+      summary: Get all NFTs by wallet address.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wallet_address
+          in: path
+          description: Solana wallet address.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ArweaveNFTMetadatas"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /nft/filter/category/{category_id}:
     get:
       tags:
@@ -4097,6 +4175,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: category_id
+          in: path
+          description: Category ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4129,6 +4213,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4161,6 +4251,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -4193,6 +4289,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: user_id
+          in: path
+          description: User ID.
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           description: |
@@ -5774,6 +5876,43 @@ paths:
                 steps_taken:
                   type: number
                   description: "Number of steps taken."
+      responses:
+        "200":
+          $ref: "#/components/responses/PuzzleGame"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /puzzle-game/{puzzle_game_id}/tap-tile:
+    post:
+      tags:
+        - "Puzzle game (client part)"
+      summary: Tapping on tile in puzzle game
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzle_game_id
+          in: path
+          description: Puzzle game ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                x:
+                  type: integer
+                  description: "x position"
+                y:
+                  type: integer
+                  description: "y position"
       responses:
         "200":
           $ref: "#/components/responses/PuzzleGame"

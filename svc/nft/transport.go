@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/uuid"
-
-	"github.com/SatorNetwork/sator-api/lib/httpencoder"
-	"github.com/SatorNetwork/sator-api/lib/utils"
-
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/google/uuid"
+
+	"github.com/SatorNetwork/sator-api/lib/httpencoder"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 )
 
 // Predefined request query keys
@@ -119,6 +118,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Get("/home", httptransport.NewServer(
 		e.GetMainScreenData,
 		decodeGetMainScreenDataRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/by_wallet_address/{wallet_address}", httptransport.NewServer(
+		e.GetNFTsByWalletAddress,
+		decodeGetNFTsByWalletAddressRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -256,6 +262,15 @@ func decodeUpdateNFTItemRequest(_ context.Context, r *http.Request) (interface{}
 	req.ID = id
 
 	return req, nil
+}
+
+func decodeGetNFTsByWalletAddressRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	walletAddress := chi.URLParam(r, "wallet_address")
+	if walletAddress == "" {
+		return nil, fmt.Errorf("%w: missed wallet address", ErrInvalidParameter)
+	}
+
+	return walletAddress, nil
 }
 
 // returns http error code by error type

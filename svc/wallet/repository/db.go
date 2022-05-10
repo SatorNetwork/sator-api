@@ -52,6 +52,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.doesUserHaveFraudulentTransfersStmt, err = db.PrepareContext(ctx, doesUserHaveFraudulentTransfers); err != nil {
 		return nil, fmt.Errorf("error preparing query DoesUserHaveFraudulentTransfers: %w", err)
 	}
+	if q.doesUserMakeTransferForLastMinuteStmt, err = db.PrepareContext(ctx, doesUserMakeTransferForLastMinute); err != nil {
+		return nil, fmt.Errorf("error preparing query DoesUserMakeTransferForLastMinute: %w", err)
+	}
 	if q.getAllEnabledStakeLevelsStmt, err = db.PrepareContext(ctx, getAllEnabledStakeLevels); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllEnabledStakeLevels: %w", err)
 	}
@@ -168,6 +171,11 @@ func (q *Queries) Close() error {
 	if q.doesUserHaveFraudulentTransfersStmt != nil {
 		if cerr := q.doesUserHaveFraudulentTransfersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing doesUserHaveFraudulentTransfersStmt: %w", cerr)
+		}
+	}
+	if q.doesUserMakeTransferForLastMinuteStmt != nil {
+		if cerr := q.doesUserMakeTransferForLastMinuteStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing doesUserMakeTransferForLastMinuteStmt: %w", cerr)
 		}
 	}
 	if q.getAllEnabledStakeLevelsStmt != nil {
@@ -324,6 +332,7 @@ type Queries struct {
 	deleteStakeByUserIDStmt               *sql.Stmt
 	deleteWalletByIDStmt                  *sql.Stmt
 	doesUserHaveFraudulentTransfersStmt   *sql.Stmt
+	doesUserMakeTransferForLastMinuteStmt *sql.Stmt
 	getAllEnabledStakeLevelsStmt          *sql.Stmt
 	getAllStakeLevelsStmt                 *sql.Stmt
 	getEthereumAccountByIDStmt            *sql.Stmt
@@ -361,6 +370,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteStakeByUserIDStmt:               q.deleteStakeByUserIDStmt,
 		deleteWalletByIDStmt:                  q.deleteWalletByIDStmt,
 		doesUserHaveFraudulentTransfersStmt:   q.doesUserHaveFraudulentTransfersStmt,
+		doesUserMakeTransferForLastMinuteStmt: q.doesUserMakeTransferForLastMinuteStmt,
 		getAllEnabledStakeLevelsStmt:          q.getAllEnabledStakeLevelsStmt,
 		getAllStakeLevelsStmt:                 q.getAllStakeLevelsStmt,
 		getEthereumAccountByIDStmt:            q.getEthereumAccountByIDStmt,

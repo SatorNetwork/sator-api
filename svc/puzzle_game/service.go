@@ -3,15 +3,18 @@ package puzzle_game
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/files"
-	"github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
+	"github.com/SatorNetwork/gopuzzlegame"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+
+	"github.com/SatorNetwork/sator-api/svc/files"
+	"github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 )
 
 // Predefined puzzle game states
@@ -19,13 +22,7 @@ const (
 	PuzzleGameStatusNew = iota
 	PuzzleGameStatusInProgress
 	PuzzleGameStatusFinished
-)
-
-// Predefined puzzle game results
-const (
-	PuzzleGameResultUndefined = iota
-	PuzzleGameResultWon
-	PuzzleGameResultLost
+	PuzzleStatusReachedStepLimit
 )
 
 type (
@@ -35,6 +32,7 @@ type (
 		chargeForUnlock            chargeForUnlockFunc          // function to charge user for unlocking puzzle game
 		rewardsFn                  rewardsFunc                  // function to send rewards for puzzle game
 		getUserRewardsMultiplierFn getUserRewardsMultiplierFunc // function to get user rewards multiplier
+		puzzleGameShuffle          bool
 	}
 
 	puzzleGameRepository interface {
@@ -48,10 +46,11 @@ type (
 		UnlinkImageFromPuzzleGame(ctx context.Context, arg repository.UnlinkImageFromPuzzleGameParams) error
 
 		GetPuzzleGameCurrentAttempt(ctx context.Context, arg repository.GetPuzzleGameCurrentAttemptParams) (repository.PuzzleGamesAttempt, error)
+		UpdatePuzzleGameAttempt(ctx context.Context, arg repository.UpdatePuzzleGameAttemptParams) (repository.PuzzleGamesAttempt, error)
 		GetUserAvailableSteps(ctx context.Context, arg repository.GetUserAvailableStepsParams) (int32, error)
+		FinishPuzzleGame(ctx context.Context, arg repository.FinishPuzzleGameParams) error
 		UnlockPuzzleGame(ctx context.Context, arg repository.UnlockPuzzleGameParams) (repository.PuzzleGamesAttempt, error)
 		StartPuzzleGame(ctx context.Context, arg repository.StartPuzzleGameParams) (repository.PuzzleGamesAttempt, error)
-		FinishPuzzleGame(ctx context.Context, arg repository.FinishPuzzleGameParams) error
 
 		GetPuzzleGameUnlockOption(ctx context.Context, id string) (repository.PuzzleGameUnlockOption, error)
 		GetPuzzleGameUnlockOptions(ctx context.Context) ([]repository.PuzzleGameUnlockOption, error)
@@ -79,10 +78,10 @@ type (
 		BonusRewards float64   `json:"bonus_rewards,omitempty"`
 		PartsX       int32     `json:"parts_x"`
 		// PartsY     int32     `json:"parts_y"`
-		Steps      int32 `json:"steps"`
-		StepsTaken int32 `json:"steps_taken,omitempty"`
-		Status     int32 `json:"status"`
-		Result     int32 `json:"result,omitempty"`
+		Steps      int32                `json:"steps"`
+		StepsTaken int32                `json:"steps_taken,omitempty"`
+		Status     int32                `json:"status"`
+		Tiles      []*gopuzzlegame.Tile `json:"tiles,omitempty"`
 
 		// depends on user role
 		Images []PuzzleGameImage `json:"images,omitempty"`
@@ -102,8 +101,15 @@ type (
 	}
 )
 
-func NewService(pgr puzzleGameRepository, opt ...ServiceOption) *Service {
-	s := &Service{pgr: pgr}
+func (pg *PuzzleGame) HideCorrectPositions() PuzzleGame {
+	for _, tile := range pg.Tiles {
+		tile.CorrectPosition = nil
+	}
+	return *pg
+}
+
+func NewService(pgr puzzleGameRepository, puzzleGameShuffle bool, opt ...ServiceOption) *Service {
+	s := &Service{pgr: pgr, puzzleGameShuffle: puzzleGameShuffle}
 
 	for _, o := range opt {
 		o(s)
@@ -312,17 +318,29 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		return PuzzleGame{}, errors.Wrap(err, "could not start puzzle game")
 	}
 
+	pg, err := s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
+	}
+
+	p, err := gopuzzlegame.GeneratePuzzle(int(pg.PartsX), s.puzzleGameShuffle)
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't generate puzzle")
+	}
+
+	rawTiles, err := json.Marshal(p.Tiles)
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't create puzzle game")
+	}
+
 	if _, err := s.pgr.StartPuzzleGame(ctx, repository.StartPuzzleGameParams{
 		PuzzleGameID: puzzleGameID,
 		UserID:       userID,
 		Image:        sql.NullString{Valid: true, String: img},
+		Tiles:        sql.NullString{String: string(rawTiles), Valid: true},
 	}); err != nil {
+		fmt.Println(err.Error())
 		return PuzzleGame{}, errors.Wrap(err, "can't start puzzle game")
-	}
-
-	pg, err := s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
 	}
 
 	result, err := s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusInProgress)
@@ -330,66 +348,8 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game for user")
 	}
 
-	return result, nil
-}
-
-func (s *Service) FinishPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, result, stepsTaken int32) (PuzzleGame, error) {
-	pg, err := s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
-	}
-
-	var rewardsAmount, lockRewardsAmount float64 = 0, 0
-	if result == PuzzleGameResultWon && pg.PrizePool > 0 {
-		rewardsAmount = pg.PrizePool
-
-		if s.getUserRewardsMultiplierFn != nil {
-			mltp, _ := s.getUserRewardsMultiplierFn(ctx, userID)
-			if mltp > 0 {
-				lockRewardsAmount = (float64(mltp) / 100) * rewardsAmount
-				rewardsAmount = rewardsAmount + lockRewardsAmount
-			}
-		}
-
-		if s.rewardsFn != nil {
-			att, err := s.pgr.GetPuzzleGameCurrentAttempt(ctx, repository.GetPuzzleGameCurrentAttemptParams{
-				PuzzleGameID: puzzleGameID,
-				UserID:       userID,
-				Status:       PuzzleGameStatusInProgress,
-			})
-			if err != nil {
-				return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game current attempt")
-			}
-
-		retrySendReward:
-			for i := 0; i < 5; i++ {
-				if err := s.rewardsFn(ctx, userID, att.ID, "puzzle_games", rewardsAmount); err != nil {
-					log.Printf("can't add rewards for puzzle game: %v", err)
-					time.Sleep(time.Second * 3)
-				} else {
-					break retrySendReward
-				}
-			}
-		}
-	}
-
-	if err := s.pgr.FinishPuzzleGame(ctx, repository.FinishPuzzleGameParams{
-		PuzzleGameID:  puzzleGameID,
-		UserID:        userID,
-		StepsTaken:    stepsTaken,
-		RewardsAmount: rewardsAmount,
-		BonusAmount:   lockRewardsAmount,
-		Result:        result,
-	}); err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't finish puzzle game")
-	}
-
-	pg, err = s.pgr.GetPuzzleGameByID(ctx, puzzleGameID)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
-	}
-
-	return s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusFinished)
+	result.Tiles = p.Tiles
+	return result.HideCorrectPositions(), nil
 }
 
 func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame repository.PuzzleGame, status int32) (PuzzleGame, error) {
@@ -405,7 +365,6 @@ func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, pu
 	pg.StepsTaken = att.StepsTaken
 	pg.Rewards = att.RewardsAmount
 	pg.BonusRewards = att.BonusAmount
-	pg.Result = att.Result
 	pg.Status = att.Status
 
 	if !att.Image.Valid {
@@ -467,4 +426,134 @@ func (s *Service) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameU
 	}
 
 	return result, nil
+}
+
+func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, position gopuzzlegame.Position) (PuzzleGame, error) {
+	att, err := s.pgr.GetPuzzleGameCurrentAttempt(ctx, repository.GetPuzzleGameCurrentAttemptParams{
+		UserID:       userID,
+		PuzzleGameID: puzzleGameID,
+		Status:       PuzzleGameStatusInProgress,
+	})
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game attempt")
+	}
+
+	pg, err := s.pgr.GetPuzzleGameByID(ctx, att.PuzzleGameID)
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
+	}
+
+	var tiles []*gopuzzlegame.Tile
+	if err = json.Unmarshal([]byte(att.Tiles.String), &tiles); err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't get tiles")
+	}
+
+	controller := gopuzzlegame.PuzzleController{
+		PuzzleStatus: att.Status,
+		Puzzle:       &gopuzzlegame.Puzzle{Tiles: tiles},
+		StepsTaken:   att.StepsTaken,
+		Steps:        att.Steps,
+	}
+
+	var tile *gopuzzlegame.Tile
+	for _, t := range tiles {
+		if t.CurrentPosition == position {
+			tile = t
+			break
+		}
+	}
+	if tile == nil {
+		return PuzzleGame{}, errors.New("can't get tile with such position")
+	}
+
+	if err = controller.TapTile(tile); err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't tap tile")
+	}
+
+	tilesBytes, err := json.Marshal(controller.Puzzle.Tiles)
+	if err != nil {
+		return PuzzleGame{}, err
+	}
+
+	att.StepsTaken = controller.StepsTaken
+	att.Status = controller.PuzzleStatus
+	att.Tiles = sql.NullString{String: string(tilesBytes), Valid: true}
+
+	var rewardsAmount, lockRewardsAmount float64 = 0, 0
+	if att.Status == PuzzleGameStatusFinished {
+		if pg.PrizePool > 0 {
+			rewardsAmount = pg.PrizePool
+
+			if s.getUserRewardsMultiplierFn != nil {
+				mltp, _ := s.getUserRewardsMultiplierFn(ctx, userID)
+				if mltp > 0 {
+					lockRewardsAmount = (float64(mltp) / 100) * rewardsAmount
+					rewardsAmount = rewardsAmount + lockRewardsAmount
+				}
+			}
+
+			if s.rewardsFn != nil {
+				att, err := s.pgr.GetPuzzleGameCurrentAttempt(ctx, repository.GetPuzzleGameCurrentAttemptParams{
+					PuzzleGameID: puzzleGameID,
+					UserID:       userID,
+					Status:       PuzzleGameStatusInProgress,
+				})
+				if err != nil {
+					return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game current attempt")
+				}
+
+			retrySendReward:
+				for i := 0; i < 5; i++ {
+					if err := s.rewardsFn(ctx, userID, att.ID, "puzzle_games", rewardsAmount); err != nil {
+						log.Printf("can't add rewards for puzzle game: %v", err)
+						time.Sleep(time.Second * 3)
+					} else {
+						break retrySendReward
+					}
+				}
+			}
+		}
+
+		if err := s.pgr.FinishPuzzleGame(ctx, repository.FinishPuzzleGameParams{
+			PuzzleGameID:  puzzleGameID,
+			UserID:        userID,
+			StepsTaken:    att.StepsTaken,
+			RewardsAmount: rewardsAmount,
+			BonusAmount:   lockRewardsAmount,
+		}); err != nil {
+			return PuzzleGame{}, errors.Wrap(err, "can't finish puzzle game")
+		}
+	} else {
+		_, err = s.pgr.UpdatePuzzleGameAttempt(ctx, repository.UpdatePuzzleGameAttemptParams{
+			Status:     att.Status,
+			Steps:      att.Steps,
+			StepsTaken: att.StepsTaken,
+			Tiles:      sql.NullString{String: string(tilesBytes), Valid: true},
+			ID:         att.ID,
+		})
+		if err != nil {
+			return PuzzleGame{}, errors.Wrap(err, "can't update game attempt")
+		}
+	}
+
+	images, err := s.GetPuzzleGameImages(ctx, pg.ID)
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game images")
+	}
+
+	response := PuzzleGame{
+		ID:           pg.ID,
+		EpisodeID:    pg.EpisodeID,
+		PrizePool:    pg.PrizePool,
+		Rewards:      rewardsAmount,
+		BonusRewards: lockRewardsAmount,
+		PartsX:       pg.PartsX,
+		Steps:        att.Steps,
+		StepsTaken:   att.StepsTaken,
+		Status:       att.Status,
+		Tiles:        controller.Puzzle.Tiles,
+		Images:       images,
+		Image:        att.Image.String,
+	}
+	return response.HideCorrectPositions(), nil
 }

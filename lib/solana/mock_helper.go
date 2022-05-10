@@ -22,8 +22,22 @@ func (m *MockInterface) ExpectNewAccountAny() *gomock.Call {
 func (m *MockInterface) ExpectAccountFromPrivateKeyBytesAny() *gomock.Call {
 	return m.EXPECT().
 		AccountFromPrivateKeyBytes(gomock.Any()).
-		DoAndReturn(func(pk []byte) types.Account {
-			return types.AccountFromPrivateKeyBytes(pk)
+		DoAndReturn(func(pk []byte) (types.Account, error) {
+			return types.AccountFromBytes(pk)
 		}).
+		AnyTimes()
+}
+
+func (m *MockInterface) ExpectTransactionDeserializeAny() *gomock.Call {
+	return m.EXPECT().
+		TransactionDeserialize(gomock.Any()).
+		Return(types.Transaction{}, nil).
+		AnyTimes()
+}
+
+func (m *MockInterface) ExpectSerializeTxMessageAny() *gomock.Call {
+	return m.EXPECT().
+		SerializeTxMessage(gomock.Any()).
+		Return([]byte{}, nil).
 		AnyTimes()
 }

@@ -26,3 +26,9 @@ SELECT (count(DISTINCT user_id) > 0)::BOOLEAN as fraud_detected
 FROM token_transfers 
 WHERE user_id = @user_id
     AND status = 3;
+
+-- name: DoesUserMakeTransferForLastMinute :one
+SELECT (count(*) > 0)::BOOLEAN as found_transfer
+FROM token_transfers 
+WHERE user_id = @user_id
+    AND created_at > now() - interval '1 minute';

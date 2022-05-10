@@ -4,30 +4,31 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/kit/endpoint"
+	"github.com/google/uuid"
+
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
-
-	"github.com/go-kit/kit/endpoint"
-	"github.com/google/uuid"
 )
 
 type (
 	// Endpoints collection of NFT service
 	Endpoints struct {
-		CreateNFT          endpoint.Endpoint
-		GetNFTs            endpoint.Endpoint
-		GetNFTsByCategory  endpoint.Endpoint
-		GetNFTsByShowID    endpoint.Endpoint
-		GetNFTsByEpisodeID endpoint.Endpoint
-		GetNFTsByUserID    endpoint.Endpoint
-		GetNFTByID         endpoint.Endpoint
-		BuyNFT             endpoint.Endpoint
-		GetCategories      endpoint.Endpoint
-		GetMainScreenData  endpoint.Endpoint
-		DeleteNFTItemByID  endpoint.Endpoint
-		UpdateNFTItem      endpoint.Endpoint
+		CreateNFT              endpoint.Endpoint
+		GetNFTs                endpoint.Endpoint
+		GetNFTsByCategory      endpoint.Endpoint
+		GetNFTsByShowID        endpoint.Endpoint
+		GetNFTsByEpisodeID     endpoint.Endpoint
+		GetNFTsByUserID        endpoint.Endpoint
+		GetNFTByID             endpoint.Endpoint
+		BuyNFT                 endpoint.Endpoint
+		GetCategories          endpoint.Endpoint
+		GetMainScreenData      endpoint.Endpoint
+		DeleteNFTItemByID      endpoint.Endpoint
+		UpdateNFTItem          endpoint.Endpoint
+		GetNFTsByWalletAddress endpoint.Endpoint
 	}
 
 	service interface {
@@ -44,6 +45,7 @@ type (
 		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
 		UpdateNFTItem(ctx context.Context, nft *NFT) error
 		GetNFTsByRelationID(ctx context.Context, uid, relID uuid.UUID, limit, offset int32) ([]*NFT, error)
+		GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTListItem, error)
 	}
 
 	TransportNFT struct {
@@ -118,6 +120,10 @@ type (
 		Supply      int       `json:"supply"`
 		BuyNowPrice float64   `json:"buy_now_price"`
 		TokenURI    string    `json:"token_uri" validate:"required"`
+	}
+
+	GetNFTsByWalletAddressRequest struct {
+		WalletAddr string `json:"wallet_addr"`
 	}
 )
 
@@ -210,18 +216,19 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		CreateNFT:          MakeCreateNFTEndpoint(s, validateFunc),
-		GetNFTs:            MakeGetNFTsEndpoint(s, validateFunc),
-		GetNFTsByCategory:  MakeGetNFTsByCategoryEndpoint(s, validateFunc),
-		GetNFTsByShowID:    MakeGetNFTsByShowIDEndpoint(s, validateFunc),
-		GetNFTsByEpisodeID: MakeGetNFTsByEpisodeIDEndpoint(s, validateFunc),
-		GetNFTsByUserID:    MakeGetNFTsByUserIDEndpoint(s, validateFunc),
-		GetNFTByID:         MakeGetNFTByIDEndpoint(s),
-		BuyNFT:             MakeBuyNFTEndpoint(s),
-		GetCategories:      MakeGetCategoriesEndpoint(s),
-		GetMainScreenData:  MakeGetMainScreenDataEndpoint(s),
-		DeleteNFTItemByID:  MakeDeleteNFTItemByIDEndpoint(s),
-		UpdateNFTItem:      MakeUpdateNFTItemEndpoint(s, validateFunc),
+		CreateNFT:              MakeCreateNFTEndpoint(s, validateFunc),
+		GetNFTs:                MakeGetNFTsEndpoint(s, validateFunc),
+		GetNFTsByCategory:      MakeGetNFTsByCategoryEndpoint(s, validateFunc),
+		GetNFTsByShowID:        MakeGetNFTsByShowIDEndpoint(s, validateFunc),
+		GetNFTsByEpisodeID:     MakeGetNFTsByEpisodeIDEndpoint(s, validateFunc),
+		GetNFTsByUserID:        MakeGetNFTsByUserIDEndpoint(s, validateFunc),
+		GetNFTByID:             MakeGetNFTByIDEndpoint(s),
+		BuyNFT:                 MakeBuyNFTEndpoint(s),
+		GetCategories:          MakeGetCategoriesEndpoint(s),
+		GetMainScreenData:      MakeGetMainScreenDataEndpoint(s),
+		DeleteNFTItemByID:      MakeDeleteNFTItemByIDEndpoint(s),
+		UpdateNFTItem:          MakeUpdateNFTItemEndpoint(s, validateFunc),
+		GetNFTsByWalletAddress: MakeGetNFTsByWalletAddressEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -239,6 +246,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetMainScreenData = mdw(e.GetMainScreenData)
 			e.DeleteNFTItemByID = mdw(e.DeleteNFTItemByID)
 			e.UpdateNFTItem = mdw(e.UpdateNFTItem)
+			e.GetNFTsByWalletAddress = mdw(e.GetNFTsByWalletAddress)
 		}
 	}
 
@@ -520,5 +528,22 @@ func MakeUpdateNFTItemEndpoint(s service, v validator.ValidateFunc) endpoint.End
 		}
 
 		return true, nil
+	}
+}
+
+func MakeGetNFTsByWalletAddressEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		nfts, err := s.GetNFTsByWalletAddress(context.Background(), &GetNFTsByWalletAddressRequest{
+			WalletAddr: request.(string),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return nfts, nil
 	}
 }

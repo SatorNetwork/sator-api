@@ -6,7 +6,9 @@ replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompat
 
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1
+	github.com/SatorNetwork/gopuzzlegame v0.0.0-20220429113459-e0ae698bfb8a
 	github.com/anytypeio/go-slip10 v0.0.0-20200330114100-25f30c832993
+	github.com/awa/go-iap v1.3.16
 	github.com/aws/aws-sdk-go v1.31.4
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dmitrymomot/go-env v0.1.1
@@ -29,14 +31,16 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.9.1
-	github.com/near/borsh-go v0.3.0
+	github.com/near/borsh-go v0.3.1-0.20210831082424-4377deff6791
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/portto/solana-go-sdk v0.1.0
+	github.com/portto/solana-go-sdk v1.16.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.7.0
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
 	github.com/stretchr/testify v1.7.0
+	github.com/superoo7/go-gecko v1.0.0
 	github.com/thedevsaddam/govalidator v1.9.10
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/zeebo/errs v1.2.2
@@ -55,8 +59,7 @@ require (
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/golang/protobuf v1.4.3 // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/nats-io/jwt v0.3.2 // indirect
@@ -64,16 +67,15 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
-	github.com/teserakt-io/golang-ed25519 v0.0.0-20210104091850-3888c087a4c8 // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	goji.io v2.0.2+incompatible // indirect
 	golang.org/x/sys v0.0.0-20211109184856-51b60fd695b3 // indirect
 	golang.org/x/text v0.3.6 // indirect
-	google.golang.org/genproto v0.0.0-20200108215221-bd8f9a0ef82f // indirect
-	google.golang.org/grpc v1.26.0 // indirect
-	google.golang.org/protobuf v1.23.0 // indirect
+	google.golang.org/genproto v0.0.0-20210607140030-00d4fb20b1ae // indirect
+	google.golang.org/grpc v1.38.0 // indirect
+	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect

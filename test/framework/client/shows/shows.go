@@ -1,6 +1,7 @@
 package shows
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -36,6 +37,11 @@ type Shows struct {
 	Data []*Show `json:"data"`
 }
 
+type SendTipsRequest struct {
+	ReviewID string  `json:"review_id"`
+	Amount   float64 `json:"amount"`
+}
+
 func (a *ShowsClient) GetShows(apiKey string) (*Shows, error) {
 	url := fmt.Sprintf("http://localhost:8080/nft-marketplace/shows")
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
@@ -61,4 +67,31 @@ func (a *ShowsClient) GetShows(apiKey string) (*Shows, error) {
 	}
 
 	return &resp, nil
+}
+
+func (a *ShowsClient) SendTipsToReviewAuthor(apiKey string, req *SendTipsRequest) error {
+	url := fmt.Sprintf("http://localhost:8080/shows/reviews/%v/tips", req.ReviewID)
+	body, err := json.Marshal(req)
+	if err != nil {
+		return errors.Wrap(err, "can't marshal request")
+	}
+	reader := bytes.NewReader(body)
+	httpReq, err := http.NewRequest(http.MethodPost, url, reader)
+	if err != nil {
+		return errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", apiKey))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+
+	return nil
 }

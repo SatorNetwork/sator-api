@@ -29,7 +29,10 @@ func AccountFromMnemonic(mnemonic string) (*types.Account, error) {
 		return nil, err
 	}
 	_, privateKey := node.Keypair()
-	account := types.AccountFromPrivateKeyBytes(privateKey)
+	account, err := types.AccountFromBytes(privateKey)
+	if err != nil {
+		return nil, err
+	}
 
 	return &account, nil
 }

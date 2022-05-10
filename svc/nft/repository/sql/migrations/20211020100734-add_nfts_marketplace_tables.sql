@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS nft_relations (
 
 -- +migrate Down
 DROP TRIGGER IF EXISTS update_nft_items_modtime ON nft_items;
-DROP TABLE IF EXISTS nft_items;
 DROP TABLE IF EXISTS nft_categories;
 DROP TABLE IF EXISTS nft_relations;
 DROP FUNCTION IF EXISTS nft_update_updated_at_column();
+DROP TABLE IF EXISTS nft_items;

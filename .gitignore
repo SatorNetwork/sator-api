@@ -27,3 +27,5 @@ Makefile.DEV.local
 geth.*
 sator-api.log
 vendor/
+.env
+.vscode

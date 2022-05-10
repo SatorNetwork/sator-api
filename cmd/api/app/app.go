@@ -22,6 +22,7 @@ import (
 	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
 	"github.com/oklog/run"
+	"github.com/portto/solana-go-sdk/types"
 	"github.com/rs/cors"
 	"github.com/zeebo/errs"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/firebase"
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
+	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
@@ -42,8 +44,13 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	challengeClient "github.com/SatorNetwork/sator-api/svc/challenge/client"
 	challengeRepo "github.com/SatorNetwork/sator-api/svc/challenge/repository"
+	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
+	exchange_rates_client "github.com/SatorNetwork/sator-api/svc/exchange_rates/client"
+	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
+	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
@@ -140,11 +147,19 @@ type Config struct {
 	NatsWSURL                   string
 	QuizV2ShuffleQuestions      bool
 	ServerRSAPrivateKey         string
+	PuzzleGameShuffle           bool
 	TipsPercent                 float64
+	TokenTransferPercent        float64
+	ClaimRewardsPercent         float64
+	FeeAccumulatorAddress       string
 	SatorAPIKey                 string
+	SkipAPIKeyCheck             bool
 	WhitelistMode               bool
 	BlacklistMode               bool
 	FraudDetectionMode          bool
+	NftMarketplaceServerHost    string
+	NftMarketplaceServerPort    int
+	SkipDeviceIDCheck           bool
 }
 
 var buildTag string
@@ -255,11 +270,22 @@ func ConfigFromEnv() *Config {
 		QuizV2ShuffleQuestions: env.GetBool("QUIZ_V2_SHUFFLE_QUESTIONS", true),
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
 
-		TipsPercent: env.GetFloat("TIPS_PERCENT", 0.5),
+		// Puzzle Game
+		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
 
-		SatorAPIKey: env.MustString("SATOR_API_KEY"),
+		TipsPercent:           env.GetFloat("TIPS_PERCENT", 0.5),
+		TokenTransferPercent:  env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
+		ClaimRewardsPercent:   env.GetFloat("CLAIM_REWARDS_PERCENT", 0.75),
+		FeeAccumulatorAddress: env.GetString("FEE_ACCUMULATOR_ADDRESS", "96P3ugPEP6osg2R5RGRApikWLPzsgm1FRU3hiuc8WnMh"),
+
+		SatorAPIKey:       env.MustString("SATOR_API_KEY"),
+		SkipAPIKeyCheck:   env.GetBool("SKIP_API_KEY_CHECK", false),
+		SkipDeviceIDCheck: env.GetBool("SKIP_DEVICE_ID_CHECK", false),
 
 		FraudDetectionMode: env.GetBool("FRAUD_DETECTION_MODE", false),
+
+		NftMarketplaceServerHost: env.MustString("NFT_MARKETPLACE_SERVER_HOST"),
+		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
 	}
 }
 
@@ -371,48 +397,82 @@ func (a *app) Run() {
 		return a.cfg.KycSkip
 	})
 
-	var walletSvcClient *walletClient.Client
-	// Wallet service
+	var exchangeRatesClient *exchange_rates_client.Client
 	{
-		walletRepository, err := walletRepo.Prepare(ctx, db)
+		exchangeRatesRepository, err := exchange_rates_repository.Prepare(context.Background(), db)
 		if err != nil {
-			log.Fatalf("walletRepo error: %v", err)
+			log.Fatalf("can't prepare exchange rates repository: %v", err)
 		}
 
+		exchangeRatesServer, err := exchange_rates.NewExchangeRatesServer(
+			exchangeRatesRepository,
+		)
+		if err != nil {
+			log.Fatalf("can't create exchange rates server: %v\n", err)
+		}
+		exchangeRatesClient = exchange_rates_client.New(exchangeRatesServer)
+	}
+	_ = exchangeRatesClient
+
+	walletRepository, err := walletRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("can't prepare wallet repository: %v", err)
+	}
+	solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
+		SystemProgram:         a.cfg.SolanaSystemProgram,
+		SysvarRent:            a.cfg.SolanaSysvarRent,
+		SysvarClock:           a.cfg.SolanaSysvarClock,
+		SplToken:              a.cfg.SolanaSplToken,
+		StakeProgramID:        a.cfg.SolanaStakeProgramID,
+		TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+		FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+	}, exchangeRatesClient)
+
+	var feePayer types.Account
+	{
 		feePayerPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaFeePayerPrivateKey)
 		if err != nil {
 			log.Fatalf("feePayerPk base64 decoding error: %v", err)
 		}
+		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
+		}
+		feePayer, err = types.AccountFromBytes(feePayerPk)
+		if err != nil {
+			log.Fatalf("can't get fee payer account from bytes")
+		}
+	}
+
+	var tokenHolder types.Account
+	{
 		tokenHolderPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaTokenHolderPrivateKey)
 		if err != nil {
 			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
 		}
-
-		solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-			SystemProgram:   a.cfg.SolanaSystemProgram,
-			SysvarRent:      a.cfg.SolanaSysvarRent,
-			SysvarClock:     a.cfg.SolanaSysvarClock,
-			SplToken:        a.cfg.SolanaSplToken,
-			StakeProgramID:  a.cfg.SolanaStakeProgramID,
-			TokenHolderAddr: a.cfg.SolanaTokenHolderAddr,
-		})
-		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
-			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
-		}
 		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, tokenHolderPk); err != nil {
 			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
 		}
+		tokenHolder, err = types.AccountFromBytes(tokenHolderPk)
+		if err != nil {
+			log.Fatalf("can't get token holder account from bytes")
+		}
+	}
 
+	var walletSvcClient *walletClient.Client
+	// Wallet service
+	{
 		walletService := wallet.NewService(
 			walletRepository,
 			solanaClient,
 			ethereumClient,
 			wallet.WithAssetSolanaAddress(a.cfg.SolanaAssetAddr),
-			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayerPk),
-			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolderPk),
+			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayer.PrivateKey),
+			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey),
 			wallet.WithMinAmountToTransfer(a.cfg.MinAmountToTransfer),
 			wallet.WithStakePoolSolanaAddress(a.cfg.SolanaStakePoolAddr),
 			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
+			wallet.WithTokenTransferPercent(a.cfg.TokenTransferPercent),
+			wallet.WithClaimRewardsPercent(a.cfg.ClaimRewardsPercent),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -475,6 +535,7 @@ func (a *app) Run() {
 			auth.WithMailService(mailer),
 			auth.WithBlacklistMode(a.cfg.BlacklistMode),
 			auth.WithWhitelistMode(a.cfg.WhitelistMode),
+			auth.WithSkipDeviceIDCheck(a.cfg.SkipDeviceIDCheck),
 		)
 
 		// Auth service
@@ -539,7 +600,7 @@ func (a *app) Run() {
 		if err != nil {
 			log.Fatalf("nftRepo error: %v", err)
 		}
-		nftService := nft.NewService(nftRepository, walletSvcClient.PayForNFT)
+		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,
@@ -549,7 +610,6 @@ func (a *app) Run() {
 
 	// Shows service
 	{
-
 		// Show repo
 		// FIXME: remove it when the app will be fixed
 		showRepo, err := showsRepo.Prepare(ctx, db)
@@ -587,7 +647,7 @@ func (a *app) Run() {
 			logger,
 		))
 		r.Mount("/nft-marketplace/shows", private.MakeHTTPHandler(
-			private.MakeEndpoints(showsService, jwt.NewAPIKeyMdw(a.cfg.SatorAPIKey)),
+			private.MakeEndpoints(showsService, jwt.NewAPIKeyMdw(a.cfg.SatorAPIKey, a.cfg.SkipAPIKeyCheck)),
 			logger,
 		))
 	}
@@ -684,6 +744,36 @@ func (a *app) Run() {
 		))
 	}
 
+	// In-app purchases service
+	{
+		iapRepository, err := iap_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare iap repository: %v", err)
+		}
+
+		if a.cfg.NftMarketplaceServerHost == "" {
+			log.Fatalf("nft marketplace server host isn't specified")
+		}
+		if a.cfg.NftMarketplaceServerPort == 0 {
+			log.Fatalf("nft marketplace server port isn't specified")
+		}
+		nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
+
+		iapSvc := iap_svc.NewService(
+			nftMarketplaceClient,
+			iapRepository,
+			walletRepository,
+			solanaClient,
+			a.cfg.SolanaAssetAddr,
+			feePayer,
+			tokenHolder,
+		)
+		r.Mount("/iap", iap_svc.MakeHTTPHandler(
+			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	{
 		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
 		if err != nil {
@@ -692,6 +782,7 @@ func (a *app) Run() {
 
 		puzzleGameSvc := puzzle_game.NewService(
 			puzzleGameRepository,
+			a.cfg.PuzzleGameShuffle,
 			puzzle_game.WithChargeFunction(walletSvcClient.PayForService),
 			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
 			puzzle_game.WithFileServiceClient(fileSvc),
