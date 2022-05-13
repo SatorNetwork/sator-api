@@ -107,7 +107,15 @@ func (c *Client) PrepareSendAssetsTx(
 			// return "", fmt.Errorf("CreateAccountWithATA: %w", err)
 			log.Printf("CreateAccountWithATA: %v", err)
 		}
+		recipientAta, err = c.deriveATAPublicKey(ctx, recipientPublicKey, asset)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	fmt.Println("source ata ", sourceAta.ToBase58())
+	fmt.Println("recipient account", recipientAddr)
+	fmt.Println("recipient token account", recipientAta.ToBase58())
 
 	message, err := c.prepareSendAssetsMessage(
 		ctx,
@@ -124,7 +132,8 @@ func (c *Client) PrepareSendAssetsTx(
 	}
 
 	var solanaTxFee uint64
-	if cfg.ChargeSolanaFeeFromSender {
+	if false {
+	//if cfg.ChargeSolanaFeeFromSender {
 		solanaTxFee, err = c.GetFeeForMessage(ctx, message, cfg.AllowFallbackToDefaultFee, cfg.DefaultFee)
 		if err != nil {
 			return nil, pkg_errors.Wrap(err, "can't get fee for message")

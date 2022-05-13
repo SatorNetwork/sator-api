@@ -248,6 +248,7 @@ func TestSPLTokenPayment(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// FIXME
 	utils.BackoffRetry(t, func() error {
 		satorTokenBalance, err := c.Wallet.GetSatorTokenBalance(signUpResp2.AccessToken)
 		require.NoError(t, err)

@@ -5,7 +5,6 @@ package client
 import (
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/assotokenprog"
@@ -24,8 +23,8 @@ func (c *Client) CreateAccountWithATA(ctx context.Context, assetAddr, initAccAdd
 	instructions := []types.Instruction{
 		assotokenprog.CreateAssociatedTokenAccount(assotokenprog.CreateAssociatedTokenAccountParam{
 			Funder:                 feePayer.PublicKey,
-			Owner:                  common.PublicKeyFromString(initAccAddr),
-			Mint:                   common.PublicKeyFromString(assetAddr),
+			Owner:                  initAcc,
+			Mint:                   asset,
 			AssociatedTokenAccount: initAccAta,
 		}),
 	}
@@ -47,10 +46,19 @@ func (c *Client) CreateAccountWithATA(ctx context.Context, assetAddr, initAccAdd
 		return "", fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
-	txhash, err := c.solana.SendTransaction(ctx, tx)
+	txhash, ok, err := c.SendTransactionUntilConfirmed(ctx, tx, 5)
 	if err != nil {
 		return "", fmt.Errorf("could not send transaction: %w", err)
 	}
+	if !ok {
+		return "", errors.New("tx not confirmed")
+	}
+
+	recipientAta, err := c.deriveATAPublicKey(ctx, initAcc, asset)
+	if err != nil {
+		return "", err
+	}
+	_ = recipientAta
 
 	return txhash, nil
 }

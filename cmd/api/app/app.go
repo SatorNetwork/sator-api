@@ -357,7 +357,7 @@ func (a *app) Run() {
 	r := chi.NewRouter()
 	{
 		r.Use(middleware.Recoverer)
-		r.Use(middleware.Timeout(a.cfg.HttpRequestTimeout))
+		//r.Use(middleware.Timeout(a.cfg.HttpRequestTimeout))
 		r.Use(cors.AllowAll().Handler)
 
 		r.Use(testingMdw)

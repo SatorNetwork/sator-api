@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
 	"github.com/pkg/errors"
@@ -81,7 +82,10 @@ func (a *RewardsClient) ClaimRewards(accessToken string) (*ClaimRewardsResult, e
 		return nil, errors.Wrap(err, "can't create http request")
 	}
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
-	httpResp, err := http.DefaultClient.Do(httpReq)
+	client := http.Client{
+		Timeout:       time.Hour,
+	}
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't make http request")
 	}

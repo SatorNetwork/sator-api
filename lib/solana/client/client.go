@@ -33,8 +33,10 @@ type (
 // New creates new solana client wrapper
 func New(endpoint string, config Config, exchangeRatesClient *exchange_rates_client.Client) lib_solana.Interface {
 	return &Client{
-		solana:              client.NewClient(endpoint),
-		endpoint:            endpoint,
+		//solana:              client.NewClient(endpoint),
+		//endpoint:            endpoint,
+		solana:              client.NewClient("https://api.devnet.solana.com"),
+		endpoint:            "https://api.devnet.solana.com",
 		decimals:            9,
 		mltpl:               1e9,
 		config:              config,
@@ -70,6 +72,48 @@ func (c *Client) CheckPrivateKey(addr string, pk []byte) error {
 }
 
 func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
+	// Check if the given account is already ATA or not
+	recipientAddr := recipientPK.ToBase58()
+	resp, err := c.solana.GetAccountInfo(ctx, recipientAddr)
+	if err != nil {
+		return common.PublicKey{}, errors.Wrapf(err, "can't get account info by addr %v", recipientAddr)
+	}
+	if resp.Owner == common.TokenProgramID.ToBase58() {
+		// given recipient public key is already an SPL token account
+		return recipientPK, nil
+	}
+
+	// Getting of the recipient ATA
+	recipientAta, _, err := common.FindAssociatedTokenAddress(recipientPK, assetPK)
+	if err != nil {
+		return common.PublicKey{}, errors.Wrapf(
+			err,
+			"can't find associated token address, recipient address: %v, asset address: %v",
+			recipientPK.ToBase58(),
+			assetPK.ToBase58(),
+		)
+	}
+
+	// Check if the ATA already created
+	respata, err := c.solana.RpcClient.GetTokenAccountsByOwner(ctx, recipientAddr, rpc.GetTokenAccountsByOwnerConfigFilter{
+		Mint:      assetPK.ToBase58(),
+	})
+	if err != nil {
+		return recipientAta, err
+	}
+	if len(respata.Result.Value) == 0 {
+		return recipientAta, ErrATANotCreated
+	}
+	fmt.Println("GetTokenAccountsByOwner", respata.Result.Value[0].Pubkey)
+	if respata.Result.Value[0].Account.Owner == common.TokenProgramID.ToBase58() {
+		// given recipient public key is already an SPL token account
+		return recipientAta, nil
+	}
+
+	return recipientAta, nil
+}
+
+func (c *Client) deriveATAPublicKeN(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
 	// Check if the given account is already ATA or not
 	recipientAddr := recipientPK.ToBase58()
 	resp, err := c.solana.GetAccountInfo(ctx, recipientAddr)
@@ -160,7 +204,8 @@ func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Tra
 	}
 
 	var ok bool
-	for i := 0; i < retries; i++ {
+	start := time.Now()
+	for true {
 		cbh, err := c.GetBlockHeight(ctx)
 		if err != nil {
 			return "", false, fmt.Errorf("could not get block height: %w", err)
@@ -172,7 +217,7 @@ func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Tra
 				return "", false, fmt.Errorf("could not get signature status: %w", err)
 			}
 
-			if ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentConfirmed {
+			if ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized {
 				ok = true
 				break
 			}
@@ -180,6 +225,9 @@ func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Tra
 
 		time.Sleep(time.Millisecond * 300)
 	}
+
+	end := time.Now()
+	fmt.Println("SendTransactionUntilConfirmed", end.Sub(start))
 
 	return txhash, ok, nil
 }
