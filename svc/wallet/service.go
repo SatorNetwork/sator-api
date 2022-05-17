@@ -48,6 +48,8 @@ type (
 
 		tokenTransferPercent float64
 		claimRewardsPercent  float64
+
+		enableResourceIntensiveQueries bool
 	}
 
 	// ServiceOption function
@@ -436,6 +438,10 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 
 // GetListTransactionsByWalletID returns list of all transactions of specific wallet.
 func (s *Service) GetListTransactionsByWalletID(ctx context.Context, userID, walletID uuid.UUID, limit, offset int32) (_ Transactions, err error) {
+	if !s.enableResourceIntensiveQueries {
+		return Transactions{}, nil
+	}
+
 	transactions, err := s.getListTransactionsByWalletID(ctx, userID, walletID)
 	if err != nil {
 		return Transactions{}, err

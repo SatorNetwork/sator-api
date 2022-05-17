@@ -83,85 +83,86 @@ import (
 )
 
 type Config struct {
-	BuildTagDO                  string
-	AppPort                     int
-	AppBaseURL                  string
-	HttpRequestTimeout          time.Duration
-	DBConnString                string
-	DBMaxOpenConns              int
-	DBMaxIdleConns              int
-	JwtSigningKey               string
-	JwtTTL                      time.Duration
-	OtpLength                   int
-	MasterOTPHash               string
-	QuizWsConnURL               string
-	QuizBotsTimeout             time.Duration
-	QuizLobbyLatency            time.Duration
-	TokenCirculatingSupply      float64
-	SolanaEnv                   string
-	SolanaApiBaseUrl            string
-	SolanaAssetAddr             string
-	SolanaFeePayerAddr          string
-	SolanaFeePayerPrivateKey    string
-	SolanaTokenHolderAddr       string
-	SolanaTokenHolderPrivateKey string
-	SolanaStakePoolAddr         string
-	SolanaSystemProgram         string
-	SolanaSysvarRent            string
-	SolanaSysvarClock           string
-	SolanaSplToken              string
-	SolanaStakeProgramID        string
-	PostmarkServerToken         string
-	PostmarkAccountToken        string
-	NotificationFromName        string
-	NotificationFromEmail       string
-	ProductName                 string
-	ProductURL                  string
-	SupportURL                  string
-	SupportEmail                string
-	CompanyName                 string
-	CompanyAddress              string
-	HoldRewardsPeriod           time.Duration
-	InvitationReward            float64
-	InvitationURL               string
-	FileStorageKey              string
-	FileStorageSecret           string
-	FileStorageEndpoint         string
-	FileStorageRegion           string
-	FileStorageBucket           string
-	FileStorageUrl              string
-	FileStorageDisableSsl       bool
-	FileStorageForcePathStyle   bool
-	BaseFirebaseURL             string
-	FBWebAPIKey                 string
-	MainSiteLink                string
-	AndroidPackageName          string
-	IOSBundleId                 string
-	SuffixOption                string
-	MinAmountToTransfer         float64
-	MinAmountToClaim            float64
-	KycAppToken                 string
-	KycAppSecret                string
-	KycAppBaseURL               string
-	KycAppTTL                   int
-	KycSkip                     bool
-	NatsURL                     string
-	NatsWSURL                   string
-	QuizV2ShuffleQuestions      bool
-	ServerRSAPrivateKey         string
-	PuzzleGameShuffle           bool
-	TipsPercent                 float64
-	TokenTransferPercent        float64
-	ClaimRewardsPercent         float64
-	FeeAccumulatorAddress       string
-	SatorAPIKey                 string
-	SkipAPIKeyCheck             bool
-	WhitelistMode               bool
-	BlacklistMode               bool
-	FraudDetectionMode          bool
-	NftMarketplaceServerHost    string
-	NftMarketplaceServerPort    int
-	SkipDeviceIDCheck           bool
+	BuildTagDO                     string
+	AppPort                        int
+	AppBaseURL                     string
+	HttpRequestTimeout             time.Duration
+	DBConnString                   string
+	DBMaxOpenConns                 int
+	DBMaxIdleConns                 int
+	JwtSigningKey                  string
+	JwtTTL                         time.Duration
+	OtpLength                      int
+	MasterOTPHash                  string
+	QuizWsConnURL                  string
+	QuizBotsTimeout                time.Duration
+	QuizLobbyLatency               time.Duration
+	TokenCirculatingSupply         float64
+	SolanaEnv                      string
+	SolanaApiBaseUrl               string
+	SolanaAssetAddr                string
+	SolanaFeePayerAddr             string
+	SolanaFeePayerPrivateKey       string
+	SolanaTokenHolderAddr          string
+	SolanaTokenHolderPrivateKey    string
+	SolanaStakePoolAddr            string
+	SolanaSystemProgram            string
+	SolanaSysvarRent               string
+	SolanaSysvarClock              string
+	SolanaSplToken                 string
+	SolanaStakeProgramID           string
+	PostmarkServerToken            string
+	PostmarkAccountToken           string
+	NotificationFromName           string
+	NotificationFromEmail          string
+	ProductName                    string
+	ProductURL                     string
+	SupportURL                     string
+	SupportEmail                   string
+	CompanyName                    string
+	CompanyAddress                 string
+	HoldRewardsPeriod              time.Duration
+	InvitationReward               float64
+	InvitationURL                  string
+	FileStorageKey                 string
+	FileStorageSecret              string
+	FileStorageEndpoint            string
+	FileStorageRegion              string
+	FileStorageBucket              string
+	FileStorageUrl                 string
+	FileStorageDisableSsl          bool
+	FileStorageForcePathStyle      bool
+	BaseFirebaseURL                string
+	FBWebAPIKey                    string
+	MainSiteLink                   string
+	AndroidPackageName             string
+	IOSBundleId                    string
+	SuffixOption                   string
+	MinAmountToTransfer            float64
+	MinAmountToClaim               float64
+	KycAppToken                    string
+	KycAppSecret                   string
+	KycAppBaseURL                  string
+	KycAppTTL                      int
+	KycSkip                        bool
+	NatsURL                        string
+	NatsWSURL                      string
+	QuizV2ShuffleQuestions         bool
+	ServerRSAPrivateKey            string
+	PuzzleGameShuffle              bool
+	TipsPercent                    float64
+	TokenTransferPercent           float64
+	ClaimRewardsPercent            float64
+	FeeAccumulatorAddress          string
+	SatorAPIKey                    string
+	SkipAPIKeyCheck                bool
+	WhitelistMode                  bool
+	BlacklistMode                  bool
+	FraudDetectionMode             bool
+	NftMarketplaceServerHost       string
+	NftMarketplaceServerPort       int
+	SkipDeviceIDCheck              bool
+	EnableResourceIntensiveQueries bool
 }
 
 var buildTag string
@@ -288,6 +289,8 @@ func ConfigFromEnv() *Config {
 
 		NftMarketplaceServerHost: env.MustString("NFT_MARKETPLACE_SERVER_HOST"),
 		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
+
+		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
 	}
 }
 
@@ -475,6 +478,7 @@ func (a *app) Run() {
 			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
 			wallet.WithTokenTransferPercent(a.cfg.TokenTransferPercent),
 			wallet.WithClaimRewardsPercent(a.cfg.ClaimRewardsPercent),
+			wallet.WithResourceIntensiveQueries(a.cfg.EnableResourceIntensiveQueries),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -602,7 +606,7 @@ func (a *app) Run() {
 		if err != nil {
 			log.Fatalf("nftRepo error: %v", err)
 		}
-		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT)
+		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT, a.cfg.EnableResourceIntensiveQueries)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,
