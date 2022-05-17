@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	"log"
 	"net/http"
 	"os"
@@ -35,6 +36,7 @@ import (
 	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
+	"github.com/SatorNetwork/sator-api/lib/solana_multiprovider"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"github.com/SatorNetwork/sator-api/svc/auth"
@@ -100,6 +102,7 @@ type Config struct {
 	TokenCirculatingSupply      float64
 	SolanaEnv                   string
 	SolanaApiBaseUrl            string
+	SolanaProviderConfigs       string
 	SolanaAssetAddr             string
 	SolanaFeePayerAddr          string
 	SolanaFeePayerPrivateKey    string
@@ -201,6 +204,7 @@ func ConfigFromEnv() *Config {
 		TokenCirculatingSupply:      env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844),
 		SolanaEnv:                   env.GetString("SOLANA_ENV", "devnet"),
 		SolanaApiBaseUrl:            env.MustString("SOLANA_API_BASE_URL"),
+		SolanaProviderConfigs:       env.GetString("SOLANA_PROVIDER_CONFIGS", ""),
 		SolanaAssetAddr:             env.MustString("SOLANA_ASSET_ADDR"),
 		SolanaFeePayerAddr:          env.MustString("SOLANA_FEE_PAYER_ADDR"),
 		SolanaFeePayerPrivateKey:    env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY"),
@@ -420,15 +424,54 @@ func (a *app) Run() {
 	if err != nil {
 		log.Fatalf("can't prepare wallet repository: %v", err)
 	}
-	solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-		SystemProgram:         a.cfg.SolanaSystemProgram,
-		SysvarRent:            a.cfg.SolanaSysvarRent,
-		SysvarClock:           a.cfg.SolanaSysvarClock,
-		SplToken:              a.cfg.SolanaSplToken,
-		StakeProgramID:        a.cfg.SolanaStakeProgramID,
-		TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
-		FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
-	}, exchangeRatesClient)
+
+	var solanaClient lib_solana.Interface
+	if a.cfg.SolanaProviderConfigs != "" {
+		type providerConfig struct {
+			SolanaApiBaseUrl string `json:"solana_api_base_url"`
+			Active           bool   `json:"active"`
+		}
+		type providerConfigs struct {
+			ProviderConfigs []*providerConfig `json:"provider_configs"`
+		}
+		var providerCfgs providerConfigs
+		if err := json.Unmarshal([]byte(a.cfg.SolanaProviderConfigs), &providerCfgs); err != nil {
+			log.Fatalf("can't unmarshal solana provider configs: %v\n", err)
+		}
+
+		solanaClients := make([]lib_solana.Interface, 0)
+		for _, providerCfg := range providerCfgs.ProviderConfigs {
+			if !providerCfg.Active {
+				continue
+			}
+
+			solanaClient := solana_client.New(providerCfg.SolanaApiBaseUrl, solana_client.Config{
+				SystemProgram:         a.cfg.SolanaSystemProgram,
+				SysvarRent:            a.cfg.SolanaSysvarRent,
+				SysvarClock:           a.cfg.SolanaSysvarClock,
+				SplToken:              a.cfg.SolanaSplToken,
+				StakeProgramID:        a.cfg.SolanaStakeProgramID,
+				TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+				FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+			}, exchangeRatesClient)
+
+			solanaClients = append(solanaClients, solanaClient)
+		}
+		solanaClient, err = solana_multiprovider.New(solanaClients)
+		if err != nil {
+			log.Fatalf("can't create solana multiprovider client: %v\n", err)
+		}
+	} else {
+		solanaClient = solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
+			SystemProgram:         a.cfg.SolanaSystemProgram,
+			SysvarRent:            a.cfg.SolanaSysvarRent,
+			SysvarClock:           a.cfg.SolanaSysvarClock,
+			SplToken:              a.cfg.SolanaSplToken,
+			StakeProgramID:        a.cfg.SolanaStakeProgramID,
+			TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+			FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+		}, exchangeRatesClient)
+	}
 
 	var feePayer types.Account
 	{
