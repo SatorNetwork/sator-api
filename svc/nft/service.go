@@ -23,6 +23,8 @@ type (
 		nftRepo    nftRepository
 		sc         solanaClient
 		buyNFTFunc buyNFTFunction
+
+		enableResourceIntensiveQueries bool
 	}
 
 	NFT struct {
@@ -151,11 +153,13 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(nftRepo nftRepository, sc solanaClient, buyNFTFunc buyNFTFunction, opt ...Option) *Service {
+func NewService(nftRepo nftRepository, sc solanaClient, buyNFTFunc buyNFTFunction, enableResourceIntensiveQueries bool, opt ...Option) *Service {
 	s := &Service{
 		nftRepo:    nftRepo,
 		sc:         sc,
 		buyNFTFunc: buyNFTFunc,
+
+		enableResourceIntensiveQueries: enableResourceIntensiveQueries,
 	}
 
 	for _, fn := range opt {
@@ -536,6 +540,10 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 
 // GetNFTsByWalletAddress returns all NFTs that are related to a wallet address
 func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTListItem, error) {
+	if !s.enableResourceIntensiveQueries {
+		return make([]*NFTListItem, 0), nil
+	}
+
 	mintAddrs, err := s.sc.GetNFTMintAddrs(ctx, req.WalletAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get nfts from solana blockchain")
