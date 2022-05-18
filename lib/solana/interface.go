@@ -10,6 +10,7 @@ import (
 
 //go:generate mockgen -destination=mock_client.go -package=solana github.com/SatorNetwork/sator-api/lib/solana Interface
 type Interface interface {
+	Endpoint() string
 	IssueAsset(ctx context.Context, feePayer, issuer, asset types.Account, dest common.PublicKey, amount float64) (string, error)
 	CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error)
 	GetConfirmedTransaction(ctx context.Context, txhash string) (GetConfirmedTransactionResponse, error)

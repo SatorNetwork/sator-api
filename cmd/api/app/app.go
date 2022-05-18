@@ -58,6 +58,7 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/invitations"
 	invitationsClient "github.com/SatorNetwork/sator-api/svc/invitations/client"
 	invitationsRepo "github.com/SatorNetwork/sator-api/svc/invitations/repository"
+	metrics_repository "github.com/SatorNetwork/sator-api/svc/metrics/repository"
 	"github.com/SatorNetwork/sator-api/svc/nft"
 	nftC "github.com/SatorNetwork/sator-api/svc/nft/client"
 	nftRepo "github.com/SatorNetwork/sator-api/svc/nft/repository"
@@ -460,7 +461,12 @@ func (a *app) Run() {
 
 			solanaClients = append(solanaClients, solanaClient)
 		}
-		solanaClient, err = solana_multiprovider.New(solanaClients)
+
+		metricsRepository, err := metrics_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare metrics repository: %v", err)
+		}
+		solanaClient, err = solana_multiprovider.New(solanaClients, metricsRepository)
 		if err != nil {
 			log.Fatalf("can't create solana multiprovider client: %v\n", err)
 		}
