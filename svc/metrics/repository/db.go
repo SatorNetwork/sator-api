@@ -22,8 +22,14 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.getErrorCounterStmt, err = db.PrepareContext(ctx, getErrorCounter); err != nil {
+		return nil, fmt.Errorf("error preparing query GetErrorCounter: %w", err)
+	}
 	if q.getProviderMetricByNameStmt, err = db.PrepareContext(ctx, getProviderMetricByName); err != nil {
 		return nil, fmt.Errorf("error preparing query GetProviderMetricByName: %w", err)
+	}
+	if q.registerProviderErrorStmt, err = db.PrepareContext(ctx, registerProviderError); err != nil {
+		return nil, fmt.Errorf("error preparing query RegisterProviderError: %w", err)
 	}
 	if q.upsertProviderMetricsStmt, err = db.PrepareContext(ctx, upsertProviderMetrics); err != nil {
 		return nil, fmt.Errorf("error preparing query UpsertProviderMetrics: %w", err)
@@ -33,9 +39,19 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.getErrorCounterStmt != nil {
+		if cerr := q.getErrorCounterStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getErrorCounterStmt: %w", cerr)
+		}
+	}
 	if q.getProviderMetricByNameStmt != nil {
 		if cerr := q.getProviderMetricByNameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getProviderMetricByNameStmt: %w", cerr)
+		}
+	}
+	if q.registerProviderErrorStmt != nil {
+		if cerr := q.registerProviderErrorStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing registerProviderErrorStmt: %w", cerr)
 		}
 	}
 	if q.upsertProviderMetricsStmt != nil {
@@ -82,7 +98,9 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                          DBTX
 	tx                          *sql.Tx
+	getErrorCounterStmt         *sql.Stmt
 	getProviderMetricByNameStmt *sql.Stmt
+	registerProviderErrorStmt   *sql.Stmt
 	upsertProviderMetricsStmt   *sql.Stmt
 }
 
@@ -90,7 +108,9 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                          tx,
 		tx:                          tx,
+		getErrorCounterStmt:         q.getErrorCounterStmt,
 		getProviderMetricByNameStmt: q.getProviderMetricByNameStmt,
+		registerProviderErrorStmt:   q.registerProviderErrorStmt,
 		upsertProviderMetricsStmt:   q.upsertProviderMetricsStmt,
 	}
 }

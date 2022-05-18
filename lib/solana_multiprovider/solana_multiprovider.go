@@ -42,6 +42,9 @@ func (s *solanaMultiProvider) Endpoint() string {
 func (s *solanaMultiProvider) IssueAsset(ctx context.Context, feePayer, issuer, asset types.Account, dest common.PublicKey, amount float64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.IssueAsset(ctx, feePayer, issuer, asset, dest, amount)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -61,6 +64,9 @@ func (s *solanaMultiProvider) IssueAsset(ctx context.Context, feePayer, issuer, 
 func (s *solanaMultiProvider) CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.CreateAccountWithATA(ctx, assetAddr, initAccAddr, feePayer)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -80,6 +86,9 @@ func (s *solanaMultiProvider) CreateAccountWithATA(ctx context.Context, assetAdd
 func (s *solanaMultiProvider) GetConfirmedTransaction(ctx context.Context, txhash string) (lib_solana.GetConfirmedTransactionResponse, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetConfirmedTransaction(ctx, txhash)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -99,6 +108,9 @@ func (s *solanaMultiProvider) GetConfirmedTransaction(ctx context.Context, txhas
 func (s *solanaMultiProvider) GetConfirmedTransactionForAccount(ctx context.Context, assetAddr string, rootPubKey string, txhash string) (lib_solana.ConfirmedTransactionResponse, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetConfirmedTransactionForAccount(ctx, assetAddr, rootPubKey, txhash)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -152,6 +164,9 @@ func (s *solanaMultiProvider) FeeAccumulatorAddress() string {
 func (s *solanaMultiProvider) RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.RequestAirdrop(ctx, pubKey, amount)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -171,6 +186,9 @@ func (s *solanaMultiProvider) RequestAirdrop(ctx context.Context, pubKey string,
 func (s *solanaMultiProvider) SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.SendTransaction(ctx, feePayer, signer, instructions...)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -190,6 +208,9 @@ func (s *solanaMultiProvider) SendTransaction(ctx context.Context, feePayer, sig
 func (s *solanaMultiProvider) GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetAccountBalanceSOL(ctx, accPubKey)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -209,6 +230,9 @@ func (s *solanaMultiProvider) GetAccountBalanceSOL(ctx context.Context, accPubKe
 func (s *solanaMultiProvider) GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetTokenAccountBalance(ctx, accPubKey)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -228,6 +252,9 @@ func (s *solanaMultiProvider) GetTokenAccountBalance(ctx context.Context, accPub
 func (s *solanaMultiProvider) GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetTokenAccountBalanceWithAutoDerive(ctx, assetAddr, accountAddr)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -247,6 +274,9 @@ func (s *solanaMultiProvider) GetTokenAccountBalanceWithAutoDerive(ctx context.C
 func (s *solanaMultiProvider) GetTransactions(ctx context.Context, assetAddr, rootPubKey, ataPubKey string) (txList []lib_solana.ConfirmedTransactionResponse, err error) {
 	for _, p := range s.providers {
 		resp, err := p.GetTransactions(ctx, assetAddr, rootPubKey, ataPubKey)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -266,6 +296,9 @@ func (s *solanaMultiProvider) GetTransactions(ctx context.Context, assetAddr, ro
 func (s *solanaMultiProvider) GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (txList []lib_solana.ConfirmedTransactionResponse, err error) {
 	for _, p := range s.providers {
 		resp, err := p.GetTransactionsWithAutoDerive(ctx, assetAddr, accountAddr)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -285,6 +318,9 @@ func (s *solanaMultiProvider) GetTransactionsWithAutoDerive(ctx context.Context,
 func (s *solanaMultiProvider) CreateAsset(ctx context.Context, feePayer, issuer, asset types.Account) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.CreateAsset(ctx, feePayer, issuer, asset)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -304,6 +340,9 @@ func (s *solanaMultiProvider) CreateAsset(ctx context.Context, feePayer, issuer,
 func (s *solanaMultiProvider) InitAccountToUseAsset(ctx context.Context, feePayer, issuer, asset, initAcc types.Account) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.InitAccountToUseAsset(ctx, feePayer, issuer, asset, initAcc)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -323,6 +362,9 @@ func (s *solanaMultiProvider) InitAccountToUseAsset(ctx context.Context, feePaye
 func (s *solanaMultiProvider) GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.GiveAssetsWithAutoDerive(ctx, assetAddr, feePayer, issuer, recipientAddr, amount)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -350,6 +392,9 @@ func (s *solanaMultiProvider) PrepareSendAssetsTx(
 ) (*lib_solana.PrepareTxResponse, error) {
 	for _, p := range s.providers {
 		resp, err := p.PrepareSendAssetsTx(ctx, assetAddr, feePayer, source, recipientAddr, amount, cfg)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -377,6 +422,9 @@ func (s *solanaMultiProvider) SendAssetsWithAutoDerive(
 ) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.SendAssetsWithAutoDerive(ctx, assetAddr, feePayer, source, recipientAddr, amount, cfg)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -418,6 +466,9 @@ func (s *solanaMultiProvider) SerializeTxMessage(message types.Message) ([]byte,
 func (s *solanaMultiProvider) GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*lib_solana.ArweaveNFTMetadata, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetNFTsByWalletAddress(ctx, walletAddr)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -437,6 +488,9 @@ func (s *solanaMultiProvider) GetNFTsByWalletAddress(ctx context.Context, wallet
 func (s *solanaMultiProvider) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetNFTMintAddrs(ctx, walletAddr)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -456,6 +510,9 @@ func (s *solanaMultiProvider) GetNFTMintAddrs(ctx context.Context, walletAddr st
 func (s *solanaMultiProvider) GetNFTMetadata(mintAddr string) (*lib_solana.ArweaveNFTMetadata, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetNFTMetadata(mintAddr)
+		if err != nil {
+			s.m.registerError(context.Background(), p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(context.Background(), p.Endpoint())
 			continue
@@ -475,6 +532,9 @@ func (s *solanaMultiProvider) GetNFTMetadata(mintAddr string) (*lib_solana.Arwea
 func (s *solanaMultiProvider) InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHash string, stakePool types.Account, err error) {
 	for _, p := range s.providers {
 		txHash, stakePool, err := p.InitializeStakePool(ctx, feePayer, issuer, asset)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -494,6 +554,9 @@ func (s *solanaMultiProvider) InitializeStakePool(ctx context.Context, feePayer,
 func (s *solanaMultiProvider) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.Stake(ctx, feePayer, userWallet, pool, asset, duration, amount)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue
@@ -513,6 +576,9 @@ func (s *solanaMultiProvider) Stake(ctx context.Context, feePayer, userWallet ty
 func (s *solanaMultiProvider) Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.Unstake(ctx, feePayer, userWallet, stakePool, asset)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
 		if err != nil && tryNextProvider(err) {
 			s.m.registerNotAvailableError(ctx, p.Endpoint())
 			continue

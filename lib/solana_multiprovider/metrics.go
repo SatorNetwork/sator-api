@@ -13,6 +13,9 @@ import (
 type metricsRepository interface {
 	GetProviderMetricByName(ctx context.Context, providerName string) (metrics_repository.SolanaMetric, error)
 	UpsertProviderMetrics(ctx context.Context, arg metrics_repository.UpsertProviderMetricsParams) error
+
+	GetErrorCounter(ctx context.Context, arg metrics_repository.GetErrorCounterParams) (metrics_repository.SolanaError, error)
+	RegisterProviderError(ctx context.Context, arg metrics_repository.RegisterProviderErrorParams) error
 }
 
 type metricsRegistrator struct {
@@ -79,4 +82,14 @@ func (m *metricsRegistrator) applyAndRegister(
 	}
 
 	return nil
+}
+
+func (m *metricsRegistrator) registerError(ctx context.Context, providerName, errorMessage string) {
+	err := m.mr.RegisterProviderError(ctx, metrics_repository.RegisterProviderErrorParams{
+		ProviderName: providerName,
+		ErrorMessage: errorMessage,
+	})
+	if err != nil {
+		log.Println(err)
+	}
 }
