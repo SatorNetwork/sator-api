@@ -42,7 +42,7 @@ VALUES (
     1
 ) ON CONFLICT (provider_name, error_message) DO UPDATE
 SET
-    counter = counter + 1
+    counter = solana_errors.counter + 1
 `
 
 type RegisterProviderErrorParams struct {
