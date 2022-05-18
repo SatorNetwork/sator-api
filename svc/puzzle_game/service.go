@@ -438,6 +438,14 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game attempt")
 	}
 
+	if att.Status != PuzzleGameStatusInProgress || att.Steps == 0 {
+		return PuzzleGame{}, errors.New("puzzle game is not in progress")
+	}
+
+	if att.StepsTaken >= att.Steps || att.RewardsAmount > 0 {
+		return PuzzleGame{}, errors.New("puzzle game is over")
+	}
+
 	pg, err := s.pgr.GetPuzzleGameByID(ctx, att.PuzzleGameID)
 	if err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game")
@@ -536,11 +544,6 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		}
 	}
 
-	images, err := s.GetPuzzleGameImages(ctx, pg.ID)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game images")
-	}
-
 	response := PuzzleGame{
 		ID:           pg.ID,
 		EpisodeID:    pg.EpisodeID,
@@ -552,7 +555,7 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 		StepsTaken:   att.StepsTaken,
 		Status:       att.Status,
 		Tiles:        controller.Puzzle.Tiles,
-		Images:       images,
+		Images:       nil,
 		Image:        att.Image.String,
 	}
 	return response.HideCorrectPositions(), nil

@@ -34,7 +34,9 @@ import (
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
 	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
+	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
+	"github.com/SatorNetwork/sator-api/lib/solana_multiprovider"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"github.com/SatorNetwork/sator-api/svc/auth"
@@ -49,6 +51,8 @@ import (
 	exchange_rates_repository "github.com/SatorNetwork/sator-api/svc/exchange_rates/repository"
 	"github.com/SatorNetwork/sator-api/svc/files"
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
+	firebase_svc "github.com/SatorNetwork/sator-api/svc/firebase"
+	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
 	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
@@ -81,85 +85,87 @@ import (
 )
 
 type Config struct {
-	BuildTagDO                  string
-	AppPort                     int
-	AppBaseURL                  string
-	HttpRequestTimeout          time.Duration
-	DBConnString                string
-	DBMaxOpenConns              int
-	DBMaxIdleConns              int
-	JwtSigningKey               string
-	JwtTTL                      time.Duration
-	OtpLength                   int
-	MasterOTPHash               string
-	QuizWsConnURL               string
-	QuizBotsTimeout             time.Duration
-	QuizLobbyLatency            time.Duration
-	TokenCirculatingSupply      float64
-	SolanaEnv                   string
-	SolanaApiBaseUrl            string
-	SolanaAssetAddr             string
-	SolanaFeePayerAddr          string
-	SolanaFeePayerPrivateKey    string
-	SolanaTokenHolderAddr       string
-	SolanaTokenHolderPrivateKey string
-	SolanaStakePoolAddr         string
-	SolanaSystemProgram         string
-	SolanaSysvarRent            string
-	SolanaSysvarClock           string
-	SolanaSplToken              string
-	SolanaStakeProgramID        string
-	PostmarkServerToken         string
-	PostmarkAccountToken        string
-	NotificationFromName        string
-	NotificationFromEmail       string
-	ProductName                 string
-	ProductURL                  string
-	SupportURL                  string
-	SupportEmail                string
-	CompanyName                 string
-	CompanyAddress              string
-	HoldRewardsPeriod           time.Duration
-	InvitationReward            float64
-	InvitationURL               string
-	FileStorageKey              string
-	FileStorageSecret           string
-	FileStorageEndpoint         string
-	FileStorageRegion           string
-	FileStorageBucket           string
-	FileStorageUrl              string
-	FileStorageDisableSsl       bool
-	FileStorageForcePathStyle   bool
-	BaseFirebaseURL             string
-	FBWebAPIKey                 string
-	MainSiteLink                string
-	AndroidPackageName          string
-	IOSBundleId                 string
-	SuffixOption                string
-	MinAmountToTransfer         float64
-	MinAmountToClaim            float64
-	KycAppToken                 string
-	KycAppSecret                string
-	KycAppBaseURL               string
-	KycAppTTL                   int
-	KycSkip                     bool
-	NatsURL                     string
-	NatsWSURL                   string
-	QuizV2ShuffleQuestions      bool
-	ServerRSAPrivateKey         string
-	PuzzleGameShuffle           bool
-	TipsPercent                 float64
-	TokenTransferPercent        float64
-	ClaimRewardsPercent         float64
-	FeeAccumulatorAddress       string
-	SatorAPIKey                 string
-	SkipAPIKeyCheck             bool
-	WhitelistMode               bool
-	BlacklistMode               bool
-	FraudDetectionMode          bool
-	NftMarketplaceServerHost    string
-	NftMarketplaceServerPort    int
-	SkipDeviceIDCheck           bool
+	BuildTagDO                     string
+	AppPort                        int
+	AppBaseURL                     string
+	HttpRequestTimeout             time.Duration
+	DBConnString                   string
+	DBMaxOpenConns                 int
+	DBMaxIdleConns                 int
+	JwtSigningKey                  string
+	JwtTTL                         time.Duration
+	OtpLength                      int
+	MasterOTPHash                  string
+	QuizWsConnURL                  string
+	QuizBotsTimeout                time.Duration
+	QuizLobbyLatency               time.Duration
+	TokenCirculatingSupply         float64
+	SolanaEnv                      string
+	SolanaApiBaseUrl               string
+	SolanaProviderConfigs          string
+	SolanaAssetAddr                string
+	SolanaFeePayerAddr             string
+	SolanaFeePayerPrivateKey       string
+	SolanaTokenHolderAddr          string
+	SolanaTokenHolderPrivateKey    string
+	SolanaStakePoolAddr            string
+	SolanaSystemProgram            string
+	SolanaSysvarRent               string
+	SolanaSysvarClock              string
+	SolanaSplToken                 string
+	SolanaStakeProgramID           string
+	PostmarkServerToken            string
+	PostmarkAccountToken           string
+	NotificationFromName           string
+	NotificationFromEmail          string
+	ProductName                    string
+	ProductURL                     string
+	SupportURL                     string
+	SupportEmail                   string
+	CompanyName                    string
+	CompanyAddress                 string
+	HoldRewardsPeriod              time.Duration
+	InvitationReward               float64
+	InvitationURL                  string
+	FileStorageKey                 string
+	FileStorageSecret              string
+	FileStorageEndpoint            string
+	FileStorageRegion              string
+	FileStorageBucket              string
+	FileStorageUrl                 string
+	FileStorageDisableSsl          bool
+	FileStorageForcePathStyle      bool
+	BaseFirebaseURL                string
+	FBWebAPIKey                    string
+	MainSiteLink                   string
+	AndroidPackageName             string
+	IOSBundleId                    string
+	SuffixOption                   string
+	MinAmountToTransfer            float64
+	MinAmountToClaim               float64
+	KycAppToken                    string
+	KycAppSecret                   string
+	KycAppBaseURL                  string
+	KycAppTTL                      int
+	KycSkip                        bool
+	NatsURL                        string
+	NatsWSURL                      string
+	QuizV2ShuffleQuestions         bool
+	ServerRSAPrivateKey            string
+	PuzzleGameShuffle              bool
+	TipsPercent                    float64
+	TokenTransferPercent           float64
+	ClaimRewardsPercent            float64
+	FeeAccumulatorAddress          string
+	SatorAPIKey                    string
+	SkipAPIKeyCheck                bool
+	WhitelistMode                  bool
+	BlacklistMode                  bool
+	FraudDetectionMode             bool
+	NftMarketplaceServerHost       string
+	NftMarketplaceServerPort       int
+	SkipDeviceIDCheck              bool
+	EnableResourceIntensiveQueries bool
 }
 
 var buildTag string
@@ -199,6 +205,7 @@ func ConfigFromEnv() *Config {
 		TokenCirculatingSupply:      env.GetFloat("TOKEN_CIRCULATING_SUPPLY", 11839844),
 		SolanaEnv:                   env.GetString("SOLANA_ENV", "devnet"),
 		SolanaApiBaseUrl:            env.MustString("SOLANA_API_BASE_URL"),
+		SolanaProviderConfigs:       env.GetString("SOLANA_PROVIDER_CONFIGS", ""),
 		SolanaAssetAddr:             env.MustString("SOLANA_ASSET_ADDR"),
 		SolanaFeePayerAddr:          env.MustString("SOLANA_FEE_PAYER_ADDR"),
 		SolanaFeePayerPrivateKey:    env.MustString("SOLANA_FEE_PAYER_PRIVATE_KEY"),
@@ -286,6 +293,8 @@ func ConfigFromEnv() *Config {
 
 		NftMarketplaceServerHost: env.MustString("NFT_MARKETPLACE_SERVER_HOST"),
 		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
+
+		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
 	}
 }
 
@@ -418,15 +427,54 @@ func (a *app) Run() {
 	if err != nil {
 		log.Fatalf("can't prepare wallet repository: %v", err)
 	}
-	solanaClient := solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
-		SystemProgram:         a.cfg.SolanaSystemProgram,
-		SysvarRent:            a.cfg.SolanaSysvarRent,
-		SysvarClock:           a.cfg.SolanaSysvarClock,
-		SplToken:              a.cfg.SolanaSplToken,
-		StakeProgramID:        a.cfg.SolanaStakeProgramID,
-		TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
-		FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
-	}, exchangeRatesClient)
+
+	var solanaClient lib_solana.Interface
+	if a.cfg.SolanaProviderConfigs != "" {
+		type providerConfig struct {
+			SolanaApiBaseUrl string `json:"solana_api_base_url"`
+			Active           bool   `json:"active"`
+		}
+		type providerConfigs struct {
+			ProviderConfigs []*providerConfig `json:"provider_configs"`
+		}
+		var providerCfgs providerConfigs
+		if err := json.Unmarshal([]byte(a.cfg.SolanaProviderConfigs), &providerCfgs); err != nil {
+			log.Fatalf("can't unmarshal solana provider configs: %v\n", err)
+		}
+
+		solanaClients := make([]lib_solana.Interface, 0)
+		for _, providerCfg := range providerCfgs.ProviderConfigs {
+			if !providerCfg.Active {
+				continue
+			}
+
+			solanaClient := solana_client.New(providerCfg.SolanaApiBaseUrl, solana_client.Config{
+				SystemProgram:         a.cfg.SolanaSystemProgram,
+				SysvarRent:            a.cfg.SolanaSysvarRent,
+				SysvarClock:           a.cfg.SolanaSysvarClock,
+				SplToken:              a.cfg.SolanaSplToken,
+				StakeProgramID:        a.cfg.SolanaStakeProgramID,
+				TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+				FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+			}, exchangeRatesClient)
+
+			solanaClients = append(solanaClients, solanaClient)
+		}
+		solanaClient, err = solana_multiprovider.New(solanaClients)
+		if err != nil {
+			log.Fatalf("can't create solana multiprovider client: %v\n", err)
+		}
+	} else {
+		solanaClient = solana_client.New(a.cfg.SolanaApiBaseUrl, solana_client.Config{
+			SystemProgram:         a.cfg.SolanaSystemProgram,
+			SysvarRent:            a.cfg.SolanaSysvarRent,
+			SysvarClock:           a.cfg.SolanaSysvarClock,
+			SplToken:              a.cfg.SolanaSplToken,
+			StakeProgramID:        a.cfg.SolanaStakeProgramID,
+			TokenHolderAddr:       a.cfg.SolanaTokenHolderAddr,
+			FeeAccumulatorAddress: a.cfg.FeeAccumulatorAddress,
+		}, exchangeRatesClient)
+	}
 
 	var feePayer types.Account
 	{
@@ -473,6 +521,7 @@ func (a *app) Run() {
 			wallet.WithFraudDetectionMode(a.cfg.FraudDetectionMode),
 			wallet.WithTokenTransferPercent(a.cfg.TokenTransferPercent),
 			wallet.WithClaimRewardsPercent(a.cfg.ClaimRewardsPercent),
+			wallet.WithResourceIntensiveQueries(a.cfg.EnableResourceIntensiveQueries),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
@@ -600,7 +649,7 @@ func (a *app) Run() {
 		if err != nil {
 			log.Fatalf("nftRepo error: %v", err)
 		}
-		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT)
+		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT, a.cfg.EnableResourceIntensiveQueries)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,
@@ -770,6 +819,22 @@ func (a *app) Run() {
 		)
 		r.Mount("/iap", iap_svc.MakeHTTPHandler(
 			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	// Firebase service
+	{
+		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare firebase repository: %v", err)
+		}
+
+		firebaseSvc := firebase_svc.NewService(
+			firebaseRepository,
+		)
+		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
+			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
 			logger,
 		))
 	}

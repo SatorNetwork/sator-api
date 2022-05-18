@@ -8,6 +8,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/challenge"
+	"github.com/SatorNetwork/sator-api/test/framework/client/db/firebase"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/iap"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/puzzle_game"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/quiz_v2"
@@ -25,6 +26,7 @@ type DB struct {
 	quizV2DB     *quiz_v2.DB
 	puzzleGameDB *puzzle_game.DB
 	iapDB        *iap.DB
+	firebaseDB   *firebase.DB
 }
 
 func New() (*DB, error) {
@@ -70,6 +72,11 @@ func New() (*DB, error) {
 		return nil, errors.Wrap(err, "can't create iap db")
 	}
 
+	firebaseDB, err := firebase.New(dbClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create firebase db")
+	}
+
 	return &DB{
 		dbClient:     dbClient,
 		challengeDB:  challengeDB,
@@ -79,6 +86,7 @@ func New() (*DB, error) {
 		quizV2DB:     quizV2DB,
 		puzzleGameDB: puzzleGameDB,
 		iapDB:        iapDB,
+		firebaseDB:   firebaseDB,
 	}, nil
 }
 
@@ -132,4 +140,8 @@ func (db *DB) QuizV2DB() *quiz_v2.DB {
 
 func (db *DB) PuzzleGameDB() *puzzle_game.DB {
 	return db.puzzleGameDB
+}
+
+func (db *DB) FirebaseDB() *firebase.DB {
+	return db.firebaseDB
 }

@@ -55,3 +55,9 @@ func WithClaimRewardsPercent(claimRewardsPercent float64) ServiceOption {
 		s.claimRewardsPercent = claimRewardsPercent
 	}
 }
+
+func WithResourceIntensiveQueries(enable bool) ServiceOption {
+	return func(s *Service) {
+		s.enableResourceIntensiveQueries = enable
+	}
+}
