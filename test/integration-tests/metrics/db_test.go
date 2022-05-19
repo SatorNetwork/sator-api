@@ -35,6 +35,31 @@ func TestMetricsDB(t *testing.T) {
 
 	{
 		provider1 := uuid.New().String()
+		err := metricsRepository.UpsertProviderMetrics(ctxb, metrics_repository.UpsertProviderMetricsParams{
+			ProviderName:       provider1,
+			NotAvailableErrors: 1,
+		})
+		require.NoError(t, err)
+
+		solanaMetric, err := metricsRepository.GetProviderMetricByName(ctxb, provider1)
+		require.NoError(t, err)
+		require.Equal(t, solanaMetric.ProviderName, provider1)
+		require.Equal(t, int32(1), solanaMetric.NotAvailableErrors)
+
+		err = metricsRepository.UpsertProviderMetrics(ctxb, metrics_repository.UpsertProviderMetricsParams{
+			ProviderName:       provider1,
+			NotAvailableErrors: 2,
+		})
+		require.NoError(t, err)
+
+		solanaMetric, err = metricsRepository.GetProviderMetricByName(ctxb, provider1)
+		require.NoError(t, err)
+		require.Equal(t, solanaMetric.ProviderName, provider1)
+		require.Equal(t, int32(2), solanaMetric.NotAvailableErrors)
+	}
+
+	{
+		provider1 := uuid.New().String()
 		provider2 := uuid.New().String()
 		error1 := uuid.New().String()
 		error2 := uuid.New().String()
