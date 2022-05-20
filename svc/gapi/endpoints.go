@@ -120,6 +120,11 @@ func MakeGetStatusEndpoint(s gameService, rs rewardsService, ws walletService) e
 			log.Printf("could not get selected nft id: %v", err)
 		}
 
+		userNFTs, err := s.GetUserNFTs(ctx, uid)
+		if err != nil {
+			log.Printf("could not get user nfts: %v", err)
+		}
+
 		return GetStatusResponse{
 			EnergyLeft:                   energyLeft,
 			UserCurrency:                 userCurrency,
@@ -127,6 +132,7 @@ func MakeGetStatusEndpoint(s gameService, rs rewardsService, ws walletService) e
 			MinAmountOfCurrencyToConvert: rs.GetMinAmountToClaim(),
 			MinVersion:                   s.GetMinVersion(ctx),
 			SelectedNFTID:                selectedNFTID,
+			UserOwnedNFTList:             userNFTs,
 		}, nil
 	}
 }
