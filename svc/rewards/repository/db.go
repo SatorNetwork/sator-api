@@ -33,6 +33,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getFailedTransactionsStmt, err = db.PrepareContext(ctx, getFailedTransactions); err != nil {
 		return nil, fmt.Errorf("error preparing query GetFailedTransactions: %w", err)
 	}
+	if q.getRequestedTransactionsStmt, err = db.PrepareContext(ctx, getRequestedTransactions); err != nil {
+		return nil, fmt.Errorf("error preparing query GetRequestedTransactions: %w", err)
+	}
 	if q.getScannedQRCodeByUserIDStmt, err = db.PrepareContext(ctx, getScannedQRCodeByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetScannedQRCodeByUserID: %w", err)
 	}
@@ -47,6 +50,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateTransactionStatusByTxHashStmt, err = db.PrepareContext(ctx, updateTransactionStatusByTxHash); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateTransactionStatusByTxHash: %w", err)
+	}
+	if q.updateTransactionTxHashStmt, err = db.PrepareContext(ctx, updateTransactionTxHash); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTransactionTxHash: %w", err)
 	}
 	if q.withdrawStmt, err = db.PrepareContext(ctx, withdraw); err != nil {
 		return nil, fmt.Errorf("error preparing query Withdraw: %w", err)
@@ -69,6 +75,11 @@ func (q *Queries) Close() error {
 	if q.getFailedTransactionsStmt != nil {
 		if cerr := q.getFailedTransactionsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getFailedTransactionsStmt: %w", cerr)
+		}
+	}
+	if q.getRequestedTransactionsStmt != nil {
+		if cerr := q.getRequestedTransactionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getRequestedTransactionsStmt: %w", cerr)
 		}
 	}
 	if q.getScannedQRCodeByUserIDStmt != nil {
@@ -94,6 +105,11 @@ func (q *Queries) Close() error {
 	if q.updateTransactionStatusByTxHashStmt != nil {
 		if cerr := q.updateTransactionStatusByTxHashStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateTransactionStatusByTxHashStmt: %w", cerr)
+		}
+	}
+	if q.updateTransactionTxHashStmt != nil {
+		if cerr := q.updateTransactionTxHashStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTransactionTxHashStmt: %w", cerr)
 		}
 	}
 	if q.withdrawStmt != nil {
@@ -143,11 +159,13 @@ type Queries struct {
 	addTransactionStmt                   *sql.Stmt
 	getAmountAvailableToWithdrawStmt     *sql.Stmt
 	getFailedTransactionsStmt            *sql.Stmt
+	getRequestedTransactionsStmt         *sql.Stmt
 	getScannedQRCodeByUserIDStmt         *sql.Stmt
 	getTotalAmountStmt                   *sql.Stmt
 	getTransactionsByUserIDPaginatedStmt *sql.Stmt
 	requestTransactionsByUserIDStmt      *sql.Stmt
 	updateTransactionStatusByTxHashStmt  *sql.Stmt
+	updateTransactionTxHashStmt          *sql.Stmt
 	withdrawStmt                         *sql.Stmt
 }
 
@@ -158,11 +176,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addTransactionStmt:                   q.addTransactionStmt,
 		getAmountAvailableToWithdrawStmt:     q.getAmountAvailableToWithdrawStmt,
 		getFailedTransactionsStmt:            q.getFailedTransactionsStmt,
+		getRequestedTransactionsStmt:         q.getRequestedTransactionsStmt,
 		getScannedQRCodeByUserIDStmt:         q.getScannedQRCodeByUserIDStmt,
 		getTotalAmountStmt:                   q.getTotalAmountStmt,
 		getTransactionsByUserIDPaginatedStmt: q.getTransactionsByUserIDPaginatedStmt,
 		requestTransactionsByUserIDStmt:      q.requestTransactionsByUserIDStmt,
 		updateTransactionStatusByTxHashStmt:  q.updateTransactionStatusByTxHashStmt,
+		updateTransactionTxHashStmt:          q.updateTransactionTxHashStmt,
 		withdrawStmt:                         q.withdrawStmt,
 	}
 }

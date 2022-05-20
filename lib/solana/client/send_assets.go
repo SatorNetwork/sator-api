@@ -39,29 +39,6 @@ func (c *Client) SendAssetsWithAutoDerive(
 	return txHash, nil
 }
 
-func (c *Client) SendConfirmedAssetsWithAutoDerive(
-	ctx context.Context,
-	assetAddr string,
-	feePayer types.Account,
-	source types.Account,
-	recipientAddr string,
-	amount float64,
-	cfg *solana.SendAssetsConfig,
-	retries int,
-) (string, bool, error) {
-	resp, err := c.PrepareSendAssetsTx(ctx, assetAddr, feePayer, source, recipientAddr, amount, cfg)
-	if err != nil {
-		return "", false, pkg_errors.Wrap(err, "can't prepare send assets tx")
-	}
-
-	txHash, ok, err := c.SendTransactionUntilConfirmed(ctx, resp.Tx, retries)
-	if err != nil {
-		return "", false, fmt.Errorf("could not send asset: %w", err)
-	}
-
-	return txHash, ok, nil
-}
-
 func (c *Client) PrepareSendAssetsTx(
 	ctx context.Context,
 	assetAddr string,
@@ -113,10 +90,6 @@ func (c *Client) PrepareSendAssetsTx(
 		}
 	}
 
-	fmt.Println("source ata ", sourceAta.ToBase58())
-	fmt.Println("recipient account", recipientAddr)
-	fmt.Println("recipient token account", recipientAta.ToBase58())
-
 	message, err := c.prepareSendAssetsMessage(
 		ctx,
 		feePayer,
@@ -133,7 +106,7 @@ func (c *Client) PrepareSendAssetsTx(
 
 	var solanaTxFee uint64
 	if false {
-	//if cfg.ChargeSolanaFeeFromSender {
+		//if cfg.ChargeSolanaFeeFromSender {
 		solanaTxFee, err = c.GetFeeForMessage(ctx, message, cfg.AllowFallbackToDefaultFee, cfg.DefaultFee)
 		if err != nil {
 			return nil, pkg_errors.Wrap(err, "can't get fee for message")

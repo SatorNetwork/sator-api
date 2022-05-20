@@ -5,6 +5,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/portto/solana-go-sdk/client"
 	"strconv"
 	"time"
 
@@ -95,4 +96,8 @@ func (c *Client) GetBlockHeight(ctx context.Context) (uint64, error) {
 	}
 
 	return res.Result, nil
+}
+
+func (c *Client) GetTransaction(ctx context.Context, txHash string) (*client.GetTransactionResponse, error) {
+	return c.solana.GetTransaction(ctx, txHash)
 }

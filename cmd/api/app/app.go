@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 	"log"
 	"net/http"
 	"os"
@@ -120,6 +121,7 @@ type Config struct {
 	CompanyName                 string
 	CompanyAddress              string
 	HoldRewardsPeriod           time.Duration
+	TransactionWorkerPeriod     time.Duration
 	InvitationReward            float64
 	InvitationURL               string
 	FileStorageKey              string
@@ -228,7 +230,8 @@ func ConfigFromEnv() *Config {
 		CompanyAddress: env.GetString("COMPANY_ADDRESS", "New York"),
 
 		// Rewards
-		HoldRewardsPeriod: env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		HoldRewardsPeriod:       env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		TransactionWorkerPeriod: env.GetDuration("TRANSACTION_WORKER_PERIOD", time.Minute),
 
 		// Invitation
 		InvitationReward: env.GetFloat("INVITATION_REWARD", 0),
@@ -501,6 +504,9 @@ func (a *app) Run() {
 		rewards.MakeEndpoints(rewardService, kycMdw, jwtMdw),
 		logger,
 	))
+
+	rewardsWorker := worker.New(rewardsRepository, solanaClient, walletSvcClient)
+	go rewardsWorker.Start(ctx, a.cfg.TransactionWorkerPeriod)
 
 	// Invitation service
 	invitationsRepository, err := invitationsRepo.Prepare(ctx, db)

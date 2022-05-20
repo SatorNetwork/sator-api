@@ -339,7 +339,6 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 		Image:        sql.NullString{Valid: true, String: img},
 		Tiles:        sql.NullString{String: string(rawTiles), Valid: true},
 	}); err != nil {
-		fmt.Println(err.Error())
 		return PuzzleGame{}, errors.Wrap(err, "can't start puzzle game")
 	}
 

@@ -96,7 +96,7 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 
 	// Check if the ATA already created
 	respata, err := c.solana.RpcClient.GetTokenAccountsByOwner(ctx, recipientAddr, rpc.GetTokenAccountsByOwnerConfigFilter{
-		Mint:      assetPK.ToBase58(),
+		Mint: assetPK.ToBase58(),
 	})
 	if err != nil {
 		return recipientAta, err
@@ -104,7 +104,6 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 	if len(respata.Result.Value) == 0 {
 		return recipientAta, ErrATANotCreated
 	}
-	fmt.Println("GetTokenAccountsByOwner", respata.Result.Value[0].Pubkey)
 	if respata.Result.Value[0].Account.Owner == common.TokenProgramID.ToBase58() {
 		// given recipient public key is already an SPL token account
 		return recipientAta, nil
@@ -196,25 +195,23 @@ func (c *Client) SendTransaction(ctx context.Context, feePayer, signer types.Acc
 	return txhash, nil
 }
 
-func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Transaction, retries int) (string, bool, error) {
+func (c *Client) CheckTransaction(ctx context.Context, txHash string) (bool, error) {
 	bh, err := c.solana.GetLatestBlockhash(ctx)
-	txhash, err := c.solana.SendTransaction(ctx, tx)
 	if err != nil {
-		return "", false, fmt.Errorf("could not send transaction: %w", err)
+		return false, fmt.Errorf("could not get latest transaction: %w", err)
 	}
 
 	var ok bool
-	start := time.Now()
 	for true {
 		cbh, err := c.GetBlockHeight(ctx)
 		if err != nil {
-			return "", false, fmt.Errorf("could not get block height: %w", err)
+			return false, fmt.Errorf("could not get block height: %w", err)
 		}
 
 		if cbh < bh.LatestValidBlockHeight {
-			ss, err := c.solana.GetSignatureStatus(ctx, txhash)
+			ss, err := c.solana.GetSignatureStatusWithConfig(ctx, txHash, rpc.GetSignatureStatusesConfig{SearchTransactionHistory: true})
 			if err != nil {
-				return "", false, fmt.Errorf("could not get signature status: %w", err)
+				return false, fmt.Errorf("could not get signature status: %w", err)
 			}
 
 			if ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized {
@@ -226,10 +223,7 @@ func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Tra
 		time.Sleep(time.Millisecond * 300)
 	}
 
-	end := time.Now()
-	fmt.Println("SendTransactionUntilConfirmed", end.Sub(start))
-
-	return txhash, ok, nil
+	return ok, nil
 }
 
 // GetAccountBalanceSOL returns account's SOL balance
@@ -326,4 +320,36 @@ func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, al
 	}
 
 	return *fee, nil
+}
+
+func (c *Client) SendTransactionUntilConfirmed(ctx context.Context, tx types.Transaction) (string, bool, error) {
+	bh, err := c.solana.GetLatestBlockhash(ctx)
+	txhash, err := c.solana.SendTransaction(ctx, tx)
+	if err != nil {
+		return "", false, fmt.Errorf("could not send transaction: %w", err)
+	}
+
+	var ok bool
+	for true {
+		cbh, err := c.GetBlockHeight(ctx)
+		if err != nil {
+			return "", false, fmt.Errorf("could not get block height: %w", err)
+		}
+
+		if cbh < bh.LatestValidBlockHeight {
+			ss, err := c.solana.GetSignatureStatus(ctx, txhash)
+			if err != nil {
+				return "", false, fmt.Errorf("could not get signature status: %w", err)
+			}
+
+			if ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized {
+				ok = true
+				break
+			}
+		}
+
+		time.Sleep(time.Millisecond * 300)
+	}
+
+	return txhash, ok, nil
 }

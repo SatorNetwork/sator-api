@@ -72,3 +72,13 @@ SELECT *
 FROM rewards
 WHERE status = 'TransactionStatusFailed'
 AND transaction_type = 1;
+
+-- name: GetRequestedTransactions :many
+SELECT *
+FROM rewards
+WHERE status = 'TransactionStatusRequested' AND transaction_type = 2 AND created_at <= NOW() - INTERVAL '1 minute';
+
+-- name: UpdateTransactionTxHash :exec
+UPDATE rewards
+SET tx_hash = @tx_hash_new, created_at = NOW()
+WHERE tx_hash = @tx_hash;

@@ -2,6 +2,7 @@ package solana
 
 import (
 	"context"
+	"github.com/portto/solana-go-sdk/client"
 	"time"
 
 	"github.com/portto/solana-go-sdk/common"
@@ -47,23 +48,15 @@ type Interface interface {
 		amount float64,
 		cfg *SendAssetsConfig,
 	) (string, error)
-	SendConfirmedAssetsWithAutoDerive(
-		ctx context.Context,
-		assetAddr string,
-		feePayer types.Account,
-		source types.Account,
-		recipientAddr string,
-		amount float64,
-		cfg *SendAssetsConfig,
-		retries int,
-	) (string, bool, error)
 	TransactionDeserialize(tx []byte) (types.Transaction, error)
 	SerializeTxMessage(message types.Message) ([]byte, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 	GetBlockHeight(ctx context.Context) (uint64, error)
-	SendTransactionUntilConfirmed(ctx context.Context, tx types.Transaction, retries int) (string, bool, error)
+	CheckTransaction(ctx context.Context, txHash string) (bool, error)
+	SendTransactionUntilConfirmed(ctx context.Context, tx types.Transaction) (string, bool, error)
+	GetTransaction(ctx context.Context, txHash string) (*client.GetTransactionResponse, error)
 }
 
 type (

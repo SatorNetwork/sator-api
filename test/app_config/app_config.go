@@ -75,6 +75,7 @@ var (
 		CompanyName:                 "Sator",
 		CompanyAddress:              "New York",
 		HoldRewardsPeriod:           0,
+		TransactionWorkerPeriod:     time.Minute,
 		InvitationReward:            0,
 		InvitationURL:               "https://sator.io",
 		FileStorageKey:              "XXXXXXXXXX",

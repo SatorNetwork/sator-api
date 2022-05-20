@@ -120,6 +120,46 @@ func (q *Queries) GetFailedTransactions(ctx context.Context) ([]Reward, error) {
 	return items, nil
 }
 
+const getRequestedTransactions = `-- name: GetRequestedTransactions :many
+SELECT id, user_id, relation_id, amount, updated_at, created_at, transaction_type, relation_type, tx_hash, status
+FROM rewards
+WHERE status = 'TransactionStatusRequested' AND transaction_type = 2 AND created_at <= NOW() - INTERVAL '1 minute'
+`
+
+func (q *Queries) GetRequestedTransactions(ctx context.Context) ([]Reward, error) {
+	rows, err := q.query(ctx, q.getRequestedTransactionsStmt, getRequestedTransactions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Reward
+	for rows.Next() {
+		var i Reward
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.RelationID,
+			&i.Amount,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.TransactionType,
+			&i.RelationType,
+			&i.TxHash,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getScannedQRCodeByUserID = `-- name: GetScannedQRCodeByUserID :one
 SELECT id, user_id, relation_id, amount, updated_at, created_at, transaction_type, relation_type, tx_hash, status
 FROM rewards
@@ -241,6 +281,22 @@ type UpdateTransactionStatusByTxHashParams struct {
 
 func (q *Queries) UpdateTransactionStatusByTxHash(ctx context.Context, arg UpdateTransactionStatusByTxHashParams) error {
 	_, err := q.exec(ctx, q.updateTransactionStatusByTxHashStmt, updateTransactionStatusByTxHash, arg.Status, arg.TxHash)
+	return err
+}
+
+const updateTransactionTxHash = `-- name: UpdateTransactionTxHash :exec
+UPDATE rewards
+SET tx_hash = $1, created_at = NOW()
+WHERE tx_hash = $2
+`
+
+type UpdateTransactionTxHashParams struct {
+	TxHashNew sql.NullString `json:"tx_hash_new"`
+	TxHash    sql.NullString `json:"tx_hash"`
+}
+
+func (q *Queries) UpdateTransactionTxHash(ctx context.Context, arg UpdateTransactionTxHashParams) error {
+	_, err := q.exec(ctx, q.updateTransactionTxHashStmt, updateTransactionTxHash, arg.TxHashNew, arg.TxHash)
 	return err
 }
 

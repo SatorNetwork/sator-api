@@ -2,7 +2,6 @@ package rewards
 
 import (
 	"encoding/base64"
-	"fmt"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	"testing"
 	"time"
@@ -41,32 +40,24 @@ func TestClaimRewards(t *testing.T) {
 		SplToken:       app_config.AppConfigForTests.SolanaSplToken,
 		StakeProgramID: app_config.AppConfigForTests.SolanaStakeProgramID,
 	}, nil)
-	_ = sc
 
 	userPK, err := c.Wallet.GetSatorTokenPublicKey(user.AccessToken())
 	require.NoError(t, err)
-	fmt.Println("SATOR user pk:", userPK.ToBase58())
 
-	start := time.Now()
+	var tokenAccount string
 	{
 		feePayerPk, err := base64.StdEncoding.DecodeString(app_config.AppConfigForTests.SolanaFeePayerPrivateKey)
 		require.NoError(t, err)
 		feePayer, err := sc.AccountFromPrivateKeyBytes(feePayerPk)
 		require.NoError(t, err)
 
-		//feeAccumulatorPublicKey := common.PublicKeyFromString(app_config.AppConfigForTests.FeeAccumulatorAddress)
 		txHash, err := sc.CreateAccountWithATA(context.Background(), app_config.AppConfigForTests.SolanaAssetAddr, userPK.ToBase58(), feePayer)
 		require.NoError(t, err)
-		fmt.Println(txHash)
+		_ = txHash
 
-		addr, err := c.Wallet.GetSatorTokenAddress(user.AccessToken())
+		tokenAccount, err = c.Wallet.GetSatorTokenAddress(user.AccessToken())
 		require.NoError(t, err)
-		fmt.Println(addr)
-		//balance, err := sc.GetTokenAccountBalance(context.Background(), acc.PublicKey.ToBase58())
-		//require.NoError(t, err)
 	}
-	end := time.Now()
-	fmt.Println("CreateAccountWithATA", end.Sub(start))
 
 	err = c.DB.RewardsDB().DepositRewards(context.Background(), id, 100)
 	require.NoError(t, err)
@@ -74,5 +65,25 @@ func TestClaimRewards(t *testing.T) {
 	resp, err := c.RewardsClient.ClaimRewards(user.AccessToken())
 	require.NoError(t, err)
 	require.NotEqual(t, "", resp.TransactionURL)
-	fmt.Println(resp.TransactionURL)
+
+	time.Sleep(time.Second * 65)
+
+	var balance float64
+	i := 0
+	ticker := time.NewTicker(time.Minute)
+LOOP:
+	for {
+		select {
+		case <-ticker.C:
+			balance, err = sc.GetTokenAccountBalance(context.Background(), tokenAccount)
+			require.NoError(t, err)
+			if balance == 99.25 {
+				break LOOP
+			}
+			if i == 20 {
+				t.Fatalf("transaction timeout")
+			}
+			i++
+		}
+	}
 }

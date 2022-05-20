@@ -46,7 +46,7 @@ func (c *Client) CreateAccountWithATA(ctx context.Context, assetAddr, initAccAdd
 		return "", fmt.Errorf("could not create new raw transaction: %w", err)
 	}
 
-	txhash, ok, err := c.SendTransactionUntilConfirmed(ctx, tx, 5)
+	txhash, ok, err := c.SendTransactionUntilConfirmed(ctx, tx)
 	if err != nil {
 		return "", fmt.Errorf("could not send transaction: %w", err)
 	}
