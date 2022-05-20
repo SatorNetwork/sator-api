@@ -34,6 +34,17 @@ func TestMetrics(t *testing.T) {
 		require.Equal(t, int32(1), solanaMetric.NotAvailableErrors)
 		require.Equal(t, int32(1), solanaMetric.OtherErrors)
 		require.Equal(t, int32(1), solanaMetric.SuccessCalls)
+
+		m.registerNotAvailableError(ctxb, provider1)
+		m.registerOtherError(ctxb, provider1)
+		m.registerSuccessCall(ctxb, provider1)
+
+		solanaMetric, err = metricsRepository.GetProviderMetricByName(ctxb, provider1)
+		require.NoError(t, err)
+		require.Equal(t, provider1, solanaMetric.ProviderName)
+		require.Equal(t, int32(2), solanaMetric.NotAvailableErrors)
+		require.Equal(t, int32(2), solanaMetric.OtherErrors)
+		require.Equal(t, int32(2), solanaMetric.SuccessCalls)
 	}
 
 	{
