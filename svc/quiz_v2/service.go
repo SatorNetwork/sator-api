@@ -92,6 +92,18 @@ func NewService(
 }
 
 func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error) {
+	challenge, err := s.challenges.GetRawChallengeByID(ctx, challengeID)
+	if err != nil {
+		return nil, err
+	}
+	questions, err := s.challenges.GetQuestionsByChallengeID(ctx, challengeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get questions by challenge id")
+	}
+	if len(questions) < int(challenge.QuestionsPerGame) {
+		return nil, errors.Errorf("can't choose %v questions out of %v", challenge.QuestionsPerGame, len(questions))
+	}
+
 	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't check if user is restricted")
