@@ -2,9 +2,10 @@ package rewards
 
 import (
 	"encoding/base64"
-	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	"testing"
 	"time"
+
+	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
 	"github.com/SatorNetwork/sator-api/test/framework/user"

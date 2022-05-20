@@ -5,9 +5,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/portto/solana-go-sdk/client"
 	"strconv"
 	"time"
+
+	"github.com/portto/solana-go-sdk/client"
 
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 )

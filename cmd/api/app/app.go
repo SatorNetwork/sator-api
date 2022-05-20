@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/SatorNetwork/sator-api/svc/rewards/worker"
 
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-chi/chi"

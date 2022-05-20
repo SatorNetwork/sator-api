@@ -3,11 +3,12 @@ package worker
 import (
 	"context"
 	"database/sql"
+	"log"
+	"time"
+
 	"github.com/SatorNetwork/sator-api/svc/rewards"
 	"github.com/google/uuid"
 	"github.com/portto/solana-go-sdk/client"
-	"log"
-	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/rewards/repository"
 )

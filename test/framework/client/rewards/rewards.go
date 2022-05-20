@@ -83,7 +83,7 @@ func (a *RewardsClient) ClaimRewards(accessToken string) (*ClaimRewardsResult, e
 	}
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 	client := http.Client{
-		Timeout:       time.Hour,
+		Timeout: time.Hour,
 	}
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
