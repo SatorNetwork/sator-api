@@ -1,0 +1,23 @@
+version: "1"
+packages:
+  - name: "repository"
+    path: "."
+    queries: "./sql/query/"
+    schema: "./sql/migrations/"
+    engine: "postgresql"
+    emit_json_tags: true
+    emit_prepared_queries: true
+    emit_interface: false
+    emit_exact_table_names: false
+    emit_empty_slices: false
+rename:
+  id: "ID"
+  guid: "GUID"
+  url: "URL"
+  limit_val: "Limit"
+  offset_val: "Offset"
+  user_id: "UserID"
+overrides:
+  - go_type: "github.com/google/uuid.NullUUID"
+    db_type: "uuid"
+    nullable: true
