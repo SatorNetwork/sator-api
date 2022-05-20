@@ -33,10 +33,8 @@ type (
 // New creates new solana client wrapper
 func New(endpoint string, config Config, exchangeRatesClient *exchange_rates_client.Client) lib_solana.Interface {
 	return &Client{
-		//solana:              client.NewClient(endpoint),
-		//endpoint:            endpoint,
-		solana:              client.NewClient("https://api.devnet.solana.com"),
-		endpoint:            "https://api.devnet.solana.com",
+		solana:              client.NewClient(endpoint),
+		endpoint:            endpoint,
 		decimals:            9,
 		mltpl:               1e9,
 		config:              config,
