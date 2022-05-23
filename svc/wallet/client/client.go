@@ -77,3 +77,14 @@ func (c *Client) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, am
 func (c *Client) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
 	return c.s.GetMultiplier(ctx, userID)
 }
+
+// ClaimInGameRewards sends tokens to user wallet from unity game tokens pool
+// returns solana transaction id or error
+func (c *Client) ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
+	panic("not implemented")
+}
+
+// GetUserBalance returns user balance in solana tokens
+func (c *Client) GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error) {
+	panic("not implemented")
+}

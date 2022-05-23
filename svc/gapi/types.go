@@ -18,16 +18,23 @@ const (
 	NFTTypeUndefined NFTType = "undefined"
 	NFTTypeCommon    NFTType = "common"
 	NFTTypeRare      NFTType = "rare"
-	NFTTypeSuperRare NFTType = "super rare"
+	NFTTypeSuperRare NFTType = "super_rare"
 	NFTTypeEpic      NFTType = "epic"
 	NFTTypeLegend    NFTType = "legend"
 )
 
+// Predefined game levels
+const (
+	GameLevelEasy = iota + 1
+	GameLevelMedium
+	GameLevelHard
+)
+
 // NFTInfo ...
 type NFTInfo struct {
-	ID            string   `json:"id"`
-	AllowedLevels []string `json:"allowed_levels"`
-	NftType       NFTType  `json:"nft_type"`
+	ID       string  `json:"id"`
+	MaxLevel int     `json:"max_level"`
+	NftType  NFTType `json:"nft_type"`
 }
 
 // NFTPackInfo ...

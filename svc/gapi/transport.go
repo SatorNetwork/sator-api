@@ -3,6 +3,8 @@ package gapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
@@ -10,7 +12,6 @@ import (
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
-	"github.com/golang-jwt/jwt"
 )
 
 type (
@@ -78,6 +79,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/claim-rewards", httptransport.NewServer(
+		e.ClaimRewards,
+		decodeClaimRewardsRequest,
+		customEncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -134,47 +142,30 @@ func decodeFinishGameRequest(ctx context.Context, r *http.Request) (interface{},
 	return req, nil
 }
 
+func decodeClaimRewardsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req ClaimRewardsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // returns http error code by error type
 func codeAndMessageFrom(err error) (int, interface{}) {
+	if errors.Is(err, ErrCouldNotVerifySignature) {
+		log.Printf("could not verify signature: %v", err)
+		return http.StatusBadRequest, http.StatusText(http.StatusBadRequest)
+	}
+
 	return httpencoder.CodeAndMessageFrom(err)
 }
 
-// EncodeResponse is the common method to encode all response types to the
-// client. I chose to do it this way because, since we're using JSON, there's no
-// reason to provide anything more specific. It's certainly possible to
-// specialize on a per-response (per-method) basis.
+// customEncodeResponse extends the default EncodeResponse to sign the response
 func customEncodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if response != nil {
-		var (
-			sig      string
-			jsonBody []byte
-			err      error
-		)
-
-		switch r := response.(type) {
-		case httpencoder.Response, httpencoder.BoolResultResponse, httpencoder.ListResponse:
-			jsonBody, err = json.Marshal(r)
-			if err != nil {
-				return ErrCouldNotSignResponse
-			}
-		case bool:
-			jsonBody, err = json.Marshal(httpencoder.BoolResult(r))
-			if err != nil {
-				return ErrCouldNotSignResponse
-			}
-		default:
-			jsonBody, err = json.Marshal(httpencoder.Response{Data: response})
-			if err != nil {
-				return ErrCouldNotSignResponse
-			}
-		}
-
-		// Sign response body
-		sig, err = jwt.SigningMethodHS256.Sign(string(jsonBody), []byte("secret"))
-		if err != nil {
-			return ErrCouldNotSignResponse
-		}
-		w.Header().Set("Signature", sig)
+	signature, err := SignResponse([]byte("secret"), response)
+	if err == nil && signature != "" {
+		w.Header().Set("Signature", signature)
 	}
 
 	return httpencoder.EncodeResponse(ctx, w, response)

@@ -15,55 +15,58 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		GetStatus   endpoint.Endpoint
-		GetNFTPacks endpoint.Endpoint
-		BuyNFTPack  endpoint.Endpoint
-		CraftNFT    endpoint.Endpoint
-		SelectNFT   endpoint.Endpoint
-		StartGame   endpoint.Endpoint
-		FinishGame  endpoint.Endpoint
+		GetStatus    endpoint.Endpoint
+		GetNFTPacks  endpoint.Endpoint
+		BuyNFTPack   endpoint.Endpoint
+		CraftNFT     endpoint.Endpoint
+		SelectNFT    endpoint.Endpoint
+		StartGame    endpoint.Endpoint
+		FinishGame   endpoint.Endpoint
+		ClaimRewards endpoint.Endpoint
 	}
 
 	gameService interface {
-		GetEnergyLeft(ctx context.Context, uid uuid.UUID) (int, error)
+		GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo, error)
 		GetMinVersion(ctx context.Context) string
+
 		GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, error)
-		GetSelectedNFT(ctx context.Context, uid uuid.UUID) (*string, error)
 		GetNFTPacks(ctx context.Context, uid uuid.UUID) ([]NFTPackInfo, error)
 		BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) error
 		CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) error
 		SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr string) error
-		StartGame(ctx context.Context, uid uuid.UUID, complexity string, isTraining bool) error
-		FinishGame(ctx context.Context, uid uuid.UUID) error
-		GetDefaultGameConfig(ctx context.Context, uid uuid.UUID) (*GameConfig, error)
-	}
 
-	rewardsService interface {
-		GetUserRewards(ctx context.Context, uid uuid.UUID) (total float64, available float64, err error)
+		StartGame(ctx context.Context, uid uuid.UUID, complexity string, isTraining bool) error
+		FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int32) error
+
+		GetDefaultGameConfig(ctx context.Context, uid uuid.UUID) (*GameConfig, error)
+
+		GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error)
+		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64, claimFn claimRewardsFunc) error
 		GetMinAmountToClaim() float64
 	}
 
 	walletService interface {
 		GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error)
+		ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
 	}
 )
 
 func MakeEndpoints(
 	gs gameService,
-	rs rewardsService,
 	ws walletService,
 	m ...endpoint.Middleware,
 ) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetStatus:   MakeGetStatusEndpoint(gs, rs, ws),
-		GetNFTPacks: MakeGetNFTPacksEndpoint(gs),
-		BuyNFTPack:  MakeBuyNFTPackEndpoint(gs, validateFunc),
-		CraftNFT:    MakeCraftNFTEndpoint(gs, validateFunc),
-		SelectNFT:   MakeSelectNFTEndpoint(gs, validateFunc),
-		StartGame:   MakeStartGameEndpoint(gs, validateFunc),
-		FinishGame:  MakeFinishGameEndpoint(gs, rs, validateFunc),
+		GetStatus:    MakeGetStatusEndpoint(gs, ws),
+		GetNFTPacks:  MakeGetNFTPacksEndpoint(gs),
+		BuyNFTPack:   MakeBuyNFTPackEndpoint(gs, validateFunc),
+		CraftNFT:     MakeCraftNFTEndpoint(gs, validateFunc),
+		SelectNFT:    MakeSelectNFTEndpoint(gs, validateFunc),
+		StartGame:    MakeStartGameEndpoint(gs, validateFunc),
+		FinishGame:   MakeFinishGameEndpoint(gs, validateFunc),
+		ClaimRewards: MakeClaimRewardsEndpoint(gs, ws, validateFunc),
 	}
 
 	// setup middlewares for each endpoints
@@ -76,6 +79,7 @@ func MakeEndpoints(
 			e.SelectNFT = mdw(e.SelectNFT)
 			e.StartGame = mdw(e.StartGame)
 			e.FinishGame = mdw(e.FinishGame)
+			e.ClaimRewards = mdw(e.ClaimRewards)
 		}
 	}
 
@@ -93,19 +97,19 @@ type GetStatusResponse struct {
 }
 
 // MakeGetStatusEndpoint ...
-func MakeGetStatusEndpoint(s gameService, rs rewardsService, ws walletService) endpoint.Endpoint {
+func MakeGetStatusEndpoint(s gameService, ws walletService) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		energyLeft, err := s.GetEnergyLeft(ctx, uid)
+		player, err := s.GetPlayerInfo(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
 
-		totalRewards, _, err := rs.GetUserRewards(ctx, uid)
+		totalRewards, err := s.GetUserRewards(ctx, uid)
 		if err != nil {
 			log.Printf("could not get user rewards: %v", err)
 		}
@@ -115,23 +119,23 @@ func MakeGetStatusEndpoint(s gameService, rs rewardsService, ws walletService) e
 			log.Printf("could not get user balance: %v", err)
 		}
 
-		selectedNFTID, err := s.GetSelectedNFT(ctx, uid)
-		if err != nil {
-			log.Printf("could not get selected nft id: %v", err)
-		}
-
 		userNFTs, err := s.GetUserNFTs(ctx, uid)
 		if err != nil {
 			log.Printf("could not get user nfts: %v", err)
 		}
 
+		var selectedNFT *string
+		if player.SelectedNftID != "" {
+			selectedNFT = &player.SelectedNftID
+		}
+
 		return GetStatusResponse{
-			EnergyLeft:                   energyLeft,
+			EnergyLeft:                   player.EnergyPoints,
 			UserCurrency:                 userCurrency,
 			UserInGameCurrency:           totalRewards,
-			MinAmountOfCurrencyToConvert: rs.GetMinAmountToClaim(),
+			MinAmountOfCurrencyToConvert: s.GetMinAmountToClaim(),
 			MinVersion:                   s.GetMinVersion(ctx),
-			SelectedNFTID:                selectedNFTID,
+			SelectedNFTID:                selectedNFT,
 			UserOwnedNFTList:             userNFTs,
 		}, nil
 	}
@@ -312,7 +316,7 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 
 type (
 	FinishGameRequest struct {
-		BlocksDone int `json:"blocks_done" validate:"required"`
+		BlocksDone int32 `json:"blocks_done" validate:"required"`
 	}
 
 	FinishGameResponse struct {
@@ -321,7 +325,7 @@ type (
 )
 
 // MakeFinishGameEndpoint ...
-func MakeFinishGameEndpoint(s gameService, rs rewardsService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+func MakeFinishGameEndpoint(s gameService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -333,17 +337,43 @@ func MakeFinishGameEndpoint(s gameService, rs rewardsService, validateFunc valid
 			return nil, err
 		}
 
-		if err := s.FinishGame(ctx, uid); err != nil {
+		if err := s.FinishGame(ctx, uid, req.BlocksDone); err != nil {
 			return nil, err
 		}
 
-		total, _, err := rs.GetUserRewards(ctx, uid)
+		rewardsAmount, err := s.GetUserRewards(ctx, uid)
 		if err != nil {
 			return nil, err
 		}
 
 		return FinishGameResponse{
-			UserInGameCurrency: total,
+			UserInGameCurrency: rewardsAmount,
 		}, nil
+	}
+}
+
+// ClaimRewardsRequest ...
+type ClaimRewardsRequest struct {
+	Amount float64 `json:"amount" validate:"required,gt=0"`
+}
+
+// MakeClaimRewardsEndpoint ...
+func MakeClaimRewardsEndpoint(s gameService, ws walletService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(ClaimRewardsRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		if err := s.ClaimRewards(ctx, uid, req.Amount, ws.ClaimInGameRewards); err != nil {
+			return nil, err
+		}
+
+		return true, nil
 	}
 }
