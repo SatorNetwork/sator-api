@@ -55,7 +55,6 @@ type Interface interface {
 	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 	GetBlockHeight(ctx context.Context) (uint64, error)
-	CheckTransaction(ctx context.Context, txHash string) (bool, error)
 	SendTransactionUntilConfirmed(ctx context.Context, tx types.Transaction) (string, bool, error)
 	GetTransaction(ctx context.Context, txHash string) (*client.GetTransactionResponse, error)
 }

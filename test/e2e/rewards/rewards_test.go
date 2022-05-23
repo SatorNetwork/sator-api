@@ -67,8 +67,6 @@ func TestClaimRewards(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, "", resp.TransactionURL)
 
-	time.Sleep(time.Second * 65)
-
 	var balance float64
 	i := 0
 	ticker := time.NewTicker(time.Minute)
@@ -78,7 +76,7 @@ LOOP:
 		case <-ticker.C:
 			balance, err = sc.GetTokenAccountBalance(context.Background(), tokenAccount)
 			require.NoError(t, err)
-			if balance == 99.25 {
+			if balance >= 99 {
 				break LOOP
 			}
 			if i == 20 {

@@ -27,7 +27,6 @@ type (
 	}
 
 	solanaClient interface {
-		CheckTransaction(ctx context.Context, txHash string) (bool, error)
 		GetTransaction(ctx context.Context, txHash string) (*client.GetTransactionResponse, error)
 	}
 

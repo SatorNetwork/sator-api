@@ -55,11 +55,5 @@ func (c *Client) CreateAccountWithATA(ctx context.Context, assetAddr, initAccAdd
 		return "", errors.New("tx not confirmed")
 	}
 
-	recipientAta, err := c.deriveATAPublicKey(ctx, initAcc, asset)
-	if err != nil {
-		return "", err
-	}
-	_ = recipientAta
-
 	return txhash, nil
 }

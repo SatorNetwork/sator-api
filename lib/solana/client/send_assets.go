@@ -105,8 +105,7 @@ func (c *Client) PrepareSendAssetsTx(
 	}
 
 	var solanaTxFee uint64
-	if false {
-		//if cfg.ChargeSolanaFeeFromSender {
+	if cfg.ChargeSolanaFeeFromSender {
 		solanaTxFee, err = c.GetFeeForMessage(ctx, message, cfg.AllowFallbackToDefaultFee, cfg.DefaultFee)
 		if err != nil {
 			return nil, pkg_errors.Wrap(err, "can't get fee for message")
