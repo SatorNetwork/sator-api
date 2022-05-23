@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/gapi/repository"
-	"github.com/google/uuid"
+	"github.com/segmentio/ksuid"
 )
 
 // Generates NFT item from NFTPackInfo
@@ -14,7 +14,7 @@ func generateNFT(nftPack repository.UnityGameNftPack) (NFTInfo, error) {
 	rand.Seed(time.Now().Unix())
 
 	return NFTInfo{
-		ID:       uuid.New().String(),
+		ID:       ksuid.New().String(),
 		MaxLevel: rand.Intn(3) + 1,
 		NftType:  nftTypesSlice[rand.Intn(len(nftTypesSlice))],
 	}, nil
@@ -26,7 +26,7 @@ func craftNFT(nftsToCraft []repository.UnityGameNft) (*NFTInfo, error) {
 	rand.Seed(time.Now().Unix())
 
 	return &NFTInfo{
-		ID:       uuid.New().String(),
+		ID:       ksuid.New().String(),
 		MaxLevel: rand.Intn(3) + 1,
 		NftType:  nftTypesSlice[rand.Intn(len(nftTypesSlice))],
 	}, nil
