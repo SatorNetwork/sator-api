@@ -2,7 +2,6 @@ package gapi
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // NFTType ...
@@ -54,25 +53,12 @@ type NFTPackInfo struct {
 }
 
 // DropChances ...
-type DropChance struct {
-	NFTType NFTType `json:"nft_type"`
-	Chance  float64 `json:"chance"`
-}
-
-func (d DropChance) String() string {
-	return fmt.Sprintf("%v:%v", d.NFTType, d.Chance)
-}
-
-// DropChances ...
-type DropChances []DropChance
-
-func (d DropChances) String() string {
-	result := ""
-	for _, dropChance := range d {
-		result += dropChance.String() + ";"
-	}
-
-	return result
+type DropChances struct {
+	Common    float64 `json:"common"`
+	Rare      float64 `json:"rare"`
+	SuperRare float64 `json:"super_rare"`
+	Epic      float64 `json:"epic"`
+	Legend    float64 `json:"legend"`
 }
 
 // GameConfig struct

@@ -10,17 +10,23 @@ import (
 )
 
 const addNFTPack = `-- name: AddNFTPack :exec
-INSERT INTO unity_game_nft_packs (id, drop_chances, price) VALUES ($1, $2, $3)
+INSERT INTO unity_game_nft_packs (id, name, drop_chances, price) VALUES ($1, $2, $3, $4)
 `
 
 type AddNFTPackParams struct {
 	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
 	DropChances []byte    `json:"drop_chances"`
 	Price       float64   `json:"price"`
 }
 
 func (q *Queries) AddNFTPack(ctx context.Context, arg AddNFTPackParams) error {
-	_, err := q.exec(ctx, q.addNFTPackStmt, addNFTPack, arg.ID, arg.DropChances, arg.Price)
+	_, err := q.exec(ctx, q.addNFTPackStmt, addNFTPack,
+		arg.ID,
+		arg.Name,
+		arg.DropChances,
+		arg.Price,
+	)
 	return err
 }
 
@@ -34,7 +40,7 @@ func (q *Queries) DeleteNFTPack(ctx context.Context, id uuid.UUID) error {
 }
 
 const getNFTPack = `-- name: GetNFTPack :one
-SELECT id, drop_chances, price, updated_at, created_at, deleted_at FROM unity_game_nft_packs WHERE id = $1 AND deleted_at IS NULL
+SELECT id, drop_chances, price, updated_at, created_at, deleted_at, name FROM unity_game_nft_packs WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetNFTPack(ctx context.Context, id uuid.UUID) (UnityGameNftPack, error) {
@@ -47,12 +53,13 @@ func (q *Queries) GetNFTPack(ctx context.Context, id uuid.UUID) (UnityGameNftPac
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.Name,
 	)
 	return i, err
 }
 
 const getNFTPacksList = `-- name: GetNFTPacksList :many
-SELECT id, drop_chances, price, updated_at, created_at, deleted_at FROM unity_game_nft_packs WHERE deleted_at IS NULL
+SELECT id, drop_chances, price, updated_at, created_at, deleted_at, name FROM unity_game_nft_packs WHERE deleted_at IS NULL
 `
 
 func (q *Queries) GetNFTPacksList(ctx context.Context) ([]UnityGameNftPack, error) {
@@ -71,6 +78,7 @@ func (q *Queries) GetNFTPacksList(ctx context.Context) ([]UnityGameNftPack, erro
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.DeletedAt,
+			&i.Name,
 		); err != nil {
 			return nil, err
 		}

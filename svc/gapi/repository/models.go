@@ -25,6 +25,7 @@ type UnityGameNftPack struct {
 	UpdatedAt   sql.NullTime `json:"updated_at"`
 	CreatedAt   time.Time    `json:"created_at"`
 	DeletedAt   sql.NullTime `json:"deleted_at"`
+	Name        string       `json:"name"`
 }
 
 type UnityGamePlayer struct {
