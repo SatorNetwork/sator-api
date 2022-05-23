@@ -107,7 +107,7 @@ func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK co
 		return recipientAta, nil
 	}
 
-	return recipientAta, nil
+	return recipientAta, ErrATANotCreated
 }
 
 func (c *Client) FeeAccumulatorAddress() string {
