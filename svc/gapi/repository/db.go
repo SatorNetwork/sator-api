@@ -55,26 +55,35 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getNFTPacksListStmt, err = db.PrepareContext(ctx, getNFTPacksList); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNFTPacksList: %w", err)
 	}
-	if q.getNFTsStmt, err = db.PrepareContext(ctx, getNFTs); err != nil {
-		return nil, fmt.Errorf("error preparing query GetNFTs: %w", err)
-	}
-	if q.getNFTsByPlayerStmt, err = db.PrepareContext(ctx, getNFTsByPlayer); err != nil {
-		return nil, fmt.Errorf("error preparing query GetNFTsByPlayer: %w", err)
-	}
-	if q.getNFTsByTypeAndLevelStmt, err = db.PrepareContext(ctx, getNFTsByTypeAndLevel); err != nil {
-		return nil, fmt.Errorf("error preparing query GetNFTsByTypeAndLevel: %w", err)
-	}
 	if q.getPlayerStmt, err = db.PrepareContext(ctx, getPlayer); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPlayer: %w", err)
 	}
-	if q.linkNFTToPlayerStmt, err = db.PrepareContext(ctx, linkNFTToPlayer); err != nil {
-		return nil, fmt.Errorf("error preparing query LinkNFTToPlayer: %w", err)
+	if q.getUserNFTStmt, err = db.PrepareContext(ctx, getUserNFT); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserNFT: %w", err)
+	}
+	if q.getUserNFTByIDsStmt, err = db.PrepareContext(ctx, getUserNFTByIDs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserNFTByIDs: %w", err)
+	}
+	if q.getUserNFTsStmt, err = db.PrepareContext(ctx, getUserNFTs); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserNFTs: %w", err)
+	}
+	if q.getUserRewardsStmt, err = db.PrepareContext(ctx, getUserRewards); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserRewards: %w", err)
+	}
+	if q.getUserRewardsDepositedStmt, err = db.PrepareContext(ctx, getUserRewardsDeposited); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserRewardsDeposited: %w", err)
+	}
+	if q.getUserRewardsWithdrawnStmt, err = db.PrepareContext(ctx, getUserRewardsWithdrawn); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserRewardsWithdrawn: %w", err)
 	}
 	if q.refillEnergyOfPlayerStmt, err = db.PrepareContext(ctx, refillEnergyOfPlayer); err != nil {
 		return nil, fmt.Errorf("error preparing query RefillEnergyOfPlayer: %w", err)
 	}
-	if q.softDeleteNFTStmt, err = db.PrepareContext(ctx, softDeleteNFT); err != nil {
-		return nil, fmt.Errorf("error preparing query SoftDeleteNFT: %w", err)
+	if q.rewardsDepositStmt, err = db.PrepareContext(ctx, rewardsDeposit); err != nil {
+		return nil, fmt.Errorf("error preparing query RewardsDeposit: %w", err)
+	}
+	if q.rewardsWithdrawStmt, err = db.PrepareContext(ctx, rewardsWithdraw); err != nil {
+		return nil, fmt.Errorf("error preparing query RewardsWithdraw: %w", err)
 	}
 	if q.softDeleteNFTPackStmt, err = db.PrepareContext(ctx, softDeleteNFTPack); err != nil {
 		return nil, fmt.Errorf("error preparing query SoftDeleteNFTPack: %w", err)
@@ -84,12 +93,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.storeSelectedNFTStmt, err = db.PrepareContext(ctx, storeSelectedNFT); err != nil {
 		return nil, fmt.Errorf("error preparing query StoreSelectedNFT: %w", err)
-	}
-	if q.unlinkNFTFromPlayerStmt, err = db.PrepareContext(ctx, unlinkNFTFromPlayer); err != nil {
-		return nil, fmt.Errorf("error preparing query UnlinkNFTFromPlayer: %w", err)
-	}
-	if q.updateNFTStmt, err = db.PrepareContext(ctx, updateNFT); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateNFT: %w", err)
 	}
 	if q.updateNFTPackStmt, err = db.PrepareContext(ctx, updateNFTPack); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateNFTPack: %w", err)
@@ -154,29 +157,39 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getNFTPacksListStmt: %w", cerr)
 		}
 	}
-	if q.getNFTsStmt != nil {
-		if cerr := q.getNFTsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getNFTsStmt: %w", cerr)
-		}
-	}
-	if q.getNFTsByPlayerStmt != nil {
-		if cerr := q.getNFTsByPlayerStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getNFTsByPlayerStmt: %w", cerr)
-		}
-	}
-	if q.getNFTsByTypeAndLevelStmt != nil {
-		if cerr := q.getNFTsByTypeAndLevelStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getNFTsByTypeAndLevelStmt: %w", cerr)
-		}
-	}
 	if q.getPlayerStmt != nil {
 		if cerr := q.getPlayerStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getPlayerStmt: %w", cerr)
 		}
 	}
-	if q.linkNFTToPlayerStmt != nil {
-		if cerr := q.linkNFTToPlayerStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing linkNFTToPlayerStmt: %w", cerr)
+	if q.getUserNFTStmt != nil {
+		if cerr := q.getUserNFTStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserNFTStmt: %w", cerr)
+		}
+	}
+	if q.getUserNFTByIDsStmt != nil {
+		if cerr := q.getUserNFTByIDsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserNFTByIDsStmt: %w", cerr)
+		}
+	}
+	if q.getUserNFTsStmt != nil {
+		if cerr := q.getUserNFTsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserNFTsStmt: %w", cerr)
+		}
+	}
+	if q.getUserRewardsStmt != nil {
+		if cerr := q.getUserRewardsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserRewardsStmt: %w", cerr)
+		}
+	}
+	if q.getUserRewardsDepositedStmt != nil {
+		if cerr := q.getUserRewardsDepositedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserRewardsDepositedStmt: %w", cerr)
+		}
+	}
+	if q.getUserRewardsWithdrawnStmt != nil {
+		if cerr := q.getUserRewardsWithdrawnStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserRewardsWithdrawnStmt: %w", cerr)
 		}
 	}
 	if q.refillEnergyOfPlayerStmt != nil {
@@ -184,9 +197,14 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing refillEnergyOfPlayerStmt: %w", cerr)
 		}
 	}
-	if q.softDeleteNFTStmt != nil {
-		if cerr := q.softDeleteNFTStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing softDeleteNFTStmt: %w", cerr)
+	if q.rewardsDepositStmt != nil {
+		if cerr := q.rewardsDepositStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing rewardsDepositStmt: %w", cerr)
+		}
+	}
+	if q.rewardsWithdrawStmt != nil {
+		if cerr := q.rewardsWithdrawStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing rewardsWithdrawStmt: %w", cerr)
 		}
 	}
 	if q.softDeleteNFTPackStmt != nil {
@@ -202,16 +220,6 @@ func (q *Queries) Close() error {
 	if q.storeSelectedNFTStmt != nil {
 		if cerr := q.storeSelectedNFTStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing storeSelectedNFTStmt: %w", cerr)
-		}
-	}
-	if q.unlinkNFTFromPlayerStmt != nil {
-		if cerr := q.unlinkNFTFromPlayerStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing unlinkNFTFromPlayerStmt: %w", cerr)
-		}
-	}
-	if q.updateNFTStmt != nil {
-		if cerr := q.updateNFTStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateNFTStmt: %w", cerr)
 		}
 	}
 	if q.updateNFTPackStmt != nil {
@@ -256,61 +264,63 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                        DBTX
-	tx                        *sql.Tx
-	addNFTStmt                *sql.Stmt
-	addNFTPackStmt            *sql.Stmt
-	addNewPlayerStmt          *sql.Stmt
-	craftNFTsStmt             *sql.Stmt
-	deleteNFTStmt             *sql.Stmt
-	deleteNFTPackStmt         *sql.Stmt
-	finishGameStmt            *sql.Stmt
-	getCurrentGameStmt        *sql.Stmt
-	getNFTStmt                *sql.Stmt
-	getNFTPackStmt            *sql.Stmt
-	getNFTPacksListStmt       *sql.Stmt
-	getNFTsStmt               *sql.Stmt
-	getNFTsByPlayerStmt       *sql.Stmt
-	getNFTsByTypeAndLevelStmt *sql.Stmt
-	getPlayerStmt             *sql.Stmt
-	linkNFTToPlayerStmt       *sql.Stmt
-	refillEnergyOfPlayerStmt  *sql.Stmt
-	softDeleteNFTStmt         *sql.Stmt
-	softDeleteNFTPackStmt     *sql.Stmt
-	startGameStmt             *sql.Stmt
-	storeSelectedNFTStmt      *sql.Stmt
-	unlinkNFTFromPlayerStmt   *sql.Stmt
-	updateNFTStmt             *sql.Stmt
-	updateNFTPackStmt         *sql.Stmt
+	db                          DBTX
+	tx                          *sql.Tx
+	addNFTStmt                  *sql.Stmt
+	addNFTPackStmt              *sql.Stmt
+	addNewPlayerStmt            *sql.Stmt
+	craftNFTsStmt               *sql.Stmt
+	deleteNFTStmt               *sql.Stmt
+	deleteNFTPackStmt           *sql.Stmt
+	finishGameStmt              *sql.Stmt
+	getCurrentGameStmt          *sql.Stmt
+	getNFTStmt                  *sql.Stmt
+	getNFTPackStmt              *sql.Stmt
+	getNFTPacksListStmt         *sql.Stmt
+	getPlayerStmt               *sql.Stmt
+	getUserNFTStmt              *sql.Stmt
+	getUserNFTByIDsStmt         *sql.Stmt
+	getUserNFTsStmt             *sql.Stmt
+	getUserRewardsStmt          *sql.Stmt
+	getUserRewardsDepositedStmt *sql.Stmt
+	getUserRewardsWithdrawnStmt *sql.Stmt
+	refillEnergyOfPlayerStmt    *sql.Stmt
+	rewardsDepositStmt          *sql.Stmt
+	rewardsWithdrawStmt         *sql.Stmt
+	softDeleteNFTPackStmt       *sql.Stmt
+	startGameStmt               *sql.Stmt
+	storeSelectedNFTStmt        *sql.Stmt
+	updateNFTPackStmt           *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                        tx,
-		tx:                        tx,
-		addNFTStmt:                q.addNFTStmt,
-		addNFTPackStmt:            q.addNFTPackStmt,
-		addNewPlayerStmt:          q.addNewPlayerStmt,
-		craftNFTsStmt:             q.craftNFTsStmt,
-		deleteNFTStmt:             q.deleteNFTStmt,
-		deleteNFTPackStmt:         q.deleteNFTPackStmt,
-		finishGameStmt:            q.finishGameStmt,
-		getCurrentGameStmt:        q.getCurrentGameStmt,
-		getNFTStmt:                q.getNFTStmt,
-		getNFTPackStmt:            q.getNFTPackStmt,
-		getNFTPacksListStmt:       q.getNFTPacksListStmt,
-		getNFTsStmt:               q.getNFTsStmt,
-		getNFTsByPlayerStmt:       q.getNFTsByPlayerStmt,
-		getNFTsByTypeAndLevelStmt: q.getNFTsByTypeAndLevelStmt,
-		getPlayerStmt:             q.getPlayerStmt,
-		linkNFTToPlayerStmt:       q.linkNFTToPlayerStmt,
-		refillEnergyOfPlayerStmt:  q.refillEnergyOfPlayerStmt,
-		softDeleteNFTStmt:         q.softDeleteNFTStmt,
-		softDeleteNFTPackStmt:     q.softDeleteNFTPackStmt,
-		startGameStmt:             q.startGameStmt,
-		storeSelectedNFTStmt:      q.storeSelectedNFTStmt,
-		unlinkNFTFromPlayerStmt:   q.unlinkNFTFromPlayerStmt,
-		updateNFTStmt:             q.updateNFTStmt,
-		updateNFTPackStmt:         q.updateNFTPackStmt,
+		db:                          tx,
+		tx:                          tx,
+		addNFTStmt:                  q.addNFTStmt,
+		addNFTPackStmt:              q.addNFTPackStmt,
+		addNewPlayerStmt:            q.addNewPlayerStmt,
+		craftNFTsStmt:               q.craftNFTsStmt,
+		deleteNFTStmt:               q.deleteNFTStmt,
+		deleteNFTPackStmt:           q.deleteNFTPackStmt,
+		finishGameStmt:              q.finishGameStmt,
+		getCurrentGameStmt:          q.getCurrentGameStmt,
+		getNFTStmt:                  q.getNFTStmt,
+		getNFTPackStmt:              q.getNFTPackStmt,
+		getNFTPacksListStmt:         q.getNFTPacksListStmt,
+		getPlayerStmt:               q.getPlayerStmt,
+		getUserNFTStmt:              q.getUserNFTStmt,
+		getUserNFTByIDsStmt:         q.getUserNFTByIDsStmt,
+		getUserNFTsStmt:             q.getUserNFTsStmt,
+		getUserRewardsStmt:          q.getUserRewardsStmt,
+		getUserRewardsDepositedStmt: q.getUserRewardsDepositedStmt,
+		getUserRewardsWithdrawnStmt: q.getUserRewardsWithdrawnStmt,
+		refillEnergyOfPlayerStmt:    q.refillEnergyOfPlayerStmt,
+		rewardsDepositStmt:          q.rewardsDepositStmt,
+		rewardsWithdrawStmt:         q.rewardsWithdrawStmt,
+		softDeleteNFTPackStmt:       q.softDeleteNFTPackStmt,
+		startGameStmt:               q.startGameStmt,
+		storeSelectedNFTStmt:        q.storeSelectedNFTStmt,
+		updateNFTPackStmt:           q.updateNFTPackStmt,
 	}
 }

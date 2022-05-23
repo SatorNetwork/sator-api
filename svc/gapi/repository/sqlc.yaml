@@ -12,11 +12,15 @@ packages:
     emit_empty_slices: false
 rename:
   id: "ID"
+  ids: "IDs"
   guid: "GUID"
   url: "URL"
   limit_val: "Limit"
   offset_val: "Offset"
   user_id: "UserID"
+  nft: "NFT"
+  nfts: "NFTs"
+  nft_id: "NFTID"
 overrides:
   - go_type: "github.com/google/uuid.NullUUID"
     db_type: "uuid"

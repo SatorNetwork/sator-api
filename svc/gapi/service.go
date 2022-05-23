@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -16,17 +17,19 @@ import (
 type (
 	// Service struct
 	Service struct {
+		db                   *sql.DB
 		gameRepo             gameRepository
 		minVersion           string
 		energyFull           int32
 		energyRecoveryPeriod time.Duration
 		minRewardsToClaim    float64
-		rewards              rewardsService
 	}
 
 	ServiceOption func(*Service)
 
 	gameRepository interface {
+		WithTx(tx *sql.Tx) *repository.Queries
+
 		StartGame(ctx context.Context, arg repository.StartGameParams) error
 		GetCurrentGame(ctx context.Context, userID uuid.UUID) (repository.UnityGameResult, error)
 		FinishGame(ctx context.Context, arg repository.FinishGameParams) error
@@ -40,26 +43,22 @@ type (
 
 		AddNFT(ctx context.Context, arg repository.AddNFTParams) (repository.UnityGameNft, error)
 		GetNFT(ctx context.Context, id string) (repository.UnityGameNft, error)
-		GetNFTs(ctx context.Context, arg repository.GetNFTsParams) ([]repository.UnityGameNft, error)
-		GetNFTsByTypeAndLevel(ctx context.Context, arg repository.GetNFTsByTypeAndLevelParams) ([]repository.UnityGameNft, error)
-		UpdateNFT(ctx context.Context, arg repository.UpdateNFTParams) error
-		SoftDeleteNFT(ctx context.Context, id string) error
+		GetUserNFT(ctx context.Context, arg repository.GetUserNFTParams) (repository.UnityGameNft, error)
+		GetUserNFTByIDs(ctx context.Context, arg repository.GetUserNFTByIDsParams) ([]repository.UnityGameNft, error)
 		DeleteNFT(ctx context.Context, id string) error
-
 		CraftNFTs(ctx context.Context, arg repository.CraftNFTsParams) error
-		GetNFTsByPlayer(ctx context.Context, userID uuid.UUID) ([]repository.UnityGameNft, error)
-		LinkNFTToPlayer(ctx context.Context, arg repository.LinkNFTToPlayerParams) error
-		UnlinkNFTFromPlayer(ctx context.Context, arg repository.UnlinkNFTFromPlayerParams) error
+		GetUserNFTs(ctx context.Context, userID uuid.UUID) ([]repository.UnityGameNft, error)
 
 		AddNewPlayer(ctx context.Context, arg repository.AddNewPlayerParams) (repository.UnityGamePlayer, error)
 		GetPlayer(ctx context.Context, userID uuid.UUID) (repository.UnityGamePlayer, error)
 		RefillEnergyOfPlayer(ctx context.Context, arg repository.RefillEnergyOfPlayerParams) error
 		StoreSelectedNFT(ctx context.Context, arg repository.StoreSelectedNFTParams) error
-	}
 
-	rewardsService interface {
-		AddDepositTransaction(ctx context.Context, userID, relationID uuid.UUID, relationType string, amount float64) error
-		GetUserRewards(ctx context.Context, userID uuid.UUID) (total float64, available float64, err error)
+		GetUserRewards(ctx context.Context, userID uuid.UUID) (float64, error)
+		RewardsDeposit(ctx context.Context, arg repository.RewardsDepositParams) error
+		RewardsWithdraw(ctx context.Context, arg repository.RewardsWithdrawParams) error
+		GetUserRewardsDeposited(ctx context.Context, userID uuid.UUID) (float64, error)
+		GetUserRewardsWithdrawn(ctx context.Context, userID uuid.UUID) (float64, error)
 	}
 
 	PlayerInfo struct {
@@ -71,13 +70,12 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo gameRepository, rs rewardsService, opt ...ServiceOption) *Service {
+func NewService(repo gameRepository, opt ...ServiceOption) *Service {
 	s := &Service{
 		gameRepo:             repo,
 		energyFull:           3,
 		energyRecoveryPeriod: time.Hour * 4,
 		minRewardsToClaim:    50,
-		rewards:              rs,
 	}
 
 	// Apply options
@@ -150,7 +148,7 @@ func (s *Service) GetEnergyLeft(ctx context.Context, uid uuid.UUID) (int, error)
 
 // GetUserNFTs ...
 func (s *Service) GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, error) {
-	nfts, err := s.gameRepo.GetNFTsByPlayer(ctx, uid)
+	nfts, err := s.gameRepo.GetUserNFTs(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +157,7 @@ func (s *Service) GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, er
 	for _, nft := range nfts {
 		result = append(result, NFTInfo{
 			ID:       nft.ID,
-			MaxLevel: nft.AllowedLevels,
+			MaxLevel: int(nft.MaxLevel),
 			NftType:  NFTType(nft.NftType),
 		})
 	}
@@ -167,8 +165,8 @@ func (s *Service) GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, er
 	return result, nil
 }
 
-// GetSelectedNFT ...
-func (s *Service) GetSelectedNFT(ctx context.Context, uid uuid.UUID) (*string, error) {
+// GetSelectedNFTID ...
+func (s *Service) GetSelectedNFTID(ctx context.Context, uid uuid.UUID) (*string, error) {
 	player, err := s.GetPlayerInfo(ctx, uid)
 	if err != nil {
 		return nil, err
@@ -206,36 +204,135 @@ func (s *Service) GetNFTPacks(ctx context.Context, uid uuid.UUID) ([]NFTPackInfo
 }
 
 // BuyNFTPack ...
-func (s *Service) BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) error {
-	return nil
+func (s *Service) BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) (*NFTInfo, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	repo := s.gameRepo.WithTx(tx)
+
+	pack, err := repo.GetNFTPack(ctx, packID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nft pack: %w", err)
+	}
+
+	nft, err := generateNFT(pack)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate nft: %w", err)
+	}
+
+	res, err := repo.AddNFT(ctx, repository.AddNFTParams{
+		UserID:   uid,
+		ID:       nft.ID,
+		NftType:  nft.NftType.String(),
+		MaxLevel: int32(nft.MaxLevel),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to store nft: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return castDbNftInfoToNFTInfo(&res), nil
 }
 
 // CraftNFT ...
-func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) error {
-	return nil
+func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) (*NFTInfo, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	repo := s.gameRepo.WithTx(tx)
+
+	nfts, err := repo.GetUserNFTByIDs(ctx, repository.GetUserNFTByIDsParams{
+		UserID: uid,
+		IDs:    nftsToCraft,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nfts to craft: %w", err)
+	}
+
+	if len(nfts) != len(nftsToCraft) {
+		return nil, ErrNotAllNftsToCraftWereFound
+	}
+
+	nft, err := craftNFT(nfts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to craft nft: %w", err)
+	}
+
+	if _, err := repo.AddNFT(ctx, repository.AddNFTParams{
+		UserID:   uid,
+		ID:       nft.ID,
+		NftType:  nft.NftType.String(),
+		MaxLevel: int32(nft.MaxLevel),
+	}); err != nil {
+		return nil, fmt.Errorf("failed to store nft: %w", err)
+	}
+
+	if err := repo.CraftNFTs(ctx, repository.CraftNFTsParams{
+		UserID:       uid,
+		NftIds:       nftsToCraft,
+		CraftedNftID: sql.NullString{String: nft.ID, Valid: true},
+	}); err != nil {
+		return nil, fmt.Errorf("failed to burn nfts: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nft, nil
 }
 
 // SelectNFT ...
 func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr string) error {
+	nft, err := s.gameRepo.GetUserNFT(ctx, repository.GetUserNFTParams{
+		UserID: uid,
+		ID:     nftMintAddr,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get user nft: %w", err)
+	}
+
 	if err := s.gameRepo.StoreSelectedNFT(ctx, repository.StoreSelectedNFTParams{
 		UserID:        uid,
-		SelectedNftID: sql.NullString{String: nftMintAddr, Valid: true},
+		SelectedNftID: sql.NullString{String: nft.ID, Valid: true},
 	}); err != nil {
 		return fmt.Errorf("failed to store selected nft: %w", err)
 	}
+
 	return nil
 }
 
 // StartGame ...
-func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity string, isTraining bool) error {
+func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) error {
 	player, err := s.GetPlayerInfo(ctx, uid)
 	if err != nil {
 		return err
 	}
 
+	nft, err := s.gameRepo.GetUserNFT(ctx, repository.GetUserNFTParams{
+		UserID: uid,
+		ID:     player.SelectedNftID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get user nft: %w", err)
+	}
+
+	if nft.MaxLevel < complexity {
+		return fmt.Errorf("nft max level is %d, but complexity is %d", nft.MaxLevel, complexity)
+	}
+
 	if err := s.gameRepo.StartGame(ctx, repository.StartGameParams{
 		UserID:     uid,
-		NftID:      player.SelectedNftID,
+		NFTID:      player.SelectedNftID,
 		Complexity: complexity,
 		IsTraining: isTraining,
 	}); err != nil {
@@ -246,29 +343,39 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity strin
 }
 
 // FinishGame ...
-// TODO: wrapp to db transaction
 // TODO: rewards calculation
 func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int32) error {
-	currentGame, err := s.gameRepo.GetCurrentGame(ctx, uid)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	repo := s.gameRepo.WithTx(tx)
+
+	currentGame, err := repo.GetCurrentGame(ctx, uid)
 	if err != nil {
 		return fmt.Errorf("failed to get current game: %w", err)
 	}
 
 	var rewardsAmount float64 = float64(blocksDone) * 0.5
 
-	if err := s.gameRepo.FinishGame(ctx, repository.FinishGameParams{
+	if err := repo.FinishGame(ctx, repository.FinishGameParams{
 		ID:         currentGame.ID,
 		BlocksDone: blocksDone,
-		Rewards:    rewardsAmount,
 	}); err != nil {
 		return fmt.Errorf("failed to finish game: %w", err)
 	}
 
-	if err := s.rewards.AddDepositTransaction(ctx, uid, currentGame.ID, "game", rewardsAmount); err != nil {
-		return fmt.Errorf("failed to add rewards: %w", err)
+	if err := repo.RewardsDeposit(ctx, repository.RewardsDepositParams{
+		UserID:     uid,
+		RelationID: uuid.NullUUID{UUID: currentGame.ID, Valid: true},
+		Amount:     rewardsAmount,
+	}); err != nil {
+		return fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // GetDefaultGameConfig ...
@@ -288,12 +395,9 @@ func (s *Service) GetMinAmountToClaim() float64 {
 
 // GetUserRewards ...
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
-	total, _, err := s.rewards.GetUserRewards(ctx, uid)
-	if err != nil {
-		return 0, err
-	}
-
-	return total, nil
+	deposit, _ := s.gameRepo.GetUserRewardsDeposited(ctx, uid)
+	withdrawn, _ := s.gameRepo.GetUserRewardsWithdrawn(ctx, uid)
+	return math.Dim(deposit, withdrawn), nil
 }
 
 // claimRewardsFunc is a function that can be used to claim rewards to the user's SAO wallet
@@ -301,6 +405,14 @@ type claimRewardsFunc func(ctx context.Context, userID uuid.UUID, amount float64
 
 // ClaimRewards ...
 func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64, claimFn claimRewardsFunc) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	repo := s.gameRepo.WithTx(tx)
+
 	userRewardsAmount, _ := s.GetUserRewards(ctx, uid)
 	if userRewardsAmount < s.GetMinAmountToClaim() {
 		return fmt.Errorf("not enough rewards to claim, need %f, have %f", s.GetMinAmountToClaim(), userRewardsAmount)
@@ -309,10 +421,30 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 		return fmt.Errorf("not enough rewards to claim, need %f, have %f", amount, userRewardsAmount)
 	}
 
-	_, err := claimFn(ctx, uid, userRewardsAmount)
-	if err != nil {
-		return fmt.Errorf("failed to claim rewards: %w", err)
+	if err := repo.RewardsWithdraw(ctx, repository.RewardsWithdrawParams{
+		UserID: uid,
+		Amount: amount,
+	}); err != nil {
+		return fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
-	return nil
+	// Send tokens to user wallet
+	if claimFn != nil {
+		if _, err := claimFn(ctx, uid, userRewardsAmount); err != nil {
+			return fmt.Errorf("failed to claim rewards: %w", err)
+		}
+	} else {
+		log.Printf("no claim function provided, skipping claim")
+	}
+
+	return tx.Commit()
+}
+
+// Cast database result to NFTInfo struct
+func castDbNftInfoToNFTInfo(dbNftInfo *repository.UnityGameNft) *NFTInfo {
+	return &NFTInfo{
+		ID:       dbNftInfo.ID,
+		NftType:  NFTType(dbNftInfo.NftType),
+		MaxLevel: int(dbNftInfo.MaxLevel),
+	}
 }

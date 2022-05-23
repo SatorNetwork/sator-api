@@ -1,21 +1,29 @@
 -- name: AddNFT :one
-INSERT INTO unity_game_nfts (id, nft_type, allowed_levels)  
-VALUES ($1, $2, $3) RETURNING *;
+INSERT INTO unity_game_nfts (id, user_id, nft_type, max_level)  
+VALUES ($1, $2, $3, $4) RETURNING *;
 
 -- name: GetNFT :one
 SELECT * FROM unity_game_nfts WHERE id = $1;
 
--- name: GetNFTs :many
-SELECT * FROM unity_game_nfts LIMIT $1 OFFSET $2;
+-- name: GetUserNFT :one
+SELECT * FROM unity_game_nfts WHERE id = $1 AND user_id = $2;
 
--- name: GetNFTsByTypeAndLevel :many
-SELECT * FROM unity_game_nfts WHERE nft_type = $1 AND allowed_levels @> $2;
+-- name: GetUserNFTs :many
+SELECT * FROM unity_game_nfts 
+WHERE user_id = $1 
+AND deleted_at IS NULL 
+AND crafted_nft_id IS NULL;
 
--- name: UpdateNFT :exec
-UPDATE unity_game_nfts SET nft_type = $1, allowed_levels = $2 WHERE id = $3;
+-- name: GetUserNFTByIDs :many
+SELECT * FROM unity_game_nfts 
+WHERE user_id = @user_id
+AND id = ANY(@ids::VARCHAR[])
+AND deleted_at IS NULL 
+AND crafted_nft_id IS NULL;
 
 -- name: DeleteNFT :exec
-DELETE FROM unity_game_nfts WHERE id = $1;
-
--- name: SoftDeleteNFT :exec
 UPDATE unity_game_nfts SET deleted_at = now() WHERE id = $1;
+
+-- name: CraftNFTs :exec
+UPDATE unity_game_nfts SET crafted_nft_id = @crafted_nft_id, deleted_at = now()
+WHERE user_id = @user_id AND id = ANY(@nft_ids::VARCHAR[]);

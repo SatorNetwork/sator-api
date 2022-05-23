@@ -12,24 +12,22 @@ import (
 const finishGame = `-- name: FinishGame :exec
 UPDATE unity_game_results SET
     blocks_done = $1,
-    rewards = $2,
     finished_at = now()
-WHERE id = $3
+WHERE id = $2
 `
 
 type FinishGameParams struct {
 	BlocksDone int32     `json:"blocks_done"`
-	Rewards    float64   `json:"rewards"`
 	ID         uuid.UUID `json:"id"`
 }
 
 func (q *Queries) FinishGame(ctx context.Context, arg FinishGameParams) error {
-	_, err := q.exec(ctx, q.finishGameStmt, finishGame, arg.BlocksDone, arg.Rewards, arg.ID)
+	_, err := q.exec(ctx, q.finishGameStmt, finishGame, arg.BlocksDone, arg.ID)
 	return err
 }
 
 const getCurrentGame = `-- name: GetCurrentGame :one
-SELECT id, user_id, nft_id, complexity, is_training, blocks_done, finished_at, rewards, updated_at, created_at FROM unity_game_results 
+SELECT id, user_id, nft_id, complexity, is_training, blocks_done, finished_at, updated_at, created_at FROM unity_game_results 
 WHERE user_id = $1 AND finished_at IS NULL 
 ORDER BY created_at DESC LIMIT 1
 `
@@ -40,12 +38,11 @@ func (q *Queries) GetCurrentGame(ctx context.Context, userID uuid.UUID) (UnityGa
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.NftID,
+		&i.NFTID,
 		&i.Complexity,
 		&i.IsTraining,
 		&i.BlocksDone,
 		&i.FinishedAt,
-		&i.Rewards,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 	)
@@ -63,15 +60,15 @@ INSERT INTO unity_game_results (
 
 type StartGameParams struct {
 	UserID     uuid.UUID `json:"user_id"`
-	NftID      string    `json:"nft_id"`
-	Complexity string    `json:"complexity"`
+	NFTID      string    `json:"nft_id"`
+	Complexity int32     `json:"complexity"`
 	IsTraining bool      `json:"is_training"`
 }
 
 func (q *Queries) StartGame(ctx context.Context, arg StartGameParams) error {
 	_, err := q.exec(ctx, q.startGameStmt, startGame,
 		arg.UserID,
-		arg.NftID,
+		arg.NFTID,
 		arg.Complexity,
 		arg.IsTraining,
 	)

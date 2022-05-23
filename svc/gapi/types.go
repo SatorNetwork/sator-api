@@ -23,6 +23,15 @@ const (
 	NFTTypeLegend    NFTType = "legend"
 )
 
+// NFT types array
+var nftTypesSlice = []NFTType{
+	NFTTypeCommon,
+	NFTTypeRare,
+	NFTTypeSuperRare,
+	NFTTypeEpic,
+	NFTTypeLegend,
+}
+
 // Predefined game levels
 const (
 	GameLevelEasy = iota + 1

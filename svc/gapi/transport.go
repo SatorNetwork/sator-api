@@ -158,6 +158,10 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusBadRequest, http.StatusText(http.StatusBadRequest)
 	}
 
+	if errors.Is(err, ErrNotAllNftsToCraftWereFound) {
+		return http.StatusBadRequest, err.Error()
+	}
+
 	return httpencoder.CodeAndMessageFrom(err)
 }
 

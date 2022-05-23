@@ -31,11 +31,11 @@ type (
 
 		GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, error)
 		GetNFTPacks(ctx context.Context, uid uuid.UUID) ([]NFTPackInfo, error)
-		BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) error
-		CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) error
+		BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) (*NFTInfo, error)
+		CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) (*NFTInfo, error)
 		SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr string) error
 
-		StartGame(ctx context.Context, uid uuid.UUID, complexity string, isTraining bool) error
+		StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) error
 		FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int32) error
 
 		GetDefaultGameConfig(ctx context.Context, uid uuid.UUID) (*GameConfig, error)
@@ -164,6 +164,7 @@ type (
 	}
 
 	BuyNFTPackResponse struct {
+		NewNFT           *NFTInfo  `json:"new_nft"`
 		UserOwnedNftList []NFTInfo `json:"user_owned_nft_list"`
 	}
 )
@@ -186,7 +187,8 @@ func MakeBuyNFTPackEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 			return nil, fmt.Errorf("could not parse pack id: %w", err)
 		}
 
-		if err := s.BuyNFTPack(ctx, uid, pid); err != nil {
+		newNFT, err := s.BuyNFTPack(ctx, uid, pid)
+		if err != nil {
 			return nil, err
 		}
 
@@ -196,6 +198,7 @@ func MakeBuyNFTPackEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 		}
 
 		return BuyNFTPackResponse{
+			NewNFT:           newNFT,
 			UserOwnedNftList: userNFTs,
 		}, nil
 	}
@@ -207,6 +210,7 @@ type (
 	}
 
 	CraftNFTResponse struct {
+		NewNFT           *NFTInfo  `json:"new_nft"`
 		UserOwnedNFTList []NFTInfo `json:"user_owned_nft_list"`
 	}
 )
@@ -224,7 +228,8 @@ func MakeCraftNFTEndpoint(s gameService, validateFunc validator.ValidateFunc) en
 			return nil, err
 		}
 
-		if err := s.CraftNFT(ctx, uid, req.NFTsToCraft); err != nil {
+		newNFT, err := s.CraftNFT(ctx, uid, req.NFTsToCraft)
+		if err != nil {
 			return nil, err
 		}
 
@@ -234,6 +239,7 @@ func MakeCraftNFTEndpoint(s gameService, validateFunc validator.ValidateFunc) en
 		}
 
 		return CraftNFTResponse{
+			NewNFT:           newNFT,
 			UserOwnedNFTList: userNFTs,
 		}, nil
 	}
@@ -272,8 +278,8 @@ func MakeSelectNFTEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 
 type (
 	StartGameRequest struct {
-		SelectedComplexity string `json:"selected_complexity" validate:"required"`
-		IsTraining         bool   `json:"is_training"`
+		SelectedComplexity int32 `json:"selected_complexity" validate:"required"`
+		IsTraining         bool  `json:"is_training"`
 	}
 
 	StartGameResponse struct {

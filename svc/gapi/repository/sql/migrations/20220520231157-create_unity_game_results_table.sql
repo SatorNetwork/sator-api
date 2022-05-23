@@ -13,11 +13,10 @@ CREATE TABLE IF NOT EXISTS unity_game_results (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
     nft_id VARCHAR NOT NULL,
-    complexity VARCHAR NOT NULL,
+    complexity INT NOT NULL,
     is_training BOOLEAN NOT NULL DEFAULT false,
     blocks_done INTEGER NOT NULL DEFAULT 0,
     finished_at TIMESTAMP DEFAULT NULL,
-    rewards DOUBLE PRECISION NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );

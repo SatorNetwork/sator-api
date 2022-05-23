@@ -1,6 +1,9 @@
 package gapi
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // WithMinVersion sets the minimum version of the unity game client
 func WithMinVersion(minVersion string) ServiceOption {
@@ -27,5 +30,12 @@ func WithEnergyRecoveryPeriod(energyRecoveryPeriod time.Duration) ServiceOption 
 func WithMinRewardsToClaim(minRewardsToClaim float64) ServiceOption {
 	return func(s *Service) {
 		s.minRewardsToClaim = minRewardsToClaim
+	}
+}
+
+// WithDB sets the database connection
+func WithDB(db *sql.DB) ServiceOption {
+	return func(s *Service) {
+		s.db = db
 	}
 }

@@ -10,10 +10,12 @@ import (
 )
 
 type UnityGameNft struct {
-	ID            string       `json:"id"`
-	NftType       string       `json:"nft_type"`
-	AllowedLevels []string     `json:"allowed_levels"`
-	DeletedAt     sql.NullTime `json:"deleted_at"`
+	ID           string         `json:"id"`
+	UserID       uuid.UUID      `json:"user_id"`
+	NftType      string         `json:"nft_type"`
+	MaxLevel     int32          `json:"max_level"`
+	CraftedNftID sql.NullString `json:"crafted_nft_id"`
+	DeletedAt    sql.NullTime   `json:"deleted_at"`
 }
 
 type UnityGameNftPack struct {
@@ -34,21 +36,23 @@ type UnityGamePlayer struct {
 	CreatedAt        time.Time      `json:"created_at"`
 }
 
-type UnityGamePlayerNft struct {
-	UserID       uuid.UUID      `json:"user_id"`
-	NftID        string         `json:"nft_id"`
-	CraftedNftID sql.NullString `json:"crafted_nft_id"`
-}
-
 type UnityGameResult struct {
 	ID         uuid.UUID    `json:"id"`
 	UserID     uuid.UUID    `json:"user_id"`
-	NftID      string       `json:"nft_id"`
-	Complexity string       `json:"complexity"`
+	NFTID      string       `json:"nft_id"`
+	Complexity int32        `json:"complexity"`
 	IsTraining bool         `json:"is_training"`
 	BlocksDone int32        `json:"blocks_done"`
 	FinishedAt sql.NullTime `json:"finished_at"`
-	Rewards    float64      `json:"rewards"`
 	UpdatedAt  sql.NullTime `json:"updated_at"`
 	CreatedAt  time.Time    `json:"created_at"`
+}
+
+type UnityGameReward struct {
+	ID            uuid.UUID     `json:"id"`
+	UserID        uuid.UUID     `json:"user_id"`
+	RelationID    uuid.NullUUID `json:"relation_id"`
+	OperationType int32         `json:"operation_type"`
+	Amount        float64       `json:"amount"`
+	CreatedAt     time.Time     `json:"created_at"`
 }

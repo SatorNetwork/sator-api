@@ -877,7 +877,11 @@ func (a *app) Run() {
 
 		unityGameSvc := gapi.NewService(
 			unityGameRepository,
-			rewardsSvcClient,
+			gapi.WithDB(db),
+			gapi.WithEnergyFull(3),
+			gapi.WithEnergyRecoveryPeriod(time.Minute*10),
+			gapi.WithMinRewardsToClaim(100),
+			gapi.WithMinVersion("1.0.0"),
 		)
 
 		r.Mount("/gapi", gapi.MakeHTTPHandler(

@@ -5,35 +5,61 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
 const addNFT = `-- name: AddNFT :one
-INSERT INTO unity_game_nfts (id, nft_type, allowed_levels)  
-VALUES ($1, $2, $3) RETURNING id, nft_type, allowed_levels, deleted_at
+INSERT INTO unity_game_nfts (id, user_id, nft_type, max_level)  
+VALUES ($1, $2, $3, $4) RETURNING id, user_id, nft_type, max_level, crafted_nft_id, deleted_at
 `
 
 type AddNFTParams struct {
-	ID            string   `json:"id"`
-	NftType       string   `json:"nft_type"`
-	AllowedLevels []string `json:"allowed_levels"`
+	ID       string    `json:"id"`
+	UserID   uuid.UUID `json:"user_id"`
+	NftType  string    `json:"nft_type"`
+	MaxLevel int32     `json:"max_level"`
 }
 
 func (q *Queries) AddNFT(ctx context.Context, arg AddNFTParams) (UnityGameNft, error) {
-	row := q.queryRow(ctx, q.addNFTStmt, addNFT, arg.ID, arg.NftType, pq.Array(arg.AllowedLevels))
+	row := q.queryRow(ctx, q.addNFTStmt, addNFT,
+		arg.ID,
+		arg.UserID,
+		arg.NftType,
+		arg.MaxLevel,
+	)
 	var i UnityGameNft
 	err := row.Scan(
 		&i.ID,
+		&i.UserID,
 		&i.NftType,
-		pq.Array(&i.AllowedLevels),
+		&i.MaxLevel,
+		&i.CraftedNftID,
 		&i.DeletedAt,
 	)
 	return i, err
 }
 
+const craftNFTs = `-- name: CraftNFTs :exec
+UPDATE unity_game_nfts SET crafted_nft_id = $1, deleted_at = now()
+WHERE user_id = $2 AND id = ANY($3::VARCHAR[])
+`
+
+type CraftNFTsParams struct {
+	CraftedNftID sql.NullString `json:"crafted_nft_id"`
+	UserID       uuid.UUID      `json:"user_id"`
+	NftIds       []string       `json:"nft_ids"`
+}
+
+func (q *Queries) CraftNFTs(ctx context.Context, arg CraftNFTsParams) error {
+	_, err := q.exec(ctx, q.craftNFTsStmt, craftNFTs, arg.CraftedNftID, arg.UserID, pq.Array(arg.NftIds))
+	return err
+}
+
 const deleteNFT = `-- name: DeleteNFT :exec
-DELETE FROM unity_game_nfts WHERE id = $1
+UPDATE unity_game_nfts SET deleted_at = now() WHERE id = $1
 `
 
 func (q *Queries) DeleteNFT(ctx context.Context, id string) error {
@@ -42,7 +68,7 @@ func (q *Queries) DeleteNFT(ctx context.Context, id string) error {
 }
 
 const getNFT = `-- name: GetNFT :one
-SELECT id, nft_type, allowed_levels, deleted_at FROM unity_game_nfts WHERE id = $1
+SELECT id, user_id, nft_type, max_level, crafted_nft_id, deleted_at FROM unity_game_nfts WHERE id = $1
 `
 
 func (q *Queries) GetNFT(ctx context.Context, id string) (UnityGameNft, error) {
@@ -50,24 +76,53 @@ func (q *Queries) GetNFT(ctx context.Context, id string) (UnityGameNft, error) {
 	var i UnityGameNft
 	err := row.Scan(
 		&i.ID,
+		&i.UserID,
 		&i.NftType,
-		pq.Array(&i.AllowedLevels),
+		&i.MaxLevel,
+		&i.CraftedNftID,
 		&i.DeletedAt,
 	)
 	return i, err
 }
 
-const getNFTs = `-- name: GetNFTs :many
-SELECT id, nft_type, allowed_levels, deleted_at FROM unity_game_nfts LIMIT $1 OFFSET $2
+const getUserNFT = `-- name: GetUserNFT :one
+SELECT id, user_id, nft_type, max_level, crafted_nft_id, deleted_at FROM unity_game_nfts WHERE id = $1 AND user_id = $2
 `
 
-type GetNFTsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+type GetUserNFTParams struct {
+	ID     string    `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) GetNFTs(ctx context.Context, arg GetNFTsParams) ([]UnityGameNft, error) {
-	rows, err := q.query(ctx, q.getNFTsStmt, getNFTs, arg.Limit, arg.Offset)
+func (q *Queries) GetUserNFT(ctx context.Context, arg GetUserNFTParams) (UnityGameNft, error) {
+	row := q.queryRow(ctx, q.getUserNFTStmt, getUserNFT, arg.ID, arg.UserID)
+	var i UnityGameNft
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.NftType,
+		&i.MaxLevel,
+		&i.CraftedNftID,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserNFTByIDs = `-- name: GetUserNFTByIDs :many
+SELECT id, user_id, nft_type, max_level, crafted_nft_id, deleted_at FROM unity_game_nfts 
+WHERE user_id = $1
+AND id = ANY($2::VARCHAR[])
+AND deleted_at IS NULL 
+AND crafted_nft_id IS NULL
+`
+
+type GetUserNFTByIDsParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	IDs    []string  `json:"ids"`
+}
+
+func (q *Queries) GetUserNFTByIDs(ctx context.Context, arg GetUserNFTByIDsParams) ([]UnityGameNft, error) {
+	rows, err := q.query(ctx, q.getUserNFTByIDsStmt, getUserNFTByIDs, arg.UserID, pq.Array(arg.IDs))
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +132,10 @@ func (q *Queries) GetNFTs(ctx context.Context, arg GetNFTsParams) ([]UnityGameNf
 		var i UnityGameNft
 		if err := rows.Scan(
 			&i.ID,
+			&i.UserID,
 			&i.NftType,
-			pq.Array(&i.AllowedLevels),
+			&i.MaxLevel,
+			&i.CraftedNftID,
 			&i.DeletedAt,
 		); err != nil {
 			return nil, err
@@ -94,17 +151,15 @@ func (q *Queries) GetNFTs(ctx context.Context, arg GetNFTsParams) ([]UnityGameNf
 	return items, nil
 }
 
-const getNFTsByTypeAndLevel = `-- name: GetNFTsByTypeAndLevel :many
-SELECT id, nft_type, allowed_levels, deleted_at FROM unity_game_nfts WHERE nft_type = $1 AND allowed_levels @> $2
+const getUserNFTs = `-- name: GetUserNFTs :many
+SELECT id, user_id, nft_type, max_level, crafted_nft_id, deleted_at FROM unity_game_nfts 
+WHERE user_id = $1 
+AND deleted_at IS NULL 
+AND crafted_nft_id IS NULL
 `
 
-type GetNFTsByTypeAndLevelParams struct {
-	NftType       string   `json:"nft_type"`
-	AllowedLevels []string `json:"allowed_levels"`
-}
-
-func (q *Queries) GetNFTsByTypeAndLevel(ctx context.Context, arg GetNFTsByTypeAndLevelParams) ([]UnityGameNft, error) {
-	rows, err := q.query(ctx, q.getNFTsByTypeAndLevelStmt, getNFTsByTypeAndLevel, arg.NftType, pq.Array(arg.AllowedLevels))
+func (q *Queries) GetUserNFTs(ctx context.Context, userID uuid.UUID) ([]UnityGameNft, error) {
+	rows, err := q.query(ctx, q.getUserNFTsStmt, getUserNFTs, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +169,10 @@ func (q *Queries) GetNFTsByTypeAndLevel(ctx context.Context, arg GetNFTsByTypeAn
 		var i UnityGameNft
 		if err := rows.Scan(
 			&i.ID,
+			&i.UserID,
 			&i.NftType,
-			pq.Array(&i.AllowedLevels),
+			&i.MaxLevel,
+			&i.CraftedNftID,
 			&i.DeletedAt,
 		); err != nil {
 			return nil, err
@@ -129,28 +186,4 @@ func (q *Queries) GetNFTsByTypeAndLevel(ctx context.Context, arg GetNFTsByTypeAn
 		return nil, err
 	}
 	return items, nil
-}
-
-const softDeleteNFT = `-- name: SoftDeleteNFT :exec
-UPDATE unity_game_nfts SET deleted_at = now() WHERE id = $1
-`
-
-func (q *Queries) SoftDeleteNFT(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.softDeleteNFTStmt, softDeleteNFT, id)
-	return err
-}
-
-const updateNFT = `-- name: UpdateNFT :exec
-UPDATE unity_game_nfts SET nft_type = $1, allowed_levels = $2 WHERE id = $3
-`
-
-type UpdateNFTParams struct {
-	NftType       string   `json:"nft_type"`
-	AllowedLevels []string `json:"allowed_levels"`
-	ID            string   `json:"id"`
-}
-
-func (q *Queries) UpdateNFT(ctx context.Context, arg UpdateNFTParams) error {
-	_, err := q.exec(ctx, q.updateNFTStmt, updateNFT, arg.NftType, pq.Array(arg.AllowedLevels), arg.ID)
-	return err
 }
