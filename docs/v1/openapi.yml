@@ -433,6 +433,18 @@ components:
               user_owned_nft_list:
                 $ref: "#/components/schemas/InGameNFTInfoArray"
 
+    NewUserOwnedNFTs:
+      description: User owned NFTs.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              new_nft:
+                $ref: "#/components/schemas/InGameNFTInfo"
+              user_owned_nft_list:
+                $ref: "#/components/schemas/InGameNFTInfoArray"
+
 paths:
   /:
     get:
@@ -6080,7 +6092,7 @@ paths:
                   type: string
       responses:
         "200":
-          $ref: "#/components/responses/UserOwnedNFTs"
+          $ref: "#/components/responses/NewUserOwnedNFTs"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -6108,7 +6120,7 @@ paths:
                     type: string
       responses:
         "200":
-          $ref: "#/components/responses/UserOwnedNFTs"
+          $ref: "#/components/responses/NewUserOwnedNFTs"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
@@ -6157,7 +6169,12 @@ paths:
               type: object
               properties:
                 selected_complexity:
-                  type: string
+                  type: number
+                  description: "Complexity of the game. Available values: 1 - easy, 2 - medium, 3 - hard."
+                  enum:
+                    - 1
+                    - 2
+                    - 3
                 is_training:
                   type: boolean
       responses:

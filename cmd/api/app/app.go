@@ -53,6 +53,8 @@ import (
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	firebase_svc "github.com/SatorNetwork/sator-api/svc/firebase"
 	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
+	"github.com/SatorNetwork/sator-api/svc/gapi"
+	unityGameRepo "github.com/SatorNetwork/sator-api/svc/gapi/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
 	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/invitations"
@@ -862,6 +864,28 @@ func (a *app) Run() {
 
 		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(
 			puzzle_game.MakeEndpoints(puzzleGameSvc, jwtMdw),
+			logger,
+		))
+	}
+
+	// Unity game API
+	{
+		unityGameRepository, err := unityGameRepo.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare unity game repository: %v", err)
+		}
+
+		unityGameSvc := gapi.NewService(
+			unityGameRepository,
+			gapi.WithDB(db),
+			gapi.WithEnergyFull(3),
+			gapi.WithEnergyRecoveryPeriod(time.Minute*10),
+			gapi.WithMinRewardsToClaim(100),
+			gapi.WithMinVersion("1.0.0"),
+		)
+
+		r.Mount("/gapi", gapi.MakeHTTPHandler(
+			gapi.MakeEndpoints(unityGameSvc, walletSvcClient, jwtMdw),
 			logger,
 		))
 	}

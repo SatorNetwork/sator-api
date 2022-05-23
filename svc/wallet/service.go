@@ -1150,3 +1150,24 @@ func (s *Service) GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUI
 
 	return levels, nil
 }
+
+// GetSAOBalance returns SAO account balance or error if it's not found.
+func (s *Service) GetSAOBalance(ctx context.Context, userID uuid.UUID) (float64, error) {
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("could not get wallet by user id %s: %w", userID, err)
+	}
+
+	sa, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return 0, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+		return 0, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	return s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
+}
