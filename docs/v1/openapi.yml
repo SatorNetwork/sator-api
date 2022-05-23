@@ -144,6 +144,36 @@ components:
       items:
         $ref: "#/components/schemas/InGameNFTInfo"
 
+    InGameNFTPack:
+      type: object
+      properties:
+        pack_id:
+          type: string
+        price:
+          type: number
+        drop_chances:
+          type: object
+          properties:
+            common:
+              type: number
+              example: 0.5
+            rare:
+              type: number
+              example: 0.5
+            super_rare:
+              type: number
+              example: 0.5
+            epic:
+              type: number
+              example: 0.5
+            legend:
+              type: number
+              example: 0.5
+    InGameNFTPackArray:
+      type: array
+      items:
+        $ref: "#/components/schemas/InGameNFTPack"
+
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http
@@ -421,7 +451,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/InGameNFTInfoArray"
+            $ref: "#/components/schemas/InGameNFTPackArray"
 
     UserOwnedNFTs:
       description: User owned NFTs.
