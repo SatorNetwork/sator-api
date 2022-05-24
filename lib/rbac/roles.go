@@ -11,6 +11,7 @@ const (
 	RoleGuest          Role = "guest"
 	RoleShowRunner     Role = "show_runner"
 	RoleUser           Role = "user"
+	RoleTestUser       Role = "test_user"
 )
 
 type Role string

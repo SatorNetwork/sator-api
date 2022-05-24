@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	challenge_service "github.com/SatorNetwork/sator-api/svc/challenge"
 )
@@ -22,9 +23,9 @@ type (
 	}
 
 	service interface {
-		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error)
-		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error)
-		GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error)
+		GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID, mustAccess bool) (*GetQuizLinkResponse, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (challenge_service.Challenge, error)
+		GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32, mustAccess bool) ([]*Challenge, error)
 	}
 
 	GetQuizLinkResponse struct {
@@ -78,7 +79,7 @@ func MakeGetQuizLinkEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get challenge id: %w", err)
 		}
 
-		resp, err := s.GetQuizLink(ctx, uid, username, challengeID)
+		resp, err := s.GetQuizLink(ctx, uid, username, challengeID, rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +105,7 @@ func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 			return nil, errors.Wrap(err, "can't parse challenge id")
 		}
 
-		resp, err := s.GetChallengeByID(ctx, challengeID, userID)
+		resp, err := s.GetChallengeByID(ctx, challengeID, userID, rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
@@ -129,7 +130,7 @@ func MakeGetChallengesSortedByPlayersEndpoint(s service) endpoint.Endpoint {
 			return nil, errors.Errorf("can't cast request to pagination request")
 		}
 
-		challenges, err := s.GetChallengesSortedByPlayers(ctx, uid, req.Limit(), req.Offset())
+		challenges, err := s.GetChallengesSortedByPlayers(ctx, uid, req.Limit(), req.Offset(), rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
