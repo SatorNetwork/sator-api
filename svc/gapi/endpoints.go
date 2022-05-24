@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/SatorNetwork/sator-api/lib/jwt"
+	"github.com/SatorNetwork/sator-api/lib/rbac"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/google/uuid"
@@ -23,6 +24,12 @@ type (
 		StartGame    endpoint.Endpoint
 		FinishGame   endpoint.Endpoint
 		ClaimRewards endpoint.Endpoint
+
+		GetSettingsValueTypes endpoint.Endpoint
+		GetSettings           endpoint.Endpoint
+		AddSetting            endpoint.Endpoint
+		UpdateSetting         endpoint.Endpoint
+		DeleteSetting         endpoint.Endpoint
 	}
 
 	gameService interface {
@@ -45,6 +52,15 @@ type (
 		GetMinAmountToClaim() float64
 	}
 
+	gameSettingsService interface {
+		Add(ctx context.Context, key, name, valueType string, value interface{}, description string) (Settings, error)
+		Get(ctx context.Context, key string) (Settings, error)
+		GetAll(ctx context.Context) []Settings
+		Update(ctx context.Context, key string, value interface{}) (Settings, error)
+		Delete(ctx context.Context, key string) error
+		SettingsValueTypes() map[string]string
+	}
+
 	walletService interface {
 		GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error)
 		ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
@@ -53,6 +69,7 @@ type (
 
 func MakeEndpoints(
 	gs gameService,
+	settings gameSettingsService,
 	ws walletService,
 	m ...endpoint.Middleware,
 ) Endpoints {
@@ -67,6 +84,12 @@ func MakeEndpoints(
 		StartGame:    MakeStartGameEndpoint(gs, validateFunc),
 		FinishGame:   MakeFinishGameEndpoint(gs, validateFunc),
 		ClaimRewards: MakeClaimRewardsEndpoint(gs, ws, validateFunc),
+
+		GetSettings:           MakeGetSettingsEndpoint(settings),
+		AddSetting:            MakeAddSettingEndpoint(settings, validateFunc),
+		UpdateSetting:         MakeUpdateSettingEndpoint(settings, validateFunc),
+		DeleteSetting:         MakeDeleteSettingEndpoint(settings),
+		GetSettingsValueTypes: MakeGetSettingsValueTypesEndpoint(settings),
 	}
 
 	// setup middlewares for each endpoints
@@ -381,5 +404,99 @@ func MakeClaimRewardsEndpoint(s gameService, ws walletService, validateFunc vali
 		}
 
 		return true, nil
+	}
+}
+
+// MakeGetSettingsEndpoint ...
+func MakeGetSettingsEndpoint(s gameSettingsService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		return s.GetAll(ctx), nil
+	}
+}
+
+// AddGameSettingsRequest ...
+type AddGameSettingsRequest struct {
+	Key         string      `json:"key" validate:"required,lowercase,alphanumunicode"`
+	Name        string      `json:"name" validate:"required"`
+	ValueType   string      `json:"value_type" validate:"required,oneof=int float string json bool"`
+	Value       interface{} `json:"value" validate:"required"`
+	Description string      `json:"description,omitempty"`
+}
+
+// MakeAddSettingEndpoint ...
+func MakeAddSettingEndpoint(s gameSettingsService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(AddGameSettingsRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		res, err := s.Add(ctx, req.Key, req.Name, req.ValueType, req.Value, req.Description)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
+	}
+}
+
+// UpdateGameSettingRequest ...
+type UpdateGameSettingRequest struct {
+	Key   string      `json:"key" validate:"required"`
+	Value interface{} `json:"value" validate:"required"`
+}
+
+// MakeUpdateSettingEndpoint ...
+func MakeUpdateSettingEndpoint(s gameSettingsService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(UpdateGameSettingRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		res, err := s.Update(ctx, req.Key, req.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		return res, nil
+	}
+}
+
+// MakeDeleteSettingEndpoint ...
+func MakeDeleteSettingEndpoint(s gameSettingsService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		if err := s.Delete(ctx, request.(string)); err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+// MakeGetSettingsValueTypesEndpoint ...
+func MakeGetSettingsValueTypesEndpoint(s gameSettingsService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		return s.SettingsValueTypes(), nil
 	}
 }
