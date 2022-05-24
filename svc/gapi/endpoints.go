@@ -102,6 +102,12 @@ func MakeEndpoints(
 			e.StartGame = mdw(e.StartGame)
 			e.FinishGame = mdw(e.FinishGame)
 			e.ClaimRewards = mdw(e.ClaimRewards)
+
+			e.GetSettings = mdw(e.GetSettings)
+			e.AddSetting = mdw(e.AddSetting)
+			e.UpdateSetting = mdw(e.UpdateSetting)
+			e.DeleteSetting = mdw(e.DeleteSetting)
+			e.GetSettingsValueTypes = mdw(e.GetSettingsValueTypes)
 		}
 	}
 
