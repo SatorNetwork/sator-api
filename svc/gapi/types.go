@@ -38,6 +38,13 @@ const (
 	GameLevelHard
 )
 
+// Game levels array
+var gameLevels = []int{
+	GameLevelEasy,
+	GameLevelMedium,
+	GameLevelHard,
+}
+
 // NFTInfo ...
 type NFTInfo struct {
 	ID       string  `json:"id"`
