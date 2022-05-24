@@ -34,7 +34,7 @@ type (
 
 	service interface {
 		GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGame, error)
-		GetPuzzleGameByEpisodeID(ctx context.Context, episodeID uuid.UUID) (PuzzleGame, error)
+		GetPuzzleGameByEpisodeID(ctx context.Context, episodeID uuid.UUID, isTestUser bool) (PuzzleGame, error)
 		CreatePuzzleGame(ctx context.Context, epID uuid.UUID, prizePool float64, partsX int32) (PuzzleGame, error)
 		UpdatePuzzleGame(ctx context.Context, id uuid.UUID, prizePool float64, partsX int32) (PuzzleGame, error)
 
@@ -148,7 +148,7 @@ func MakeGetPuzzleGameByEpisodeIDEndpoint(s service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		res, err := s.GetPuzzleGameByEpisodeID(ctx, uuid.MustParse(request.(string)))
+		res, err := s.GetPuzzleGameByEpisodeID(ctx, uuid.MustParse(request.(string)), rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
