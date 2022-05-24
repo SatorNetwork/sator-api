@@ -15,7 +15,7 @@ func generateNFT(nftPack repository.UnityGameNftPack) (NFTInfo, error) {
 
 	return NFTInfo{
 		ID:       ksuid.New().String(),
-		MaxLevel: rand.Intn(3) + 1,
+		MaxLevel: gameLevels[rand.Intn(len(gameLevels))],
 		NftType:  nftTypesSlice[rand.Intn(len(nftTypesSlice))],
 	}, nil
 }
@@ -27,7 +27,7 @@ func craftNFT(nftsToCraft []repository.UnityGameNft) (*NFTInfo, error) {
 
 	return &NFTInfo{
 		ID:       ksuid.New().String(),
-		MaxLevel: rand.Intn(3) + 1,
+		MaxLevel: gameLevels[rand.Intn(len(gameLevels))],
 		NftType:  nftTypesSlice[rand.Intn(len(nftTypesSlice))],
 	}, nil
 }

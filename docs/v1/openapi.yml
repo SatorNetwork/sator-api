@@ -118,6 +118,23 @@ components:
       items:
         $ref: "#/components/schemas/TradingPlatformLink"
 
+    GameSettingsItem:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        value_type:
+          type: string
+          enum: [string, int, float, boolean, json]
+        value:
+          type: string
+          description: CAN BY ANY TYPE! Value of the setting item.
+          example: "true"
+        description:
+          type: string
+
     InGameNFTInfo:
       type: object
       properties:
@@ -474,6 +491,36 @@ components:
                 $ref: "#/components/schemas/InGameNFTInfo"
               user_owned_nft_list:
                 $ref: "#/components/schemas/InGameNFTInfoArray"
+
+    GameSettingItem:
+      description: Game setting item.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GameSettingsItem"
+
+    GameSettings:
+      description: Game settings.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/GameSettingsItem"
+
+    SettingsValueTypes:
+      description: Settings value types.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              value_type:
+                type: string
+                description: Value type
+              value_type_name:
+                type: string
+                description: "Name of the setting value type"
 
 paths:
   /:
@@ -6273,6 +6320,136 @@ paths:
               properties:
                 amount:
                   type: number
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/settings:
+    get:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Get settings.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/GameSettings"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/settings/value-types:
+    get:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Get available settings value types.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SettingsValueTypes"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    post:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Set settings value.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                value_type:
+                  type: string
+                  description: "Value type. Available values: string, number, boolean, array, object."
+                  enum:
+                    - string
+                    - number
+                    - boolean
+                    - array
+                    - object
+                value:
+                  type: string
+                  description: "Value of the setting."
+                description:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/settings/{key}:
+    put:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Claim rewards. Convert in-game currency to SAO.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          description: Setting key.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  description: "Setting value."
+      responses:
+        "200":
+          $ref: "#/components/responses/GameSettingItem"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    delete:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Delete setting key.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          description: Setting key.
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
