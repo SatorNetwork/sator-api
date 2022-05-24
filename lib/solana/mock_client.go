@@ -95,6 +95,20 @@ func (mr *MockInterfaceMockRecorder) CreateAsset(arg0, arg1, arg2, arg3 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAsset", reflect.TypeOf((*MockInterface)(nil).CreateAsset), arg0, arg1, arg2, arg3)
 }
 
+// Endpoint mocks base method.
+func (m *MockInterface) Endpoint() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Endpoint")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Endpoint indicates an expected call of Endpoint.
+func (mr *MockInterfaceMockRecorder) Endpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Endpoint", reflect.TypeOf((*MockInterface)(nil).Endpoint))
+}
+
 // FeeAccumulatorAddress mocks base method.
 func (m *MockInterface) FeeAccumulatorAddress() string {
 	m.ctrl.T.Helper()

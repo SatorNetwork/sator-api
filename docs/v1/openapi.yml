@@ -112,10 +112,84 @@ components:
         logo:
           type: string
           example: "https://sator-dev-storage.nyc3.cdn.digitaloceanspaces.com/uploads/6e3500c8-df21-4279-a092-33c7a0d73e90.png"
+
     TradingPlatformLinks:
       type: array
       items:
         $ref: "#/components/schemas/TradingPlatformLink"
+
+    GameSettingsItem:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        value_type:
+          type: string
+          enum: [string, int, float, boolean, json]
+        value:
+          type: string
+          description: CAN BY ANY TYPE! Value of the setting item.
+          example: "true"
+        description:
+          type: string
+
+    InGameNFTInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        max_level:
+          type: number
+          description: "Max level of the NFT. Available values: 1 - easy, 2 - medium, 3 - hard"
+          enum:
+            - 1
+            - 2
+            - 3
+        nft_type:
+          type: string
+          enum:
+            - common
+            - rare
+            - super rare
+            - epic
+            - legend
+
+    InGameNFTInfoArray:
+      type: array
+      items:
+        $ref: "#/components/schemas/InGameNFTInfo"
+
+    InGameNFTPack:
+      type: object
+      properties:
+        pack_id:
+          type: string
+        price:
+          type: number
+        drop_chances:
+          type: object
+          properties:
+            common:
+              type: number
+              example: 0.5
+            rare:
+              type: number
+              example: 0.5
+            super_rare:
+              type: number
+              example: 0.5
+            epic:
+              type: number
+              example: 0.5
+            legend:
+              type: number
+              example: 0.5
+    InGameNFTPackArray:
+      type: array
+      items:
+        $ref: "#/components/schemas/InGameNFTPack"
 
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
@@ -125,6 +199,7 @@ components:
   responses:
     EmptyBody:
       description: Returns only HTTP status, without any payload.
+
     ResultSuccess:
       description: "Successful result"
       content:
@@ -135,6 +210,7 @@ components:
               result:
                 type: boolean
                 example: true
+
     AccessToken:
       description: Returns JWT token.
       content:
@@ -148,6 +224,7 @@ components:
               refresh_token:
                 type: string
                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+
     DefaultError:
       description: Default error view.
       content:
@@ -158,6 +235,7 @@ components:
               error:
                 type: string
                 example: "something went wrong"
+
     UnauthorizedError:
       description: Access token is missing or invalid
       content:
@@ -168,6 +246,7 @@ components:
               error:
                 type: string
                 example: "Access token is missing or invalid"
+
     ValidationError:
       description: Validation errors.
       content:
@@ -190,12 +269,14 @@ components:
                     items:
                       type: string
                       example: "Field another_field must contain at least 8 chars"
+
     NFT:
       description: NFT.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/NFT"
+
     NFTs:
       description: NFTs.
       content:
@@ -211,6 +292,7 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ArweaveNFTMetadata"
+
     ArweaveNFTMetadatas:
       description: ArweaveNFTMetadatas.
       content:
@@ -233,12 +315,14 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/TradingPlatformLink"
+
     TradingPlatformLinks:
       description: Trading platform links.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/TradingPlatformLinks"
+
     PuzzleGameAdmin:
       description: Puzzle game object
       content:
@@ -354,6 +438,90 @@ components:
               is_locked:
                 type: boolean
                 description: Is this option locked?
+
+    PlayerStatus:
+      description: Player status
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              energy_left:
+                type: number
+              user_currency:
+                type: number
+              user_in_game_currency:
+                type: number
+              min_amount_of_currency_to_convert:
+                type: number
+              min_version:
+                type: string
+              selected_nft_id:
+                type: string
+              user_owned_nft_list:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InGameNFTInfoArray"
+
+    NFTPacks:
+      description: NFT Packs.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/InGameNFTPackArray"
+
+    UserOwnedNFTs:
+      description: User owned NFTs.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user_owned_nft_list:
+                $ref: "#/components/schemas/InGameNFTInfoArray"
+
+    NewUserOwnedNFTs:
+      description: User owned NFTs.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              new_nft:
+                $ref: "#/components/schemas/InGameNFTInfo"
+              user_owned_nft_list:
+                $ref: "#/components/schemas/InGameNFTInfoArray"
+
+    GameSettingItem:
+      description: Game setting item.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GameSettingsItem"
+
+    GameSettings:
+      description: Game settings.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/GameSettingsItem"
+
+    SettingsValueTypes:
+      description: Settings value types.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              value_type:
+                type: string
+                description: Value type
+              value_type_name:
+                type: string
+                description: "Name of the setting value type"
+
 paths:
   /:
     get:
@@ -5929,7 +6097,7 @@ paths:
         - "Firebase"
       summary: Register new firebase token.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -5942,6 +6110,349 @@ paths:
                 token:
                   type: string
       responses:
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/get-status:
+    get:
+      tags:
+        - "Unity Game API"
+      summary: Get player status.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/PlayerStatus"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/get-nft-packs:
+    get:
+      tags:
+        - "Unity Game API"
+      summary: Get NFT packs.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTPacks"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/buy-nft-pack:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Buy NFT Pack.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pack_id:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/NewUserOwnedNFTs"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/craft-nft:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Craft NFT.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nfts_to_craft:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/NewUserOwnedNFTs"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/select-nft:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Select NFT.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nft_id:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/UserOwnedNFTs"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/start-game:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Start game.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                selected_complexity:
+                  type: number
+                  description: "Complexity of the game. Available values: 1 - easy, 2 - medium, 3 - hard."
+                  enum:
+                    - 1
+                    - 2
+                    - 3
+                is_training:
+                  type: boolean
+      responses:
+        "200":
+          description: Start game config.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  game_config_json:
+                    type: string
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/finish-game:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Finish game.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                blocks_done:
+                  type: number
+      responses:
+        "200":
+          description: Finish game result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_in_game_currency:
+                    type: number
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/claim-rewards:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Claim rewards. Convert in-game currency to SAO.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/settings:
+    get:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Get settings.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/GameSettings"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/settings/value-types:
+    get:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Get available settings value types.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SettingsValueTypes"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    post:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Set settings value.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                value_type:
+                  type: string
+                  description: "Value type. Available values: string, number, boolean, array, object."
+                  enum:
+                    - string
+                    - number
+                    - boolean
+                    - array
+                    - object
+                value:
+                  type: string
+                  description: "Value of the setting."
+                description:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/settings/{key}:
+    put:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Claim rewards. Convert in-game currency to SAO.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          description: Setting key.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  description: "Setting value."
+      responses:
+        "200":
+          $ref: "#/components/responses/GameSettingItem"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    delete:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Delete setting key.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          description: Setting key.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

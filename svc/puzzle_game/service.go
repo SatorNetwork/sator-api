@@ -145,7 +145,11 @@ func (s *Service) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 	return result, nil
 }
 
-func (s *Service) GetPuzzleGameByEpisodeID(ctx context.Context, epID uuid.UUID) (PuzzleGame, error) {
+func (s *Service) GetPuzzleGameByEpisodeID(ctx context.Context, epID uuid.UUID, isTestUser bool) (PuzzleGame, error) {
+	if isTestUser {
+		return PuzzleGame{}, ErrNotFound
+	}
+
 	puzzleGame, err := s.pgr.GetPuzzleGameByEpisodeID(ctx, epID)
 	if err != nil {
 		puzzleGame, err = s.pgr.CreatePuzzleGame(ctx, repository.CreatePuzzleGameParams{
@@ -261,7 +265,11 @@ func (s *Service) GetPuzzleGameImages(ctx context.Context, gameID uuid.UUID) ([]
 	return result, nil
 }
 
-func (s *Service) GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (PuzzleGame, error) {
+func (s *Service) GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID, isTestUser bool) (PuzzleGame, error) {
+	if isTestUser {
+		return PuzzleGame{}, ErrNotFound
+	}
+
 	pg, err := s.pgr.GetPuzzleGameByEpisodeID(ctx, episodeID)
 	if err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game by episode id")

@@ -36,7 +36,8 @@ func GetRoleFromContext(ctx context.Context) Role {
 	}
 
 	switch r := Role(role); r {
-	case RoleAdmin, RoleContentManager, RoleModerator, RoleGuest, RoleShowRunner, RoleUser:
+	case RoleAdmin, RoleContentManager, RoleModerator,
+		RoleGuest, RoleShowRunner, RoleUser, RoleTestUser:
 		return r
 	}
 

@@ -9,7 +9,7 @@ import (
 )
 
 type ChallengesService interface {
-	GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge.Challenge, error)
+	GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (challenge.Challenge, error)
 	GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (challenge.RawChallenge, error)
 	GetQuestionsByChallengeID(ctx context.Context, challengeID uuid.UUID) ([]challenge.Question, error)
 	GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
