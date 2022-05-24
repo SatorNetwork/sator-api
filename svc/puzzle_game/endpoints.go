@@ -41,7 +41,7 @@ type (
 		LinkImageToPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
 		UnlinkImageFromPuzzleGame(ctx context.Context, gameID, fileID uuid.UUID) error
 
-		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID) (PuzzleGame, error)
+		GetPuzzleGameForUser(ctx context.Context, userID, episodeID uuid.UUID, isTestUser bool) (PuzzleGame, error)
 		UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (PuzzleGame, error)
 		StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (PuzzleGame, error)
 
@@ -254,7 +254,7 @@ func MakeGetPuzzleGameForUserEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		res, err := s.GetPuzzleGameForUser(ctx, uid, uuid.MustParse(request.(string)))
+		res, err := s.GetPuzzleGameForUser(ctx, uid, uuid.MustParse(request.(string)), rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
