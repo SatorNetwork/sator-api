@@ -169,6 +169,7 @@ type Config struct {
 	NftMarketplaceServerPort       int
 	SkipDeviceIDCheck              bool
 	EnableResourceIntensiveQueries bool
+	FirebaseCredsInJSON            string
 }
 
 var buildTag string
@@ -298,6 +299,8 @@ func ConfigFromEnv() *Config {
 		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
 
 		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
+
+		FirebaseCredsInJSON: env.MustString("FIREBASE_CREDS_IN_JSON"),
 	}
 }
 
@@ -665,6 +668,31 @@ func (a *app) Run() {
 		nftClient = nftC.New(nftService)
 	}
 
+	// Firebase service
+	var firebaseSvc *firebase_svc.Service
+	{
+		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare firebase repository: %v", err)
+		}
+
+		if a.cfg.FirebaseCredsInJSON == "" {
+			log.Fatal("firebase JSON creds is not set")
+		}
+
+		firebaseSvc, err = firebase_svc.NewService(
+			firebaseRepository,
+			[]byte(a.cfg.FirebaseCredsInJSON),
+		)
+		if err != nil {
+			log.Fatalf("can't create firebase service: %v\n", err)
+		}
+		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
+			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	// Shows service
 	{
 		// Show repo
@@ -698,7 +726,16 @@ func (a *app) Run() {
 			logger,
 		))
 
-		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient, a.cfg.TipsPercent)
+		showsService := shows.NewService(
+			showRepo,
+			challengeSvcClient,
+			profileSvc,
+			authClient,
+			walletSvcClient.P2PTransfer,
+			nftClient,
+			firebaseSvc,
+			a.cfg.TipsPercent,
+		)
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(showsService, jwtMdw),
 			logger,
@@ -827,22 +864,6 @@ func (a *app) Run() {
 		)
 		r.Mount("/iap", iap_svc.MakeHTTPHandler(
 			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
-			logger,
-		))
-	}
-
-	// Firebase service
-	{
-		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare firebase repository: %v", err)
-		}
-
-		firebaseSvc := firebase_svc.NewService(
-			firebaseRepository,
-		)
-		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
-			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
 			logger,
 		))
 	}

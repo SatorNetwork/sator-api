@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"time"
 
@@ -35,6 +36,7 @@ type (
 		ac           authClient
 		sentTipsFunc sentTipsFunction
 		nc           nftClient
+		firebaseSvc  firebaseService
 		tipsPercent  float64
 	}
 
@@ -191,13 +193,27 @@ type (
 		DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
 	}
 
+	firebaseService interface {
+		SendNewShowNotification(ctx context.Context, showTitle string) error
+		SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string) error
+	}
+
 	// Simple function
 	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient, tipsPercent float64) *Service {
+func NewService(
+	sr showsRepository,
+	chc challengesClient,
+	pc profileClient,
+	ac authClient,
+	sentTipsFunc sentTipsFunction,
+	nc nftClient,
+	firebaseSvc firebaseService,
+	tipsPercent float64,
+) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -217,7 +233,16 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 		log.Fatalln("nft client is not set")
 	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc, tipsPercent: tipsPercent}
+	return &Service{
+		sr:           sr,
+		chc:          chc,
+		pc:           pc,
+		ac:           ac,
+		sentTipsFunc: sentTipsFunc,
+		nc:           nc,
+		tipsPercent:  tipsPercent,
+		firebaseSvc:  firebaseSvc,
+	}
 }
 
 // GetShows returns shows.
@@ -643,6 +668,10 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		}
 	}
 
+	if err := s.firebaseSvc.SendNewShowNotification(ctx, sh.Title); err != nil {
+		return Show{}, errors.Wrap(err, "can't send new show notification")
+	}
+
 	return s.GetShowByID(ctx, show.ID)
 }
 
@@ -753,6 +782,10 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 	episodeByID, err := s.sr.GetEpisodeByID(ctx, episode.ID)
 	if err != nil {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
+	}
+
+	if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, ep.ShowTitle, ep.Title); err != nil {
+		return Episode{}, errors.Wrap(err, "can't send new show notification")
 	}
 
 	// return castToEpisode(episode, episodeByID.SeasonNumber), nil
