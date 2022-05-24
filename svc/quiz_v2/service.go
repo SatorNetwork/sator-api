@@ -264,13 +264,18 @@ func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Chall
 		}
 	}
 
+	isActivated := c.IsActivated
+	if mustAccess {
+		isActivated = true
+	}
+
 	return &Challenge{
 		ID:               c.ID,
 		Title:            c.Title,
 		PlayersToStart:   c.PlayersToStart,
 		PlayersNumber:    c.PlayersNum,
 		PrizePool:        fmt.Sprintf("%.2f SAO", currentPrizePool),
-		IsRealmActivated: c.IsActivated,
+		IsRealmActivated: isActivated,
 		Cover:            c.Cover.String,
 	}, nil
 }
