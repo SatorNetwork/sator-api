@@ -29,3 +29,4 @@ sator-api.log
 vendor/
 .env
 .vscode
+cmd/gapi/seed.go
