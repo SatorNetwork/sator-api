@@ -2,6 +2,8 @@ package gapi
 
 import (
 	"encoding/json"
+	"math/rand"
+	"time"
 )
 
 // NFTType ...
@@ -22,33 +24,55 @@ const (
 	NFTTypeLegend    NFTType = "legend"
 )
 
-// NFT types array
-var nftTypesSlice = []NFTType{
-	NFTTypeCommon,
-	NFTTypeRare,
-	NFTTypeSuperRare,
-	NFTTypeEpic,
-	NFTTypeLegend,
+func getNextNFTType(nftType NFTType) NFTType {
+	switch nftType {
+	case NFTTypeCommon:
+		return NFTTypeRare
+	case NFTTypeRare:
+		return NFTTypeSuperRare
+	case NFTTypeSuperRare:
+		return NFTTypeEpic
+	case NFTTypeEpic:
+		return NFTTypeLegend
+	case NFTTypeLegend:
+		return NFTTypeLegend
+	default:
+		return NFTTypeUndefined
+	}
 }
 
 // Predefined game levels
 const (
-	GameLevelEasy = iota + 1
+	GameLevelEasy int32 = iota + 1
 	GameLevelMedium
 	GameLevelHard
 )
 
 // Game levels array
-var gameLevels = []int{
+var gameLevels = []int32{
 	GameLevelEasy,
 	GameLevelMedium,
 	GameLevelHard,
 }
 
+// get next nft level
+func getNextNFTLevel(level int32) int32 {
+	if level == GameLevelHard {
+		return GameLevelHard
+	}
+	return level + 1
+}
+
+// Get random nft level
+func getRandomNFTLevel() int32 {
+	rand.Seed(time.Now().UnixNano())
+	return gameLevels[rand.Intn(len(gameLevels))]
+}
+
 // NFTInfo ...
 type NFTInfo struct {
 	ID       string  `json:"id"`
-	MaxLevel int     `json:"max_level"`
+	MaxLevel int32   `json:"max_level"`
 	NftType  NFTType `json:"nft_type"`
 }
 
@@ -66,6 +90,17 @@ type DropChances struct {
 	SuperRare float64 `json:"super_rare"`
 	Epic      float64 `json:"epic"`
 	Legend    float64 `json:"legend"`
+}
+
+// DropChances to map
+func (d DropChances) ToMap() map[string]float64 {
+	return map[string]float64{
+		NFTTypeCommon.String():    d.Common,
+		NFTTypeRare.String():      d.Rare,
+		NFTTypeSuperRare.String(): d.SuperRare,
+		NFTTypeEpic.String():      d.Epic,
+		NFTTypeLegend.String():    d.Legend,
+	}
 }
 
 // GameConfig struct

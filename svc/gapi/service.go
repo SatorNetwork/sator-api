@@ -157,7 +157,7 @@ func (s *Service) GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, er
 	for _, nft := range nfts {
 		result = append(result, NFTInfo{
 			ID:       nft.ID,
-			MaxLevel: int(nft.MaxLevel),
+			MaxLevel: nft.MaxLevel,
 			NftType:  NFTType(nft.NftType),
 		})
 	}
@@ -459,6 +459,6 @@ func castDbNftInfoToNFTInfo(dbNftInfo *repository.UnityGameNft) *NFTInfo {
 	return &NFTInfo{
 		ID:       dbNftInfo.ID,
 		NftType:  NFTType(dbNftInfo.NftType),
-		MaxLevel: int(dbNftInfo.MaxLevel),
+		MaxLevel: dbNftInfo.MaxLevel,
 	}
 }

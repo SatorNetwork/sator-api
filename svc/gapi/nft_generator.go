@@ -1,33 +1,41 @@
 package gapi
 
 import (
-	"math/rand"
-	"time"
+	"encoding/json"
+	"fmt"
 
 	"github.com/SatorNetwork/sator-api/svc/gapi/repository"
+	"github.com/dmitrymomot/random"
 	"github.com/segmentio/ksuid"
 )
 
 // Generates NFT item from NFTPackInfo
 // returns NFTInfo or error
 func generateNFT(nftPack repository.UnityGameNftPack) (NFTInfo, error) {
-	rand.Seed(time.Now().Unix())
+	var dropChances DropChances
+	if err := json.Unmarshal(nftPack.DropChances, &dropChances); err != nil {
+		return NFTInfo{}, fmt.Errorf("failed to unmarshal drop chances: %w", err)
+	}
+
+	nftType := random.GetRandomMapItemWithProbabilities(dropChances.ToMap())
 
 	return NFTInfo{
 		ID:       ksuid.New().String(),
-		MaxLevel: gameLevels[rand.Intn(len(gameLevels))],
-		NftType:  nftTypesSlice[rand.Intn(len(nftTypesSlice))],
+		MaxLevel: getRandomNFTLevel(),
+		NftType:  NFTType(nftType),
 	}, nil
 }
 
 // Craft new NFT from users NFTs list
 // returns NFTInfo or error
 func craftNFT(nftsToCraft []repository.UnityGameNft) (*NFTInfo, error) {
-	rand.Seed(time.Now().Unix())
+	if len(nftsToCraft) < 2 {
+		return nil, ErrNotEnoughNFTsToCraft
+	}
 
 	return &NFTInfo{
 		ID:       ksuid.New().String(),
-		MaxLevel: gameLevels[rand.Intn(len(gameLevels))],
-		NftType:  nftTypesSlice[rand.Intn(len(nftTypesSlice))],
+		MaxLevel: getNextNFTLevel(nftsToCraft[0].MaxLevel),
+		NftType:  getNextNFTType(NFTType(nftsToCraft[0].NftType)),
 	}, nil
 }
