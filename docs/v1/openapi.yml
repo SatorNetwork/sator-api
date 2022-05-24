@@ -6264,6 +6264,8 @@ paths:
                 properties:
                   game_config_json:
                     type: string
+                  game_config:
+                    type: object
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
