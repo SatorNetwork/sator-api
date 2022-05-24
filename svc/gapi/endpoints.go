@@ -306,7 +306,8 @@ type (
 	}
 
 	StartGameResponse struct {
-		GameConfigJSON string `json:"game_config_json"`
+		GameConfigJSON []byte      `json:"game_config_json"`
+		GameConfig     *GameConfig `json:"game_config"`
 	}
 )
 
@@ -338,7 +339,8 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 		}
 
 		return StartGameResponse{
-			GameConfigJSON: string(config),
+			GameConfigJSON: config,
+			GameConfig:     gameConfig,
 		}, nil
 	}
 }
