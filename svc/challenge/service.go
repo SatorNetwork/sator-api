@@ -387,6 +387,15 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 
 // VerifyUserAccessToEpisode ...
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID, mustAccess bool) (EpisodeAccess, error) {
+	if mustAccess {
+		return EpisodeAccess{
+			EpisodeID:       &eid,
+			Result:          true,
+			ActivatedAt:     time.Now().Format(time.RFC3339),
+			ActivatedBefore: time.Now().Add(s.activatedRealmPeriod).Format(time.RFC3339),
+		}, nil
+	}
+
 	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
 		EpisodeID: eid,
 		UserID:    uid,
