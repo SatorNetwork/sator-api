@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	client "github.com/portto/solana-go-sdk/client"
 	common "github.com/portto/solana-go-sdk/common"
 	types "github.com/portto/solana-go-sdk/types"
 )
@@ -124,6 +125,21 @@ func (mr *MockInterfaceMockRecorder) GetAccountBalanceSOL(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountBalanceSOL", reflect.TypeOf((*MockInterface)(nil).GetAccountBalanceSOL), arg0, arg1)
 }
 
+// GetBlockHeight mocks base method.
+func (m *MockInterface) GetBlockHeight(arg0 context.Context) (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlockHeight", arg0)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlockHeight indicates an expected call of GetBlockHeight.
+func (mr *MockInterfaceMockRecorder) GetBlockHeight(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHeight", reflect.TypeOf((*MockInterface)(nil).GetBlockHeight), arg0)
+}
+
 // GetConfirmedTransaction mocks base method.
 func (m *MockInterface) GetConfirmedTransaction(arg0 context.Context, arg1 string) (GetConfirmedTransactionResponse, error) {
 	m.ctrl.T.Helper()
@@ -182,6 +198,21 @@ func (m *MockInterface) GetTokenAccountBalanceWithAutoDerive(arg0 context.Contex
 func (mr *MockInterfaceMockRecorder) GetTokenAccountBalanceWithAutoDerive(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTokenAccountBalanceWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).GetTokenAccountBalanceWithAutoDerive), arg0, arg1, arg2)
+}
+
+// GetTransaction mocks base method.
+func (m *MockInterface) GetTransaction(arg0 context.Context, arg1 string) (*client.GetTransactionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTransaction", arg0, arg1)
+	ret0, _ := ret[0].(*client.GetTransactionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTransaction indicates an expected call of GetTransaction.
+func (mr *MockInterfaceMockRecorder) GetTransaction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransaction", reflect.TypeOf((*MockInterface)(nil).GetTransaction), arg0, arg1)
 }
 
 // GetTransactions mocks base method.
@@ -366,6 +397,22 @@ func (mr *MockInterfaceMockRecorder) SendTransaction(arg0, arg1, arg2 interface{
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransaction", reflect.TypeOf((*MockInterface)(nil).SendTransaction), varargs...)
+}
+
+// SendTransactionUntilConfirmed mocks base method.
+func (m *MockInterface) SendTransactionUntilConfirmed(arg0 context.Context, arg1 types.Transaction) (string, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendTransactionUntilConfirmed", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SendTransactionUntilConfirmed indicates an expected call of SendTransactionUntilConfirmed.
+func (mr *MockInterfaceMockRecorder) SendTransactionUntilConfirmed(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransactionUntilConfirmed", reflect.TypeOf((*MockInterface)(nil).SendTransactionUntilConfirmed), arg0, arg1)
 }
 
 // SerializeTxMessage mocks base method.

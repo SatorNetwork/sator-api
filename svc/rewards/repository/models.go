@@ -21,5 +21,5 @@ type Reward struct {
 	TransactionType int32          `json:"transaction_type"`
 	RelationType    sql.NullString `json:"relation_type"`
 	TxHash          sql.NullString `json:"tx_hash"`
-	Status          string         `json:"status"`
+	Status          sql.NullString `json:"status"`
 }

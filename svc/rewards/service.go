@@ -113,7 +113,7 @@ func (s *Service) AddTransaction(ctx context.Context, uid, relationID uuid.UUID,
 		Amount:          amount,
 		TransactionType: trType,
 		RelationType:    sql.NullString{String: relationType, Valid: true},
-		Status:          status,
+		Status:          sql.NullString{String: status, Valid: true},
 	}); err != nil {
 		return fmt.Errorf("could not add transaction for user_id=%s, relation_id=%s, relation_type=%s: %w", uid.String(), relationID.String(), relationType, err)
 	}
@@ -168,7 +168,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID) (ClaimRewards
 		Amount:          amount,
 		TransactionType: TransactionTypeWithdraw,
 		TxHash:          sql.NullString{String: txHash, Valid: true},
-		Status:          TransactionStatusRequested.String(),
+		Status:          sql.NullString{String: TransactionStatusRequested.String(), Valid: true},
 	}); err != nil {
 		return ClaimRewardsResult{}, fmt.Errorf("could not add reward: %w", err)
 	}

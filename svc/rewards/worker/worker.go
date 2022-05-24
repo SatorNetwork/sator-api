@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"database/sql"
+	"github.com/SatorNetwork/sator-api/svc/rewards"
 	"log"
 	"time"
 
-	"github.com/SatorNetwork/sator-api/svc/rewards"
 	"github.com/google/uuid"
 	"github.com/portto/solana-go-sdk/client"
 
@@ -63,7 +63,10 @@ func (t *TransactionWorker) Start(ctx context.Context, duration time.Duration) {
 
 				if resp != nil {
 					if err = t.repo.UpdateTransactionStatusByTxHash(ctx, repository.UpdateTransactionStatusByTxHashParams{
-						Status: rewards.TransactionStatusWithdrawn.String(),
+						Status: sql.NullString{
+							String: rewards.TransactionStatusWithdrawn.String(),
+							Valid:  true,
+						},
 						TxHash: transactions[i].TxHash,
 					}); err != nil {
 						log.Println(err)

@@ -33,7 +33,7 @@ func (db *DB) DepositRewards(ctx context.Context, userID uuid.UUID, amount float
 		UserID:          userID,
 		TransactionType: 1,
 		Amount:          amount,
-		Status:          rewards.TransactionStatusAvailable.String(),
+		Status:          sql.NullString{String: rewards.TransactionStatusAvailable.String(), Valid: true},
 	}); err != nil {
 		return fmt.Errorf("error to deposit rewards for user: %v: %w", userID, err)
 	}

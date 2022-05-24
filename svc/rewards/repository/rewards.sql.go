@@ -41,7 +41,7 @@ type AddTransactionParams struct {
 	TransactionType int32          `json:"transaction_type"`
 	Amount          float64        `json:"amount"`
 	TxHash          sql.NullString `json:"tx_hash"`
-	Status          string         `json:"status"`
+	Status          sql.NullString `json:"status"`
 }
 
 func (q *Queries) AddTransaction(ctx context.Context, arg AddTransactionParams) error {
@@ -275,7 +275,7 @@ WHERE tx_hash = $2
 `
 
 type UpdateTransactionStatusByTxHashParams struct {
-	Status string         `json:"status"`
+	Status sql.NullString `json:"status"`
 	TxHash sql.NullString `json:"tx_hash"`
 }
 
