@@ -24,6 +24,15 @@ const (
 	NFTTypeLegend    NFTType = "legend"
 )
 
+// Check if nft type is valid
+func (n NFTType) IsValid() bool {
+	switch n {
+	case NFTTypeCommon, NFTTypeRare, NFTTypeSuperRare, NFTTypeEpic, NFTTypeLegend:
+		return true
+	}
+	return false
+}
+
 func getNextNFTType(nftType NFTType) NFTType {
 	switch nftType {
 	case NFTTypeCommon:

@@ -11,18 +11,22 @@ import (
 
 // Generates NFT item from NFTPackInfo
 // returns NFTInfo or error
-func generateNFT(nftPack repository.UnityGameNftPack) (NFTInfo, error) {
+func generateNFT(nftPack repository.UnityGameNftPack) (*NFTInfo, error) {
 	var dropChances DropChances
 	if err := json.Unmarshal(nftPack.DropChances, &dropChances); err != nil {
-		return NFTInfo{}, fmt.Errorf("failed to unmarshal drop chances: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal drop chances: %w", err)
 	}
 
 	nftType := random.GetRandomMapItemWithProbabilities(dropChances.ToMap())
+	nt := NFTType(nftType)
+	if !nt.IsValid() {
+		return nil, fmt.Errorf("invalid nft type: %s", nt)
+	}
 
-	return NFTInfo{
+	return &NFTInfo{
 		ID:       ksuid.New().String(),
 		MaxLevel: getRandomNFTLevel(),
-		NftType:  NFTType(nftType),
+		NftType:  nt,
 	}, nil
 }
 
