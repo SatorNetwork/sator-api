@@ -41,7 +41,7 @@ type (
 	}
 
 	service interface {
-		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (interface{}, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (interface{}, error)
 		GetChallengesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		AddChallenge(ctx context.Context, ch Challenge) (Challenge, error)
 		DeleteChallengeByID(ctx context.Context, id uuid.UUID) error
@@ -49,7 +49,7 @@ type (
 
 		GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error)
 		CheckVerificationQuestionAnswer(ctx context.Context, questionID, answerID, userID uuid.UUID) (interface{}, error)
-		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (EpisodeAccess, error)
+		VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID, mustAccess bool) (EpisodeAccess, error)
 		GetAttemptsLeftForVerificationQuestion(ctx context.Context, episodeID, userID uuid.UUID) (int64, error)
 
 		AddQuestion(ctx context.Context, qw Question) (Question, error)
@@ -297,7 +297,7 @@ func MakeVerifyUserAccessToEpisodeEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("could not get user profile id: %w", err)
 		}
 
-		resp, err := s.VerifyUserAccessToEpisode(ctx, uid, epid)
+		resp, err := s.VerifyUserAccessToEpisode(ctx, uid, epid, rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
@@ -323,7 +323,7 @@ func MakeGetChallengeByIdEndpoint(s service) endpoint.Endpoint {
 			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetChallengeByID(ctx, id, uid)
+		resp, err := s.GetChallengeByID(ctx, id, uid, rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}
@@ -780,7 +780,7 @@ func MakeUnlockEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			return false, err
 		}
 
-		resp, err := s.VerifyUserAccessToEpisode(ctx, uid, episodeID)
+		resp, err := s.VerifyUserAccessToEpisode(ctx, uid, episodeID, rbac.IsCurrentUserHasRole(ctx, rbac.RoleTestUser))
 		if err != nil {
 			return nil, err
 		}

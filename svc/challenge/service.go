@@ -222,7 +222,7 @@ func NewService(cr challengesRepository, showRepo showsRepository, fn playURLGen
 }
 
 // GetByID ...
-func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (Challenge, error) {
+func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (Challenge, error) {
 	challenge, err := s.cr.GetChallengeByID(ctx, challengeID)
 	if err != nil {
 		return Challenge{}, fmt.Errorf("could not get challenge by challengeID=%s: %w", challengeID, err)
@@ -254,7 +254,7 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID) (C
 
 	// Check if a user has access to the challenge
 	epID, _ := s.showRepo.GetEpisodeIDByQuizChallengeID(ctx, uuid.NullUUID{UUID: challengeID, Valid: true})
-	res, _ := s.VerifyUserAccessToEpisode(ctx, userID, epID)
+	res, _ := s.VerifyUserAccessToEpisode(ctx, userID, epID, mustAccess)
 
 	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward, &epID, res.Result), nil
 }
@@ -269,8 +269,8 @@ func (s *Service) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID
 }
 
 // GetChallengeByID ...
-func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (interface{}, error) {
-	return s.GetByID(ctx, challengeID, userID)
+func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (interface{}, error) {
+	return s.GetByID(ctx, challengeID, userID, mustAccess)
 }
 
 // GetVerificationQuestionByEpisodeID ...
@@ -386,7 +386,7 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 }
 
 // VerifyUserAccessToEpisode ...
-func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID) (EpisodeAccess, error) {
+func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID, mustAccess bool) (EpisodeAccess, error) {
 	data, err := s.cr.GetEpisodeAccessData(ctx, repository.GetEpisodeAccessDataParams{
 		EpisodeID: eid,
 		UserID:    uid,

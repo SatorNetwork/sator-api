@@ -91,7 +91,7 @@ func NewService(
 	return s
 }
 
-func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID) (*GetQuizLinkResponse, error) {
+func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username string, challengeID uuid.UUID, mustAccess bool) (*GetQuizLinkResponse, error) {
 	challenge, err := s.challenges.GetRawChallengeByID(ctx, challengeID)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, errors.Errorf("can't choose %v questions out of %v", challenge.QuestionsPerGame, len(questions))
 	}
 
-	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid)
+	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid, mustAccess)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't check if user is restricted")
 	}
@@ -164,8 +164,8 @@ func (s *Service) StartEngine() {
 	s.engine.Start()
 }
 
-func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error) {
-	challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, userID)
+func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (challenge_service.Challenge, error) {
+	challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, userID, mustAccess)
 	if err != nil {
 		return challenge_service.Challenge{}, errors.Wrap(err, "can't get challenge by ID")
 	}
@@ -199,7 +199,7 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 	return challenge, nil
 }
 
-func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*Challenge, error) {
+func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.UUID, limit, offset int32, mustAccess bool) ([]*Challenge, error) {
 	query := sql_builder.ConstructGetChallengesSortedByPlayersQuery(userID, limit, offset)
 	{
 		tmpl := `
@@ -223,7 +223,7 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 		}
 		log.Printf("Serialized SQL challenges: %s\n", serializedChallenges)
 	}
-	challenges, err := s.NewChallengesFromSQL(ctx, sqlChallenges, userID)
+	challenges, err := s.NewChallengesFromSQL(ctx, sqlChallenges, userID, mustAccess)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 	return challenges, nil
 }
 
-func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Challenge, userID uuid.UUID) (*Challenge, error) {
+func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Challenge, userID uuid.UUID, mustAccess bool) (*Challenge, error) {
 	var currentPrizePool float64
 	{
 		challengeUID, err := uuid.Parse(c.ID)
@@ -247,7 +247,7 @@ func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Chall
 		}
 
 		// TODO(evg): get rid of extra database call
-		challenge, err := s.challenges.GetChallengeByID(ctx, challengeUID, userID)
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeUID, userID, mustAccess)
 		if err != nil {
 			return nil, errors.Wrap(err, "can't get challenge by ID")
 		}
@@ -275,10 +275,10 @@ func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Chall
 	}, nil
 }
 
-func (s *Service) NewChallengesFromSQL(ctx context.Context, sqlChallenges []*sql_executor.Challenge, userID uuid.UUID) ([]*Challenge, error) {
+func (s *Service) NewChallengesFromSQL(ctx context.Context, sqlChallenges []*sql_executor.Challenge, userID uuid.UUID, mustAccess bool) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for _, c := range sqlChallenges {
-		challenge, err := s.NewChallengeFromSQL(ctx, c, userID)
+		challenge, err := s.NewChallengeFromSQL(ctx, c, userID, mustAccess)
 		if err != nil {
 			return nil, err
 		}

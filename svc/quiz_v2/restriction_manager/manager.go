@@ -33,7 +33,7 @@ func (r restrictionReason) String() string {
 
 type (
 	RestrictionManager interface {
-		IsUserRestricted(ctx context.Context, challengeID, userID uuid.UUID) (bool, restrictionReason, error)
+		IsUserRestricted(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (bool, restrictionReason, error)
 		RegisterEarnedReward(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
 		RegisterAttempt(ctx context.Context, challengeID, userID uuid.UUID) error
 	}
@@ -43,7 +43,7 @@ type (
 	}
 
 	challengeService interface {
-		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID) (challenge_service.Challenge, error)
+		GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (challenge_service.Challenge, error)
 		GetChallengeReceivedRewardAmountByUserID(ctx context.Context, challengeID, userID uuid.UUID) (float64, error)
 		GetPassedChallengeAttempts(ctx context.Context, challengeID, userID uuid.UUID) (int64, error)
 		StoreChallengeReceivedRewardAmount(ctx context.Context, challengeID, userID uuid.UUID, rewardAmount float64) error
@@ -57,7 +57,7 @@ func New(challenge challengeService) RestrictionManager {
 	}
 }
 
-func (m *restrictionManager) IsUserRestricted(ctx context.Context, challengeID, userID uuid.UUID) (bool, restrictionReason, error) {
+func (m *restrictionManager) IsUserRestricted(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (bool, restrictionReason, error) {
 	receivedReward, err := m.challenge.GetChallengeReceivedRewardAmountByUserID(ctx, challengeID, userID)
 	if err != nil && !db.IsNotFoundError(err) {
 		return false, undefined, errors.Wrap(err, "could not get received reward amount")
@@ -66,7 +66,7 @@ func (m *restrictionManager) IsUserRestricted(ctx context.Context, challengeID, 
 		return true, rewardAlreadyReceived, nil
 	}
 
-	challenge, err := m.challenge.GetChallengeByID(ctx, challengeID, userID)
+	challenge, err := m.challenge.GetChallengeByID(ctx, challengeID, userID, mustAccess)
 	if err != nil {
 		return false, undefined, errors.Wrap(err, "can't get challenge by ID")
 	}
