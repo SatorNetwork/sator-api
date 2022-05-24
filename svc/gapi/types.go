@@ -97,15 +97,15 @@ type GameConfig struct {
 	BlocksCreateInfo struct {
 		BlocksAmount int `json:"_blocksAmount"`
 		BlocksInfo   []struct {
-			ID                string        `json:"_id"`
-			Type              string        `json:"_type"`
-			ResourceRoadPath  string        `json:"_resourceRoadPath"`
-			From              int           `json:"_from"`
-			To                int           `json:"_to"`
-			AmountMin         int           `json:"_amountMin"`
-			AmountMax         int           `json:"_amountMax"`
-			Chance            int           `json:"_chance"`
-			OnExit            []interface{} `json:"_onExit"`
+			ID                string   `json:"_id"`
+			Type              string   `json:"_type"`
+			ResourceRoadPath  string   `json:"_resourceRoadPath"`
+			From              int      `json:"_from"`
+			To                int      `json:"_to"`
+			AmountMin         int      `json:"_amountMin"`
+			AmountMax         int      `json:"_amountMax"`
+			Chance            float64  `json:"_chance"`
+			OnExit            []string `json:"_onExit"`
 			PossibleMoveItems []struct {
 				ID                    string  `json:"_id"`
 				SpawnDelayRandomMin   int     `json:"_spawnDelayRandomMin"`
@@ -117,28 +117,28 @@ type GameConfig struct {
 			} `json:"_possibleMoveItems,omitempty"`
 		} `json:"_blocksInfo"`
 		BlocksExitInfo []struct {
-			ID                   string        `json:"_id"`
-			Type                 string        `json:"_type"`
-			ResourceRoadPath     string        `json:"_resourceRoadPath"`
-			From                 int           `json:"_from"`
-			To                   int           `json:"_to"`
-			AmountMin            int           `json:"_amountMin"`
-			AmountMax            int           `json:"_amountMax"`
-			Chance               int           `json:"_chance"`
-			OnExit               []interface{} `json:"_onExit"`
-			SizeRandomMin        int           `json:"_sizeRandomMin,omitempty"`
-			SizeRandomMax        int           `json:"_sizeRandomMax,omitempty"`
-			BlockAmountRandomMin int           `json:"_blockAmountRandomMin,omitempty"`
-			BlockAmountRandomMax int           `json:"_blockAmountRandomMax,omitempty"`
-			ResourceBlockPath    string        `json:"_resourceBlockPath,omitempty"`
+			ID                   string   `json:"_id"`
+			Type                 string   `json:"_type"`
+			ResourceRoadPath     string   `json:"_resourceRoadPath"`
+			From                 int      `json:"_from"`
+			To                   int      `json:"_to"`
+			AmountMin            int      `json:"_amountMin"`
+			AmountMax            int      `json:"_amountMax"`
+			Chance               float64  `json:"_chance"`
+			OnExit               []string `json:"_onExit"`
+			SizeRandomMin        int      `json:"_sizeRandomMin,omitempty"`
+			SizeRandomMax        int      `json:"_sizeRandomMax,omitempty"`
+			BlockAmountRandomMin int      `json:"_blockAmountRandomMin,omitempty"`
+			BlockAmountRandomMax int      `json:"_blockAmountRandomMax,omitempty"`
+			ResourceBlockPath    string   `json:"_resourceBlockPath,omitempty"`
 			PossibleMoveItems    []struct {
-				ID                    string `json:"_id"`
-				SpawnDelayRandomMin   int    `json:"_spawnDelayRandomMin"`
-				SpawnDelayRandomMax   int    `json:"_spawnDelayRandomMax"`
-				MoveTimeMin           int    `json:"_moveTimeMin"`
-				MoveTimeMax           int    `json:"_moveTimeMax"`
-				ReverseMovementChance int    `json:"_reverseMovementChance"`
-				ResourceMovementPath  string `json:"_resourceMovementPath"`
+				ID                    string  `json:"_id"`
+				SpawnDelayRandomMin   int     `json:"_spawnDelayRandomMin"`
+				SpawnDelayRandomMax   int     `json:"_spawnDelayRandomMax"`
+				MoveTimeMin           int     `json:"_moveTimeMin"`
+				MoveTimeMax           int     `json:"_moveTimeMax"`
+				ReverseMovementChance float64 `json:"_reverseMovementChance"`
+				ResourceMovementPath  string  `json:"_resourceMovementPath"`
 			} `json:"_possibleMoveItems,omitempty"`
 		} `json:"_blocksExitInfo"`
 	} `json:"_blocksCreateInfo"`
