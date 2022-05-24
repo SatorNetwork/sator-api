@@ -39,6 +39,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.7.0
 	github.com/rubenv/sql-migrate v0.0.0-20210408115534-a32ed26c37ea
+	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.7.0
 	github.com/superoo7/go-gecko v1.0.0
 	github.com/thedevsaddam/govalidator v1.9.10

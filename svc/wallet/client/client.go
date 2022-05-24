@@ -25,6 +25,7 @@ type (
 		PayForNFT(ctx context.Context, uid uuid.UUID, amount float64, info string, creatorAddr string, creatorShare int32) error
 		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 		GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error)
+		GetSAOBalance(ctx context.Context, userID uuid.UUID) (float64, error)
 	}
 )
 
@@ -76,4 +77,16 @@ func (c *Client) P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, am
 // GetMultiplier ...
 func (c *Client) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error) {
 	return c.s.GetMultiplier(ctx, userID)
+}
+
+// ClaimInGameRewards sends tokens to user wallet from unity game tokens pool
+// returns solana transaction id or error
+func (c *Client) ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
+	// TODO: implement
+	return "not_implemented", nil
+}
+
+// GetUserBalance returns user balance in solana tokens
+func (c *Client) GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error) {
+	return c.s.GetSAOBalance(ctx, uid)
 }

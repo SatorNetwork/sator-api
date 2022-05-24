@@ -43,6 +43,10 @@ func New(endpoint string, config Config, exchangeRatesClient *exchange_rates_cli
 	}
 }
 
+func (c *Client) Endpoint() string {
+	return c.endpoint
+}
+
 // NewAccount generates account keypair
 func (c *Client) NewAccount() types.Account {
 	return types.NewAccount()

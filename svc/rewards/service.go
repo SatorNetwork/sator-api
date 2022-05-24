@@ -83,6 +83,10 @@ func NewService(repo rewardsRepository, ws walletService, getLocker db.GetLocker
 	return s
 }
 
+func (s *Service) GetMinAmountToClaim() float64 {
+	return s.minAmountToClaim
+}
+
 func (s *Service) GetRewardsWallet(ctx context.Context, userID, walletID uuid.UUID) (wallet.Wallet, error) {
 	totalRewards, _, err := s.GetUserRewards(ctx, userID)
 	if err != nil {
