@@ -2,7 +2,6 @@ package gapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -306,8 +305,7 @@ type (
 	}
 
 	StartGameResponse struct {
-		GameConfigJSON []byte      `json:"game_config_json"`
-		GameConfig     *GameConfig `json:"game_config"`
+		GameConfig *GameConfig `json:"game_config"`
 	}
 )
 
@@ -333,14 +331,8 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 			return nil, err
 		}
 
-		config, err := json.Marshal(gameConfig)
-		if err != nil {
-			return nil, err
-		}
-
 		return StartGameResponse{
-			GameConfigJSON: config,
-			GameConfig:     gameConfig,
+			GameConfig: gameConfig,
 		}, nil
 	}
 }

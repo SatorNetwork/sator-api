@@ -6262,8 +6262,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  game_config_json:
-                    type: string
                   game_config:
                     type: object
         "400":
