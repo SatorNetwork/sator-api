@@ -233,6 +233,13 @@ func (s *Service) BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) (*NFTIn
 		return nil, fmt.Errorf("failed to store nft: %w", err)
 	}
 
+	if err := repo.StoreSelectedNFT(ctx, repository.StoreSelectedNFTParams{
+		UserID:        uid,
+		SelectedNftID: sql.NullString{String: res.ID, Valid: true},
+	}); err != nil {
+		return nil, fmt.Errorf("failed to store selected nft: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -282,6 +289,13 @@ func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []str
 		CraftedNftID: sql.NullString{String: nft.ID, Valid: true},
 	}); err != nil {
 		return nil, fmt.Errorf("failed to burn nfts: %w", err)
+	}
+
+	if err := repo.StoreSelectedNFT(ctx, repository.StoreSelectedNFTParams{
+		UserID:        uid,
+		SelectedNftID: sql.NullString{String: nft.ID, Valid: true},
+	}); err != nil {
+		return nil, fmt.Errorf("failed to store selected nft: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
