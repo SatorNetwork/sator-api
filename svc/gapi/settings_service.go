@@ -57,11 +57,6 @@ func (s *SettingsService) SettingsValueTypes() map[string]string {
 
 // Add adds the setting
 func (s *SettingsService) Add(ctx context.Context, key, name, valueType string, value interface{}, description string) (Settings, error) {
-	var vt *repository.UnityGameSettingsValueType
-	if err := vt.Scan(valueType); err != nil {
-		return Settings{}, fmt.Errorf("failed to parse value type %s: %w", valueType, err)
-	}
-
 	jsonValue, err := json.Marshal(SettingValue{
 		Value: value,
 	})
@@ -73,6 +68,7 @@ func (s *SettingsService) Add(ctx context.Context, key, name, valueType string, 
 		Key:         key,
 		Name:        name,
 		Value:       jsonValue,
+		ValueType:   repository.UnityGameSettingsValueType(valueType),
 		Description: sql.NullString{String: description, Valid: len(description) > 0},
 	})
 	if err != nil {
