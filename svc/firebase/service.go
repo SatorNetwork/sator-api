@@ -18,7 +18,7 @@ type (
 	Service struct {
 		fr              firebaseRepository
 		app             lib_google_firebase.AppInterface
-		messagingClient *messaging.Client
+		messagingClient lib_google_firebase.MessagingClientInterface
 	}
 
 	firebaseRepository interface {

@@ -8,7 +8,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	messaging "firebase.google.com/go/messaging"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -36,10 +35,10 @@ func (m *MockAppInterface) EXPECT() *MockAppInterfaceMockRecorder {
 }
 
 // Messaging mocks base method.
-func (m *MockAppInterface) Messaging(arg0 context.Context) (*messaging.Client, error) {
+func (m *MockAppInterface) Messaging(arg0 context.Context) (MessagingClientInterface, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Messaging", arg0)
-	ret0, _ := ret[0].(*messaging.Client)
+	ret0, _ := ret[0].(MessagingClientInterface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

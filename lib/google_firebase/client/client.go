@@ -4,8 +4,6 @@ package client
 
 import (
 	"context"
-	"firebase.google.com/go/messaging"
-
 	firebase "firebase.google.com/go"
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
@@ -30,6 +28,6 @@ func NewApp(ctx context.Context, config *firebase.Config, opts ...option.ClientO
 	}, nil
 }
 
-func (a *FirebaseApp) Messaging(ctx context.Context) (*messaging.Client, error) {
+func (a *FirebaseApp) Messaging(ctx context.Context) (lib_google_firebase.MessagingClientInterface, error) {
 	return a.client.Messaging(ctx)
 }
