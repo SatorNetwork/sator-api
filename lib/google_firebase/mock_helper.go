@@ -19,7 +19,6 @@ func (m *MockMessagingClientInterface) ExpectSubscribeToTopicAny() *gomock.Call 
 		AnyTimes()
 }
 
-//Send(ctx context.Context, message *messaging.Message) (string, error)
 func (m *MockMessagingClientInterface) ExpectSendAny() *gomock.Call {
 	return m.EXPECT().
 		Send(gomock.Any(), gomock.Any()).
