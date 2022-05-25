@@ -6414,6 +6414,28 @@ paths:
           $ref: "#/components/responses/DefaultError"
 
   /gapi/settings/{key}:
+    get:
+      tags:
+        - "Unity Game API / Settings API"
+      summary: Get setting by key.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          description: Setting key.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/GameSettingItem"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
     put:
       tags:
         - "Unity Game API / Settings API"

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/SatorNetwork/sator-api/svc/gapi/repository"
 )
@@ -64,6 +65,12 @@ func (s *SettingsService) Add(ctx context.Context, key, name, valueType string, 
 		return Settings{}, fmt.Errorf("failed to marshal setting value: %w", err)
 	}
 
+	key = strings.ToLower(key)
+	key = strings.TrimSpace(key)
+	key = strings.ReplaceAll(key, " ", "_")
+	key = strings.ReplaceAll(key, ".", "_")
+	key = strings.ReplaceAll(key, "-", "_")
+
 	res, err := s.repo.AddSetting(ctx, repository.AddSettingParams{
 		Key:         key,
 		Name:        name,
@@ -86,6 +93,26 @@ func (s *SettingsService) Get(ctx context.Context, key string) (Settings, error)
 	}
 
 	return castUnityGameSettingToSetting(setting), nil
+}
+
+// GetValue returns the setting value
+func (s *SettingsService) GetValue(ctx context.Context, key string) (interface{}, error) {
+	setting, err := s.repo.GetSettingByKey(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get setting with key %s: %w", key, err)
+	}
+
+	var value SettingValue
+	if err := json.Unmarshal(setting.Value, &value); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal setting value: %w", err)
+	}
+
+	v, err := castSettingValueToValue(value.Value, setting.ValueType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to cast setting value: %w", err)
+	}
+
+	return v, nil
 }
 
 // GetAll returns the all settings
@@ -171,5 +198,23 @@ func castUnityGameSettingToSetting(rawSetting repository.UnityGameSetting) Setti
 		Value:       valRes,
 		ValueType:   string(rawSetting.ValueType),
 		Description: rawSetting.Description.String,
+	}
+}
+
+// cast settings value to the value_type data type
+func castSettingValueToValue(value interface{}, valueType repository.UnityGameSettingsValueType) (interface{}, error) {
+	switch valueType {
+	case repository.UnityGameSettingsValueTypeBool:
+		return value.(bool), nil
+	case repository.UnityGameSettingsValueTypeFloat:
+		return value.(float64), nil
+	case repository.UnityGameSettingsValueTypeInt:
+		return value.(int), nil
+	case repository.UnityGameSettingsValueTypeJson:
+		return value.(map[string]interface{}), nil
+	case repository.UnityGameSettingsValueTypeString:
+		return value.(string), nil
+	default:
+		return nil, fmt.Errorf("value type %s is not supported", valueType)
 	}
 }

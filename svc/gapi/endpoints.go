@@ -26,6 +26,7 @@ type (
 
 		GetSettingsValueTypes endpoint.Endpoint
 		GetSettings           endpoint.Endpoint
+		GetSettingsByKey      endpoint.Endpoint
 		AddSetting            endpoint.Endpoint
 		UpdateSetting         endpoint.Endpoint
 		DeleteSetting         endpoint.Endpoint
@@ -54,6 +55,7 @@ type (
 	gameSettingsService interface {
 		Add(ctx context.Context, key, name, valueType string, value interface{}, description string) (Settings, error)
 		Get(ctx context.Context, key string) (Settings, error)
+		GetValue(ctx context.Context, key string) (interface{}, error)
 		GetAll(ctx context.Context) []Settings
 		Update(ctx context.Context, key string, value interface{}) (Settings, error)
 		Delete(ctx context.Context, key string) error
@@ -85,6 +87,7 @@ func MakeEndpoints(
 		ClaimRewards: MakeClaimRewardsEndpoint(gs, ws, validateFunc),
 
 		GetSettings:           MakeGetSettingsEndpoint(settings),
+		GetSettingsByKey:      MakeGetSettingsByKeyEndpoint(settings),
 		AddSetting:            MakeAddSettingEndpoint(settings, validateFunc),
 		UpdateSetting:         MakeUpdateSettingEndpoint(settings, validateFunc),
 		DeleteSetting:         MakeDeleteSettingEndpoint(settings),
@@ -104,6 +107,7 @@ func MakeEndpoints(
 			e.ClaimRewards = mdw(e.ClaimRewards)
 
 			e.GetSettings = mdw(e.GetSettings)
+			e.GetSettingsByKey = mdw(e.GetSettingsByKey)
 			e.AddSetting = mdw(e.AddSetting)
 			e.UpdateSetting = mdw(e.UpdateSetting)
 			e.DeleteSetting = mdw(e.DeleteSetting)
@@ -420,7 +424,7 @@ func MakeGetSettingsEndpoint(s gameSettingsService) endpoint.Endpoint {
 
 // AddGameSettingsRequest ...
 type AddGameSettingsRequest struct {
-	Key         string      `json:"key" validate:"required,lowercase,alphanumunicode"`
+	Key         string      `json:"key" validate:"required"`
 	Name        string      `json:"name" validate:"required"`
 	ValueType   string      `json:"value_type" validate:"required,oneof=int float string json bool"`
 	Value       interface{} `json:"value" validate:"required"`
@@ -498,5 +502,16 @@ func MakeGetSettingsValueTypesEndpoint(s gameSettingsService) endpoint.Endpoint 
 		}
 
 		return s.SettingsValueTypes(), nil
+	}
+}
+
+// MakeGetSettingsByKeyEndpoint ...
+func MakeGetSettingsByKeyEndpoint(s gameSettingsService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		return s.Get(ctx, request.(string))
 	}
 }

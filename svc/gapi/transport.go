@@ -86,6 +86,8 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 		options...,
 	).ServeHTTP)
 
+	// Settings
+
 	r.Get("/settings", httptransport.NewServer(
 		gameEndpoints.GetSettings,
 		decodeGetSettingsRequest,
@@ -97,6 +99,13 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 		gameEndpoints.GetSettingsValueTypes,
 		decodeGetSettingsValueTypesRequest,
 		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/settings/{key}", httptransport.NewServer(
+		gameEndpoints.GetSettingsByKey,
+		decodeGetSettingsByKeyRequest,
+		customEncodeResponse,
 		options...,
 	).ServeHTTP)
 
@@ -307,4 +316,8 @@ func decodeDeleteNFTPackRequest(ctx context.Context, r *http.Request) (interface
 
 func decodeSoftDeleteNFTPackRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	return chi.URLParam(r, "id"), nil
+}
+
+func decodeGetSettingsByKeyRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return chi.URLParam(r, "key"), nil
 }
