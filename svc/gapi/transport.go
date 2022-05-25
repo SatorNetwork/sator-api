@@ -225,7 +225,10 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 		return http.StatusBadRequest, http.StatusText(http.StatusBadRequest)
 	}
 
-	if errors.Is(err, ErrNotAllNftsToCraftWereFound) || errors.Is(err, ErrNotEnoughNFTsToCraft) {
+	if errors.Is(err, ErrNotAllNftsToCraftWereFound) ||
+		errors.Is(err, ErrNotEnoughNFTsToCraft) ||
+		errors.Is(err, ErrNFTsToCraftHaveDifferentTypes) ||
+		errors.Is(err, ErrNFTTypeLegendCannotBeCrafted) {
 		return http.StatusBadRequest, err.Error()
 	}
 

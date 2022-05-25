@@ -2,8 +2,6 @@ package gapi
 
 import (
 	"encoding/json"
-	"math/rand"
-	"time"
 )
 
 // NFTType ...
@@ -57,13 +55,6 @@ const (
 	GameLevelHard
 )
 
-// Game levels array
-var gameLevels = []int32{
-	GameLevelEasy,
-	GameLevelMedium,
-	GameLevelHard,
-}
-
 // get next nft level
 func getNextNFTLevel(level int32) int32 {
 	if level == GameLevelHard {
@@ -72,10 +63,18 @@ func getNextNFTLevel(level int32) int32 {
 	return level + 1
 }
 
-// Get random nft level
-func getRandomNFTLevel() int32 {
-	rand.Seed(time.Now().UnixNano())
-	return gameLevels[rand.Intn(len(gameLevels))]
+// getNFTLevelByType returns max NFT level depending on NFT type
+func getNFTLevelByType(t NFTType) int32 {
+	switch t {
+	case NFTTypeCommon:
+		return GameLevelEasy
+	case NFTTypeRare:
+		return GameLevelMedium
+	case NFTTypeSuperRare, NFTTypeEpic, NFTTypeLegend:
+		return GameLevelHard
+	default:
+		return GameLevelEasy
+	}
 }
 
 // NFTInfo ...

@@ -113,7 +113,7 @@ func Test_generateNFT(t *testing.T) {
 			},
 			want: &NFTInfo{
 				ID:       ksuid.New().String(),
-				MaxLevel: getRandomNFTLevel(),
+				MaxLevel: getNFTLevelByType(NFTTypeRare),
 				NftType:  NFTTypeRare,
 			},
 			wantErr: false,
