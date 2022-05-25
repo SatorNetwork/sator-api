@@ -889,6 +889,10 @@ func (a *app) Run() {
 				walletSvcClient,
 				jwtMdw,
 			),
+			gapi.MakeNFTPacksEndpoints(
+				gapi.NewNFTPackService(unityGameRepository),
+				jwtMdw,
+			),
 			logger,
 		))
 	}

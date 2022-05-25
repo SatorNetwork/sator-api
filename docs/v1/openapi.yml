@@ -166,6 +166,8 @@ components:
       properties:
         pack_id:
           type: string
+        name:
+          type: string
         price:
           type: number
         drop_chances:
@@ -462,6 +464,13 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/InGameNFTInfoArray"
+
+    NFTPack:
+      description: NFT Packs.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/InGameNFTPack"
 
     NFTPacks:
       description: NFT Packs.
@@ -6447,6 +6456,188 @@ paths:
         - name: key
           in: path
           description: Setting key.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/nft-packs:
+    get:
+      tags:
+        - "Unity Game API / NFT Packs API"
+      summary: Get NFT packs.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTPacks"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    post:
+      tags:
+        - "Unity Game API / NFT Packs API"
+      summary: Create NFT pack.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                drop_chances:
+                  type: object
+                  properties:
+                    common:
+                      type: number
+                      example: 0.5
+                    rare:
+                      type: number
+                      example: 0.5
+                    super_rare:
+                      type: number
+                      example: 0.5
+                    epic:
+                      type: number
+                      example: 0.5
+                    legend:
+                      type: number
+                      example: 0.5
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTPack"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/nft-packs/{id}:
+    get:
+      tags:
+        - "Unity Game API / NFT Packs API"
+      summary: Get NFT pack.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: NFT pack ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTPack"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    put:
+      tags:
+        - "Unity Game API / NFT Packs API"
+      summary: Update NFT pack.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: NFT pack ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                drop_chances:
+                  type: object
+                  properties:
+                    common:
+                      type: number
+                      example: 0.5
+                    rare:
+                      type: number
+                      example: 0.5
+                    super_rare:
+                      type: number
+                      example: 0.5
+                    epic:
+                      type: number
+                      example: 0.5
+                    legend:
+                      type: number
+                      example: 0.5
+      responses:
+        "200":
+          $ref: "#/components/responses/NFTPack"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+    delete:
+      tags:
+        - "Unity Game API / NFT Packs API"
+      summary: Delete NFT pack.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: NFT pack ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/nft-packs/{id}/soft:
+    delete:
+      tags:
+        - "Unity Game API / NFT Packs API"
+      summary: Soft delete NFT pack. NFT pack will be removed from the list, but not deleted from the database.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: NFT pack ID.
           required: true
           schema:
             type: string

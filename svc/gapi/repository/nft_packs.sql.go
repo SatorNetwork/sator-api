@@ -11,25 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
-const addNFTPack = `-- name: AddNFTPack :exec
-INSERT INTO unity_game_nft_packs (id, name, drop_chances, price) VALUES ($1, $2, $3, $4)
+const addNFTPack = `-- name: AddNFTPack :one
+INSERT INTO unity_game_nft_packs ( name, drop_chances, price) VALUES ($1, $2, $3) RETURNING id, drop_chances, price, updated_at, created_at, deleted_at, name
 `
 
 type AddNFTPackParams struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	DropChances []byte    `json:"drop_chances"`
-	Price       float64   `json:"price"`
+	Name        string  `json:"name"`
+	DropChances []byte  `json:"drop_chances"`
+	Price       float64 `json:"price"`
 }
 
-func (q *Queries) AddNFTPack(ctx context.Context, arg AddNFTPackParams) error {
-	_, err := q.exec(ctx, q.addNFTPackStmt, addNFTPack,
-		arg.ID,
-		arg.Name,
-		arg.DropChances,
-		arg.Price,
+func (q *Queries) AddNFTPack(ctx context.Context, arg AddNFTPackParams) (UnityGameNftPack, error) {
+	row := q.queryRow(ctx, q.addNFTPackStmt, addNFTPack, arg.Name, arg.DropChances, arg.Price)
+	var i UnityGameNftPack
+	err := row.Scan(
+		&i.ID,
+		&i.DropChances,
+		&i.Price,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.DeletedAt,
+		&i.Name,
 	)
-	return err
+	return i, err
 }
 
 const deleteNFTPack = `-- name: DeleteNFTPack :exec
@@ -104,17 +108,33 @@ func (q *Queries) SoftDeleteNFTPack(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const updateNFTPack = `-- name: UpdateNFTPack :exec
-UPDATE unity_game_nft_packs SET drop_chances = $1, price = $2 WHERE id = $3
+const updateNFTPack = `-- name: UpdateNFTPack :one
+UPDATE unity_game_nft_packs SET drop_chances = $1, price = $2, name = $3 WHERE id = $4 RETURNING id, drop_chances, price, updated_at, created_at, deleted_at, name
 `
 
 type UpdateNFTPackParams struct {
 	DropChances []byte    `json:"drop_chances"`
 	Price       float64   `json:"price"`
+	Name        string    `json:"name"`
 	ID          uuid.UUID `json:"id"`
 }
 
-func (q *Queries) UpdateNFTPack(ctx context.Context, arg UpdateNFTPackParams) error {
-	_, err := q.exec(ctx, q.updateNFTPackStmt, updateNFTPack, arg.DropChances, arg.Price, arg.ID)
-	return err
+func (q *Queries) UpdateNFTPack(ctx context.Context, arg UpdateNFTPackParams) (UnityGameNftPack, error) {
+	row := q.queryRow(ctx, q.updateNFTPackStmt, updateNFTPack,
+		arg.DropChances,
+		arg.Price,
+		arg.Name,
+		arg.ID,
+	)
+	var i UnityGameNftPack
+	err := row.Scan(
+		&i.ID,
+		&i.DropChances,
+		&i.Price,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.DeletedAt,
+		&i.Name,
+	)
+	return i, err
 }

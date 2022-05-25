@@ -34,18 +34,11 @@ type (
 		GetCurrentGame(ctx context.Context, userID uuid.UUID) (repository.UnityGameResult, error)
 		FinishGame(ctx context.Context, arg repository.FinishGameParams) error
 
-		AddNFTPack(ctx context.Context, arg repository.AddNFTPackParams) error
-		GetNFTPack(ctx context.Context, id uuid.UUID) (repository.UnityGameNftPack, error)
 		GetNFTPacksList(ctx context.Context) ([]repository.UnityGameNftPack, error)
-		UpdateNFTPack(ctx context.Context, arg repository.UpdateNFTPackParams) error
-		SoftDeleteNFTPack(ctx context.Context, id uuid.UUID) error
-		DeleteNFTPack(ctx context.Context, id uuid.UUID) error
 
 		AddNFT(ctx context.Context, arg repository.AddNFTParams) (repository.UnityGameNft, error)
-		GetNFT(ctx context.Context, id string) (repository.UnityGameNft, error)
 		GetUserNFT(ctx context.Context, arg repository.GetUserNFTParams) (repository.UnityGameNft, error)
 		GetUserNFTByIDs(ctx context.Context, arg repository.GetUserNFTByIDsParams) ([]repository.UnityGameNft, error)
-		DeleteNFT(ctx context.Context, id string) error
 		CraftNFTs(ctx context.Context, arg repository.CraftNFTsParams) error
 		GetUserNFTs(ctx context.Context, userID uuid.UUID) ([]repository.UnityGameNft, error)
 

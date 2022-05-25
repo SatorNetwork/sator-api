@@ -79,6 +79,7 @@ type NFTInfo struct {
 // NFTPackInfo ...
 type NFTPackInfo struct {
 	ID          string      `json:"pack_id"`
+	Name        string      `json:"name"`
 	DropChances DropChances `json:"drop_chances"`
 	Price       float64     `json:"price"`
 }
@@ -101,6 +102,12 @@ func (d DropChances) ToMap() map[string]float64 {
 		NFTTypeEpic.String():      d.Epic,
 		NFTTypeLegend.String():    d.Legend,
 	}
+}
+
+// DropChances to bytes
+func (d DropChances) Bytes() []byte {
+	bytes, _ := json.Marshal(d)
+	return bytes
 }
 
 // GameConfig struct
