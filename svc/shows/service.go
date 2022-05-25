@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"

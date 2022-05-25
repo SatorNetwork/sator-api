@@ -4,6 +4,7 @@ package client
 
 import (
 	"context"
+
 	firebase "firebase.google.com/go"
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
