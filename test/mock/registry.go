@@ -24,4 +24,5 @@ const (
 	CoingeckoProvider      = "CoingeckoProvider"
 	AppStoreProvider       = "AppStoreProvider"
 	NftMarketplaceProvider = "NftMarketplaceProvider"
+	GoogleFirebaseProvider = "GoogleFirebaseProvider"
 )

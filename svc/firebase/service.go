@@ -4,19 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	firebase "firebase.google.com/go"
 	"firebase.google.com/go/messaging"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
 
+	lib_google_firebase "github.com/SatorNetwork/sator-api/lib/google_firebase"
+	google_firebase_client "github.com/SatorNetwork/sator-api/lib/google_firebase/client"
 	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
 )
 
 type (
 	Service struct {
 		fr              firebaseRepository
-		app             *firebase.App
+		app             lib_google_firebase.AppInterface
 		messagingClient *messaging.Client
 	}
 
@@ -47,7 +48,7 @@ func NewService(
 	credsInJSON []byte,
 ) (*Service, error) {
 	creds := option.WithCredentialsJSON(credsInJSON)
-	app, err := firebase.NewApp(context.Background(), nil, creds)
+	app, err := google_firebase_client.NewApp(context.Background(), nil, creds)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't initialize firebase app")
 	}
