@@ -54,7 +54,7 @@ func craftNFT(nftsToCraft []repository.UnityGameNft) (*NFTInfo, error) {
 
 	return &NFTInfo{
 		ID:       ksuid.New().String(),
-		MaxLevel: getNextNFTLevel(nftsToCraft[0].MaxLevel),
+		MaxLevel: getNFTLevelByType(nt),
 		NftType:  nt,
 	}, nil
 }

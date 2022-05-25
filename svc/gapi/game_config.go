@@ -16,10 +16,10 @@ var defaultGameConfig = `{
   "_factoryWaterInfo": {
     "_movementCurve": [
       "0,0",
-      "0.06904668,0.2065322",
-      "0.2607135,0.3969892",
-      "0.8250648,0.855166",
-      "1.005554,0.9608002"
+      "0.069,0.206",
+      "0.260,0.396",
+      "0.825,0.855",
+      "1.005,0.960"
     ],
     "_minDistanceToSnap": 3
   },
@@ -56,7 +56,7 @@ var defaultGameConfig = `{
         "_to": 15,
         "_amountMin": 2,
         "_amountMax": 3,
-        "_chance": 0.600000023841858,
+        "_chance": 0.6,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -89,7 +89,7 @@ var defaultGameConfig = `{
         "_to": 15,
         "_amountMin": 1,
         "_amountMax": 3,
-        "_chance": 0.300000011920929,
+        "_chance": 0.3,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -122,7 +122,7 @@ var defaultGameConfig = `{
         "_to": 15,
         "_amountMin": 1,
         "_amountMax": 1,
-        "_chance": 0.100000001490116,
+        "_chance": 0.1,
         "_onExit": [],
         "_possibleMoveItems": [
           {
@@ -144,7 +144,7 @@ var defaultGameConfig = `{
         "_to": 45,
         "_amountMin": 2,
         "_amountMax": 5,
-        "_chance": 0.300000011920929,
+        "_chance": 0.3,
         "_onExit": [
           "WaterStaticZone",
           "WaterZone_1",
@@ -197,7 +197,7 @@ var defaultGameConfig = `{
         "_to": 45,
         "_amountMin": 1,
         "_amountMax": 1,
-        "_chance": 0.100000001490116,
+        "_chance": 0.1,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -221,7 +221,7 @@ var defaultGameConfig = `{
         "_to": 45,
         "_amountMin": 3,
         "_amountMax": 6,
-        "_chance": 0.300000011920929,
+        "_chance": 0.3,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -232,7 +232,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 5,
             "_moveTimeMin": 8,
             "_moveTimeMax": 8,
-            "_reverseMovementChance": 0.300000011920929,
+            "_reverseMovementChance": 0.3,
             "_resourceMovementPath": "RoadCross/MovementPrefab"
           },
           {
@@ -241,7 +241,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 5,
             "_moveTimeMin": 9,
             "_moveTimeMax": 9,
-            "_reverseMovementChance": 0.699999988079071,
+            "_reverseMovementChance": 0.7,
             "_resourceMovementPath": "RoadCross/MovementPrefab"
           }
         ]
@@ -254,7 +254,7 @@ var defaultGameConfig = `{
         "_to": 45,
         "_amountMin": 2,
         "_amountMax": 5,
-        "_chance": 0.200000002980232,
+        "_chance": 0.2,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -265,7 +265,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 5,
             "_moveTimeMin": 8,
             "_moveTimeMax": 8,
-            "_reverseMovementChance": 0.300000011920929,
+            "_reverseMovementChance": 0.3,
             "_resourceMovementPath": "RoadCross/MovementBigPrefab"
           },
           {
@@ -274,7 +274,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 6,
             "_moveTimeMin": 10,
             "_moveTimeMax": 10,
-            "_reverseMovementChance": 0.699999988079071,
+            "_reverseMovementChance": 0.7,
             "_resourceMovementPath": "RoadCross/MovementBigPrefab"
           }
         ]
@@ -287,7 +287,7 @@ var defaultGameConfig = `{
         "_to": 45,
         "_amountMin": 1,
         "_amountMax": 1,
-        "_chance": 0.100000001490116,
+        "_chance": 0.1,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -311,7 +311,7 @@ var defaultGameConfig = `{
         "_to": 75,
         "_amountMin": 2,
         "_amountMax": 4,
-        "_chance": 0.300000011920929,
+        "_chance": 0.3,
         "_onExit": [
           "WaterStaticZone",
           "WaterZoneLate",
@@ -364,7 +364,7 @@ var defaultGameConfig = `{
         "_to": 75,
         "_amountMin": 1,
         "_amountMax": 1,
-        "_chance": 0.100000001490116,
+        "_chance": 0.1,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -388,7 +388,7 @@ var defaultGameConfig = `{
         "_to": 75,
         "_amountMin": 3,
         "_amountMax": 6,
-        "_chance": 0.300000011920929,
+        "_chance": 0.3,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -399,7 +399,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 5,
             "_moveTimeMin": 7,
             "_moveTimeMax": 7,
-            "_reverseMovementChance": 0.300000011920929,
+            "_reverseMovementChance": 0.3,
             "_resourceMovementPath": "RoadCross/MovementPrefab"
           },
           {
@@ -408,7 +408,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 5,
             "_moveTimeMin": 8,
             "_moveTimeMax": 9,
-            "_reverseMovementChance": 0.699999988079071,
+            "_reverseMovementChance": 0.7,
             "_resourceMovementPath": "RoadCross/MovementPrefab"
           }
         ]
@@ -421,7 +421,7 @@ var defaultGameConfig = `{
         "_to": 75,
         "_amountMin": 2,
         "_amountMax": 5,
-        "_chance": 0.200000002980232,
+        "_chance": 0.2,
         "_onExit": [
           "SafeZone_1"
         ],
@@ -432,7 +432,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 5,
             "_moveTimeMin": 7,
             "_moveTimeMax": 8,
-            "_reverseMovementChance": 0.300000011920929,
+            "_reverseMovementChance": 0.3,
             "_resourceMovementPath": "RoadCross/MovementBigPrefab"
           },
           {
@@ -441,7 +441,7 @@ var defaultGameConfig = `{
             "_spawnDelayRandomMax": 6,
             "_moveTimeMin": 9,
             "_moveTimeMax": 10,
-            "_reverseMovementChance": 0.699999988079071,
+            "_reverseMovementChance": 0.7,
             "_resourceMovementPath": "RoadCross/MovementBigPrefab"
           }
         ]
@@ -454,7 +454,7 @@ var defaultGameConfig = `{
         "_to": 75,
         "_amountMin": 1,
         "_amountMax": 1,
-        "_chance": 0.100000001490116,
+        "_chance": 0.1,
         "_onExit": [
           "SafeZone_1"
         ],

@@ -55,14 +55,6 @@ const (
 	GameLevelHard
 )
 
-// get next nft level
-func getNextNFTLevel(level int32) int32 {
-	if level == GameLevelHard {
-		return GameLevelHard
-	}
-	return level + 1
-}
-
 // getNFTLevelByType returns max NFT level depending on NFT type
 func getNFTLevelByType(t NFTType) int32 {
 	switch t {
