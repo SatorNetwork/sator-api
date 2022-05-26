@@ -114,3 +114,29 @@ func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalan
 
 	return float64(postTokenBalance-preTokenBalance) / 1e9, nil
 }
+
+func (c *Client) IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error) {
+	ss, err := c.solana.GetSignatureStatus(ctx, txhash)
+	if err != nil {
+		return false, fmt.Errorf("could not get signature status: %w", err)
+	}
+
+	if ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (c *Client) GetBlockHeight(ctx context.Context) (uint64, error) {
+	res := struct {
+		GeneralResponse
+		Result uint64 `json:"result"`
+	}{}
+
+	if err := c.request(ctx, "getBlockHeight", nil, &res); err != nil {
+		return 0, err
+	}
+
+	return res.Result, nil
+}

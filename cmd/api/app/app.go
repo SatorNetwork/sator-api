@@ -82,6 +82,8 @@ import (
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/trading_platforms"
 	tradingPlatformsRepo "github.com/SatorNetwork/sator-api/svc/trading_platforms/repository"
+	tx_watcher_svc "github.com/SatorNetwork/sator-api/svc/tx_watcher"
+	tx_watcher_repository "github.com/SatorNetwork/sator-api/svc/tx_watcher/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
@@ -539,6 +541,21 @@ func (a *app) Run() {
 			wallet.MakeEndpoints(walletService, kycMdw, jwtMdw),
 			logger,
 		))
+	}
+
+	{
+		txWatcherRepository, err := tx_watcher_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare tx watcher repository: %v", err)
+		}
+
+		txWatcherSvc := tx_watcher_svc.NewService(
+			txWatcherRepository,
+			solanaClient,
+			feePayer,
+			tokenHolder,
+		)
+		_ = txWatcherSvc
 	}
 
 	// Rewards service

@@ -130,6 +130,10 @@ func (c *Client) RequestAirdrop(ctx context.Context, pubKey string, amount float
 	return txhash, nil
 }
 
+func (c *Client) SendConstructedTransaction(ctx context.Context, tx types.Transaction) (string, error) {
+	return c.solana.SendTransaction(ctx, tx)
+}
+
 // SendTransaction sends transaction ans returns transaction hash
 func (c *Client) SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error) {
 	res, err := c.solana.GetRecentBlockhash(ctx)
@@ -256,4 +260,8 @@ func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, al
 	}
 
 	return *fee, nil
+}
+
+func (c *Client) GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error) {
+	return c.solana.GetLatestBlockhash(ctx)
 }
