@@ -56,7 +56,6 @@ type (
 	gameSettingsService interface {
 		Add(ctx context.Context, key, name, valueType string, value interface{}, description string) (Settings, error)
 		Get(ctx context.Context, key string) (Settings, error)
-		GetValue(ctx context.Context, key string) (interface{}, error)
 		GetAll(ctx context.Context) []Settings
 		Update(ctx context.Context, key string, value interface{}) (Settings, error)
 		Delete(ctx context.Context, key string) error

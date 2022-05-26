@@ -15,11 +15,13 @@ import (
 type UnityGameSettingsValueType string
 
 const (
-	UnityGameSettingsValueTypeString UnityGameSettingsValueType = "string"
-	UnityGameSettingsValueTypeInt    UnityGameSettingsValueType = "int"
-	UnityGameSettingsValueTypeFloat  UnityGameSettingsValueType = "float"
-	UnityGameSettingsValueTypeBool   UnityGameSettingsValueType = "bool"
-	UnityGameSettingsValueTypeJson   UnityGameSettingsValueType = "json"
+	UnityGameSettingsValueTypeString   UnityGameSettingsValueType = "string"
+	UnityGameSettingsValueTypeInt      UnityGameSettingsValueType = "int"
+	UnityGameSettingsValueTypeFloat    UnityGameSettingsValueType = "float"
+	UnityGameSettingsValueTypeBool     UnityGameSettingsValueType = "bool"
+	UnityGameSettingsValueTypeJson     UnityGameSettingsValueType = "json"
+	UnityGameSettingsValueTypeDuration UnityGameSettingsValueType = "duration"
+	UnityGameSettingsValueTypeDatetime UnityGameSettingsValueType = "datetime"
 )
 
 func (e *UnityGameSettingsValueType) Scan(src interface{}) error {
@@ -87,6 +89,6 @@ type UnityGameSetting struct {
 	Key         string                     `json:"key"`
 	Name        string                     `json:"name"`
 	ValueType   UnityGameSettingsValueType `json:"value_type"`
-	Value       []byte                     `json:"value"`
+	Value       string                     `json:"value"`
 	Description sql.NullString             `json:"description"`
 }
