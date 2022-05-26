@@ -48,12 +48,12 @@ func NewSettingsService(repo settingsRepository) *SettingsService {
 // SettingsValueTypes returns the supported settings value types
 func (s *SettingsService) SettingsValueTypes() map[string]string {
 	return map[string]string{
-		string(repository.UnityGameSettingsValueTypeBool):     "Boolean",
-		string(repository.UnityGameSettingsValueTypeFloat):    "Float",
-		string(repository.UnityGameSettingsValueTypeInt):      "Integer",
-		string(repository.UnityGameSettingsValueTypeJson):     "JSON",
-		string(repository.UnityGameSettingsValueTypeString):   "String",
-		string(repository.UnityGameSettingsValueTypeDatetime): "DateTime (in RFC3339 format)",
+		string(repository.UnityGameSettingsValueTypeBool):   "Boolean",
+		string(repository.UnityGameSettingsValueTypeFloat):  "Float",
+		string(repository.UnityGameSettingsValueTypeInt):    "Integer",
+		string(repository.UnityGameSettingsValueTypeJson):   "JSON",
+		string(repository.UnityGameSettingsValueTypeString): "String",
+		// string(repository.UnityGameSettingsValueTypeDatetime): "DateTime (in RFC3339 format)",
 		string(repository.UnityGameSettingsValueTypeDuration): "Duration (duration string, eg: 5s, 1m, 1h, 2h30m)",
 	}
 }
