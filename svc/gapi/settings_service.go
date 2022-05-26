@@ -261,10 +261,11 @@ func stringToSettingsValue(value string, valueType repository.UnityGameSettingsV
 		return stringToFloat64(value)
 	case repository.UnityGameSettingsValueTypeInt:
 		return stringToInt(value)
-	case repository.UnityGameSettingsValueTypeString:
+	case repository.UnityGameSettingsValueTypeString,
+		repository.UnityGameSettingsValueTypeJson,
+		repository.UnityGameSettingsValueTypeDuration,
+		repository.UnityGameSettingsValueTypeDatetime:
 		return value
-	case repository.UnityGameSettingsValueTypeJson:
-		return stringToMap(value)
 	default:
 		return value
 	}
