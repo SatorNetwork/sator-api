@@ -896,17 +896,16 @@ func (a *app) Run() {
 			log.Fatalf("can't prepare unity game repository: %v", err)
 		}
 
+		settingsService := gapi.NewSettingsService(unityGameRepository)
+
 		r.Mount("/gapi", gapi.MakeHTTPHandler(
 			gapi.MakeEndpoints(
 				gapi.NewService(
 					unityGameRepository,
+					settingsService,
 					gapi.WithDB(db),
-					gapi.WithEnergyFull(3),
-					gapi.WithEnergyRecoveryPeriod(time.Minute*10),
-					gapi.WithMinRewardsToClaim(100),
-					gapi.WithMinVersion("1.0.0"),
 				),
-				gapi.NewSettingsService(unityGameRepository),
+				settingsService,
 				walletSvcClient,
 				jwtMdw,
 			),

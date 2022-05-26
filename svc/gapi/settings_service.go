@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/gapi/repository"
 )
@@ -100,12 +101,7 @@ func (s *SettingsService) GetValue(ctx context.Context, key string) (interface{}
 		return nil, fmt.Errorf("failed to get setting with key %s: %w", key, err)
 	}
 
-	var value SettingValue
-	if err := json.Unmarshal(setting.Value, &value); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal setting value: %w", err)
-	}
-
-	v, err := castSettingValueToValue(value.Value, setting.ValueType)
+	v, err := castSettingValueBytesToValue(setting.Value, setting.ValueType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cast setting value: %w", err)
 	}
@@ -171,12 +167,7 @@ func (s *SettingsService) GetBool(ctx context.Context, key string) (bool, error)
 		return false, fmt.Errorf("key %s value type is not boolean, it's %s", key, setting.ValueType)
 	}
 
-	var value SettingValue
-	if err := json.Unmarshal(setting.Value, &value); err != nil {
-		return false, fmt.Errorf("failed to unmarshal setting value: %w", err)
-	}
-
-	v, err := castSettingValueToValue(value.Value, setting.ValueType)
+	v, err := castSettingValueBytesToValue(setting.Value, setting.ValueType)
 	if err != nil {
 		return false, fmt.Errorf("failed to cast setting value: %w", err)
 	}
@@ -195,12 +186,7 @@ func (s *SettingsService) GetString(ctx context.Context, key string) (string, er
 		return "", fmt.Errorf("key %s value type is not string, it's %s", key, setting.ValueType)
 	}
 
-	var value SettingValue
-	if err := json.Unmarshal(setting.Value, &value); err != nil {
-		return "", fmt.Errorf("failed to unmarshal setting value: %w", err)
-	}
-
-	v, err := castSettingValueToValue(value.Value, setting.ValueType)
+	v, err := castSettingValueBytesToValue(setting.Value, setting.ValueType)
 	if err != nil {
 		return "", fmt.Errorf("failed to cast setting value: %w", err)
 	}
@@ -219,12 +205,7 @@ func (s *SettingsService) GetFloat64(ctx context.Context, key string) (float64, 
 		return 0, fmt.Errorf("key %s value type is not float, it's %s", key, setting.ValueType)
 	}
 
-	var value SettingValue
-	if err := json.Unmarshal(setting.Value, &value); err != nil {
-		return 0, fmt.Errorf("failed to unmarshal setting value: %w", err)
-	}
-
-	v, err := castSettingValueToValue(value.Value, setting.ValueType)
+	v, err := castSettingValueBytesToValue(setting.Value, setting.ValueType)
 	if err != nil {
 		return 0, fmt.Errorf("failed to cast setting value: %w", err)
 	}
@@ -243,12 +224,7 @@ func (s *SettingsService) GetInt(ctx context.Context, key string) (int, error) {
 		return 0, fmt.Errorf("key %s value type is not integer, it's %s", key, setting.ValueType)
 	}
 
-	var value SettingValue
-	if err := json.Unmarshal(setting.Value, &value); err != nil {
-		return 0, fmt.Errorf("failed to unmarshal setting value: %w", err)
-	}
-
-	v, err := castSettingValueToValue(value.Value, setting.ValueType)
+	v, err := castSettingValueBytesToValue(setting.Value, setting.ValueType)
 	if err != nil {
 		return 0, fmt.Errorf("failed to cast setting value: %w", err)
 	}
@@ -272,6 +248,30 @@ func (s *SettingsService) GetJSON(ctx context.Context, key string, result interf
 	}
 
 	return nil
+}
+
+// GetDurration returns the setting value
+func (s *SettingsService) GetDurration(ctx context.Context, key string) (time.Duration, error) {
+	setting, err := s.repo.GetSettingByKey(ctx, key)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get setting with key %s: %w", key, err)
+	}
+
+	if setting.ValueType != repository.UnityGameSettingsValueTypeString {
+		return 0, fmt.Errorf("key %s value type is not string, it's %s", key, setting.ValueType)
+	}
+
+	v, err := castSettingValueBytesToValue(setting.Value, setting.ValueType)
+	if err != nil {
+		return 0, fmt.Errorf("failed to cast setting value: %w", err)
+	}
+
+	d, err := time.ParseDuration(v.(string))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse duration: %w", err)
+	}
+
+	return d, nil
 }
 
 // settingsValueType returns the value type of the setting
@@ -312,21 +312,21 @@ func castUnityGameSettingToSetting(rawSetting repository.UnityGameSetting) Setti
 }
 
 // cast settings value to the value_type data type
-func castSettingValueToValue(value interface{}, valueType repository.UnityGameSettingsValueType) (interface{}, error) {
-	switch valueType {
-	case repository.UnityGameSettingsValueTypeBool:
-		return value.(bool), nil
-	case repository.UnityGameSettingsValueTypeFloat:
-		return value.(float64), nil
-	case repository.UnityGameSettingsValueTypeInt:
-		return value.(int), nil
-	case repository.UnityGameSettingsValueTypeJson:
-		return value.(map[string]interface{}), nil
-	case repository.UnityGameSettingsValueTypeString:
-		return value.(string), nil
-	default:
-		return nil, fmt.Errorf("value type %s is not supported", valueType)
+func castSettingValueBytesToValue(value []byte, valueType repository.UnityGameSettingsValueType) (interface{}, error) {
+	if valueType == repository.UnityGameSettingsValueTypeJson {
+		var res map[string]interface{}
+		if err := json.Unmarshal(value, &res); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal setting value: %w", err)
+		}
+		return res, nil
 	}
+
+	result := SettingValue{}
+	if err := json.Unmarshal(value, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal setting value: %w", err)
+	}
+
+	return result.Value, nil
 }
 
 // cast settings value to the value_type data type
@@ -336,7 +336,7 @@ func settingsValueToBytes(value interface{}, valueType string) ([]byte, error) {
 	}
 
 	if vt := settingsValueType(value); valueType != string(vt) {
-		return nil, fmt.Errorf("value type %s is not supported", valueType)
+		return nil, fmt.Errorf("want value type %s, but got %s", valueType, vt)
 	}
 
 	var data interface{}

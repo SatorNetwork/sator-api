@@ -126,6 +126,7 @@ type GetStatusResponse struct {
 	MinVersion                   string    `json:"min_version"`
 	SelectedNFTID                *string   `json:"selected_nft_id"`
 	UserOwnedNFTList             []NFTInfo `json:"user_owned_nft_list"`
+	CraftStepAmount              float64   `json:"craft_step_amount"`
 }
 
 // MakeGetStatusEndpoint ...
@@ -169,6 +170,7 @@ func MakeGetStatusEndpoint(s gameService, ws walletService) endpoint.Endpoint {
 			MinVersion:                   s.GetMinVersion(ctx),
 			SelectedNFTID:                selectedNFT,
 			UserOwnedNFTList:             userNFTs,
+			CraftStepAmount:              500,
 		}, nil
 	}
 }

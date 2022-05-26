@@ -19,6 +19,7 @@ type (
 	Service struct {
 		db                   *sql.DB
 		gameRepo             gameRepository
+		conf                 configer
 		minVersion           string
 		energyFull           int32
 		energyRecoveryPeriod time.Duration
@@ -54,6 +55,15 @@ type (
 		GetUserRewardsWithdrawn(ctx context.Context, userID uuid.UUID) (float64, error)
 	}
 
+	configer interface {
+		GetBool(ctx context.Context, key string) (bool, error)
+		GetString(ctx context.Context, key string) (string, error)
+		GetFloat64(ctx context.Context, key string) (float64, error)
+		GetInt(ctx context.Context, key string) (int, error)
+		GetJSON(ctx context.Context, key string, result interface{}) error
+		GetDurration(ctx context.Context, key string) (time.Duration, error)
+	}
+
 	PlayerInfo struct {
 		UserID        uuid.UUID
 		EnergyPoints  int
@@ -63,12 +73,41 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo gameRepository, opt ...ServiceOption) *Service {
+func NewService(repo gameRepository, conf configer, opt ...ServiceOption) *Service {
 	s := &Service{
 		gameRepo:             repo,
+		conf:                 conf,
 		energyFull:           3,
 		energyRecoveryPeriod: time.Hour * 4,
 		minRewardsToClaim:    50,
+	}
+
+	energyFull, err := conf.GetInt(context.Background(), "energy_full")
+	if err != nil {
+		log.Printf("[WARN] energy_full not found in config, using default value: %d", s.energyFull)
+	} else {
+		s.energyFull = int32(energyFull)
+	}
+
+	energyRecoveryPeriod, err := conf.GetDurration(context.Background(), "energy_recovery_period")
+	if err != nil {
+		log.Printf("[WARN] energy_recovery_period not found in config, using default value: %s", s.energyRecoveryPeriod)
+	} else {
+		s.energyRecoveryPeriod = energyRecoveryPeriod
+	}
+
+	minRewardsToClaim, err := conf.GetFloat64(context.Background(), "min_rewards_to_claim")
+	if err != nil {
+		log.Printf("[WARN] min_rewards_to_claim not found in config, using default value: %f", s.minRewardsToClaim)
+	} else {
+		s.minRewardsToClaim = minRewardsToClaim
+	}
+
+	minVersion, err := conf.GetString(context.Background(), "min_version")
+	if err != nil {
+		log.Printf("[WARN] min_version not found in config, using default value: %s", s.minVersion)
+	} else {
+		s.minVersion = minVersion
 	}
 
 	// Apply options
