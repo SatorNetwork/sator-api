@@ -116,8 +116,17 @@ func (s *Service) subscribeTokenToTopics(ctx context.Context, token string, topi
 	return nil
 }
 
-func (s *Service) SendNotificationToTopic(ctx context.Context, topicName, title, body string) error {
-	_, err := s.messagingClient.Send(context.Background(), &messaging.Message{
+func (s *Service) SendNotificationToTopic(ctx context.Context, topicName, title, body string, extraData map[string]string) error {
+	data := map[string]string{
+		"type":  topicName,
+		"title": title,
+		"body":  body,
+	}
+	for k, v := range extraData {
+		data[k] = v
+	}
+	_, err := s.messagingClient.Send(ctx, &messaging.Message{
+		Data: data,
 		Notification: &messaging.Notification{
 			Title: title,
 			Body:  body,
@@ -139,12 +148,15 @@ func (s *Service) SendNotificationToTopic(ctx context.Context, topicName, title,
 	return nil
 }
 
-func (s *Service) SendNewShowNotification(ctx context.Context, showTitle string) error {
+func (s *Service) SendNewShowNotification(ctx context.Context, showTitle string, showID uuid.UUID) error {
 	err := s.SendNotificationToTopic(
 		ctx,
 		NewShowTopicName,
 		fmt.Sprintf("New Arrival"),
 		fmt.Sprintf("%v is now on Sator.", showTitle),
+		map[string]string{
+			"show_id": showID.String(),
+		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "can't send notification to topic")
@@ -153,12 +165,16 @@ func (s *Service) SendNewShowNotification(ctx context.Context, showTitle string)
 	return nil
 }
 
-func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string) error {
+func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, episodeID uuid.UUID) error {
 	err := s.SendNotificationToTopic(
 		ctx,
 		NewShowTopicName,
 		fmt.Sprintf("New Arrival"),
 		fmt.Sprintf("%s: %s is now on Sator.", showTitle, episodeTitle),
+		map[string]string{
+			"show_id":    showID.String(),
+			"episode_id": episodeID.String(),
+		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "can't send notification to topic")
