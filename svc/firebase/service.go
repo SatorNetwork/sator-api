@@ -143,8 +143,8 @@ func (s *Service) SendNewShowNotification(ctx context.Context, showTitle string)
 	err := s.SendNotificationToTopic(
 		ctx,
 		NewShowTopicName,
-		fmt.Sprintf("New show %s has been added", showTitle),
-		fmt.Sprintf("New show %s has been added", showTitle),
+		fmt.Sprintf("New show has been arrived"),
+		fmt.Sprintf(showTitle),
 	)
 	if err != nil {
 		return errors.Wrap(err, "can't send notification to topic")
@@ -157,8 +157,8 @@ func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, epi
 	err := s.SendNotificationToTopic(
 		ctx,
 		NewShowTopicName,
-		fmt.Sprintf("New realm %s: %s has been added", showTitle, episodeTitle),
-		fmt.Sprintf("New realm %s: %s has been added", showTitle, episodeTitle),
+		fmt.Sprintf("New realm has been arrived"),
+		fmt.Sprintf("%s: %s", showTitle, episodeTitle),
 	)
 	if err != nil {
 		return errors.Wrap(err, "can't send notification to topic")
