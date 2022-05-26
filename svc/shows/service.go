@@ -784,7 +784,12 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
 	}
 
-	if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, ep.ShowTitle, ep.Title); err != nil {
+	show, err := s.sr.GetShowByID(ctx, ep.ShowID)
+	if err != nil {
+		return Episode{}, errors.Wrap(err, "can't get show by id")
+	}
+
+	if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, show.Title, ep.Title); err != nil {
 		return Episode{}, errors.Wrap(err, "can't send new show notification")
 	}
 
