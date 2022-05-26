@@ -551,7 +551,7 @@ func (s *solanaMultiProvider) InitializeStakePool(ctx context.Context, feePayer,
 	return "", types.Account{}, ErrSolanaProvidersDontRespond
 }
 
-func (s *solanaMultiProvider) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error) {
+func (s *solanaMultiProvider) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.Stake(ctx, feePayer, userWallet, pool, asset, duration, amount)
 		if err != nil {
