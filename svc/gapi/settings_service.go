@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/svc/gapi/repository"
@@ -64,12 +63,10 @@ func (s *SettingsService) Add(ctx context.Context, key, name, valueType string, 
 	if name == "" {
 		name = key
 	}
-	name = strings.TrimSpace(name)
-	name = strings.ToTitle(name)
 
 	res, err := s.repo.AddSetting(ctx, repository.AddSettingParams{
 		Key:         toSnakeCase(key),
-		Name:        name,
+		Name:        toTitle(name),
 		Value:       settingsValueToString(value),
 		ValueType:   repository.UnityGameSettingsValueType(valueType),
 		Description: sql.NullString{String: description, Valid: len(description) > 0},
@@ -272,11 +269,6 @@ func stringToSettingsValue(value string, valueType repository.UnityGameSettingsV
 		return value
 	case repository.UnityGameSettingsValueTypeJson:
 		return stringToMap(value)
-	case repository.UnityGameSettingsValueTypeDuration:
-		return stringToDuration(value)
-	case repository.UnityGameSettingsValueTypeDatetime:
-		res, _ := stringToTime(value)
-		return res
 	default:
 		return value
 	}

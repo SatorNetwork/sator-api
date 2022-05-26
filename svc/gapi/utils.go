@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // convert float64 to string
@@ -103,4 +106,10 @@ func alphaNumUnderscore(s string) string {
 		}
 		return -1
 	}, s)
+}
+
+// format string to title case
+// e.g. "my_string" -> "My String"
+func toTitle(s string) string {
+	return cases.Title(language.Und).String(strings.TrimSpace(s))
 }
