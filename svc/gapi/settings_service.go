@@ -70,6 +70,12 @@ func (s *SettingsService) Add(ctx context.Context, key, name, valueType string, 
 	key = strings.ReplaceAll(key, ".", "_")
 	key = strings.ReplaceAll(key, "-", "_")
 
+	if name == "" {
+		name = key
+	}
+	name = strings.TrimSpace(name)
+	name = strings.ToTitle(name)
+
 	res, err := s.repo.AddSetting(ctx, repository.AddSettingParams{
 		Key:         key,
 		Name:        name,
@@ -336,7 +342,9 @@ func settingsValueToBytes(value interface{}, valueType string) ([]byte, error) {
 	}
 
 	if vt := settingsValueType(value); valueType != string(vt) {
-		return nil, fmt.Errorf("want value type %s, but got %s", valueType, vt)
+		if !(vt == repository.UnityGameSettingsValueTypeFloat && valueType == string(repository.UnityGameSettingsValueTypeInt)) {
+			return nil, fmt.Errorf("want value type %s, but got %s", valueType, vt)
+		}
 	}
 
 	var data interface{}

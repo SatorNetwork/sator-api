@@ -428,7 +428,7 @@ func MakeGetSettingsEndpoint(s gameSettingsService) endpoint.Endpoint {
 // AddGameSettingsRequest ...
 type AddGameSettingsRequest struct {
 	Key         string      `json:"key" validate:"required"`
-	Name        string      `json:"name" validate:"required"`
+	Name        string      `json:"name"`
 	ValueType   string      `json:"value_type" validate:"required,oneof=int float string json bool"`
 	Value       interface{} `json:"value" validate:"required"`
 	Description string      `json:"description,omitempty"`
