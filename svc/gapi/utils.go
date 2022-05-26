@@ -117,5 +117,7 @@ func alphaNumUnderscore(s string) string {
 // format string to title case
 // e.g. "my_string" -> "My String"
 func toTitle(s string) string {
-	return cases.Title(language.Und).String(strings.TrimSpace(s))
+	return cases.
+		Title(language.Und).
+		String(strings.TrimSpace(strings.ReplaceAll(s, "_", " ")))
 }
