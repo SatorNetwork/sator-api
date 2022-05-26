@@ -35,6 +35,7 @@ type (
 	gameService interface {
 		GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo, error)
 		GetMinVersion(ctx context.Context) string
+		GetCraftStepAmount(ctx context.Context) float64
 
 		GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, error)
 		GetNFTPacks(ctx context.Context, uid uuid.UUID) ([]NFTPackInfo, error)
@@ -170,7 +171,7 @@ func MakeGetStatusEndpoint(s gameService, ws walletService) endpoint.Endpoint {
 			MinVersion:                   s.GetMinVersion(ctx),
 			SelectedNFTID:                selectedNFT,
 			UserOwnedNFTList:             userNFTs,
-			CraftStepAmount:              500,
+			CraftStepAmount:              s.GetCraftStepAmount(ctx),
 		}, nil
 	}
 }

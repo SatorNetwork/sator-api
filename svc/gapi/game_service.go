@@ -24,6 +24,7 @@ type (
 		energyFull           int32
 		energyRecoveryPeriod time.Duration
 		minRewardsToClaim    float64
+		craftStepAmount      float64
 	}
 
 	ServiceOption func(*Service)
@@ -80,39 +81,42 @@ func NewService(repo gameRepository, conf configer, opt ...ServiceOption) *Servi
 		energyFull:           3,
 		energyRecoveryPeriod: time.Hour * 4,
 		minRewardsToClaim:    50,
-	}
-
-	energyFull, err := conf.GetInt(context.Background(), "energy_full")
-	if err != nil {
-		log.Printf("[WARN] energy_full not found in config, using default value: %d", s.energyFull)
-	} else {
-		s.energyFull = int32(energyFull)
-	}
-
-	energyRecoveryPeriod, err := conf.GetDurration(context.Background(), "energy_recovery_period")
-	if err != nil {
-		log.Printf("[WARN] energy_recovery_period not found in config, using default value: %s", s.energyRecoveryPeriod)
-	} else {
-		s.energyRecoveryPeriod = energyRecoveryPeriod
-	}
-
-	minRewardsToClaim, err := conf.GetFloat64(context.Background(), "min_rewards_to_claim")
-	if err != nil {
-		log.Printf("[WARN] min_rewards_to_claim not found in config, using default value: %f", s.minRewardsToClaim)
-	} else {
-		s.minRewardsToClaim = minRewardsToClaim
-	}
-
-	minVersion, err := conf.GetString(context.Background(), "min_version")
-	if err != nil {
-		log.Printf("[WARN] min_version not found in config, using default value: %s", s.minVersion)
-	} else {
-		s.minVersion = minVersion
+		craftStepAmount:      500,
 	}
 
 	// Apply options
 	for _, o := range opt {
 		o(s)
+	}
+
+	if energyFull, err := conf.GetInt(context.Background(), "energy_full"); err != nil {
+		log.Printf("[WARN] energy_full not found in config, using default value: %d", s.energyFull)
+	} else {
+		s.energyFull = int32(energyFull)
+	}
+
+	if energyRecoveryPeriod, err := conf.GetDurration(context.Background(), "energy_recovery_period"); err != nil {
+		log.Printf("[WARN] energy_recovery_period not found in config, using default value: %s", s.energyRecoveryPeriod)
+	} else {
+		s.energyRecoveryPeriod = energyRecoveryPeriod
+	}
+
+	if minRewardsToClaim, err := conf.GetFloat64(context.Background(), "min_rewards_to_claim"); err != nil {
+		log.Printf("[WARN] min_rewards_to_claim not found in config, using default value: %f", s.minRewardsToClaim)
+	} else {
+		s.minRewardsToClaim = minRewardsToClaim
+	}
+
+	if minVersion, err := conf.GetString(context.Background(), "min_version"); err != nil {
+		log.Printf("[WARN] min_version not found in config, using default value: %s", s.minVersion)
+	} else {
+		s.minVersion = minVersion
+	}
+
+	if craftStepAmount, err := conf.GetFloat64(context.Background(), "craft_step_amount"); err != nil {
+		log.Printf("[WARN] craft_step_amount not found in config, using default value: %f", s.craftStepAmount)
+	} else {
+		s.craftStepAmount = craftStepAmount
 	}
 
 	return s
@@ -166,6 +170,11 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 // GetMinVersion ...
 func (s *Service) GetMinVersion(ctx context.Context) string {
 	return s.minVersion
+}
+
+// GetCraftStepAmount ...
+func (s *Service) GetCraftStepAmount(ctx context.Context) float64 {
+	return s.craftStepAmount
 }
 
 // GetEnergyLeft ...
