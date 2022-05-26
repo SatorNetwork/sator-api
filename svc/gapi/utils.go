@@ -76,11 +76,11 @@ func mapToString(m map[string]interface{}) string {
 }
 
 // convert json string to map
-func stringToMap(s string) map[string]interface{} {
-	var m map[string]interface{}
-	json.Unmarshal([]byte(s), &m)
-	return m
-}
+// func stringToMap(s string) map[string]interface{} {
+// 	var m map[string]interface{}
+// 	json.Unmarshal([]byte(s), &m)
+// 	return m
+// }
 
 // convert time.Time to string
 func timeToString(t time.Time) string {
