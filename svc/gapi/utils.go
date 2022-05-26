@@ -32,6 +32,12 @@ func stringToInt(s string) int {
 	return res
 }
 
+// convert string to int
+func stringToInt32(s string) int32 {
+	i, _ := strconv.ParseInt(s, 10, 32)
+	return int32(i)
+}
+
 // convert bool to string
 func boolToString(b bool) string {
 	if b {

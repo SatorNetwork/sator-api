@@ -121,74 +121,78 @@ func (s *SettingsService) Delete(ctx context.Context, key string) error {
 	return s.repo.DeleteSetting(ctx, key)
 }
 
-// GetBool returns the setting value
-func (s *SettingsService) GetBool(ctx context.Context, key string) (bool, error) {
-	setting, err := s.repo.GetSettingByKey(ctx, key)
-	if err != nil {
-		return false, fmt.Errorf("failed to get setting with key %s: %w", key, err)
-	}
-
-	if setting.ValueType != repository.UnityGameSettingsValueTypeBool {
-		return false, fmt.Errorf("key %s value type is not boolean, it's %s", key, setting.ValueType)
-	}
-
-	return stringToBool(setting.Value), nil
-}
-
-// GetString returns the setting value
-func (s *SettingsService) GetString(ctx context.Context, key string) (string, error) {
+// GetInt32 returns the setting value
+func (s *SettingsService) getValueByKey(ctx context.Context, key string, valueType repository.UnityGameSettingsValueType) (string, error) {
 	setting, err := s.repo.GetSettingByKey(ctx, key)
 	if err != nil {
 		return "", fmt.Errorf("failed to get setting with key %s: %w", key, err)
 	}
 
-	if setting.ValueType != repository.UnityGameSettingsValueTypeString {
-		return "", fmt.Errorf("key %s value type is not string, it's %s", key, setting.ValueType)
+	if setting.ValueType != valueType {
+		return "", fmt.Errorf("key %s value type is not integer, it's %s", key, setting.ValueType)
 	}
 
 	return setting.Value, nil
 }
 
+// GetBool returns the setting value
+func (s *SettingsService) GetBool(ctx context.Context, key string) (bool, error) {
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeBool)
+	if err != nil {
+		return false, err
+	}
+
+	return stringToBool(value), nil
+}
+
+// GetString returns the setting value
+func (s *SettingsService) GetString(ctx context.Context, key string) (string, error) {
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeString)
+	if err != nil {
+		return "", err
+	}
+
+	return value, nil
+}
+
 // GetFloat64 returns the setting value
 func (s *SettingsService) GetFloat64(ctx context.Context, key string) (float64, error) {
-	setting, err := s.repo.GetSettingByKey(ctx, key)
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeFloat)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get setting with key %s: %w", key, err)
+		return 0, err
 	}
 
-	if setting.ValueType != repository.UnityGameSettingsValueTypeFloat {
-		return 0, fmt.Errorf("key %s value type is not float, it's %s", key, setting.ValueType)
-	}
-
-	return stringToFloat64(setting.Value), nil
+	return stringToFloat64(value), nil
 }
 
 // GetInt returns the setting value
 func (s *SettingsService) GetInt(ctx context.Context, key string) (int, error) {
-	setting, err := s.repo.GetSettingByKey(ctx, key)
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeInt)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get setting with key %s: %w", key, err)
+		return 0, err
 	}
 
-	if setting.ValueType != repository.UnityGameSettingsValueTypeInt {
-		return 0, fmt.Errorf("key %s value type is not integer, it's %s", key, setting.ValueType)
+	return stringToInt(value), nil
+}
+
+// GetInt32 returns the setting value
+func (s *SettingsService) GetInt32(ctx context.Context, key string) (int32, error) {
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeInt)
+	if err != nil {
+		return 0, err
 	}
 
-	return stringToInt(setting.Value), nil
+	return stringToInt32(value), nil
 }
 
 // GetJSON returns the setting value
 func (s *SettingsService) GetJSON(ctx context.Context, key string, result interface{}) error {
-	setting, err := s.repo.GetSettingByKey(ctx, key)
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeJson)
 	if err != nil {
-		return fmt.Errorf("failed to get setting with key %s: %w", key, err)
+		return err
 	}
 
-	if setting.ValueType != repository.UnityGameSettingsValueTypeJson {
-		return fmt.Errorf("key %s value type is not json, it's %s", key, setting.ValueType)
-	}
-
-	if err := json.Unmarshal([]byte(setting.Value), &result); err != nil {
+	if err := json.Unmarshal([]byte(value), &result); err != nil {
 		return fmt.Errorf("failed to unmarshal setting value: %w", err)
 	}
 
@@ -197,30 +201,22 @@ func (s *SettingsService) GetJSON(ctx context.Context, key string, result interf
 
 // GetDurration returns the setting value
 func (s *SettingsService) GetDurration(ctx context.Context, key string) (time.Duration, error) {
-	setting, err := s.repo.GetSettingByKey(ctx, key)
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeDuration)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get setting with key %s: %w", key, err)
+		return 0, err
 	}
 
-	if setting.ValueType != repository.UnityGameSettingsValueTypeString {
-		return 0, fmt.Errorf("key %s value type is not string, it's %s", key, setting.ValueType)
-	}
-
-	return stringToDuration(setting.Value), nil
+	return stringToDuration(value), nil
 }
 
 // GetDatetime returns the setting value
 func (s *SettingsService) GetDatetime(ctx context.Context, key string) (time.Time, error) {
-	setting, err := s.repo.GetSettingByKey(ctx, key)
+	value, err := s.getValueByKey(ctx, key, repository.UnityGameSettingsValueTypeDatetime)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to get setting with key %s: %w", key, err)
+		return time.Time{}, err
 	}
 
-	if setting.ValueType != repository.UnityGameSettingsValueTypeString {
-		return time.Time{}, fmt.Errorf("key %s value type is not string, it's %s", key, setting.ValueType)
-	}
-
-	return stringToTime(setting.Value)
+	return stringToTime(value)
 }
 
 // castUnityGameSettingToSetting casts the database record to the setting structure

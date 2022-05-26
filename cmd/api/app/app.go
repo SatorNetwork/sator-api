@@ -903,10 +903,10 @@ func (a *app) Run() {
 				gapi.NewService(
 					unityGameRepository,
 					settingsService,
+					walletSvcClient,
 					gapi.WithDB(db),
 				),
 				settingsService,
-				walletSvcClient,
 				jwtMdw,
 			),
 			gapi.MakeNFTPacksEndpoints(

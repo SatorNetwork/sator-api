@@ -43,14 +43,13 @@ type (
 		CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) (*NFTInfo, error)
 		SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr string) error
 
-		StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) error
+		StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error)
 		FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int32) error
 
-		GetDefaultGameConfig(ctx context.Context, uid uuid.UUID) (*GameConfig, error)
-
 		GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error)
-		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64, claimFn claimRewardsFunc) error
+		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) error
 		GetMinAmountToClaim() float64
+		GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error)
 	}
 
 	gameSettingsService interface {
@@ -61,30 +60,24 @@ type (
 		Delete(ctx context.Context, key string) error
 		SettingsValueTypes() map[string]string
 	}
-
-	walletService interface {
-		GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error)
-		ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
-	}
 )
 
 func MakeEndpoints(
 	gs gameService,
 	settings gameSettingsService,
-	ws walletService,
 	m ...endpoint.Middleware,
 ) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetStatus:    MakeGetStatusEndpoint(gs, ws),
+		GetStatus:    MakeGetStatusEndpoint(gs),
 		GetNFTPacks:  MakeGetNFTPacksEndpoint(gs),
 		BuyNFTPack:   MakeBuyNFTPackEndpoint(gs, validateFunc),
 		CraftNFT:     MakeCraftNFTEndpoint(gs, validateFunc),
 		SelectNFT:    MakeSelectNFTEndpoint(gs, validateFunc),
 		StartGame:    MakeStartGameEndpoint(gs, validateFunc),
 		FinishGame:   MakeFinishGameEndpoint(gs, validateFunc),
-		ClaimRewards: MakeClaimRewardsEndpoint(gs, ws, validateFunc),
+		ClaimRewards: MakeClaimRewardsEndpoint(gs, validateFunc),
 
 		GetSettings:           MakeGetSettingsEndpoint(settings),
 		GetSettingsByKey:      MakeGetSettingsByKeyEndpoint(settings),
@@ -130,7 +123,7 @@ type GetStatusResponse struct {
 }
 
 // MakeGetStatusEndpoint ...
-func MakeGetStatusEndpoint(s gameService, ws walletService) endpoint.Endpoint {
+func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -147,7 +140,7 @@ func MakeGetStatusEndpoint(s gameService, ws walletService) endpoint.Endpoint {
 			log.Printf("could not get user rewards: %v", err)
 		}
 
-		userCurrency, err := ws.GetUserBalance(ctx, uid)
+		userCurrency, err := s.GetUserBalance(ctx, uid)
 		if err != nil {
 			log.Printf("could not get user balance: %v", err)
 		}
@@ -334,11 +327,7 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 			return nil, err
 		}
 
-		if err := s.StartGame(ctx, uid, req.SelectedComplexity, req.IsTraining); err != nil {
-			return nil, err
-		}
-
-		gameConfig, err := s.GetDefaultGameConfig(ctx, uid)
+		gameConfig, err := s.StartGame(ctx, uid, req.SelectedComplexity, req.IsTraining)
 		if err != nil {
 			return nil, err
 		}
@@ -393,7 +382,7 @@ type ClaimRewardsRequest struct {
 }
 
 // MakeClaimRewardsEndpoint ...
-func MakeClaimRewardsEndpoint(s gameService, ws walletService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+func MakeClaimRewardsEndpoint(s gameService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -405,7 +394,7 @@ func MakeClaimRewardsEndpoint(s gameService, ws walletService, validateFunc vali
 			return nil, err
 		}
 
-		if err := s.ClaimRewards(ctx, uid, req.Amount, ws.ClaimInGameRewards); err != nil {
+		if err := s.ClaimRewards(ctx, uid, req.Amount); err != nil {
 			return nil, err
 		}
 

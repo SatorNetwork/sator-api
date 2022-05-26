@@ -48,6 +48,7 @@ require (
 	github.com/zeebo/errs v1.2.2
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9
+	golang.org/x/text v0.3.7
 	google.golang.org/api v0.59.0
 	syreclabs.com/go/faker v1.2.3
 )
@@ -83,7 +84,6 @@ require (
 	goji.io v2.0.2+incompatible // indirect
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1 // indirect
 	golang.org/x/sys v0.0.0-20211109184856-51b60fd695b3 // indirect
-	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20211028162531-8db9c33dc351 // indirect

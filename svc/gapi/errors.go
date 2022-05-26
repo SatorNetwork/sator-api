@@ -10,4 +10,5 @@ var (
 	ErrNotEnoughNFTsToCraft          = errors.New("not enough nfts to craft")
 	ErrNFTsToCraftHaveDifferentTypes = errors.New("nfts to craft have different types")
 	ErrNFTTypeLegendCannotBeCrafted  = errors.New("nft type legend cannot be crafted")
+	ErrCouldNotCraftNFT              = errors.New("could not craft nft")
 )

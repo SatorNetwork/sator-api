@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"time"
 
@@ -20,6 +19,7 @@ type (
 		db                   *sql.DB
 		gameRepo             gameRepository
 		conf                 configer
+		wallet               walletService
 		minVersion           string
 		energyFull           int32
 		energyRecoveryPeriod time.Duration
@@ -61,8 +61,15 @@ type (
 		GetString(ctx context.Context, key string) (string, error)
 		GetFloat64(ctx context.Context, key string) (float64, error)
 		GetInt(ctx context.Context, key string) (int, error)
+		GetInt32(ctx context.Context, key string) (int32, error)
 		GetJSON(ctx context.Context, key string, result interface{}) error
 		GetDurration(ctx context.Context, key string) (time.Duration, error)
+	}
+
+	walletService interface {
+		GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error)
+		ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
+		PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error
 	}
 
 	PlayerInfo struct {
@@ -74,10 +81,11 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo gameRepository, conf configer, opt ...ServiceOption) *Service {
+func NewService(repo gameRepository, conf configer, wallet walletService, opt ...ServiceOption) *Service {
 	s := &Service{
 		gameRepo:             repo,
 		conf:                 conf,
+		wallet:               wallet,
 		energyFull:           3,
 		energyRecoveryPeriod: time.Hour * 4,
 		minRewardsToClaim:    50,
@@ -89,41 +97,21 @@ func NewService(repo gameRepository, conf configer, opt ...ServiceOption) *Servi
 		o(s)
 	}
 
-	if energyFull, err := conf.GetInt(context.Background(), "energy_full"); err != nil {
-		log.Printf("[WARN] energy_full not found in config, using default value: %d", s.energyFull)
-	} else {
-		s.energyFull = int32(energyFull)
-	}
-
-	if energyRecoveryPeriod, err := conf.GetDurration(context.Background(), "energy_recovery_period"); err != nil {
-		log.Printf("[WARN] energy_recovery_period not found in config, using default value: %s", s.energyRecoveryPeriod)
-	} else {
-		s.energyRecoveryPeriod = energyRecoveryPeriod
-	}
-
-	if minRewardsToClaim, err := conf.GetFloat64(context.Background(), "min_rewards_to_claim"); err != nil {
-		log.Printf("[WARN] min_rewards_to_claim not found in config, using default value: %f", s.minRewardsToClaim)
-	} else {
-		s.minRewardsToClaim = minRewardsToClaim
-	}
-
-	if minVersion, err := conf.GetString(context.Background(), "min_version"); err != nil {
-		log.Printf("[WARN] min_version not found in config, using default value: %s", s.minVersion)
-	} else {
-		s.minVersion = minVersion
-	}
-
-	if craftStepAmount, err := conf.GetFloat64(context.Background(), "craft_step_amount"); err != nil {
-		log.Printf("[WARN] craft_step_amount not found in config, using default value: %f", s.craftStepAmount)
-	} else {
-		s.craftStepAmount = craftStepAmount
-	}
-
 	return s
 }
 
 // GetPlayerInfo ...
 func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo, error) {
+	energyFull, err := s.conf.GetInt32(ctx, "energy_full")
+	if err != nil || energyFull == 0 {
+		energyFull = s.energyFull
+	}
+
+	energyRecoveryPeriod, err := s.conf.GetDurration(context.Background(), "energy_recovery_period")
+	if err != nil || energyRecoveryPeriod == 0 {
+		energyRecoveryPeriod = s.energyRecoveryPeriod
+	}
+
 	player, err := s.gameRepo.GetPlayer(ctx, uid)
 	if err != nil {
 		if !db.IsNotFoundError(err) {
@@ -132,7 +120,7 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 
 		player, err = s.gameRepo.AddNewPlayer(ctx, repository.AddNewPlayerParams{
 			UserID:           uid,
-			EnergyPoints:     s.energyFull,
+			EnergyPoints:     energyFull,
 			EnergyRefilledAt: time.Now(),
 		})
 		if err != nil {
@@ -141,14 +129,14 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 	}
 
 	energy := player.EnergyPoints
-	if player.EnergyPoints < s.energyFull && time.Since(player.EnergyRefilledAt) > s.energyRecoveryPeriod {
+	if player.EnergyPoints < energyFull && time.Since(player.EnergyRefilledAt) > energyRecoveryPeriod {
 		hoursSince := time.Since(player.EnergyRefilledAt).Hours()
-		recoveryHours := s.energyRecoveryPeriod.Hours()
+		recoveryHours := energyRecoveryPeriod.Hours()
 		recoveryPoints := math.Floor(hoursSince / recoveryHours)
 		if recoveryPoints > 0 {
 			energy = player.EnergyPoints + int32(recoveryPoints)
-			if energy > s.energyFull {
-				energy = s.energyFull
+			if energy > energyFull {
+				energy = energyFull
 			}
 			if err := s.gameRepo.RefillEnergyOfPlayer(ctx, repository.RefillEnergyOfPlayerParams{
 				UserID:           uid,
@@ -167,14 +155,29 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 	}, nil
 }
 
+// GetUserBalance ...
+func (s *Service) GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error) {
+	return s.wallet.GetUserBalance(ctx, uid)
+}
+
 // GetMinVersion ...
 func (s *Service) GetMinVersion(ctx context.Context) string {
-	return s.minVersion
+	minVersion, err := s.conf.GetString(context.Background(), "min_version")
+	if err != nil || minVersion == "" {
+		minVersion = s.minVersion
+	}
+
+	return minVersion
 }
 
 // GetCraftStepAmount ...
 func (s *Service) GetCraftStepAmount(ctx context.Context) float64 {
-	return s.craftStepAmount
+	craftStepAmount, err := s.conf.GetFloat64(context.Background(), "craft_step_amount")
+	if err != nil || craftStepAmount == 0 {
+		craftStepAmount = s.craftStepAmount
+	}
+
+	return craftStepAmount
 }
 
 // GetEnergyLeft ...
@@ -310,6 +313,19 @@ func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []str
 		return nil, ErrNotAllNftsToCraftWereFound
 	}
 
+	craftStepAmount := s.GetCraftStepAmount(ctx)
+	userBalance, _ := s.GetUserBalance(ctx, uid)
+
+	nextNftType := getNextNFTType(NFTType(nfts[0].NftType))
+	if nextNftType.ToInt() < 1 {
+		return nil, ErrCouldNotCraftNFT
+	}
+
+	craftCost := float64(nextNftType.ToInt()) * craftStepAmount
+	if userBalance < craftCost {
+		return nil, fmt.Errorf("not enough balance to craft nft: you have %f but you need %f", userBalance, craftCost)
+	}
+
 	nft, err := craftNFT(nfts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to craft nft: %w", err)
@@ -337,6 +353,10 @@ func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []str
 		SelectedNftID: sql.NullString{String: nft.ID, Valid: true},
 	}); err != nil {
 		return nil, fmt.Errorf("failed to store selected nft: %w", err)
+	}
+
+	if err := s.wallet.PayForService(ctx, uid, craftCost, "crafting in-game nft"); err != nil {
+		return nil, fmt.Errorf("failed to pay for crafting: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -367,10 +387,10 @@ func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr stri
 }
 
 // StartGame ...
-func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) error {
+func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error) {
 	player, err := s.GetPlayerInfo(ctx, uid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	nft, err := s.gameRepo.GetUserNFT(ctx, repository.GetUserNFTParams{
@@ -378,11 +398,20 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 		ID:     player.SelectedNftID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to get user nft: %w", err)
+		return nil, fmt.Errorf("failed to get user nft: %w", err)
 	}
 
 	if nft.MaxLevel < complexity {
-		return fmt.Errorf("nft max level is %d, but complexity is %d", nft.MaxLevel, complexity)
+		return nil, fmt.Errorf("nft max level is %d, but complexity is %d", nft.MaxLevel, complexity)
+	}
+
+	gameConfig := &GameConfig{}
+	if err := s.conf.GetJSON(ctx, fmt.Sprintf("complexity_%s", getGameLevelName(complexity)), gameConfig); err != nil {
+		res, err := s.GetDefaultGameConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get game config: %w", err)
+		}
+		gameConfig = res
 	}
 
 	if err := s.gameRepo.StartGame(ctx, repository.StartGameParams{
@@ -391,10 +420,10 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 		Complexity: complexity,
 		IsTraining: isTraining,
 	}); err != nil {
-		return fmt.Errorf("failed to start game: %w", err)
+		return nil, fmt.Errorf("failed to start game: %w", err)
 	}
 
-	return nil
+	return gameConfig, nil
 }
 
 // FinishGame ...
@@ -434,7 +463,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int3
 }
 
 // GetDefaultGameConfig ...
-func (s *Service) GetDefaultGameConfig(ctx context.Context, uid uuid.UUID) (*GameConfig, error) {
+func (s *Service) GetDefaultGameConfig() (*GameConfig, error) {
 	cnf := &GameConfig{}
 	if err := json.Unmarshal([]byte(defaultGameConfig), cnf); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal game config: %w", err)
@@ -445,21 +474,24 @@ func (s *Service) GetDefaultGameConfig(ctx context.Context, uid uuid.UUID) (*Gam
 
 // GetMinAmountToClaim ...
 func (s *Service) GetMinAmountToClaim() float64 {
-	return s.minRewardsToClaim
+	minRewardsToClaim, err := s.conf.GetFloat64(context.Background(), "min_rewards_to_claim")
+	if err != nil || minRewardsToClaim == 0 {
+		minRewardsToClaim = s.minRewardsToClaim
+	}
+
+	return minRewardsToClaim
 }
 
 // GetUserRewards ...
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
 	deposit, _ := s.gameRepo.GetUserRewardsDeposited(ctx, uid)
 	withdrawn, _ := s.gameRepo.GetUserRewardsWithdrawn(ctx, uid)
+
 	return math.Dim(deposit, withdrawn), nil
 }
 
-// claimRewardsFunc is a function that can be used to claim rewards to the user's SAO wallet
-type claimRewardsFunc func(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
-
 // ClaimRewards ...
-func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64, claimFn claimRewardsFunc) error {
+func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -483,13 +515,8 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 		return fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
-	// Send tokens to user wallet
-	if claimFn != nil {
-		if _, err := claimFn(ctx, uid, userRewardsAmount); err != nil {
-			return fmt.Errorf("failed to claim rewards: %w", err)
-		}
-	} else {
-		log.Printf("no claim function provided, skipping claim")
+	if _, err := s.wallet.ClaimInGameRewards(ctx, uid, userRewardsAmount); err != nil {
+		return fmt.Errorf("failed to claim rewards: %w", err)
 	}
 
 	return tx.Commit()

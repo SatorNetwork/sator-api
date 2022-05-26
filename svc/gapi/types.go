@@ -31,6 +31,24 @@ func (n NFTType) IsValid() bool {
 	return false
 }
 
+// NFTType to int
+func (n NFTType) ToInt() int {
+	switch n {
+	case NFTTypeCommon:
+		return 0
+	case NFTTypeRare:
+		return 1
+	case NFTTypeSuperRare:
+		return 2
+	case NFTTypeEpic:
+		return 3
+	case NFTTypeLegend:
+		return 4
+	default:
+		return -1
+	}
+}
+
 func getNextNFTType(nftType NFTType) NFTType {
 	switch nftType {
 	case NFTTypeCommon:
@@ -54,6 +72,19 @@ const (
 	GameLevelMedium
 	GameLevelHard
 )
+
+func getGameLevelName(level int32) string {
+	switch level {
+	case GameLevelEasy:
+		return "easy"
+	case GameLevelMedium:
+		return "medium"
+	case GameLevelHard:
+		return "hard"
+	default:
+		return "default"
+	}
+}
 
 // getNFTLevelByType returns max NFT level depending on NFT type
 func getNFTLevelByType(t NFTType) int32 {
