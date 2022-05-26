@@ -107,7 +107,7 @@ func alphaNumUnderscore(s string) string {
 		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
 			return r
 		}
-		if r == ' ' {
+		if r == ' ' || r == '_' || r == '-' || r == '.' || r == ',' || r == ':' || r == ';' || r == '(' || r == ')' || r == '[' || r == ']' || r == '{' || r == '}' {
 			return '_'
 		}
 		return -1
