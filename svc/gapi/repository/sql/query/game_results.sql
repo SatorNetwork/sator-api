@@ -9,8 +9,10 @@ INSERT INTO unity_game_results (
 -- name: FinishGame :exec
 UPDATE unity_game_results SET
     blocks_done = $1,
+    result = $2,
+    electricity_costs = $3,
     finished_at = now()
-WHERE id = $2;
+WHERE id = $4;
 
 -- name: GetCurrentGame :one
 SELECT * FROM unity_game_results 

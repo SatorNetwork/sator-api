@@ -62,18 +62,22 @@ type UnityGamePlayer struct {
 	SelectedNftID    sql.NullString `json:"selected_nft_id"`
 	UpdatedAt        sql.NullTime   `json:"updated_at"`
 	CreatedAt        time.Time      `json:"created_at"`
+	ElectricitySpent int32          `json:"electricity_spent"`
+	ElectricityCosts float64        `json:"electricity_costs"`
 }
 
 type UnityGameResult struct {
-	ID         uuid.UUID    `json:"id"`
-	UserID     uuid.UUID    `json:"user_id"`
-	NFTID      string       `json:"nft_id"`
-	Complexity int32        `json:"complexity"`
-	IsTraining bool         `json:"is_training"`
-	BlocksDone int32        `json:"blocks_done"`
-	FinishedAt sql.NullTime `json:"finished_at"`
-	UpdatedAt  sql.NullTime `json:"updated_at"`
-	CreatedAt  time.Time    `json:"created_at"`
+	ID               uuid.UUID     `json:"id"`
+	UserID           uuid.UUID     `json:"user_id"`
+	NFTID            string        `json:"nft_id"`
+	Complexity       int32         `json:"complexity"`
+	IsTraining       bool          `json:"is_training"`
+	BlocksDone       int32         `json:"blocks_done"`
+	FinishedAt       sql.NullTime  `json:"finished_at"`
+	UpdatedAt        sql.NullTime  `json:"updated_at"`
+	CreatedAt        time.Time     `json:"created_at"`
+	Result           sql.NullInt32 `json:"result"`
+	ElectricityCosts float64       `json:"electricity_costs"`
 }
 
 type UnityGameReward struct {

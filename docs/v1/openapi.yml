@@ -464,6 +464,15 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/InGameNFTInfoArray"
+              craft_step_amount:
+                type: number
+                description: Craft step amount
+              electricity_left:
+                type: number
+                description: Electricity left
+              electricity_cost:
+                type: number
+                description: Electricity cost
 
     NFTPack:
       description: NFT Packs.
@@ -6049,7 +6058,7 @@ paths:
               properties:
                 result:
                   type: number
-                  description: "Result game. Available values: 1 - win, 2 - lose."
+                  description: "Result game. Available values: 1 - win, 0 - lose."
                 steps_taken:
                   type: number
                   description: "Number of steps taken."
@@ -6329,6 +6338,23 @@ paths:
               properties:
                 amount:
                   type: number
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/pay-for-electricity:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Pay for electricity.
+      security:
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

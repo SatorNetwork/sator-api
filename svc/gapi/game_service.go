@@ -25,6 +25,7 @@ type (
 		energyRecoveryPeriod time.Duration
 		minRewardsToClaim    float64
 		craftStepAmount      float64
+		electricityMaxGames  int32
 	}
 
 	ServiceOption func(*Service)
@@ -74,9 +75,11 @@ type (
 	}
 
 	PlayerInfo struct {
-		UserID        uuid.UUID
-		EnergyPoints  int
-		SelectedNftID string
+		UserID           uuid.UUID
+		EnergyPoints     int
+		SelectedNftID    string
+		ElectricityCost  float64
+		ElectricitySpent int32
 	}
 )
 
@@ -91,6 +94,7 @@ func NewService(repo gameRepository, conf configer, wallet walletService, opt ..
 		energyRecoveryPeriod: time.Hour * 4,
 		minRewardsToClaim:    50,
 		craftStepAmount:      500,
+		electricityMaxGames:  18,
 	}
 
 	// Apply options
@@ -150,9 +154,11 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 	}
 
 	return &PlayerInfo{
-		UserID:        player.UserID,
-		EnergyPoints:  int(energy),
-		SelectedNftID: player.SelectedNftID.String,
+		UserID:           player.UserID,
+		EnergyPoints:     int(energy),
+		SelectedNftID:    player.SelectedNftID.String,
+		ElectricityCost:  player.ElectricityCosts,
+		ElectricitySpent: player.ElectricitySpent,
 	}, nil
 }
 
@@ -389,6 +395,10 @@ func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr stri
 
 // StartGame ...
 func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error) {
+	if left, _ := s.GetElectricityLeft(ctx, uid); left < 1 {
+		return nil, ErrNotEnoughElectricity
+	}
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
@@ -445,7 +455,7 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 
 // FinishGame ...
 // TODO: rewards calculation
-func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int32) error {
+func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksDone int32) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -464,6 +474,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int3
 	if err := repo.FinishGame(ctx, repository.FinishGameParams{
 		ID:         currentGame.ID,
 		BlocksDone: blocksDone,
+		Result:     sql.NullInt32{Int32: result, Valid: true},
 	}); err != nil {
 		return fmt.Errorf("failed to finish game: %w", err)
 	}
@@ -474,6 +485,13 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, blocksDone int3
 		Amount:     rewardsAmount,
 	}); err != nil {
 		return fmt.Errorf("failed to withdraw rewards: %w", err)
+	}
+
+	if err := repo.AddElectricityToPlayer(ctx, repository.AddElectricityToPlayerParams{
+		UserID:           uid,
+		ElectricityCosts: 100, // TODO: fix it
+	}); err != nil {
+		return fmt.Errorf("failed to take the energy of player: %w", err)
 	}
 
 	return tx.Commit()
@@ -546,4 +564,52 @@ func castDbNftInfoToNFTInfo(dbNftInfo *repository.UnityGameNft) *NFTInfo {
 		NftType:  NFTType(dbNftInfo.NftType),
 		MaxLevel: dbNftInfo.MaxLevel,
 	}
+}
+
+func (s *Service) GetElectricityLeft(ctx context.Context, uid uuid.UUID) (int32, error) {
+	electricityMax, err := s.conf.GetInt32(ctx, "electricity_max_games")
+	if err != nil {
+		electricityMax = s.electricityMaxGames
+	}
+
+	player, err := s.gameRepo.GetPlayer(ctx, uid)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get player: %w", err)
+	}
+
+	return electricityMax - player.ElectricitySpent, nil
+}
+
+func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	repo := s.gameRepo.WithTx(tx)
+
+	player, err := repo.GetPlayer(ctx, uid)
+	if err != nil {
+		return fmt.Errorf("failed to get player: %w", err)
+	}
+
+	balance, err := s.wallet.GetUserBalance(ctx, uid)
+	if err != nil {
+		return fmt.Errorf("failed to get user balance: %w", err)
+	}
+
+	if balance < player.ElectricityCosts {
+		return fmt.Errorf("not enough funds to pay for electricity")
+	}
+
+	if err := repo.ResetElectricityForPlayer(ctx, uid); err != nil {
+		return fmt.Errorf("failed to reset electricity for player: %w", err)
+	}
+
+	if err := s.wallet.PayForService(ctx, uid, player.ElectricityCosts, "electricity"); err != nil {
+		return fmt.Errorf("failed to pay for electricity: %w", err)
+	}
+
+	return tx.Commit()
 }

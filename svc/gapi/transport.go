@@ -89,6 +89,13 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 		options...,
 	).ServeHTTP)
 
+	r.Post("/pay-for-electricity", httptransport.NewServer(
+		gameEndpoints.PayForElectricity,
+		decodePayForElectricityRequest,
+		encodeResponse,
+		options...,
+	).ServeHTTP)
+
 	// Settings
 
 	r.Get("/settings", httptransport.NewServer(
@@ -266,6 +273,10 @@ func decodeClaimRewardsRequest(ctx context.Context, r *http.Request) (interface{
 	}
 
 	return req, nil
+}
+
+func decodePayForElectricityRequest(_ context.Context, _ *http.Request) (interface{}, error) {
+	return nil, nil
 }
 
 func decodeGetSettingsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {

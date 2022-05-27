@@ -4,6 +4,26 @@ import (
 	"encoding/json"
 )
 
+// Game result type
+type GameResult int32
+
+const (
+	GameResultLose GameResult = iota
+	GameResultWin
+)
+
+// GameResult to string
+func (g GameResult) String() string {
+	switch g {
+	case GameResultLose:
+		return "lose"
+	case GameResultWin:
+		return "win"
+	default:
+		return "undefined"
+	}
+}
+
 // NFTType ...
 type NFTType string
 
