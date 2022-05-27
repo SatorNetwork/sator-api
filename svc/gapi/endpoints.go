@@ -103,6 +103,7 @@ func MakeEndpoints(
 			e.StartGame = mdw(e.StartGame)
 			e.FinishGame = mdw(e.FinishGame)
 			e.ClaimRewards = mdw(e.ClaimRewards)
+			e.PayForElectricity = mdw(e.PayForElectricity)
 
 			e.GetSettings = mdw(e.GetSettings)
 			e.GetSettingsByKey = mdw(e.GetSettingsByKey)
