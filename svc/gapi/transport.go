@@ -198,9 +198,13 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 
 func EncodeResponseWithSignature(uv string) httptransport.EncodeResponseFunc {
 	return func(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+		deviceID, err := jwt.DeviceIDFromContext(ctx)
+		if err != nil {
+			return err
+		}
+
 		timestamp := time.Now().Unix()
 		tokenString := ctx.Value(jwtkit.JWTTokenContextKey).(string)
-		deviceID, _ := jwt.DeviceIDFromContext(ctx)
 		signingKey := fmt.Sprintf("%s%s%d%s", uv, deviceID, timestamp, tokenString[len(tokenString)-3:])
 
 		signature, err := SignResponse([]byte(signingKey), response)
