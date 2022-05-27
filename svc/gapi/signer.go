@@ -46,6 +46,21 @@ func ValidateSignature(signingKey []byte, s interface{}, sig string) error {
 	return nil
 }
 
+// ValidateStringSignature function is used to validate a signature
+// using the given signing key.
+// Returns an error if the signature is invalid.
+func ValidateStringSignature(signingKey []byte, s string, sig string) error {
+	if err := jwt.SigningMethodHS256.Verify(s, sig, signingKey); err != nil {
+		if errors.Is(err, jwt.ErrSignatureInvalid) {
+			return err
+		}
+
+		return fmt.Errorf("%w: %s", ErrCouldNotVerifySignature, err.Error())
+	}
+
+	return nil
+}
+
 // SignResponse function is used to sign a response
 // using the given signing key.
 // Returns a signature string or an error.

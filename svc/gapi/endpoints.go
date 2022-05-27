@@ -352,7 +352,7 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 type (
 	FinishGameRequest struct {
 		BlocksDone int32 `json:"blocks_done" validate:"gte=0"`
-		GameResult int32 `json:"game_result" validate:"required,in=0,1"`
+		GameResult int32 `json:"game_result" validate:"required,oneof=0 1"`
 	}
 
 	FinishGameResponse struct {
