@@ -14,6 +14,7 @@ type Claims struct {
 	UserID   string `json:"user_id,omitempty"`
 	Username string `json:"username,omitempty"`
 	Role     string `json:"role,omitempty"`
+	DeviceID string `json:"device_id,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -59,6 +60,15 @@ func RoleFromContext(ctx context.Context) (string, error) {
 	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
 	if cl, ok := claims.(*Claims); ok {
 		return cl.Role, nil
+	}
+	return "", ErrInvalidJWTClaims
+}
+
+// DeviceIDFromContext returns user current device id from request context
+func DeviceIDFromContext(ctx context.Context) (string, error) {
+	claims := ctx.Value(kitjwt.JWTClaimsContextKey)
+	if cl, ok := claims.(*Claims); ok {
+		return cl.DeviceID, nil
 	}
 	return "", ErrInvalidJWTClaims
 }

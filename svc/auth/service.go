@@ -65,7 +65,7 @@ type (
 	ServiceOption func(*Service)
 
 	jwtInteractor interface {
-		NewWithRefreshToken(userID uuid.UUID, username, role string) (access, refresh string, err error)
+		NewWithRefreshToken(userID uuid.UUID, username, role, deviceID string) (access, refresh string, err error)
 	}
 
 	userRepository interface {
@@ -242,7 +242,7 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 		return Token{}, ErrInvalidCredentials
 	}
 
-	token, refreshToken, err := s.jwt.NewWithRefreshToken(user.ID, user.Username, user.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(user.ID, user.Username, user.Role, deviceID)
 	if err != nil {
 		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
@@ -319,7 +319,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 	}
 
 	// TODO: add JWT id into the revoked tokens list
-	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role, deviceID)
 	if err != nil {
 		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
@@ -451,7 +451,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 		log.Printf("[email verification] email: %s, otp: %s", email, otp)
 	}
 
-	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role)
+	token, refreshToken, err := s.jwt.NewWithRefreshToken(u.ID, u.Username, u.Role, deviceID)
 	if err != nil {
 		return Token{}, fmt.Errorf("could not generate new access token: %w", err)
 	}
