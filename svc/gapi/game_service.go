@@ -35,6 +35,7 @@ type (
 		StartGame(ctx context.Context, arg repository.StartGameParams) error
 		GetCurrentGame(ctx context.Context, userID uuid.UUID) (repository.UnityGameResult, error)
 		FinishGame(ctx context.Context, arg repository.FinishGameParams) error
+		SpendEnergyOfPlayer(ctx context.Context, userID uuid.UUID) error
 
 		GetNFTPacksList(ctx context.Context) ([]repository.UnityGameNftPack, error)
 
@@ -388,12 +389,20 @@ func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr stri
 
 // StartGame ...
 func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	repo := s.gameRepo.WithTx(tx)
+
 	player, err := s.GetPlayerInfo(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
 
-	nft, err := s.gameRepo.GetUserNFT(ctx, repository.GetUserNFTParams{
+	nft, err := repo.GetUserNFT(ctx, repository.GetUserNFTParams{
 		UserID: uid,
 		ID:     player.SelectedNftID,
 	})
@@ -414,13 +423,21 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 		gameConfig = res
 	}
 
-	if err := s.gameRepo.StartGame(ctx, repository.StartGameParams{
+	if err := repo.StartGame(ctx, repository.StartGameParams{
 		UserID:     uid,
 		NFTID:      player.SelectedNftID,
 		Complexity: complexity,
 		IsTraining: isTraining,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to start game: %w", err)
+	}
+
+	if err := repo.SpendEnergyOfPlayer(ctx, uid); err != nil {
+		return nil, fmt.Errorf("failed to take the energy of player: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return gameConfig, nil

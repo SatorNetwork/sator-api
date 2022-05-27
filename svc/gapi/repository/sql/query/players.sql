@@ -8,6 +8,9 @@ SELECT * FROM unity_game_players WHERE user_id = $1;
 -- name: RefillEnergyOfPlayer :exec
 UPDATE unity_game_players SET energy_points = $1, energy_refilled_at = $2 WHERE user_id = $3;
 
+-- name: SpendEnergyOfPlayer :exec
+UPDATE unity_game_players SET energy_points = energy_points-1 WHERE user_id = $1;
+
 -- name: StoreSelectedNFT :exec
 UPDATE unity_game_players SET selected_nft_id = $1 WHERE user_id = $2;
 

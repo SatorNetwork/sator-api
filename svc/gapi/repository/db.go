@@ -102,6 +102,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.softDeleteNFTPackStmt, err = db.PrepareContext(ctx, softDeleteNFTPack); err != nil {
 		return nil, fmt.Errorf("error preparing query SoftDeleteNFTPack: %w", err)
 	}
+	if q.spendEnergyOfPlayerStmt, err = db.PrepareContext(ctx, spendEnergyOfPlayer); err != nil {
+		return nil, fmt.Errorf("error preparing query SpendEnergyOfPlayer: %w", err)
+	}
 	if q.startGameStmt, err = db.PrepareContext(ctx, startGame); err != nil {
 		return nil, fmt.Errorf("error preparing query StartGame: %w", err)
 	}
@@ -249,6 +252,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing softDeleteNFTPackStmt: %w", cerr)
 		}
 	}
+	if q.spendEnergyOfPlayerStmt != nil {
+		if cerr := q.spendEnergyOfPlayerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing spendEnergyOfPlayerStmt: %w", cerr)
+		}
+	}
 	if q.startGameStmt != nil {
 		if cerr := q.startGameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing startGameStmt: %w", cerr)
@@ -334,6 +342,7 @@ type Queries struct {
 	rewardsDepositStmt          *sql.Stmt
 	rewardsWithdrawStmt         *sql.Stmt
 	softDeleteNFTPackStmt       *sql.Stmt
+	spendEnergyOfPlayerStmt     *sql.Stmt
 	startGameStmt               *sql.Stmt
 	storeSelectedNFTStmt        *sql.Stmt
 	updateNFTPackStmt           *sql.Stmt
@@ -370,6 +379,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		rewardsDepositStmt:          q.rewardsDepositStmt,
 		rewardsWithdrawStmt:         q.rewardsWithdrawStmt,
 		softDeleteNFTPackStmt:       q.softDeleteNFTPackStmt,
+		spendEnergyOfPlayerStmt:     q.spendEnergyOfPlayerStmt,
 		startGameStmt:               q.startGameStmt,
 		storeSelectedNFTStmt:        q.storeSelectedNFTStmt,
 		updateNFTPackStmt:           q.updateNFTPackStmt,

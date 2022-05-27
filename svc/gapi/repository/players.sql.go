@@ -77,6 +77,15 @@ func (q *Queries) RefillEnergyOfPlayer(ctx context.Context, arg RefillEnergyOfPl
 	return err
 }
 
+const spendEnergyOfPlayer = `-- name: SpendEnergyOfPlayer :exec
+UPDATE unity_game_players SET energy_points = energy_points-1 WHERE user_id = $1
+`
+
+func (q *Queries) SpendEnergyOfPlayer(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.spendEnergyOfPlayerStmt, spendEnergyOfPlayer, userID)
+	return err
+}
+
 const storeSelectedNFT = `-- name: StoreSelectedNFT :exec
 UPDATE unity_game_players SET selected_nft_id = $1 WHERE user_id = $2
 `
