@@ -199,7 +199,7 @@ func EncodeResponseWithSignature(uv string) httptransport.EncodeResponseFunc {
 	return func(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 		timestamp := time.Now().Unix()
 		tokenString := ctx.Value(jwtkit.JWTTokenContextKey).(string)
-		signingKey := fmt.Sprintf("%s%s%s", uv, timestamp, tokenString[len(tokenString)-3:])
+		signingKey := fmt.Sprintf("%s%d%s", uv, timestamp, tokenString[len(tokenString)-3:])
 
 		signature, err := SignResponse([]byte(signingKey), response)
 		if err == nil && signature != "" {
