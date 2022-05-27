@@ -14,7 +14,7 @@ type Claims struct {
 	UserID   string `json:"user_id,omitempty"`
 	Username string `json:"username,omitempty"`
 	Role     string `json:"role,omitempty"`
-	DeviceID string `json:"device_id,omitempty"`
+	DeviceID string `json:"-"`
 	jwt.StandardClaims
 }
 
