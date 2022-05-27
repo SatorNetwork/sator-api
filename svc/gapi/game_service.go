@@ -469,12 +469,32 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 		return fmt.Errorf("failed to get current game: %w", err)
 	}
 
-	var rewardsAmount float64 = float64(blocksDone) * 0.5
+	var rewardsAmount, electricityCost float64
+	if !currentGame.IsTraining {
+		nft, err := repo.GetUserNFT(ctx, repository.GetUserNFTParams{
+			UserID: uid,
+			ID:     currentGame.NFTID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get current nft: %w", err)
+		}
+
+		rewardsAmount, err := calculateUserRewardsForGame(s.conf, nft.NftType, currentGame.Complexity, result)
+		if err != nil {
+			return fmt.Errorf("failed to calculate user rewards: %w", err)
+		}
+
+		electricityCost, err = calculateElectricityCost(s.conf, nft.NftType, result, rewardsAmount)
+		if err != nil {
+			return fmt.Errorf("failed to calculate electricity cost: %w", err)
+		}
+	}
 
 	if err := repo.FinishGame(ctx, repository.FinishGameParams{
-		ID:         currentGame.ID,
-		BlocksDone: blocksDone,
-		Result:     sql.NullInt32{Int32: result, Valid: true},
+		ID:               currentGame.ID,
+		BlocksDone:       blocksDone,
+		Result:           sql.NullInt32{Int32: result, Valid: true},
+		ElectricityCosts: electricityCost,
 	}); err != nil {
 		return fmt.Errorf("failed to finish game: %w", err)
 	}
@@ -489,7 +509,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 
 	if err := repo.AddElectricityToPlayer(ctx, repository.AddElectricityToPlayerParams{
 		UserID:           uid,
-		ElectricityCosts: 100, // TODO: fix it
+		ElectricityCosts: electricityCost,
 	}); err != nil {
 		return fmt.Errorf("failed to take the energy of player: %w", err)
 	}
