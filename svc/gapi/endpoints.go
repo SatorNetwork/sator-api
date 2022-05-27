@@ -414,6 +414,10 @@ func MakeClaimRewardsEndpoint(s gameService, validateFunc validator.ValidateFunc
 	}
 }
 
+type PayForElectricityResponse struct {
+	ElectricityLeft int32 `json:"electricity_left"`
+}
+
 // MakePayForElectricityEndpoint ...
 func MakePayForElectricityEndpoint(s gameService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -426,7 +430,14 @@ func MakePayForElectricityEndpoint(s gameService) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return true, nil
+		left, err := s.GetElectricityLeft(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return PayForElectricityResponse{
+			ElectricityLeft: left,
+		}, nil
 	}
 }
 

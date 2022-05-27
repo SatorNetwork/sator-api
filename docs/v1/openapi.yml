@@ -6357,7 +6357,16 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "#/components/responses/ResultSuccess"
+          description: Pay for electricity result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  electricity_left:
+                    type: number
+                    example: 18
+                    description: "Amount of electricity left."
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
