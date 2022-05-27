@@ -668,7 +668,7 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		}
 	}
 
-	if err := s.firebaseSvc.SendNewShowNotification(ctx, sh.Title, sh.ID); err != nil {
+	if err := s.firebaseSvc.SendNewShowNotification(ctx, show.Title, show.ID); err != nil {
 		return Show{}, errors.Wrap(err, "can't send new show notification")
 	}
 
