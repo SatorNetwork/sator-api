@@ -170,6 +170,7 @@ type Config struct {
 	SkipDeviceIDCheck              bool
 	EnableResourceIntensiveQueries bool
 	FirebaseCredsInJSON            string
+	UnityVersion                   string
 }
 
 var buildTag string
@@ -301,6 +302,7 @@ func ConfigFromEnv() *Config {
 		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
 
 		FirebaseCredsInJSON: env.MustString("FIREBASE_CREDS_IN_JSON"),
+		UnityVersion:        env.MustString("UNITY_VERSION"),
 	}
 }
 
@@ -914,6 +916,7 @@ func (a *app) Run() {
 				jwtMdw,
 			),
 			logger,
+			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
 		))
 	}
 

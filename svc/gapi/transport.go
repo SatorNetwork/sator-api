@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
+	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -21,7 +24,7 @@ type (
 )
 
 // MakeHTTPHandler ...
-func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints, log logger) http.Handler {
+func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints, log logger, encodeResponse httptransport.EncodeResponseFunc) http.Handler {
 	r := chi.NewRouter()
 
 	options := []httptransport.ServerOption{
@@ -33,56 +36,56 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 	r.Get("/get-status", httptransport.NewServer(
 		gameEndpoints.GetStatus,
 		decodeGetStatusRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/get-nft-packs", httptransport.NewServer(
 		gameEndpoints.GetNFTPacks,
 		decodeGetNFTPacksRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/buy-nft-pack", httptransport.NewServer(
 		gameEndpoints.BuyNFTPack,
 		decodeBuyNFTPackRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/craft-nft", httptransport.NewServer(
 		gameEndpoints.CraftNFT,
 		decodeCraftNFTRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/select-nft", httptransport.NewServer(
 		gameEndpoints.SelectNFT,
 		decodeSelectNFTRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/start-game", httptransport.NewServer(
 		gameEndpoints.StartGame,
 		decodeStartGameRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/finish-game", httptransport.NewServer(
 		gameEndpoints.FinishGame,
 		decodeFinishGameRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/claim-rewards", httptransport.NewServer(
 		gameEndpoints.ClaimRewards,
 		decodeClaimRewardsRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
@@ -105,7 +108,7 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 	r.Get("/settings/{key}", httptransport.NewServer(
 		gameEndpoints.GetSettingsByKey,
 		decodeGetSettingsByKeyRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
@@ -186,14 +189,21 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 	return httpencoder.CodeAndMessageFrom(err)
 }
 
-// customEncodeResponse extends the default EncodeResponse to sign the response
-func customEncodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	signature, err := SignResponse([]byte("secret"), response)
-	if err == nil && signature != "" {
-		w.Header().Set("Signature", signature)
-	}
+func EncodeResponseWithSignature(uv string) httptransport.EncodeResponseFunc {
+	return func(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+		timestamp := time.Now().Unix()
+		tokenString := ctx.Value(jwtkit.JWTTokenContextKey).(string)
+		deviceID, _ := jwt.DeviceIDFromContext(ctx)
+		signingKey := fmt.Sprintf("%s%s%d%s", uv, deviceID, timestamp, tokenString[len(tokenString)-3:])
 
-	return httpencoder.EncodeResponse(ctx, w, response)
+		signature, err := SignResponse([]byte(signingKey), response)
+		if err == nil && signature != "" {
+			w.Header().Set("X-Signature", signature)
+			w.Header().Set("X-Timestamp", fmt.Sprintf("%d", timestamp))
+		}
+
+		return httpencoder.EncodeResponse(ctx, w, response)
+	}
 }
 
 func decodeGetStatusRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
