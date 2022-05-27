@@ -207,6 +207,7 @@ func EncodeResponseWithSignature(uv string) httptransport.EncodeResponseFunc {
 		if err == nil && signature != "" {
 			w.Header().Set("X-Signature", signature)
 			w.Header().Set("X-Timestamp", fmt.Sprintf("%d", timestamp))
+			w.Header().Set("X-Key", signingKey)
 		}
 
 		return httpencoder.EncodeResponse(ctx, w, response)
