@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
-	"github.com/SatorNetwork/sator-api/lib/jwt"
 	"github.com/go-chi/chi"
 	jwtkit "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport"
@@ -198,14 +197,9 @@ func codeAndMessageFrom(err error) (int, interface{}) {
 
 func EncodeResponseWithSignature(uv string) httptransport.EncodeResponseFunc {
 	return func(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-		deviceID, err := jwt.DeviceIDFromContext(ctx)
-		if err != nil {
-			return err
-		}
-
 		timestamp := time.Now().Unix()
 		tokenString := ctx.Value(jwtkit.JWTTokenContextKey).(string)
-		signingKey := fmt.Sprintf("%s%s%d%s", uv, deviceID, timestamp, tokenString[len(tokenString)-3:])
+		signingKey := fmt.Sprintf("%s%s%s", uv, timestamp, tokenString[len(tokenString)-3:])
 
 		signature, err := SignResponse([]byte(signingKey), response)
 		if err == nil && signature != "" {
