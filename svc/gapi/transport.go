@@ -108,7 +108,7 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 	r.Get("/settings/{key}", httptransport.NewServer(
 		gameEndpoints.GetSettingsByKey,
 		decodeGetSettingsByKeyRequest,
-		encodeResponse,
+		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
