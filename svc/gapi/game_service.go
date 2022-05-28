@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"time"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
@@ -539,10 +540,18 @@ func (s *Service) GetMinAmountToClaim() float64 {
 
 // GetUserRewards ...
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
-	deposit, _ := s.gameRepo.GetUserRewardsDeposited(ctx, uid)
-	withdrawn, _ := s.gameRepo.GetUserRewardsWithdrawn(ctx, uid)
+	deposit, err := s.gameRepo.GetUserRewardsDeposited(ctx, uid)
+	if err != nil {
+		return 0, nil
+	}
 
-	return math.Dim(deposit, withdrawn), nil
+	withdrawn, err := s.gameRepo.GetUserRewardsWithdrawn(ctx, uid)
+	if err != nil {
+		return deposit, nil
+	}
+
+	result, _ := big.NewFloat(0).Sub(big.NewFloat(deposit), big.NewFloat(withdrawn)).Float64()
+	return result, nil
 }
 
 // ClaimRewards ...
