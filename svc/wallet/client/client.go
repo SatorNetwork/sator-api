@@ -26,6 +26,7 @@ type (
 		P2PTransfer(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 		GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, err error)
 		GetSAOBalance(ctx context.Context, userID uuid.UUID) (float64, error)
+		GetUserSolanaAccount(ctx context.Context, userID uuid.UUID) ([]byte, error)
 	}
 )
 
@@ -81,9 +82,8 @@ func (c *Client) GetMultiplier(ctx context.Context, userID uuid.UUID) (_ int32, 
 
 // ClaimInGameRewards sends tokens to user wallet from unity game tokens pool
 // returns solana transaction id or error
-func (c *Client) ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
-	// TODO: implement
-	return "not_implemented", nil
+func (c *Client) GetUserSolanaAccount(ctx context.Context, userID uuid.UUID) ([]byte, error) {
+	return c.s.GetUserSolanaAccount(ctx, userID)
 }
 
 // GetUserBalance returns user balance in solana tokens

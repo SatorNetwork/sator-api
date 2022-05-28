@@ -171,6 +171,9 @@ type Config struct {
 	EnableResourceIntensiveQueries bool
 	FirebaseCredsInJSON            string
 	UnityVersion                   string
+
+	UnityGameFeeCollectorAddress string
+	UnityGameTokenPoolPrivateKey string
 }
 
 var buildTag string
@@ -302,7 +305,10 @@ func ConfigFromEnv() *Config {
 		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
 
 		FirebaseCredsInJSON: env.MustString("FIREBASE_CREDS_IN_JSON"),
-		UnityVersion:        env.MustString("UNITY_VERSION"),
+
+		UnityVersion:                 env.MustString("UNITY_VERSION"),
+		UnityGameTokenPoolPrivateKey: env.MustString("UNITY_GAME_TOKEN_POOL_PRIVATE_KEY"),
+		UnityGameFeeCollectorAddress: env.MustString("UNITY_GAME_FEE_COLLECTOR_ADDRESS"),
 	}
 }
 
@@ -516,6 +522,21 @@ func (a *app) Run() {
 		tokenHolder, err = types.AccountFromBytes(tokenHolderPk)
 		if err != nil {
 			log.Fatalf("can't get token holder account from bytes")
+		}
+	}
+
+	var unityGameTokenHolder types.Account
+	{
+		unityGameTokenHolderPk, err := base64.StdEncoding.DecodeString(a.cfg.UnityGameTokenPoolPrivateKey)
+		if err != nil {
+			log.Fatalf("unityGameTokenHolderPk base64 decoding error: %v", err)
+		}
+		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, unityGameTokenHolderPk); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: unity game token holder: %v", err)
+		}
+		unityGameTokenHolder, err = types.AccountFromBytes(unityGameTokenHolderPk)
+		if err != nil {
+			log.Fatalf("can't get unity game token holder account from bytes")
 		}
 	}
 
@@ -905,7 +926,14 @@ func (a *app) Run() {
 				gapi.NewService(
 					unityGameRepository,
 					settingsService,
-					walletSvcClient,
+					gapi.NewSolanaClient(
+						solanaClient,
+						walletSvcClient,
+						a.cfg.SolanaAssetAddr,
+						a.cfg.UnityGameFeeCollectorAddress,
+						feePayer,
+						unityGameTokenHolder,
+					),
 					gapi.WithDB(db),
 				),
 				settingsService,

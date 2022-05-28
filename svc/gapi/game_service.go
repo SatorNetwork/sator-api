@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 	"time"
@@ -20,7 +21,7 @@ type (
 		db                   *sql.DB
 		gameRepo             gameRepository
 		conf                 configer
-		wallet               walletService
+		payment              paymentService
 		minVersion           string
 		energyFull           int32
 		energyRecoveryPeriod time.Duration
@@ -69,10 +70,10 @@ type (
 		GetDurration(ctx context.Context, key string) (time.Duration, error)
 	}
 
-	walletService interface {
-		GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error)
-		ClaimInGameRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error)
-		PayForService(ctx context.Context, uid uuid.UUID, amount float64, info string) error
+	paymentService interface {
+		GetBalance(ctx context.Context, uid uuid.UUID) (float64, error)
+		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) (string, error)
+		Pay(ctx context.Context, uid uuid.UUID, amount float64, info string) (string, error)
 	}
 
 	PlayerInfo struct {
@@ -86,11 +87,11 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(repo gameRepository, conf configer, wallet walletService, opt ...ServiceOption) *Service {
+func NewService(repo gameRepository, conf configer, p paymentService, opt ...ServiceOption) *Service {
 	s := &Service{
 		gameRepo:             repo,
 		conf:                 conf,
-		wallet:               wallet,
+		payment:              p,
 		energyFull:           3,
 		energyRecoveryPeriod: time.Hour * 4,
 		minRewardsToClaim:    50,
@@ -165,7 +166,7 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 
 // GetUserBalance ...
 func (s *Service) GetUserBalance(ctx context.Context, uid uuid.UUID) (float64, error) {
-	return s.wallet.GetUserBalance(ctx, uid)
+	return s.payment.GetBalance(ctx, uid)
 }
 
 // GetMinVersion ...
@@ -363,8 +364,10 @@ func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []str
 		return nil, fmt.Errorf("failed to store selected nft: %w", err)
 	}
 
-	if err := s.wallet.PayForService(ctx, uid, craftCost, "crafting in-game nft"); err != nil {
+	if tr, err := s.payment.Pay(ctx, uid, craftCost, "crafting in-game nft"); err != nil {
 		return nil, fmt.Errorf("failed to pay for crafting: %w", err)
+	} else {
+		log.Printf("successful payment for crafting: %s", tr)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -579,8 +582,10 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 		return fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
-	if _, err := s.wallet.ClaimInGameRewards(ctx, uid, userRewardsAmount); err != nil {
+	if tr, err := s.payment.ClaimRewards(ctx, uid, userRewardsAmount); err != nil {
 		return fmt.Errorf("failed to claim rewards: %w", err)
+	} else {
+		log.Printf("successful claim rewards: %s", tr)
 	}
 
 	return tx.Commit()
@@ -623,7 +628,7 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 		return fmt.Errorf("failed to get player: %w", err)
 	}
 
-	balance, err := s.wallet.GetUserBalance(ctx, uid)
+	balance, err := s.payment.GetBalance(ctx, uid)
 	if err != nil {
 		return fmt.Errorf("failed to get user balance: %w", err)
 	}
@@ -636,8 +641,10 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 		return fmt.Errorf("failed to reset electricity for player: %w", err)
 	}
 
-	if err := s.wallet.PayForService(ctx, uid, player.ElectricityCosts, "electricity"); err != nil {
+	if tr, err := s.payment.Pay(ctx, uid, player.ElectricityCosts, "electricity"); err != nil {
 		return fmt.Errorf("failed to pay for electricity: %w", err)
+	} else {
+		log.Printf("successful payment for electricity: %s", tr)
 	}
 
 	return tx.Commit()

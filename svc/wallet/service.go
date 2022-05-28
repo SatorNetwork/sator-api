@@ -1171,3 +1171,24 @@ func (s *Service) GetSAOBalance(ctx context.Context, userID uuid.UUID) (float64,
 
 	return s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
 }
+
+func (s *Service) GetUserSolanaAccount(ctx context.Context, userID uuid.UUID) ([]byte, error) {
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get wallet by user id %s: %w", userID, err)
+	}
+
+	acc, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+
+		return nil, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	return acc.PrivateKey, nil
+}
