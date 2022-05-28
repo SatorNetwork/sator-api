@@ -364,11 +364,13 @@ func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []str
 		return nil, fmt.Errorf("failed to store selected nft: %w", err)
 	}
 
-	if tr, err := s.payment.Pay(ctx, uid, craftCost, "crafting in-game nft"); err != nil {
-		log.Printf("failed to pay for crafting nft: %v", err)
-		return nil, ErrCouldNotCraftNFT
-	} else {
-		log.Printf("successful payment for crafting: %s", tr)
+	if craftCost > 0 {
+		if tr, err := s.payment.Pay(ctx, uid, craftCost, "crafting in-game nft"); err != nil {
+			log.Printf("failed to pay for crafting nft: %v", err)
+			return nil, ErrCouldNotCraftNFT
+		} else {
+			log.Printf("successful payment for crafting: %s", tr)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -568,12 +570,17 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 
 	repo := s.gameRepo.WithTx(tx)
 
+	minAmountToClaim := s.GetMinAmountToClaim()
+	if amount < minAmountToClaim {
+		return fmt.Errorf("amount to claim is less than %f", minAmountToClaim)
+	}
+
 	userRewardsAmount, _ := s.GetUserRewards(ctx, uid)
-	if userRewardsAmount < s.GetMinAmountToClaim() {
+	if userRewardsAmount < minAmountToClaim {
 		return fmt.Errorf("not enough rewards to claim, need %f, have %f", s.GetMinAmountToClaim(), userRewardsAmount)
 	}
 	if amount > userRewardsAmount {
-		return fmt.Errorf("not enough rewards to claim, need %f, have %f", amount, userRewardsAmount)
+		return fmt.Errorf("not enough rewards to claim, you want %f, but have %f", amount, userRewardsAmount)
 	}
 
 	if err := repo.RewardsWithdraw(ctx, repository.RewardsWithdrawParams{
@@ -628,6 +635,10 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 	player, err := repo.GetPlayer(ctx, uid)
 	if err != nil {
 		return fmt.Errorf("failed to get player: %w", err)
+	}
+
+	if player.ElectricityCosts <= 0 {
+		return nil
 	}
 
 	balance, err := s.payment.GetBalance(ctx, uid)

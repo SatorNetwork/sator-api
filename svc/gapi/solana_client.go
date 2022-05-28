@@ -27,6 +27,7 @@ type (
 		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
 		CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error)
 		SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error)
+		DeriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error)
 	}
 
 	walletService interface {
@@ -143,22 +144,20 @@ func (c *SolanaClient) sendAssetsWithAutoDerive(
 	feePayer, source types.Account,
 	recipient string,
 	amount float64) (string, error) {
-	if _, err := c.solana.CreateAccountWithATA(ctx, assetAddr, recipient, feePayer); err != nil {
-		log.Printf("CreateAccountWithATA: %v", err)
-	}
-
 	asset := common.PublicKeyFromString(assetAddr)
+	recipientPK := common.PublicKeyFromString(recipient)
 
-	sourceAta, _, err := common.FindAssociatedTokenAddress(
-		common.PublicKeyFromString(source.PublicKey.ToBase58()),
-		asset,
-	)
+	recipientAta, err := c.solana.DeriveATAPublicKey(ctx, recipientPK, asset)
 	if err != nil {
+		if _, err := c.solana.CreateAccountWithATA(ctx, assetAddr, recipient, feePayer); err != nil {
+			log.Printf("could not create account with ata: %v", err)
+		}
+
 		return "", fmt.Errorf("could not find associated token address: %w", err)
 	}
 
-	recipientAta, _, err := common.FindAssociatedTokenAddress(
-		common.PublicKeyFromString(recipient),
+	sourceAta, _, err := common.FindAssociatedTokenAddress(
+		common.PublicKeyFromString(source.PublicKey.ToBase58()),
 		asset,
 	)
 	if err != nil {
