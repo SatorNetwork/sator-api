@@ -15,4 +15,5 @@ var (
 	ErrNotEnoughElectricity          = errors.New("not enough electricity")
 	ErrCouldNotClaimRewards          = errors.New("could not claim rewards")
 	ErrCouldNotPayForElectricity     = errors.New("could not pay for electricity")
+	ErrInsufficientBalance           = errors.New("insufficient balance")
 )

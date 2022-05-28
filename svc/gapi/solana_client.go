@@ -128,7 +128,7 @@ func (c *SolanaClient) Pay(ctx context.Context, uid uuid.UUID, amount float64, i
 		c.tokenPubKey,
 		c.feePayer,
 		userAcc,
-		c.tokenPool.PublicKey.ToBase58(),
+		c.feeCollectorPubKey,
 		amount,
 	)
 	if err != nil {
@@ -143,7 +143,13 @@ func (c *SolanaClient) sendAssetsWithAutoDerive(
 	assetAddr string,
 	feePayer, source types.Account,
 	recipient string,
-	amount float64) (string, error) {
+	amount float64,
+) (string, error) {
+
+	if amount <= 0 {
+		return "", fmt.Errorf("amount must be greater than 0")
+	}
+
 	asset := common.PublicKeyFromString(assetAddr)
 	recipientPK := common.PublicKeyFromString(recipient)
 

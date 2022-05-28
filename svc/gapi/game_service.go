@@ -293,6 +293,20 @@ func (s *Service) BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) (*NFTIn
 		return nil, fmt.Errorf("failed to store selected nft: %w", err)
 	}
 
+	if pack.Price > 0 {
+		userBalance, _ := s.GetUserBalance(ctx, uid)
+		if userBalance < pack.Price {
+			return nil, ErrInsufficientBalance
+		}
+
+		if tr, err := s.payment.Pay(ctx, uid, pack.Price, "purchase of nft pack"); err != nil {
+			log.Printf("failed to buy nft pack: %v", err)
+			return nil, fmt.Errorf("failed to buy nft pack: %w", err)
+		} else {
+			log.Printf("successful purchase of nft pack: %s", tr)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -641,7 +655,7 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 		return nil
 	}
 
-	balance, err := s.payment.GetBalance(ctx, uid)
+	balance, err := s.GetUserBalance(ctx, uid)
 	if err != nil {
 		return fmt.Errorf("failed to get user balance: %w", err)
 	}
