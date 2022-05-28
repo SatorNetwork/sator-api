@@ -13,4 +13,6 @@ var (
 	ErrNFTTypeLegendCannotBeCrafted  = errors.New("nft type legend cannot be crafted")
 	ErrCouldNotCraftNFT              = errors.New("could not craft nft")
 	ErrNotEnoughElectricity          = errors.New("not enough electricity")
+	ErrCouldNotClaimRewards          = errors.New("could not claim rewards")
+	ErrCouldNotPayForElectricity     = errors.New("could not pay for electricity")
 )

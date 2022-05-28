@@ -365,7 +365,8 @@ func (s *Service) CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []str
 	}
 
 	if tr, err := s.payment.Pay(ctx, uid, craftCost, "crafting in-game nft"); err != nil {
-		return nil, fmt.Errorf("failed to pay for crafting: %w", err)
+		log.Printf("failed to pay for crafting nft: %v", err)
+		return nil, ErrCouldNotCraftNFT
 	} else {
 		log.Printf("successful payment for crafting: %s", tr)
 	}
@@ -583,7 +584,8 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 	}
 
 	if tr, err := s.payment.ClaimRewards(ctx, uid, userRewardsAmount); err != nil {
-		return fmt.Errorf("failed to claim rewards: %w", err)
+		log.Printf("failed to claim rewards: %v", err)
+		return ErrCouldNotClaimRewards
 	} else {
 		log.Printf("successful claim rewards: %s", tr)
 	}
@@ -642,7 +644,8 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 	}
 
 	if tr, err := s.payment.Pay(ctx, uid, player.ElectricityCosts, "electricity"); err != nil {
-		return fmt.Errorf("failed to pay for electricity: %w", err)
+		log.Printf("failed to pay for electricity: %v", err)
+		return ErrCouldNotPayForElectricity
 	} else {
 		log.Printf("successful payment for electricity: %s", tr)
 	}

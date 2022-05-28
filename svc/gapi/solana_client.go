@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/google/uuid"
+	"github.com/portto/solana-go-sdk/common"
+	"github.com/portto/solana-go-sdk/program/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -14,6 +15,7 @@ type (
 	SolanaClient struct {
 		solana solanaClient
 		wallet walletService
+		mltpl  uint64
 
 		tokenPubKey        string
 		feeCollectorPubKey string
@@ -23,7 +25,8 @@ type (
 
 	solanaClient interface {
 		GetTokenAccountBalanceWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) (float64, error)
-		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64, cfg *solana.SendAssetsConfig) (string, error)
+		CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error)
+		SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error)
 	}
 
 	walletService interface {
@@ -36,6 +39,7 @@ func NewSolanaClient(solana solanaClient, wallet walletService, tokenPubKey, fee
 	return &SolanaClient{
 		solana:             solana,
 		wallet:             wallet,
+		mltpl:              1e9,
 		tokenPubKey:        tokenPubKey,
 		feeCollectorPubKey: feeCollectorPubKey,
 		feePayer:           feePayer,
@@ -95,14 +99,13 @@ func (c *SolanaClient) ClaimRewards(ctx context.Context, uid uuid.UUID, amount f
 		return "", fmt.Errorf("get user wallet address: %w", err)
 	}
 
-	tx, err := c.solana.SendAssetsWithAutoDerive(
+	tx, err := c.sendAssetsWithAutoDerive(
 		ctx,
 		c.tokenPubKey,
 		c.feePayer,
 		c.tokenPool,
 		walletAddr,
 		amount,
-		&solana.SendAssetsConfig{},
 	)
 	if err != nil {
 		return "", fmt.Errorf("could not claim rewards: %w", err)
@@ -119,18 +122,63 @@ func (c *SolanaClient) Pay(ctx context.Context, uid uuid.UUID, amount float64, i
 		return "", fmt.Errorf("get user solana account: %w", err)
 	}
 
-	tx, err := c.solana.SendAssetsWithAutoDerive(
+	tx, err := c.sendAssetsWithAutoDerive(
 		ctx,
 		c.tokenPubKey,
 		c.feePayer,
 		userAcc,
 		c.tokenPool.PublicKey.ToBase58(),
 		amount,
-		&solana.SendAssetsConfig{},
 	)
 	if err != nil {
 		return "", fmt.Errorf("could not claim rewards: %w", err)
 	}
 
 	return tx, nil
+}
+
+func (c *SolanaClient) sendAssetsWithAutoDerive(
+	ctx context.Context,
+	assetAddr string,
+	feePayer, source types.Account,
+	recipient string,
+	amount float64) (string, error) {
+	if _, err := c.solana.CreateAccountWithATA(ctx, assetAddr, recipient, feePayer); err != nil {
+		log.Printf("CreateAccountWithATA: %v", err)
+	}
+
+	asset := common.PublicKeyFromString(assetAddr)
+
+	sourceAta, _, err := common.FindAssociatedTokenAddress(
+		common.PublicKeyFromString(source.PublicKey.ToBase58()),
+		asset,
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not find associated token address: %w", err)
+	}
+
+	recipientAta, _, err := common.FindAssociatedTokenAddress(
+		common.PublicKeyFromString(recipient),
+		asset,
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not find associated token address: %w", err)
+	}
+
+	txHash, err := c.solana.SendTransaction(ctx, feePayer, source,
+		tokenprog.TransferChecked(tokenprog.TransferCheckedParam{
+			From:     sourceAta,
+			To:       recipientAta,
+			Mint:     asset,
+			Auth:     source.PublicKey,
+			Signers:  []common.PublicKey{},
+			Amount:   uint64(amount * float64(c.mltpl)),
+			Decimals: 9,
+		}),
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not send asset: %w", err)
+	}
+
+	return txHash, nil
 }
