@@ -108,13 +108,13 @@ func Test_generateNFT(t *testing.T) {
 			name: "should return NFTInfo when dropChances is valid",
 			args: args{
 				nftPack: repository.UnityGameNftPack{
-					DropChances: []byte(`{"common":0,"legend":0,"rare":1}`),
+					DropChances: []byte(`{"common":55.3,"rare":28.2,"super_rare":12.8,"epic":3.5,"legend":0.2}`),
 				},
 			},
 			want: &NFTInfo{
 				ID:       ksuid.New().String(),
 				MaxLevel: getNFTLevelByType(NFTTypeRare),
-				NftType:  NFTTypeRare,
+				NftType:  NFTTypeCommon,
 			},
 			wantErr: false,
 		},

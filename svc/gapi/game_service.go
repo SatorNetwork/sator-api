@@ -479,7 +479,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 			return fmt.Errorf("failed to get current nft: %w", err)
 		}
 
-		rewardsAmount, err := calculateUserRewardsForGame(s.conf, nft.NftType, currentGame.Complexity, result)
+		rewardsAmount, err = calculateUserRewardsForGame(s.conf, nft.NftType, currentGame.Complexity, result)
 		if err != nil {
 			return fmt.Errorf("failed to calculate user rewards: %w", err)
 		}
