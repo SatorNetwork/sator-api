@@ -527,14 +527,7 @@ func (a *app) Run() {
 
 	var unityGameTokenHolder types.Account
 	{
-		unityGameTokenHolderPk, err := base64.StdEncoding.DecodeString(a.cfg.UnityGameTokenPoolPrivateKey)
-		if err != nil {
-			log.Fatalf("unityGameTokenHolderPk base64 decoding error: %v", err)
-		}
-		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, unityGameTokenHolderPk); err != nil {
-			log.Fatalf("solanaClient.CheckPrivateKey: unity game token holder: %v", err)
-		}
-		unityGameTokenHolder, err = types.AccountFromBytes(unityGameTokenHolderPk)
+		unityGameTokenHolder, err = types.AccountFromBase58(a.cfg.UnityGameTokenPoolPrivateKey)
 		if err != nil {
 			log.Fatalf("can't get unity game token holder account from bytes")
 		}
