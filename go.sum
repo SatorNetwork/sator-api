@@ -194,8 +194,8 @@ github.com/dmitrymomot/go-env v0.1.1 h1:Yx7gev20j7zMA1LW/GMBrdJx2PQQy7/LY7tkWGKh
 github.com/dmitrymomot/go-env v0.1.1/go.mod h1:NM1eMH8iEskjkdd78BIBqK4PH7XC7tnAwW4i++62uLM=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3 h1:yF6awAXyo0ZoZGrqGGDMeavVlNB5VOWmTGG7nau6cm8=
 github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3/go.mod h1:mnH1ZTKNPliDCV/96Lmz5JeDFmdiQWqfgR4zgzmk8vU=
-github.com/dmitrymomot/random v1.0.3 h1:kWz32/FdXtX8BV2Ik71tohRy0b9JQATp20KTJm+qarw=
-github.com/dmitrymomot/random v1.0.3/go.mod h1:7J6vVk7h9UIip/I8rZG6MEfiNgqwKTzQ0MQoh8YdAsg=
+github.com/dmitrymomot/random v1.0.6 h1:C9FoNBlSS9t3KD3CzVuG9HvgR5/KJ1XOMENWEI/WXz0=
+github.com/dmitrymomot/random v1.0.6/go.mod h1:7J6vVk7h9UIip/I8rZG6MEfiNgqwKTzQ0MQoh8YdAsg=
 github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/dop251/goja v0.0.0-20211011172007-d99e4b8cbf48/go.mod h1:R9ET47fwRVRPZnOGvHxxhuZcbrMCuiqOz3Rlrh4KSnk=
 github.com/dop251/goja_nodejs v0.0.0-20210225215109-d91c329300e7/go.mod h1:hn7BA7c8pLvoGndExHudxTDKZ84Pyvv+90pbBjbTz0Y=

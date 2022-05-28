@@ -17,7 +17,7 @@ func generateNFT(nftPack repository.UnityGameNftPack) (*NFTInfo, error) {
 		return nil, fmt.Errorf("failed to unmarshal drop chances: %w", err)
 	}
 
-	nftType := random.GetRandomMapItemWithProbabilities(dropChances.ToMap())
+	nftType := random.GetRandomMapItemWithPrecent(dropChances.ToMap())
 	nt := NFTType(nftType)
 	if !nt.IsValid() {
 		return nil, fmt.Errorf("invalid nft type: %s", nt)

@@ -14,7 +14,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dmitrymomot/go-env v0.1.1
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
-	github.com/dmitrymomot/random v1.0.3
+	github.com/dmitrymomot/random v1.0.6
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
 	github.com/ethereum/go-ethereum v1.10.12
 	github.com/go-chi/chi v4.1.1+incompatible
