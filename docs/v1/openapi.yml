@@ -473,6 +473,9 @@ components:
               electricity_cost:
                 type: number
                 description: Electricity cost
+              electricity_max_games:
+                type: number
+                description: Electricity max games
 
     NFTPack:
       description: NFT Packs.
@@ -3285,7 +3288,7 @@ paths:
         - "Seasons"
       summary: Used for get season by id.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: show_id
           in: path

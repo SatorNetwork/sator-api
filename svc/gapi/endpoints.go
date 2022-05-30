@@ -38,6 +38,7 @@ type (
 		GetMinVersion(ctx context.Context) string
 		GetCraftStepAmount(ctx context.Context) float64
 
+		GetElectricityMaxGames(ctx context.Context) (int, error)
 		GetElectricityLeft(ctx context.Context, uid uuid.UUID) (int32, error)
 		PayForElectricity(ctx context.Context, uid uuid.UUID) error
 
@@ -128,6 +129,7 @@ type GetStatusResponse struct {
 	CraftStepAmount              float64   `json:"craft_step_amount"`
 	ElectricityLeft              int32     `json:"electricity_left"`
 	ElectricityCost              float64   `json:"electricity_cost"`
+	ElectricityMaxGames          int       `json:"electricity_max_games"`
 }
 
 // MakeGetStatusEndpoint ...
@@ -164,6 +166,7 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 		}
 
 		electrLeft, _ := s.GetElectricityLeft(ctx, uid)
+		electricityMaxGames, _ := s.GetElectricityMaxGames(ctx)
 
 		return GetStatusResponse{
 			EnergyLeft:                   player.EnergyPoints,
@@ -176,6 +179,7 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 			CraftStepAmount:              s.GetCraftStepAmount(ctx),
 			ElectricityLeft:              electrLeft,
 			ElectricityCost:              player.ElectricityCost,
+			ElectricityMaxGames:          electricityMaxGames,
 		}, nil
 	}
 }

@@ -189,6 +189,15 @@ func (s *Service) GetCraftStepAmount(ctx context.Context) float64 {
 	return craftStepAmount
 }
 
+func (s *Service) GetElectricityMaxGames(ctx context.Context) (int, error) {
+	electricityMaxGames, err := s.conf.GetInt(context.Background(), "electricity_max_games")
+	if err != nil || electricityMaxGames == 0 {
+		electricityMaxGames = int(s.electricityMaxGames)
+	}
+
+	return electricityMaxGames, nil
+}
+
 // GetEnergyLeft ...
 func (s *Service) GetEnergyLeft(ctx context.Context, uid uuid.UUID) (int, error) {
 	player, err := s.GetPlayerInfo(ctx, uid)
