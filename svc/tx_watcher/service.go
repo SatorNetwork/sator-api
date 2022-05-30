@@ -261,33 +261,42 @@ func (s *Service) resendSolanaDBTXsIfNeeded(ctx context.Context) error {
 	}
 
 	for _, tx := range txs {
-		success, err := s.sc.IsTransactionSuccessful(ctx, tx.TxHash)
-		if err != nil {
-			return errors.Wrap(err, "can't check if transaction is successful")
-		}
-		if success {
-			err := s.txwr.UpdateTransactionStatus(ctx, txw_repository.UpdateTransactionStatusParams{
-				ID:     tx.ID,
-				Status: successfulStatus.String(),
-			})
-			if err != nil {
-				return errors.Wrap(err, "can't update transaction status")
-			}
+		if err := s.processTx(ctx, tx); err != nil {
+			log.Printf("can't process tx: %v\n", err)
 			continue
 		}
+	}
 
-		needToRetry, err := s.needToRetry(ctx, tx)
-		if err != nil {
-			return errors.Wrap(err, "can't check if tx need to be retried")
-		}
-		if !needToRetry {
-			continue
-		}
+	return nil
+}
 
-		err = s.resendSolanaDBTX(ctx, tx)
+func (s *Service) processTx(ctx context.Context, tx txw_repository.WatcherTransaction) error {
+	success, err := s.sc.IsTransactionSuccessful(ctx, tx.TxHash)
+	if err != nil {
+		return errors.Wrap(err, "can't check if transaction is successful")
+	}
+	if success {
+		err := s.txwr.UpdateTransactionStatus(ctx, txw_repository.UpdateTransactionStatusParams{
+			ID:     tx.ID,
+			Status: successfulStatus.String(),
+		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "can't update transaction status")
 		}
+		return nil
+	}
+
+	needToRetry, err := s.needToRetry(ctx, tx)
+	if err != nil {
+		return errors.Wrap(err, "can't check if tx need to be retried")
+	}
+	if !needToRetry {
+		return nil
+	}
+
+	err = s.resendSolanaDBTX(ctx, tx)
+	if err != nil {
+		return err
 	}
 
 	return nil
