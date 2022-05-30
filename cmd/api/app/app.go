@@ -519,6 +519,21 @@ func (a *app) Run() {
 		}
 	}
 
+	var txWatcherSvc *tx_watcher_svc.Service
+	{
+		txWatcherRepository, err := tx_watcher_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare tx watcher repository: %v", err)
+		}
+
+		txWatcherSvc = tx_watcher_svc.NewService(
+			txWatcherRepository,
+			solanaClient,
+			feePayer,
+			tokenHolder,
+		)
+	}
+
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
@@ -526,6 +541,7 @@ func (a *app) Run() {
 			walletRepository,
 			solanaClient,
 			ethereumClient,
+			txWatcherSvc,
 			wallet.WithAssetSolanaAddress(a.cfg.SolanaAssetAddr),
 			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayer.PrivateKey),
 			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey),
@@ -541,21 +557,6 @@ func (a *app) Run() {
 			wallet.MakeEndpoints(walletService, kycMdw, jwtMdw),
 			logger,
 		))
-	}
-
-	{
-		txWatcherRepository, err := tx_watcher_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare tx watcher repository: %v", err)
-		}
-
-		txWatcherSvc := tx_watcher_svc.NewService(
-			txWatcherRepository,
-			solanaClient,
-			feePayer,
-			tokenHolder,
-		)
-		_ = txWatcherSvc
 	}
 
 	// Rewards service

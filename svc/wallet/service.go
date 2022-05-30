@@ -10,12 +10,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mr-tron/base58"
+	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
 	"github.com/SatorNetwork/sator-api/lib/ethereum"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
+	tx_watcher_alias "github.com/SatorNetwork/sator-api/svc/tx_watcher/alias"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 )
 
@@ -26,6 +28,8 @@ type (
 		sc solanaClient
 		ec ethereumClient
 		// rw rewardsService
+
+		txWatcher txWatcher
 
 		satorAssetName  string
 		solanaAssetName string
@@ -99,6 +103,15 @@ type (
 		AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 		FeeAccumulatorAddress() string
 		GiveAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, issuer types.Account, recipientAddr string, amount float64) (string, error)
+		PrepareSendAssetsTx(
+			ctx context.Context,
+			assetAddr string,
+			feePayer types.Account,
+			source types.Account,
+			recipientAddr string,
+			amount float64,
+			cfg *lib_solana.SendAssetsConfig,
+		) (*lib_solana.PrepareTxResponse, error)
 		SendAssetsWithAutoDerive(ctx context.Context, assetAddr string, feePayer, source types.Account, recipientAddr string, amount float64, cfg *lib_solana.SendAssetsConfig) (string, error)
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
@@ -109,6 +122,10 @@ type (
 
 	ethereumClient interface {
 		CreateAccount() (ethereum.Wallet, error)
+	}
+
+	txWatcher interface {
+		SendAndWatchTx(ctx context.Context, message types.Message, accountAliases []tx_watcher_alias.Alias) (string, error)
 	}
 
 	// PreparedTransaction ...
@@ -134,12 +151,13 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, opt ...ServiceOption) *Service {
+func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, txWatcher txWatcher, opt ...ServiceOption) *Service {
 	s := &Service{
 		wr: wr,
 		sc: sc,
 		ec: ec,
 		// rw: rw,
+		txWatcher: txWatcher,
 
 		solanaAssetName: "SOL",
 		satorAssetName:  "SAO",
@@ -381,7 +399,7 @@ func (s *Service) CreateWallet(ctx context.Context, userID uuid.UUID) error {
 }
 
 // WithdrawRewards convert rewards into sator tokens
-func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (tx string, err error) {
+func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount float64) (txhash string, err error) {
 	user, err := s.wr.GetSolanaAccountByUserIDAndType(ctx, repository.GetSolanaAccountByUserIDAndTypeParams{
 		UserID:     userID,
 		WalletType: WalletTypeSator,
@@ -407,19 +425,28 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 		return "", err
 	}
 
+	prepareTxResp, err := s.sc.PrepareSendAssetsTx(
+		ctx,
+		s.satorAssetSolanaAddr,
+		feePayer,
+		tokenHolder,
+		user.PublicKey,
+		amount,
+		&lib_solana.SendAssetsConfig{
+			PercentToCharge:           s.claimRewardsPercent,
+			ChargeSolanaFeeFromSender: true,
+		},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "can't prepare send assets tx")
+	}
+
 	// sends token
 	for i := 0; i < 5; i++ {
-		if tx, err = s.sc.SendAssetsWithAutoDerive(
+		if txhash, err = s.txWatcher.SendAndWatchTx(
 			ctx,
-			s.satorAssetSolanaAddr,
-			feePayer,
-			tokenHolder,
-			user.PublicKey,
-			amount,
-			&lib_solana.SendAssetsConfig{
-				PercentToCharge:           s.claimRewardsPercent,
-				ChargeSolanaFeeFromSender: true,
-			},
+			prepareTxResp.Tx.Message,
+			[]tx_watcher_alias.Alias{tx_watcher_alias.FeePayerAlias, tx_watcher_alias.TokenHolderAlias},
 		); err != nil {
 			if i < 4 {
 				log.Println(err)
@@ -428,12 +455,12 @@ func (s *Service) WithdrawRewards(ctx context.Context, userID uuid.UUID, amount 
 			}
 			time.Sleep(time.Second * 10)
 		} else {
-			log.Printf("user %s: successful transaction: rewards withdraw: %s", userID.String(), tx)
+			log.Printf("user %s: successful transaction: rewards withdraw: %s", userID.String(), txhash)
 			break
 		}
 	}
 
-	return tx, nil
+	return txhash, nil
 }
 
 // GetListTransactionsByWalletID returns list of all transactions of specific wallet.

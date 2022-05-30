@@ -9,64 +9,9 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 	"github.com/robfig/cron/v3"
 
+	tx_watcher_alias "github.com/SatorNetwork/sator-api/svc/tx_watcher/alias"
 	txw_repository "github.com/SatorNetwork/sator-api/svc/tx_watcher/repository"
 )
-
-type alias uint8
-
-const (
-	undefinedAlias alias = iota
-	feePayerAlias
-	tokenHolderAlias
-)
-
-func newAliasFromString(s string) (alias, error) {
-	switch s {
-	case "fee_payer":
-		return feePayerAlias, nil
-	case "token_holder":
-		return tokenHolderAlias, nil
-	default:
-		return undefinedAlias, errors.Errorf("alias with such name %v doesn't exist", s)
-	}
-}
-
-func (a alias) String() string {
-	switch a {
-	case undefinedAlias:
-		return "undefined"
-	case feePayerAlias:
-		return "fee_payer"
-	case tokenHolderAlias:
-		return "token_holder"
-	default:
-		return "undefined"
-	}
-}
-
-type aliases []alias
-
-func newAliasesFromStrings(strings []string) (aliases, error) {
-	aliases := make(aliases, 0, len(strings))
-	for _, s := range strings {
-		alias, err := newAliasFromString(s)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't get new alias from string")
-		}
-		aliases = append(aliases, alias)
-	}
-
-	return aliases, nil
-}
-
-func (as aliases) ToStrings() []string {
-	strings := make([]string, 0, len(as))
-	for _, a := range as {
-		strings = append(strings, a.String())
-	}
-
-	return strings
-}
 
 type status uint8
 
@@ -129,20 +74,20 @@ func NewService(
 	return s
 }
 
-func (s *Service) accountByAlias(a alias) (types.Account, error) {
+func (s *Service) accountByAlias(a tx_watcher_alias.Alias) (types.Account, error) {
 	switch a {
-	case undefinedAlias:
+	case tx_watcher_alias.UndefinedAlias:
 		return types.Account{}, errors.Errorf("alias %v is undefined", a)
-	case feePayerAlias:
+	case tx_watcher_alias.FeePayerAlias:
 		return s.feePayer, nil
-	case tokenHolderAlias:
+	case tx_watcher_alias.TokenHolderAlias:
 		return s.tokenHolder, nil
 	default:
 		return types.Account{}, errors.Errorf("alias %v is undefined", a)
 	}
 }
 
-func (s *Service) accountsByAliases(aliases []alias) ([]types.Account, error) {
+func (s *Service) accountsByAliases(aliases []tx_watcher_alias.Alias) ([]types.Account, error) {
 	accounts := make([]types.Account, 0, len(aliases))
 	for _, alias := range aliases {
 		account, err := s.accountByAlias(alias)
@@ -155,29 +100,29 @@ func (s *Service) accountsByAliases(aliases []alias) ([]types.Account, error) {
 	return accounts, nil
 }
 
-func (s *Service) SendAndWatchTx(ctx context.Context, message types.Message, accountAliases []alias) error {
+func (s *Service) SendAndWatchTx(ctx context.Context, message types.Message, accountAliases []tx_watcher_alias.Alias) (string, error) {
 	serializedMessage, err := message.Serialize()
 	if err != nil {
-		return errors.Wrap(err, "can't serialize message")
+		return "", errors.Wrap(err, "can't serialize message")
 	}
 
-	resp, err := s.sendSolanaTx(ctx, string(serializedMessage), aliases(accountAliases).ToStrings())
+	resp, err := s.sendSolanaTx(ctx, string(serializedMessage), tx_watcher_alias.Aliases(accountAliases).ToStrings())
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = s.txwr.RegisterTransaction(ctx, txw_repository.RegisterTransactionParams{
 		SerializedMessage:      string(serializedMessage),
 		LatestValidBlockHeight: int64(resp.LatestValidBlockHeight),
-		AccountAliases:         aliases(accountAliases).ToStrings(),
+		AccountAliases:         tx_watcher_alias.Aliases(accountAliases).ToStrings(),
 		TxHash:                 resp.TxHash,
 		Status:                 registeredStatus.String(),
 	})
 	if err != nil {
-		return errors.Wrap(err, "can't register transaction")
+		return "", errors.Wrap(err, "can't register transaction")
 	}
 
-	return nil
+	return resp.TxHash, nil
 }
 
 func (s *Service) resendSolanaDBTX(ctx context.Context, tx txw_repository.WatcherTransaction) error {
@@ -214,7 +159,7 @@ func (s *Service) sendSolanaTx(ctx context.Context, serializedMessage string, ac
 	}
 	message.RecentBlockHash = latestBlockhash.Blockhash
 
-	aliases, err := newAliasesFromStrings(accountAliases)
+	aliases, err := tx_watcher_alias.NewAliasesFromStrings(accountAliases)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get new aliases from strings")
 	}
