@@ -168,7 +168,7 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 		electrLeft, _ := s.GetElectricityLeft(ctx, uid)
 		electricityMaxGames, _ := s.GetElectricityMaxGames(ctx)
 
-		return GetStatusResponse{
+		resp := GetStatusResponse{
 			EnergyLeft:                   player.EnergyPoints,
 			UserCurrency:                 userCurrency,
 			UserInGameCurrency:           totalRewards,
@@ -180,7 +180,11 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 			ElectricityLeft:              electrLeft,
 			ElectricityCost:              player.ElectricityCost,
 			ElectricityMaxGames:          electricityMaxGames,
-		}, nil
+		}
+
+		log.Printf("GetStatusResponse: %+v", resp)
+
+		return resp, nil
 	}
 }
 
@@ -240,10 +244,14 @@ func MakeBuyNFTPackEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 			return nil, err
 		}
 
-		return BuyNFTPackResponse{
+		resp := BuyNFTPackResponse{
 			NewNFT:           newNFT,
 			UserOwnedNftList: userNFTs,
-		}, nil
+		}
+
+		log.Printf("BuyNFTPackResponse: %+v", resp)
+
+		return resp, nil
 	}
 }
 
@@ -281,10 +289,14 @@ func MakeCraftNFTEndpoint(s gameService, validateFunc validator.ValidateFunc) en
 			return nil, err
 		}
 
-		return CraftNFTResponse{
+		resp := CraftNFTResponse{
 			NewNFT:           newNFT,
 			UserOwnedNFTList: userNFTs,
-		}, nil
+		}
+
+		log.Printf("CraftNFTResponse: %+v", resp)
+
+		return resp, nil
 	}
 }
 
@@ -348,9 +360,13 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 			return nil, err
 		}
 
-		return StartGameResponse{
+		resp := StartGameResponse{
 			GameConfig: gameConfig,
-		}, nil
+		}
+
+		log.Printf("StartGameResponse: %+v", resp)
+
+		return resp, nil
 	}
 }
 
@@ -387,9 +403,13 @@ func MakeFinishGameEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 			return nil, err
 		}
 
-		return FinishGameResponse{
+		resp := FinishGameResponse{
 			UserInGameCurrency: rewardsAmount,
-		}, nil
+		}
+
+		log.Printf("FinishGameResponse: %+v", resp)
+
+		return resp, nil
 	}
 }
 
@@ -440,9 +460,13 @@ func MakePayForElectricityEndpoint(s gameService) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return PayForElectricityResponse{
+		resp := PayForElectricityResponse{
 			ElectricityLeft: left,
-		}, nil
+		}
+
+		log.Printf("PayForElectricityResponse: %+v", resp)
+
+		return resp, nil
 	}
 }
 
