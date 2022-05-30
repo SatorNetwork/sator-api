@@ -103,7 +103,7 @@ type (
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
-		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
+		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error)
 		Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 	}
 
@@ -798,7 +798,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 
 	for i := 0; i < 5; i++ {
 		newCtx, cancel := context.WithCancel(context.Background())
-		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, uint64(amount)); err != nil {
+		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, amount); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {

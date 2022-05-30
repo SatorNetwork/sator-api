@@ -443,7 +443,7 @@ func (mr *MockInterfaceMockRecorder) SerializeTxMessage(arg0 interface{}) *gomoc
 }
 
 // Stake mocks base method.
-func (m *MockInterface) Stake(arg0 context.Context, arg1, arg2 types.Account, arg3, arg4 common.PublicKey, arg5 int64, arg6 uint64) (string, error) {
+func (m *MockInterface) Stake(arg0 context.Context, arg1, arg2 types.Account, arg3, arg4 common.PublicKey, arg5 int64, arg6 float64) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stake", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(string)
