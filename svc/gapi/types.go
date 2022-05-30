@@ -164,28 +164,28 @@ func (d DropChances) Bytes() []byte {
 // GameConfig struct
 type GameConfig struct {
 	FactoryBlockInfo struct {
-		BaseStep     int `json:"_baseStep"`
-		BaseScale    int `json:"_baseScale"`
-		MinRandomPos int `json:"_minRandomPos"`
-		MaxRandomPos int `json:"_maxRandomPos"`
+		BaseStep     float64 `json:"_baseStep"`
+		BaseScale    float64 `json:"_baseScale"`
+		MinRandomPos float64 `json:"_minRandomPos"`
+		MaxRandomPos float64 `json:"_maxRandomPos"`
 	} `json:"_factoryBlockInfo"`
 	FactoryMoveInfo struct {
 		MovementCurve []string `json:"_movementCurve"`
 	} `json:"_factoryMoveInfo"`
 	FactoryWaterInfo struct {
 		MovementCurve     []string `json:"_movementCurve"`
-		MinDistanceToSnap int      `json:"_minDistanceToSnap"`
+		MinDistanceToSnap float64  `json:"_minDistanceToSnap"`
 	} `json:"_factoryWaterInfo"`
 	FactoryWaterStaticInfo struct {
-		BaseStep          int `json:"_baseStep"`
-		BaseScale         int `json:"_baseScale"`
-		MinRandomPos      int `json:"_minRandomPos"`
-		MaxRandomPos      int `json:"_maxRandomPos"`
-		MinDistanceToSnap int `json:"_minDistanceToSnap"`
+		BaseStep          float64 `json:"_baseStep"`
+		BaseScale         float64 `json:"_baseScale"`
+		MinRandomPos      float64 `json:"_minRandomPos"`
+		MaxRandomPos      float64 `json:"_maxRandomPos"`
+		MinDistanceToSnap float64 `json:"_minDistanceToSnap"`
 	} `json:"_factoryWaterStaticInfo"`
 	GeneralData struct {
-		ForwardStep            int    `json:"_forwardStep"`
-		ResourceFinishRoadPath string `json:"_resourceFinishRoadPath"`
+		ForwardStep            float64 `json:"_forwardStep"`
+		ResourceFinishRoadPath string  `json:"_resourceFinishRoadPath"`
 	} `json:"_generalData"`
 	BlocksCreateInfo struct {
 		BlocksAmount int `json:"_blocksAmount"`
@@ -201,10 +201,10 @@ type GameConfig struct {
 			OnExit            []string `json:"_onExit"`
 			PossibleMoveItems []struct {
 				ID                    string  `json:"_id"`
-				SpawnDelayRandomMin   int     `json:"_spawnDelayRandomMin"`
-				SpawnDelayRandomMax   int     `json:"_spawnDelayRandomMax"`
-				MoveTimeMin           int     `json:"_moveTimeMin"`
-				MoveTimeMax           int     `json:"_moveTimeMax"`
+				SpawnDelayRandomMin   float64 `json:"_spawnDelayRandomMin"`
+				SpawnDelayRandomMax   float64 `json:"_spawnDelayRandomMax"`
+				MoveTimeMin           float64 `json:"_moveTimeMin"`
+				MoveTimeMax           float64 `json:"_moveTimeMax"`
 				ReverseMovementChance float64 `json:"_reverseMovementChance"`
 				ResourceMovementPath  string  `json:"_resourceMovementPath"`
 			} `json:"_possibleMoveItems,omitempty"`
@@ -219,30 +219,30 @@ type GameConfig struct {
 			AmountMax            int      `json:"_amountMax"`
 			Chance               float64  `json:"_chance"`
 			OnExit               []string `json:"_onExit"`
-			SizeRandomMin        int      `json:"_sizeRandomMin,omitempty"`
-			SizeRandomMax        int      `json:"_sizeRandomMax,omitempty"`
+			SizeRandomMin        float64  `json:"_sizeRandomMin,omitempty"`
+			SizeRandomMax        float64  `json:"_sizeRandomMax,omitempty"`
 			BlockAmountRandomMin int      `json:"_blockAmountRandomMin,omitempty"`
 			BlockAmountRandomMax int      `json:"_blockAmountRandomMax,omitempty"`
 			ResourceBlockPath    string   `json:"_resourceBlockPath,omitempty"`
 			PossibleMoveItems    []struct {
 				ID                    string  `json:"_id"`
-				SpawnDelayRandomMin   int     `json:"_spawnDelayRandomMin"`
-				SpawnDelayRandomMax   int     `json:"_spawnDelayRandomMax"`
-				MoveTimeMin           int     `json:"_moveTimeMin"`
-				MoveTimeMax           int     `json:"_moveTimeMax"`
+				SpawnDelayRandomMin   float64 `json:"_spawnDelayRandomMin"`
+				SpawnDelayRandomMax   float64 `json:"_spawnDelayRandomMax"`
+				MoveTimeMin           float64 `json:"_moveTimeMin"`
+				MoveTimeMax           float64 `json:"_moveTimeMax"`
 				ReverseMovementChance float64 `json:"_reverseMovementChance"`
 				ResourceMovementPath  string  `json:"_resourceMovementPath"`
 			} `json:"_possibleMoveItems,omitempty"`
 		} `json:"_blocksExitInfo"`
 	} `json:"_blocksCreateInfo"`
 	LazyInfo struct {
-		MaxBlocksAllowed     int `json:"_maxBlocksAllowed"`
-		DistanceToRemoveItem int `json:"_distanceToRemoveItem"`
+		MaxBlocksAllowed     int     `json:"_maxBlocksAllowed"`
+		DistanceToRemoveItem float64 `json:"_distanceToRemoveItem"`
 	} `json:"_lazyInfo"`
 	CameraInfo struct {
 		CamMoveCurve    []string `json:"_camMoveCurve"`
-		CamLoseTime     int      `json:"_camLoseTime"`
-		CamLoseDistance int      `json:"_camLoseDistance"`
+		CamLoseTime     float64  `json:"_camLoseTime"`
+		CamLoseDistance float64  `json:"_camLoseDistance"`
 	} `json:"_cameraInfo"`
 }
 
