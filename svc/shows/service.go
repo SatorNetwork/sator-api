@@ -879,6 +879,22 @@ func castToSeason(source repository.Season) Season {
 	}
 }
 
+func (s *Service) GetSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) (*Season, error) {
+	season, err := s.sr.GetSeasonByID(ctx, seasonID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get season by id")
+	}
+	if showID != season.ShowID {
+		return nil, errors.Errorf("season with such ID found in another show")
+	}
+
+	return &Season{
+		ID:           season.ID,
+		SeasonNumber: season.SeasonNumber,
+		ShowID:       season.ShowID,
+	}, nil
+}
+
 // DeleteSeasonByID ...
 func (s *Service) DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error {
 	if err := s.sr.DeleteSeasonByID(ctx, repository.DeleteSeasonByIDParams{

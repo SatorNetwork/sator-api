@@ -34,6 +34,7 @@ type (
 		GetShowCategories      endpoint.Endpoint
 
 		AddSeason        endpoint.Endpoint
+		GetSeasonByID    endpoint.Endpoint
 		DeleteSeasonByID endpoint.Endpoint
 
 		AddEpisode               endpoint.Endpoint
@@ -74,6 +75,7 @@ type (
 		GetShowCategoriesWithDisabled(ctx context.Context, limit, offset int32) ([]ShowCategory, error)
 
 		AddSeason(ctx context.Context, ss Season) (Season, error)
+		GetSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) (*Season, error)
 		DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error
 
 		AddEpisode(ctx context.Context, ep Episode) (Episode, error)
@@ -187,6 +189,11 @@ type (
 		SeasonNumber int32  `json:"season_number"`
 	}
 
+	GetSeasonByIDRequest struct {
+		SeasonID string `json:"season_id" validate:"required,uuid"`
+		ShowID   string `json:"show_id" validate:"required,uuid"`
+	}
+
 	// DeleteSeasonByIDRequest struct
 	DeleteSeasonByIDRequest struct {
 		SeasonID string `json:"season_id" validate:"required,uuid"`
@@ -273,6 +280,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowCategories:      MakeGetShowCategoriesEndpoint(s, validateFunc),
 
 		AddSeason:        MakeAddSeasonEndpoint(s, validateFunc),
+		GetSeasonByID:    MakeGetSeasonByIDEndpoint(s, validateFunc),
 		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
 
 		AddEpisode:               MakeAddEpisodeEndpoint(s, validateFunc),
@@ -839,6 +847,36 @@ func MakeAddSeasonEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoin
 		}
 
 		return resp, nil
+	}
+}
+
+func MakeGetSeasonByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetSeasonByIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+		}
+
+		seasonID, err := uuid.Parse(req.SeasonID)
+		if err != nil {
+			return nil, fmt.Errorf("%w season id: %v", ErrInvalidParameter, err)
+		}
+
+		season, err := s.GetSeasonByID(ctx, showID, seasonID)
+		if err != nil {
+			return nil, err
+		}
+
+		return season, nil
 	}
 }
 
