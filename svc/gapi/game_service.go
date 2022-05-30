@@ -457,12 +457,7 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 	gameConfig := &GameConfig{}
 	confName := fmt.Sprintf("complexity_%s", getGameLevelName(complexity))
 	if err := s.conf.GetJSON(ctx, confName, gameConfig); err != nil {
-		log.Printf("failed to get game config %s: %v", confName, err)
-		res, err := s.GetDefaultGameConfig()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get game config: %w", err)
-		}
-		gameConfig = res
+		return nil, fmt.Errorf("failed to get game config %s: %w", confName, err)
 	}
 
 	if err := repo.StartGame(ctx, repository.StartGameParams{
@@ -547,16 +542,6 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 	}
 
 	return tx.Commit()
-}
-
-// GetDefaultGameConfig ...
-func (s *Service) GetDefaultGameConfig() (*GameConfig, error) {
-	cnf := &GameConfig{}
-	if err := json.Unmarshal([]byte(defaultGameConfig), cnf); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal game config: %w", err)
-	}
-
-	return cnf, nil
 }
 
 // GetMinAmountToClaim ...
