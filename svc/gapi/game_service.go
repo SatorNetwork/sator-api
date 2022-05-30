@@ -425,7 +425,10 @@ func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr stri
 
 // StartGame ...
 func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error) {
+	log.Printf("start game: %s, %d, %t", uid, complexity, isTraining)
+
 	if left, _ := s.GetElectricityLeft(ctx, uid); left < 1 {
+		log.Printf("not enough electricity to start game")
 		return nil, ErrNotEnoughElectricity
 	}
 
@@ -483,6 +486,8 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 // FinishGame ...
 // TODO: rewards calculation
 func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksDone int32) error {
+	log.Printf("finish game: %s, %d, %d", uid, result, blocksDone)
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -516,6 +521,8 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 			return fmt.Errorf("failed to calculate electricity cost: %w", err)
 		}
 	}
+
+	log.Printf("rewards amount: %f, electricity cost: %f", rewardsAmount, electricityCost)
 
 	if err := repo.FinishGame(ctx, repository.FinishGameParams{
 		ID:               currentGame.ID,
@@ -558,15 +565,18 @@ func (s *Service) GetMinAmountToClaim() float64 {
 func (s *Service) GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error) {
 	deposit, err := s.gameRepo.GetUserRewardsDeposited(ctx, uid)
 	if err != nil {
+		log.Printf("failed to get user rewards deposited: %v", err)
 		return 0, nil
 	}
 
 	withdrawn, err := s.gameRepo.GetUserRewardsWithdrawn(ctx, uid)
 	if err != nil {
+		log.Printf("failed to get user rewards withdrawn: %v", err)
 		return deposit, nil
 	}
 
 	result, _ := big.NewFloat(0).Sub(big.NewFloat(deposit), big.NewFloat(withdrawn)).Float64()
+	log.Printf("user %s rewards: %f", uid, result)
 	return result, nil
 }
 
@@ -622,18 +632,26 @@ func castDbNftInfoToNFTInfo(dbNftInfo *repository.UnityGameNft) *NFTInfo {
 func (s *Service) GetElectricityLeft(ctx context.Context, uid uuid.UUID) (int32, error) {
 	electricityMax, err := s.conf.GetInt32(ctx, "electricity_max_games")
 	if err != nil {
+		log.Printf("failed to get electricity max: %v", err)
 		electricityMax = s.electricityMaxGames
 	}
+
+	log.Printf("electricity max: %d", electricityMax)
 
 	player, err := s.gameRepo.GetPlayer(ctx, uid)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get player: %w", err)
 	}
 
+	log.Printf("player: %+v", player)
+	log.Printf("electricityMax - player.ElectricitySpent: %v", electricityMax-player.ElectricitySpent)
+
 	return electricityMax - player.ElectricitySpent, nil
 }
 
 func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
+	log.Printf("pay for electricity")
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -647,6 +665,8 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 		return fmt.Errorf("failed to get player: %w", err)
 	}
 
+	log.Printf("PayForElectricity: player: %+v", player)
+
 	if player.ElectricityCosts <= 0 {
 		return nil
 	}
@@ -656,11 +676,15 @@ func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {
 		return fmt.Errorf("failed to get user balance: %w", err)
 	}
 
+	log.Printf("PayForElectricity: balance: %+v", balance)
+
 	if balance < player.ElectricityCosts {
+		log.Printf("PayForElectricity: not enough balance; balance: %v, need to pay: %v", balance, player.ElectricityCosts)
 		return fmt.Errorf("not enough funds to pay for electricity")
 	}
 
 	if err := repo.ResetElectricityForPlayer(ctx, uid); err != nil {
+		log.Printf("failed to reset electricity for player: %v", err)
 		return fmt.Errorf("failed to reset electricity for player: %w", err)
 	}
 
