@@ -89,7 +89,7 @@ func getNextNFTType(nftType NFTType) NFTType {
 // Predefined game levels
 const (
 	GameLevelEasy int32 = iota + 1
-	GameLevelMedium
+	GameLevelNormal
 	GameLevelHard
 )
 
@@ -97,8 +97,8 @@ func getGameLevelName(level int32) string {
 	switch level {
 	case GameLevelEasy:
 		return "easy"
-	case GameLevelMedium:
-		return "medium"
+	case GameLevelNormal:
+		return "normal"
 	case GameLevelHard:
 		return "hard"
 	default:
@@ -112,7 +112,7 @@ func getNFTLevelByType(t NFTType) int32 {
 	case NFTTypeCommon:
 		return GameLevelEasy
 	case NFTTypeRare:
-		return GameLevelMedium
+		return GameLevelNormal
 	case NFTTypeSuperRare, NFTTypeEpic, NFTTypeLegend:
 		return GameLevelHard
 	default:

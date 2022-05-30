@@ -455,7 +455,9 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 	}
 
 	gameConfig := &GameConfig{}
-	if err := s.conf.GetJSON(ctx, fmt.Sprintf("complexity_%s", getGameLevelName(complexity)), gameConfig); err != nil {
+	confName := fmt.Sprintf("complexity_%s", getGameLevelName(complexity))
+	if err := s.conf.GetJSON(ctx, confName, gameConfig); err != nil {
+		log.Printf("failed to get game config %s: %v", confName, err)
 		res, err := s.GetDefaultGameConfig()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get game config: %w", err)
