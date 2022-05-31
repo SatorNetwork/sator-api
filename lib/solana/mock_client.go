@@ -395,6 +395,21 @@ func (mr *MockInterfaceMockRecorder) IssueAsset(arg0, arg1, arg2, arg3, arg4, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssueAsset", reflect.TypeOf((*MockInterface)(nil).IssueAsset), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
+// NeedToRetry mocks base method.
+func (m *MockInterface) NeedToRetry(arg0 context.Context, arg1 int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NeedToRetry", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NeedToRetry indicates an expected call of NeedToRetry.
+func (mr *MockInterfaceMockRecorder) NeedToRetry(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NeedToRetry", reflect.TypeOf((*MockInterface)(nil).NeedToRetry), arg0, arg1)
+}
+
 // NewAccount mocks base method.
 func (m *MockInterface) NewAccount() types.Account {
 	m.ctrl.T.Helper()

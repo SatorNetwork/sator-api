@@ -17,6 +17,7 @@ type Interface interface {
 	GetConfirmedTransaction(ctx context.Context, txhash string) (GetConfirmedTransactionResponse, error)
 	GetConfirmedTransactionForAccount(ctx context.Context, assetAddr string, rootPubKey string, txhash string) (ConfirmedTransactionResponse, error)
 	IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error)
+	NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error)
 	GetBlockHeight(ctx context.Context) (uint64, error)
 	NewAccount() types.Account
 	PublicKeyFromString(pk string) common.PublicKey

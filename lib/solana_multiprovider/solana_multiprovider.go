@@ -150,6 +150,28 @@ func (s *solanaMultiProvider) IsTransactionSuccessful(ctx context.Context, txhas
 	return false, ErrSolanaProvidersDontRespond
 }
 
+func (s *solanaMultiProvider) NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
+	for _, p := range s.providers {
+		resp, err := p.NeedToRetry(ctx, latestValidBlockHeight)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return false, ErrSolanaProvidersDontRespond
+}
+
 func (s *solanaMultiProvider) GetBlockHeight(ctx context.Context) (uint64, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetBlockHeight(ctx)

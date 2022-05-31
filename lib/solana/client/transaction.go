@@ -128,6 +128,15 @@ func (c *Client) IsTransactionSuccessful(ctx context.Context, txhash string) (bo
 	return false, nil
 }
 
+func (s *Client) NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
+	cbh, err := s.GetBlockHeight(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "can't get block height")
+	}
+
+	return int64(cbh) > latestValidBlockHeight, nil
+}
+
 func (c *Client) GetBlockHeight(ctx context.Context) (uint64, error) {
 	res := struct {
 		GeneralResponse

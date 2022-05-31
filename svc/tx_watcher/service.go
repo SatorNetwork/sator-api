@@ -53,6 +53,7 @@ type (
 	solanaClient interface {
 		SendConstructedTransaction(ctx context.Context, tx types.Transaction) (string, error)
 		IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error)
+		NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error)
 		GetBlockHeight(ctx context.Context) (uint64, error)
 		TransactionDeserialize(tx []byte) (types.Transaction, error)
 		SerializeTxMessage(message types.Message) ([]byte, error)
@@ -237,7 +238,7 @@ func (s *Service) processTx(ctx context.Context, tx txw_repository.WatcherTransa
 		return nil
 	}
 
-	needToRetry, err := s.needToRetry(ctx, tx)
+	needToRetry, err := s.sc.NeedToRetry(ctx, tx.LatestValidBlockHeight)
 	if err != nil {
 		return errors.Wrap(err, "can't check if tx need to be retried")
 	}
@@ -253,11 +254,11 @@ func (s *Service) processTx(ctx context.Context, tx txw_repository.WatcherTransa
 	return nil
 }
 
-func (s *Service) needToRetry(ctx context.Context, tx txw_repository.WatcherTransaction) (bool, error) {
+func (s *Service) needToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
 	cbh, err := s.sc.GetBlockHeight(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "can't get block height")
 	}
 
-	return int64(cbh) > tx.LatestValidBlockHeight, nil
+	return int64(cbh) > latestValidBlockHeight, nil
 }
