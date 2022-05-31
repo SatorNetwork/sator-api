@@ -17,17 +17,18 @@ const addElectricityToPlayer = `-- name: AddElectricityToPlayer :exec
 UPDATE unity_game_players 
 SET 
     electricity_costs = electricity_costs + $1,
-    electricity_spent = electricity_spent + 1 
-WHERE user_id = $2
+    electricity_spent = electricity_spent + $2 
+WHERE user_id = $3
 `
 
 type AddElectricityToPlayerParams struct {
 	ElectricityCosts float64   `json:"electricity_costs"`
+	ElectricitySpent int32     `json:"electricity_spent"`
 	UserID           uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) AddElectricityToPlayer(ctx context.Context, arg AddElectricityToPlayerParams) error {
-	_, err := q.exec(ctx, q.addElectricityToPlayerStmt, addElectricityToPlayer, arg.ElectricityCosts, arg.UserID)
+	_, err := q.exec(ctx, q.addElectricityToPlayerStmt, addElectricityToPlayer, arg.ElectricityCosts, arg.ElectricitySpent, arg.UserID)
 	return err
 }
 

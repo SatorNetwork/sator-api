@@ -494,6 +494,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 	}
 
 	var rewardsAmount, electricityCost float64
+	var electricitySpent int32
 	if !currentGame.IsTraining {
 		nft, err := repo.GetUserNFT(ctx, repository.GetUserNFTParams{
 			UserID: uid,
@@ -512,6 +513,8 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 		if err != nil {
 			return fmt.Errorf("failed to calculate electricity cost: %w", err)
 		}
+
+		electricitySpent = 1
 	}
 
 	log.Printf("rewards amount: %f, electricity cost: %f", rewardsAmount, electricityCost)
@@ -536,6 +539,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 	if err := repo.AddElectricityToPlayer(ctx, repository.AddElectricityToPlayerParams{
 		UserID:           uid,
 		ElectricityCosts: electricityCost,
+		ElectricitySpent: electricitySpent,
 	}); err != nil {
 		return fmt.Errorf("failed to take the energy of player: %w", err)
 	}

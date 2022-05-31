@@ -18,8 +18,8 @@ UPDATE unity_game_players SET selected_nft_id = $1 WHERE user_id = $2;
 UPDATE unity_game_players 
 SET 
     electricity_costs = electricity_costs + $1,
-    electricity_spent = electricity_spent + 1 
-WHERE user_id = $2;
+    electricity_spent = electricity_spent + $2 
+WHERE user_id = $3;
 
 -- name: ResetElectricityForPlayer :exec
 UPDATE unity_game_players SET electricity_costs = 0, electricity_spent = 0 WHERE user_id = $1;
