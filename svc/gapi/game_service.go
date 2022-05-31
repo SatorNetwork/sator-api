@@ -514,7 +514,9 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 			return fmt.Errorf("failed to calculate electricity cost: %w", err)
 		}
 
-		electricitySpent = 1
+		if electricityCost > 0 {
+			electricitySpent = 1
+		}
 	}
 
 	log.Printf("rewards amount: %f, electricity cost: %f", rewardsAmount, electricityCost)
