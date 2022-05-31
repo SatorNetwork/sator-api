@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"time"
 
@@ -135,23 +134,16 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 		}
 	}
 
-	energy := player.EnergyPoints
-	if player.EnergyPoints < energyFull && time.Since(player.EnergyRefilledAt) > energyRecoveryPeriod {
-		hoursSince := time.Since(player.EnergyRefilledAt).Hours()
-		recoveryHours := energyRecoveryPeriod.Hours()
-		recoveryPoints := math.Floor(hoursSince / recoveryHours)
-		if recoveryPoints > 0 {
-			energy = player.EnergyPoints + int32(recoveryPoints)
-			if energy > energyFull {
-				energy = energyFull
-			}
-			if err := s.gameRepo.RefillEnergyOfPlayer(ctx, repository.RefillEnergyOfPlayerParams{
-				UserID:           uid,
-				EnergyPoints:     energy,
-				EnergyRefilledAt: time.Now(),
-			}); err != nil {
-				return nil, err
-			}
+	recoveryEnergy := recoveryEnergyPoints(player, energyFull, energyRecoveryPeriod)
+	energy := recoveryEnergy + player.EnergyPoints
+
+	if recoveryEnergy > 0 {
+		if err := s.gameRepo.RefillEnergyOfPlayer(ctx, repository.RefillEnergyOfPlayerParams{
+			UserID:           uid,
+			EnergyPoints:     energy,
+			EnergyRefilledAt: time.Now(),
+		}); err != nil {
+			return nil, err
 		}
 	}
 
