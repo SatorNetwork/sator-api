@@ -108,7 +108,7 @@ func Test_generateNFT(t *testing.T) {
 			name: "should return NFTInfo when dropChances is valid",
 			args: args{
 				nftPack: repository.UnityGameNftPack{
-					DropChances: []byte(`{"common":55.3,"rare":28.2,"super_rare":12.8,"epic":3.5,"legend":0.2}`),
+					DropChances: []byte(`{"common":55.3,"legend":0.0}`),
 				},
 			},
 			want: &NFTInfo{
