@@ -96,6 +96,21 @@ func (mr *MockInterfaceMockRecorder) CreateAsset(arg0, arg1, arg2, arg3 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAsset", reflect.TypeOf((*MockInterface)(nil).CreateAsset), arg0, arg1, arg2, arg3)
 }
 
+// DeriveATAPublicKey mocks base method.
+func (m *MockInterface) DeriveATAPublicKey(arg0 context.Context, arg1, arg2 common.PublicKey) (common.PublicKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeriveATAPublicKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].(common.PublicKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeriveATAPublicKey indicates an expected call of DeriveATAPublicKey.
+func (mr *MockInterfaceMockRecorder) DeriveATAPublicKey(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeriveATAPublicKey", reflect.TypeOf((*MockInterface)(nil).DeriveATAPublicKey), arg0, arg1, arg2)
+}
+
 // DeserializeTxMessage mocks base method.
 func (m *MockInterface) DeserializeTxMessage(arg0 []byte) (types.Message, error) {
 	m.ctrl.T.Helper()
@@ -549,7 +564,7 @@ func (mr *MockInterfaceMockRecorder) SerializeTxMessage(arg0 interface{}) *gomoc
 }
 
 // Stake mocks base method.
-func (m *MockInterface) Stake(arg0 context.Context, arg1, arg2 types.Account, arg3, arg4 common.PublicKey, arg5 int64, arg6 uint64) (string, error) {
+func (m *MockInterface) Stake(arg0 context.Context, arg1, arg2 types.Account, arg3, arg4 common.PublicKey, arg5 int64, arg6 float64) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stake", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(string)

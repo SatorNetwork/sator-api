@@ -85,7 +85,7 @@ func MakeDeleteNFTPackEndpoint(s nftPacksService) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return nil, nil
+		return true, nil
 	}
 }
 
@@ -120,7 +120,7 @@ func MakeSoftDeleteNFTPackEndpoint(s nftPacksService) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return nil, nil
+		return true, nil
 	}
 }
 

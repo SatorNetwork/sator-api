@@ -81,19 +81,19 @@ func (c *Client) InitializeStakePool(ctx context.Context, feePayer, issuer types
 }
 
 // Stake ...
-func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error) {
+func (c *Client) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error) {
 	sysvarClock := c.PublicKeyFromString(c.config.SysvarClock)
 	sysvarRent := c.PublicKeyFromString(c.config.SysvarRent)
 	systemProgram := c.PublicKeyFromString(c.config.SystemProgram)
 	splToken := c.PublicKeyFromString(c.config.SplToken)
 	programID := c.PublicKeyFromString(c.config.StakeProgramID)
 
-	amount = amount * c.mltpl
+	amountUint := uint64(amount * float64(c.mltpl))
 
 	data, err := borsh.Serialize(StakeInput{
 		Number:   1,
 		Duration: duration,
-		Amount:   amount,
+		Amount:   amountUint,
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not serialize data with borsh: %w", err)

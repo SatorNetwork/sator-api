@@ -10,7 +10,7 @@ $$ LANGUAGE 'plpgsql';
 -- +migrate StatementEnd
 CREATE TABLE IF NOT EXISTS unity_game_players (
     user_id uuid PRIMARY KEY,
-    energy_points INT NOT NULL DEFAULT 1,
+    energy_points INT NOT NULL DEFAULT 0,
     energy_refilled_at TIMESTAMP NOT NULL DEFAULT now(),
     selected_nft_id VARCHAR DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,

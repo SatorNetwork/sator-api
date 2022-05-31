@@ -172,6 +172,10 @@ type Config struct {
 	SkipDeviceIDCheck              bool
 	EnableResourceIntensiveQueries bool
 	FirebaseCredsInJSON            string
+	UnityVersion                   string
+
+	UnityGameFeeCollectorAddress string
+	UnityGameTokenPoolPrivateKey string
 }
 
 var buildTag string
@@ -303,6 +307,10 @@ func ConfigFromEnv() *Config {
 		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
 
 		FirebaseCredsInJSON: env.MustString("FIREBASE_CREDS_IN_JSON"),
+
+		UnityVersion:                 env.MustString("UNITY_VERSION"),
+		UnityGameTokenPoolPrivateKey: env.MustString("UNITY_GAME_TOKEN_POOL_PRIVATE_KEY"),
+		UnityGameFeeCollectorAddress: env.MustString("UNITY_GAME_FEE_COLLECTOR_ADDRESS"),
 	}
 }
 
@@ -532,6 +540,14 @@ func (a *app) Run() {
 			feePayer,
 			tokenHolder,
 		)
+	}
+
+	var unityGameTokenHolder types.Account
+	{
+		unityGameTokenHolder, err = types.AccountFromBase58(a.cfg.UnityGameTokenPoolPrivateKey)
+		if err != nil {
+			log.Fatalf("can't get unity game token holder account from bytes")
+		}
 	}
 
 	var walletSvcClient *walletClient.Client
@@ -914,18 +930,24 @@ func (a *app) Run() {
 			log.Fatalf("can't prepare unity game repository: %v", err)
 		}
 
+		settingsService := gapi.NewSettingsService(unityGameRepository)
+
 		r.Mount("/gapi", gapi.MakeHTTPHandler(
 			gapi.MakeEndpoints(
 				gapi.NewService(
 					unityGameRepository,
+					settingsService,
+					gapi.NewSolanaClient(
+						solanaClient,
+						walletSvcClient,
+						a.cfg.SolanaAssetAddr,
+						a.cfg.UnityGameFeeCollectorAddress,
+						feePayer,
+						unityGameTokenHolder,
+					),
 					gapi.WithDB(db),
-					gapi.WithEnergyFull(3),
-					gapi.WithEnergyRecoveryPeriod(time.Minute*10),
-					gapi.WithMinRewardsToClaim(100),
-					gapi.WithMinVersion("1.0.0"),
 				),
-				gapi.NewSettingsService(unityGameRepository),
-				walletSvcClient,
+				settingsService,
 				jwtMdw,
 			),
 			gapi.MakeNFTPacksEndpoints(
@@ -933,6 +955,7 @@ func (a *app) Run() {
 				jwtMdw,
 			),
 			logger,
+			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
 		))
 	}
 

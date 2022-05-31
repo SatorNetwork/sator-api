@@ -668,7 +668,7 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		}
 	}
 
-	if err := s.firebaseSvc.SendNewShowNotification(ctx, sh.Title, sh.ID); err != nil {
+	if err := s.firebaseSvc.SendNewShowNotification(ctx, show.Title, show.ID); err != nil {
 		return Show{}, errors.Wrap(err, "can't send new show notification")
 	}
 
@@ -877,6 +877,22 @@ func castToSeason(source repository.Season) Season {
 		SeasonNumber: source.SeasonNumber,
 		ShowID:       source.ShowID,
 	}
+}
+
+func (s *Service) GetSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) (*Season, error) {
+	season, err := s.sr.GetSeasonByID(ctx, seasonID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get season by id")
+	}
+	if showID != season.ShowID {
+		return nil, errors.Errorf("season with such ID found in another show")
+	}
+
+	return &Season{
+		ID:           season.ID,
+		SeasonNumber: season.SeasonNumber,
+		ShowID:       season.ShowID,
+	}, nil
 }
 
 // DeleteSeasonByID ...

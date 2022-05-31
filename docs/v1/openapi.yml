@@ -464,6 +464,18 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/InGameNFTInfoArray"
+              craft_step_amount:
+                type: number
+                description: Craft step amount
+              electricity_left:
+                type: number
+                description: Electricity left
+              electricity_cost:
+                type: number
+                description: Electricity cost
+              electricity_max_games:
+                type: number
+                description: Electricity max games
 
     NFTPack:
       description: NFT Packs.
@@ -3270,6 +3282,50 @@ paths:
           $ref: "#/components/responses/DefaultError"
 
   /shows/{show_id}/seasons/{season_id}:
+    get:
+      tags:
+        - "Shows"
+        - "Seasons"
+      summary: Used for get season by id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: show_id
+          in: path
+          description: Show ID.
+          required: true
+          schema:
+            type: string
+        - name: season_id
+          in: path
+          description: Seasons ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns season data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  show_id:
+                    type: string
+                    example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                  season_number:
+                    type: number
+                    example: 13
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
     delete:
       tags:
         - "Shows"
@@ -6049,7 +6105,7 @@ paths:
               properties:
                 result:
                   type: number
-                  description: "Result game. Available values: 1 - win, 2 - lose."
+                  description: "Result game. Available values: 1 - win, 0 - lose."
                 steps_taken:
                   type: number
                   description: "Number of steps taken."
@@ -6332,6 +6388,32 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/pay-for-electricity:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Pay for electricity.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pay for electricity result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  electricity_left:
+                    type: number
+                    example: 18
+                    description: "Amount of electricity left."
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

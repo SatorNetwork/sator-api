@@ -74,6 +74,10 @@ func (c *Client) CheckPrivateKey(addr string, pk []byte) error {
 	return nil
 }
 
+func (c *Client) DeriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
+	return c.deriveATAPublicKey(ctx, recipientPK, assetPK)
+}
+
 func (c *Client) deriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
 	// Check if the given account is already ATA or not
 	recipientAddr := recipientPK.ToBase58()

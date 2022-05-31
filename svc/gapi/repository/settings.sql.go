@@ -20,7 +20,7 @@ type AddSettingParams struct {
 	Key         string                     `json:"key"`
 	Name        string                     `json:"name"`
 	ValueType   UnityGameSettingsValueType `json:"value_type"`
-	Value       []byte                     `json:"value"`
+	Value       string                     `json:"value"`
 	Description sql.NullString             `json:"description"`
 }
 
@@ -111,7 +111,7 @@ RETURNING key, name, value_type, value, description
 
 type UpdateSettingParams struct {
 	Key   string `json:"key"`
-	Value []byte `json:"value"`
+	Value string `json:"value"`
 }
 
 func (q *Queries) UpdateSetting(ctx context.Context, arg UpdateSettingParams) (UnityGameSetting, error) {

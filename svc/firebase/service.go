@@ -168,7 +168,7 @@ func (s *Service) SendNewShowNotification(ctx context.Context, showTitle string,
 func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, episodeID uuid.UUID) error {
 	err := s.SendNotificationToTopic(
 		ctx,
-		NewShowTopicName,
+		NewEpisodeTopicName,
 		fmt.Sprintf("New Arrival"),
 		fmt.Sprintf("%s: %s is now on Sator.", showTitle, episodeTitle),
 		map[string]string{

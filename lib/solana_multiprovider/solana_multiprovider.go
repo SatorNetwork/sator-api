@@ -62,6 +62,28 @@ func (s *solanaMultiProvider) IssueAsset(ctx context.Context, feePayer, issuer, 
 	return "", ErrSolanaProvidersDontRespond
 }
 
+func (s *solanaMultiProvider) DeriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error) {
+	for _, p := range s.providers {
+		resp, err := p.DeriveATAPublicKey(ctx, recipientPK, assetPK)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return common.PublicKey{}, ErrSolanaProvidersDontRespond
+}
+
 func (s *solanaMultiProvider) CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.CreateAccountWithATA(ctx, assetAddr, initAccAddr, feePayer)
@@ -684,7 +706,7 @@ func (s *solanaMultiProvider) InitializeStakePool(ctx context.Context, feePayer,
 	return "", types.Account{}, ErrSolanaProvidersDontRespond
 }
 
-func (s *solanaMultiProvider) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error) {
+func (s *solanaMultiProvider) Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.Stake(ctx, feePayer, userWallet, pool, asset, duration, amount)
 		if err != nil {
