@@ -22,6 +22,12 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.cleanTransactionsStmt, err = db.PrepareContext(ctx, cleanTransactions); err != nil {
+		return nil, fmt.Errorf("error preparing query CleanTransactions: %w", err)
+	}
+	if q.getAllTransactionsStmt, err = db.PrepareContext(ctx, getAllTransactions); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllTransactions: %w", err)
+	}
 	if q.getTransactionsByStatusStmt, err = db.PrepareContext(ctx, getTransactionsByStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTransactionsByStatus: %w", err)
 	}
@@ -39,6 +45,16 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.cleanTransactionsStmt != nil {
+		if cerr := q.cleanTransactionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing cleanTransactionsStmt: %w", cerr)
+		}
+	}
+	if q.getAllTransactionsStmt != nil {
+		if cerr := q.getAllTransactionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllTransactionsStmt: %w", cerr)
+		}
+	}
 	if q.getTransactionsByStatusStmt != nil {
 		if cerr := q.getTransactionsByStatusStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getTransactionsByStatusStmt: %w", cerr)
@@ -98,6 +114,8 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                          DBTX
 	tx                          *sql.Tx
+	cleanTransactionsStmt       *sql.Stmt
+	getAllTransactionsStmt      *sql.Stmt
 	getTransactionsByStatusStmt *sql.Stmt
 	registerTransactionStmt     *sql.Stmt
 	updateTransactionStmt       *sql.Stmt
@@ -108,6 +126,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                          tx,
 		tx:                          tx,
+		cleanTransactionsStmt:       q.cleanTransactionsStmt,
+		getAllTransactionsStmt:      q.getAllTransactionsStmt,
 		getTransactionsByStatusStmt: q.getTransactionsByStatusStmt,
 		registerTransactionStmt:     q.registerTransactionStmt,
 		updateTransactionStmt:       q.updateTransactionStmt,

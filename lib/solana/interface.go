@@ -54,6 +54,8 @@ type Interface interface {
 	) (string, error)
 	TransactionDeserialize(tx []byte) (types.Transaction, error)
 	SerializeTxMessage(message types.Message) ([]byte, error)
+	DeserializeTxMessage(message []byte) (types.Message, error)
+	NewTransaction(param types.NewTransactionParam) (types.Transaction, error)
 	GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error)
 	GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*ArweaveNFTMetadata, error)
 	GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)

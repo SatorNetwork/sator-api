@@ -247,6 +247,14 @@ func (c *Client) SerializeTxMessage(message types.Message) ([]byte, error) {
 	return message.Serialize()
 }
 
+func (c *Client) DeserializeTxMessage(message []byte) (types.Message, error) {
+	return types.MessageDeserialize(message)
+}
+
+func (c *Client) NewTransaction(param types.NewTransactionParam) (types.Transaction, error) {
+	return types.NewTransaction(param)
+}
+
 func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, allowFallbackToDefaultFee bool, defaultFee uint64) (uint64, error) {
 	fee, err := c.solana.GetFeeForMessage(ctx, message)
 	if err != nil && strings.Contains(err.Error(), `{"code":-32601,"message":"Method not found"}`) && allowFallbackToDefaultFee {

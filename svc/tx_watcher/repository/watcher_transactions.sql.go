@@ -10,6 +10,51 @@ import (
 	"github.com/lib/pq"
 )
 
+const cleanTransactions = `-- name: CleanTransactions :exec
+DELETE FROM watcher_transactions
+`
+
+func (q *Queries) CleanTransactions(ctx context.Context) error {
+	_, err := q.exec(ctx, q.cleanTransactionsStmt, cleanTransactions)
+	return err
+}
+
+const getAllTransactions = `-- name: GetAllTransactions :many
+SELECT id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at FROM watcher_transactions
+`
+
+func (q *Queries) GetAllTransactions(ctx context.Context) ([]WatcherTransaction, error) {
+	rows, err := q.query(ctx, q.getAllTransactionsStmt, getAllTransactions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WatcherTransaction
+	for rows.Next() {
+		var i WatcherTransaction
+		if err := rows.Scan(
+			&i.ID,
+			&i.SerializedMessage,
+			&i.LatestValidBlockHeight,
+			pq.Array(&i.AccountAliases),
+			&i.TxHash,
+			&i.Status,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTransactionsByStatus = `-- name: GetTransactionsByStatus :many
 SELECT id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at FROM watcher_transactions
 WHERE status = $1

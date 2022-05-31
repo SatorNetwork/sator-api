@@ -530,6 +530,28 @@ func (s *solanaMultiProvider) SerializeTxMessage(message types.Message) ([]byte,
 	return nil, ErrSolanaProvidersDontRespond
 }
 
+func (s *solanaMultiProvider) DeserializeTxMessage(message []byte) (types.Message, error) {
+	for _, p := range s.providers {
+		resp, err := p.DeserializeTxMessage(message)
+		if err != nil && tryNextProvider(err) {
+			continue
+		}
+		return resp, err
+	}
+	return types.Message{}, ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) NewTransaction(param types.NewTransactionParam) (types.Transaction, error) {
+	for _, p := range s.providers {
+		resp, err := p.NewTransaction(param)
+		if err != nil && tryNextProvider(err) {
+			continue
+		}
+		return resp, err
+	}
+	return types.Transaction{}, ErrSolanaProvidersDontRespond
+}
+
 func (s *solanaMultiProvider) GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error) {
 	for _, p := range s.providers {
 		resp, err := p.GetLatestBlockhash(ctx)

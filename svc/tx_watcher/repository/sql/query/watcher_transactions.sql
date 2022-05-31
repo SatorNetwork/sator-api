@@ -18,6 +18,9 @@ VALUES (
 SELECT * FROM watcher_transactions
 WHERE status = @status;
 
+-- name: GetAllTransactions :many
+SELECT * FROM watcher_transactions;
+
 -- name: UpdateTransactionStatus :exec
 UPDATE watcher_transactions
 SET status = @status
@@ -28,3 +31,6 @@ UPDATE watcher_transactions
 SET latest_valid_block_height = @latest_valid_block_height,
     tx_hash = @tx_hash
 WHERE id = @id;
+
+-- name: CleanTransactions :exec
+DELETE FROM watcher_transactions;

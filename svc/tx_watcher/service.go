@@ -54,6 +54,10 @@ type (
 		SendConstructedTransaction(ctx context.Context, tx types.Transaction) (string, error)
 		IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error)
 		GetBlockHeight(ctx context.Context) (uint64, error)
+		TransactionDeserialize(tx []byte) (types.Transaction, error)
+		SerializeTxMessage(message types.Message) ([]byte, error)
+		DeserializeTxMessage(message []byte) (types.Message, error)
+		NewTransaction(param types.NewTransactionParam) (types.Transaction, error)
 		GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error)
 	}
 )
@@ -71,7 +75,39 @@ func NewService(
 		tokenHolder: tokenHolder,
 	}
 
+	s.start()
+
 	return s
+}
+
+func (s *Service) start() {
+	c := cron.New()
+	_, err := c.AddFunc("0-59/10 * * * *", func() {
+		if err := s.ResendSolanaDBTXsIfNeeded(context.Background()); err != nil {
+			log.Printf("can't resend solana DBTXs: %v", err)
+		}
+	})
+	if err != nil {
+		log.Printf("can't register resend-solana-dbtxs-if-needed callback")
+	}
+
+	c.Start()
+}
+
+func (s *Service) ResendSolanaDBTXsIfNeeded(ctx context.Context) error {
+	txs, err := s.txwr.GetTransactionsByStatus(ctx, registeredStatus.String())
+	if err != nil {
+		return errors.Wrap(err, "can't get transactions by status")
+	}
+
+	for _, tx := range txs {
+		if err := s.processTx(ctx, tx); err != nil {
+			log.Printf("can't process tx: %v\n", err)
+			continue
+		}
+	}
+
+	return nil
 }
 
 func (s *Service) accountByAlias(a tx_watcher_alias.Alias) (types.Account, error) {
@@ -101,7 +137,7 @@ func (s *Service) accountsByAliases(aliases []tx_watcher_alias.Alias) ([]types.A
 }
 
 func (s *Service) SendAndWatchTx(ctx context.Context, message types.Message, accountAliases []tx_watcher_alias.Alias) (string, error) {
-	serializedMessage, err := message.Serialize()
+	serializedMessage, err := s.sc.SerializeTxMessage(message)
 	if err != nil {
 		return "", errors.Wrap(err, "can't serialize message")
 	}
@@ -149,7 +185,7 @@ type sendSolanaTxResp struct {
 }
 
 func (s *Service) sendSolanaTx(ctx context.Context, serializedMessage string, accountAliases []string) (*sendSolanaTxResp, error) {
-	message, err := types.MessageDeserialize([]byte(serializedMessage))
+	message, err := s.sc.DeserializeTxMessage([]byte(serializedMessage))
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize message")
 	}
@@ -167,7 +203,7 @@ func (s *Service) sendSolanaTx(ctx context.Context, serializedMessage string, ac
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get accounts by aliases")
 	}
-	solanaTx, err := types.NewTransaction(types.NewTransactionParam{
+	solanaTx, err := s.sc.NewTransaction(types.NewTransactionParam{
 		Message: message,
 		Signers: accounts,
 	})
@@ -183,36 +219,6 @@ func (s *Service) sendSolanaTx(ctx context.Context, serializedMessage string, ac
 		TxHash:                 txHash,
 		LatestValidBlockHeight: latestBlockhash.LatestValidBlockHeight,
 	}, nil
-}
-
-func (s *Service) start() {
-	c := cron.New()
-	_, err := c.AddFunc("@hourly", func() {
-		if err := s.resendSolanaDBTXsIfNeeded(context.Background()); err != nil {
-			log.Printf("can't resend solana DBTXs: %v", err)
-		}
-	})
-	if err != nil {
-		log.Printf("can't register resend-solana-dbtxs-if-needed callback")
-	}
-
-	c.Start()
-}
-
-func (s *Service) resendSolanaDBTXsIfNeeded(ctx context.Context) error {
-	txs, err := s.txwr.GetTransactionsByStatus(ctx, registeredStatus.String())
-	if err != nil {
-		return errors.Wrap(err, "can't get transactions by status")
-	}
-
-	for _, tx := range txs {
-		if err := s.processTx(ctx, tx); err != nil {
-			log.Printf("can't process tx: %v\n", err)
-			continue
-		}
-	}
-
-	return nil
 }
 
 func (s *Service) processTx(ctx context.Context, tx txw_repository.WatcherTransaction) error {

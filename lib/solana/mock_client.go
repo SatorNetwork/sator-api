@@ -96,6 +96,21 @@ func (mr *MockInterfaceMockRecorder) CreateAsset(arg0, arg1, arg2, arg3 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAsset", reflect.TypeOf((*MockInterface)(nil).CreateAsset), arg0, arg1, arg2, arg3)
 }
 
+// DeserializeTxMessage mocks base method.
+func (m *MockInterface) DeserializeTxMessage(arg0 []byte) (types.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeserializeTxMessage", arg0)
+	ret0, _ := ret[0].(types.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeserializeTxMessage indicates an expected call of DeserializeTxMessage.
+func (mr *MockInterfaceMockRecorder) DeserializeTxMessage(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeserializeTxMessage", reflect.TypeOf((*MockInterface)(nil).DeserializeTxMessage), arg0)
+}
+
 // Endpoint mocks base method.
 func (m *MockInterface) Endpoint() string {
 	m.ctrl.T.Helper()
@@ -392,6 +407,21 @@ func (m *MockInterface) NewAccount() types.Account {
 func (mr *MockInterfaceMockRecorder) NewAccount() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccount", reflect.TypeOf((*MockInterface)(nil).NewAccount))
+}
+
+// NewTransaction mocks base method.
+func (m *MockInterface) NewTransaction(arg0 types.NewTransactionParam) (types.Transaction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewTransaction", arg0)
+	ret0, _ := ret[0].(types.Transaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewTransaction indicates an expected call of NewTransaction.
+func (mr *MockInterfaceMockRecorder) NewTransaction(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTransaction", reflect.TypeOf((*MockInterface)(nil).NewTransaction), arg0)
 }
 
 // PrepareSendAssetsTx mocks base method.
