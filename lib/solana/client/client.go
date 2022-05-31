@@ -134,6 +134,10 @@ func (c *Client) RequestAirdrop(ctx context.Context, pubKey string, amount float
 	return txhash, nil
 }
 
+func (c *Client) SendConstructedTransaction(ctx context.Context, tx types.Transaction) (string, error) {
+	return c.solana.SendTransaction(ctx, tx)
+}
+
 // SendTransaction sends transaction ans returns transaction hash
 func (c *Client) SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error) {
 	res, err := c.solana.GetRecentBlockhash(ctx)
@@ -247,6 +251,14 @@ func (c *Client) SerializeTxMessage(message types.Message) ([]byte, error) {
 	return message.Serialize()
 }
 
+func (c *Client) DeserializeTxMessage(message []byte) (types.Message, error) {
+	return types.MessageDeserialize(message)
+}
+
+func (c *Client) NewTransaction(param types.NewTransactionParam) (types.Transaction, error) {
+	return types.NewTransaction(param)
+}
+
 func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, allowFallbackToDefaultFee bool, defaultFee uint64) (uint64, error) {
 	fee, err := c.solana.GetFeeForMessage(ctx, message)
 	if err != nil && strings.Contains(err.Error(), `{"code":-32601,"message":"Method not found"}`) && allowFallbackToDefaultFee {
@@ -260,4 +272,8 @@ func (c *Client) GetFeeForMessage(ctx context.Context, message types.Message, al
 	}
 
 	return *fee, nil
+}
+
+func (c *Client) GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error) {
+	return c.solana.GetLatestBlockhash(ctx)
 }

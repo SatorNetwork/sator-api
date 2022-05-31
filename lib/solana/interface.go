@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/portto/solana-go-sdk/common"
+	"github.com/portto/solana-go-sdk/rpc"
 	"github.com/portto/solana-go-sdk/types"
 )
 
@@ -16,12 +17,16 @@ type Interface interface {
 	DeriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error)
 	GetConfirmedTransaction(ctx context.Context, txhash string) (GetConfirmedTransactionResponse, error)
 	GetConfirmedTransactionForAccount(ctx context.Context, assetAddr string, rootPubKey string, txhash string) (ConfirmedTransactionResponse, error)
+	IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error)
+	NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error)
+	GetBlockHeight(ctx context.Context) (uint64, error)
 	NewAccount() types.Account
 	PublicKeyFromString(pk string) common.PublicKey
 	AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 	CheckPrivateKey(addr string, pk []byte) error
 	FeeAccumulatorAddress() string
 	RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error)
+	SendConstructedTransaction(ctx context.Context, tx types.Transaction) (string, error)
 	SendTransaction(ctx context.Context, feePayer, signer types.Account, instructions ...types.Instruction) (string, error)
 	GetAccountBalanceSOL(ctx context.Context, accPubKey string) (float64, error)
 	GetTokenAccountBalance(ctx context.Context, accPubKey string) (float64, error)
@@ -51,6 +56,9 @@ type Interface interface {
 	) (string, error)
 	TransactionDeserialize(tx []byte) (types.Transaction, error)
 	SerializeTxMessage(message types.Message) ([]byte, error)
+	DeserializeTxMessage(message []byte) (types.Message, error)
+	NewTransaction(param types.NewTransactionParam) (types.Transaction, error)
+	GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error)
 	GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*ArweaveNFTMetadata, error)
 	GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)
 	GetNFTMetadata(mintAddr string) (*ArweaveNFTMetadata, error)
