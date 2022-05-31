@@ -103,7 +103,7 @@ type (
 		GetTransactionsWithAutoDerive(ctx context.Context, assetAddr, accountAddr string) ([]lib_solana.ConfirmedTransactionResponse, error)
 
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
-		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
+		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error)
 		Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 	}
 
@@ -798,7 +798,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 
 	for i := 0; i < 5; i++ {
 		newCtx, cancel := context.WithCancel(context.Background())
-		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, uint64(amount)); err != nil {
+		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, amount); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {
@@ -1170,4 +1170,25 @@ func (s *Service) GetSAOBalance(ctx context.Context, userID uuid.UUID) (float64,
 	}
 
 	return s.sc.GetTokenAccountBalanceWithAutoDerive(ctx, s.satorAssetSolanaAddr, sa.PublicKey)
+}
+
+func (s *Service) GetUserSolanaAccount(ctx context.Context, userID uuid.UUID) ([]byte, error) {
+	w, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not get wallet by user id %s: %w", userID, err)
+	}
+
+	acc, err := s.wr.GetSolanaAccountByID(ctx, w.SolanaAccountID)
+	if err != nil {
+		if db.IsNotFoundError(err) {
+			return nil, fmt.Errorf("%w solana account for this wallet", ErrNotFound)
+		}
+
+		return nil, fmt.Errorf("could not get solana account for this wallet: %w", err)
+	}
+
+	return acc.PrivateKey, nil
 }

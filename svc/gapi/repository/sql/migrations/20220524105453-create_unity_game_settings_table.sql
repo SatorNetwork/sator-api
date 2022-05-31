@@ -18,3 +18,4 @@ CREATE TABLE IF NOT EXISTS unity_game_settings (
 
 -- +migrate Down
 DROP TABLE IF EXISTS unity_game_settings;
+DROP TYPE IF EXISTS unity_game_settings_value_type;

@@ -6,6 +6,7 @@ replace github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompat
 
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1
+	firebase.google.com/go v3.13.0+incompatible
 	github.com/SatorNetwork/gopuzzlegame v0.0.0-20220429113459-e0ae698bfb8a
 	github.com/anytypeio/go-slip10 v0.0.0-20200330114100-25f30c832993
 	github.com/awa/go-iap v1.3.16
@@ -13,7 +14,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dmitrymomot/go-env v0.1.1
 	github.com/dmitrymomot/go-signature v0.0.0-20190805202920-725320ef06d3
-	github.com/dmitrymomot/random v0.0.0-20190806074213-235e86f90ac3
+	github.com/dmitrymomot/random v1.0.6
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
 	github.com/ethereum/go-ethereum v1.10.12
 	github.com/go-chi/chi v4.1.1+incompatible
@@ -22,7 +23,7 @@ require (
 	github.com/go-playground/universal-translator v0.17.0
 	github.com/go-playground/validator/v10 v10.6.1
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/golang/mock v1.5.0
+	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
@@ -47,20 +48,28 @@ require (
 	github.com/zeebo/errs v1.2.2
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9
+	golang.org/x/text v0.3.7
+	google.golang.org/api v0.59.0
 	syreclabs.com/go/faker v1.2.3
 )
 
 require (
+	cloud.google.com/go v0.97.0 // indirect
+	cloud.google.com/go/firestore v1.6.1 // indirect
+	cloud.google.com/go/storage v1.10.0 // indirect
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/go-logfmt/logfmt v0.5.0 // indirect
+	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/nats-io/jwt v0.3.2 // indirect
@@ -71,12 +80,15 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
+	go.opencensus.io v0.23.0 // indirect
 	goji.io v2.0.2+incompatible // indirect
+	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1 // indirect
 	golang.org/x/sys v0.0.0-20211109184856-51b60fd695b3 // indirect
-	golang.org/x/text v0.3.6 // indirect
-	google.golang.org/genproto v0.0.0-20210607140030-00d4fb20b1ae // indirect
-	google.golang.org/grpc v1.38.0 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto v0.0.0-20211028162531-8db9c33dc351 // indirect
+	google.golang.org/grpc v1.40.0 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect

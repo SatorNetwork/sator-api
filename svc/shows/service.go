@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
@@ -35,6 +36,7 @@ type (
 		ac           authClient
 		sentTipsFunc sentTipsFunction
 		nc           nftClient
+		firebaseSvc  firebaseService
 		tipsPercent  float64
 	}
 
@@ -191,13 +193,27 @@ type (
 		DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID) (bool, error)
 	}
 
+	firebaseService interface {
+		SendNewShowNotification(ctx context.Context, showTitle string, showID uuid.UUID) error
+		SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, episodeID uuid.UUID) error
+	}
+
 	// Simple function
 	sentTipsFunction func(ctx context.Context, uid, recipientID uuid.UUID, amount float64, cfg *lib_solana.SendAssetsConfig, info string) error
 )
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation.
-func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac authClient, sentTipsFunc sentTipsFunction, nc nftClient, tipsPercent float64) *Service {
+func NewService(
+	sr showsRepository,
+	chc challengesClient,
+	pc profileClient,
+	ac authClient,
+	sentTipsFunc sentTipsFunction,
+	nc nftClient,
+	firebaseSvc firebaseService,
+	tipsPercent float64,
+) *Service {
 	if sr == nil {
 		log.Fatalln("shows repository is not set")
 	}
@@ -217,7 +233,16 @@ func NewService(sr showsRepository, chc challengesClient, pc profileClient, ac a
 		log.Fatalln("nft client is not set")
 	}
 
-	return &Service{sr: sr, chc: chc, pc: pc, ac: ac, sentTipsFunc: sentTipsFunc, nc: nc, tipsPercent: tipsPercent}
+	return &Service{
+		sr:           sr,
+		chc:          chc,
+		pc:           pc,
+		ac:           ac,
+		sentTipsFunc: sentTipsFunc,
+		nc:           nc,
+		tipsPercent:  tipsPercent,
+		firebaseSvc:  firebaseSvc,
+	}
 }
 
 // GetShows returns shows.
@@ -643,6 +668,10 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 		}
 	}
 
+	if err := s.firebaseSvc.SendNewShowNotification(ctx, show.Title, show.ID); err != nil {
+		return Show{}, errors.Wrap(err, "can't send new show notification")
+	}
+
 	return s.GetShowByID(ctx, show.ID)
 }
 
@@ -755,6 +784,15 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
 	}
 
+	show, err := s.sr.GetShowByID(ctx, ep.ShowID)
+	if err != nil {
+		return Episode{}, errors.Wrap(err, "can't get show by id")
+	}
+
+	if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, show.Title, ep.Title, show.ID, episode.ID); err != nil {
+		return Episode{}, errors.Wrap(err, "can't send new show notification")
+	}
+
 	// return castToEpisode(episode, episodeByID.SeasonNumber), nil
 	return castRowToEpisode(episodeByID), nil
 }
@@ -839,6 +877,22 @@ func castToSeason(source repository.Season) Season {
 		SeasonNumber: source.SeasonNumber,
 		ShowID:       source.ShowID,
 	}
+}
+
+func (s *Service) GetSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) (*Season, error) {
+	season, err := s.sr.GetSeasonByID(ctx, seasonID)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get season by id")
+	}
+	if showID != season.ShowID {
+		return nil, errors.Errorf("season with such ID found in another show")
+	}
+
+	return &Season{
+		ID:           season.ID,
+		SeasonNumber: season.SeasonNumber,
+		ShowID:       season.ShowID,
+	}, nil
 }
 
 // DeleteSeasonByID ...

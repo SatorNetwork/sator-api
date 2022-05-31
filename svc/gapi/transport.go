@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
 	"github.com/go-chi/chi"
@@ -21,7 +23,7 @@ type (
 )
 
 // MakeHTTPHandler ...
-func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
+func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints, log logger, encodeResponse httptransport.EncodeResponseFunc) http.Handler {
 	r := chi.NewRouter()
 
 	options := []httptransport.ServerOption{
@@ -31,97 +33,183 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	}
 
 	r.Get("/get-status", httptransport.NewServer(
-		e.GetStatus,
+		gameEndpoints.GetStatus,
 		decodeGetStatusRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/get-nft-packs", httptransport.NewServer(
-		e.GetNFTPacks,
+		gameEndpoints.GetNFTPacks,
 		decodeGetNFTPacksRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/buy-nft-pack", httptransport.NewServer(
-		e.BuyNFTPack,
+		gameEndpoints.BuyNFTPack,
 		decodeBuyNFTPackRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/craft-nft", httptransport.NewServer(
-		e.CraftNFT,
+		gameEndpoints.CraftNFT,
 		decodeCraftNFTRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/select-nft", httptransport.NewServer(
-		e.SelectNFT,
+		gameEndpoints.SelectNFT,
 		decodeSelectNFTRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/start-game", httptransport.NewServer(
-		e.StartGame,
+		gameEndpoints.StartGame,
 		decodeStartGameRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/finish-game", httptransport.NewServer(
-		e.FinishGame,
+		gameEndpoints.FinishGame,
 		decodeFinishGameRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Post("/claim-rewards", httptransport.NewServer(
-		e.ClaimRewards,
+		gameEndpoints.ClaimRewards,
 		decodeClaimRewardsRequest,
-		customEncodeResponse,
+		encodeResponse,
 		options...,
 	).ServeHTTP)
 
+	r.Post("/pay-for-electricity", httptransport.NewServer(
+		gameEndpoints.PayForElectricity,
+		decodePayForElectricityRequest,
+		encodeResponse,
+		options...,
+	).ServeHTTP)
+
+	// Settings
+
 	r.Get("/settings", httptransport.NewServer(
-		e.GetSettings,
+		gameEndpoints.GetSettings,
 		decodeGetSettingsRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Get("/settings/value-types", httptransport.NewServer(
-		e.GetSettingsValueTypes,
+		gameEndpoints.GetSettingsValueTypes,
 		decodeGetSettingsValueTypesRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
+	r.Get("/settings/{key}", httptransport.NewServer(
+		gameEndpoints.GetSettingsByKey,
+		decodeGetSettingsByKeyRequest,
+		encodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/settings", httptransport.NewServer(
-		e.AddSetting,
+		gameEndpoints.AddSetting,
 		decodeAddSettingRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Put("/settings/{key}", httptransport.NewServer(
-		e.UpdateSetting,
+		gameEndpoints.UpdateSetting,
 		decodeUpdateSettingRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
 	r.Delete("/settings/{key}", httptransport.NewServer(
-		e.DeleteSetting,
+		gameEndpoints.DeleteSetting,
 		decodeDeleteSettingRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
+	// NFT packs
+	r.Get("/nft-packs", httptransport.NewServer(
+		nftPackEndpoints.GetNFTPacksListEndpoint,
+		decodeGetNFTPacksRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Post("/nft-packs", httptransport.NewServer(
+		nftPackEndpoints.AddNFTPackEndpoint,
+		decodeAddNFTPackRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Put("/nft-packs/{id}", httptransport.NewServer(
+		nftPackEndpoints.UpdateNFTPackEndpoint,
+		decodeUpdateNFTPackRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/nft-packs/{id}", httptransport.NewServer(
+		nftPackEndpoints.DeleteNFTPackEndpoint,
+		decodeDeleteNFTPackRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Delete("/nft-packs/{id}/soft", httptransport.NewServer(
+		nftPackEndpoints.SoftDeleteNFTPackEndpoint,
+		decodeSoftDeleteNFTPackRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
+}
+
+// returns http error code by error type
+func codeAndMessageFrom(err error) (int, interface{}) {
+	if errors.Is(err, ErrCouldNotVerifySignature) {
+		log.Printf("could not verify signature: %v", err)
+		return http.StatusBadRequest, http.StatusText(http.StatusBadRequest)
+	}
+
+	if errors.Is(err, ErrNotAllNftsToCraftWereFound) ||
+		errors.Is(err, ErrNotEnoughNFTsToCraft) ||
+		errors.Is(err, ErrNFTsToCraftHaveDifferentTypes) ||
+		errors.Is(err, ErrNFTTypeLegendCannotBeCrafted) {
+		return http.StatusBadRequest, err.Error()
+	}
+
+	return httpencoder.CodeAndMessageFrom(err)
+}
+
+func EncodeResponseWithSignature(uv string) httptransport.EncodeResponseFunc {
+	return func(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+		timestamp := time.Now().Unix()
+		tokenString := ctx.Value(jwtkit.JWTTokenContextKey).(string)
+		signingKey := fmt.Sprintf("%s%d%s", uv, timestamp, tokenString[len(tokenString)-3:])
+
+		signature, err := SignResponse([]byte(signingKey), response)
+		if err == nil && signature != "" {
+			w.Header().Set("X-Signature", signature)
+			w.Header().Set("X-Timestamp", fmt.Sprintf("%d", timestamp))
+			w.Header().Set("X-Key", signingKey)
+		}
+
+		return httpencoder.EncodeResponse(ctx, w, response)
+	}
 }
 
 func decodeGetStatusRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
@@ -186,6 +274,10 @@ func decodeClaimRewardsRequest(ctx context.Context, r *http.Request) (interface{
 	return req, nil
 }
 
+func decodePayForElectricityRequest(_ context.Context, _ *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
 func decodeGetSettingsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
 }
@@ -218,26 +310,34 @@ func decodeDeleteSettingRequest(ctx context.Context, r *http.Request) (interface
 	return chi.URLParam(r, "key"), nil
 }
 
-// returns http error code by error type
-func codeAndMessageFrom(err error) (int, interface{}) {
-	if errors.Is(err, ErrCouldNotVerifySignature) {
-		log.Printf("could not verify signature: %v", err)
-		return http.StatusBadRequest, http.StatusText(http.StatusBadRequest)
+func decodeAddNFTPackRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req AddNFTPackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
 	}
 
-	if errors.Is(err, ErrNotAllNftsToCraftWereFound) {
-		return http.StatusBadRequest, err.Error()
-	}
-
-	return httpencoder.CodeAndMessageFrom(err)
+	return req, nil
 }
 
-// customEncodeResponse extends the default EncodeResponse to sign the response
-func customEncodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	signature, err := SignResponse([]byte("secret"), response)
-	if err == nil && signature != "" {
-		w.Header().Set("Signature", signature)
+func decodeUpdateNFTPackRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req UpdateNFTPackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
 	}
 
-	return httpencoder.EncodeResponse(ctx, w, response)
+	req.ID = chi.URLParam(r, "id")
+
+	return req, nil
+}
+
+func decodeDeleteNFTPackRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return chi.URLParam(r, "id"), nil
+}
+
+func decodeSoftDeleteNFTPackRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return chi.URLParam(r, "id"), nil
+}
+
+func decodeGetSettingsByKeyRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return chi.URLParam(r, "key"), nil
 }

@@ -7,6 +7,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -14,22 +15,31 @@ import (
 const finishGame = `-- name: FinishGame :exec
 UPDATE unity_game_results SET
     blocks_done = $1,
+    result = $2,
+    electricity_costs = $3,
     finished_at = now()
-WHERE id = $2
+WHERE id = $4
 `
 
 type FinishGameParams struct {
-	BlocksDone int32     `json:"blocks_done"`
-	ID         uuid.UUID `json:"id"`
+	BlocksDone       int32         `json:"blocks_done"`
+	Result           sql.NullInt32 `json:"result"`
+	ElectricityCosts float64       `json:"electricity_costs"`
+	ID               uuid.UUID     `json:"id"`
 }
 
 func (q *Queries) FinishGame(ctx context.Context, arg FinishGameParams) error {
-	_, err := q.exec(ctx, q.finishGameStmt, finishGame, arg.BlocksDone, arg.ID)
+	_, err := q.exec(ctx, q.finishGameStmt, finishGame,
+		arg.BlocksDone,
+		arg.Result,
+		arg.ElectricityCosts,
+		arg.ID,
+	)
 	return err
 }
 
 const getCurrentGame = `-- name: GetCurrentGame :one
-SELECT id, user_id, nft_id, complexity, is_training, blocks_done, finished_at, updated_at, created_at FROM unity_game_results 
+SELECT id, user_id, nft_id, complexity, is_training, blocks_done, finished_at, updated_at, created_at, result, electricity_costs FROM unity_game_results 
 WHERE user_id = $1 AND finished_at IS NULL 
 ORDER BY created_at DESC LIMIT 1
 `
@@ -47,6 +57,8 @@ func (q *Queries) GetCurrentGame(ctx context.Context, userID uuid.UUID) (UnityGa
 		&i.FinishedAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Result,
+		&i.ElectricityCosts,
 	)
 	return i, err
 }

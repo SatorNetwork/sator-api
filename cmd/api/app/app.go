@@ -169,6 +169,11 @@ type Config struct {
 	NftMarketplaceServerPort       int
 	SkipDeviceIDCheck              bool
 	EnableResourceIntensiveQueries bool
+	FirebaseCredsInJSON            string
+	UnityVersion                   string
+
+	UnityGameFeeCollectorAddress string
+	UnityGameTokenPoolPrivateKey string
 }
 
 var buildTag string
@@ -298,6 +303,12 @@ func ConfigFromEnv() *Config {
 		NftMarketplaceServerPort: env.MustInt("NFT_MARKETPLACE_SERVER_PORT"),
 
 		EnableResourceIntensiveQueries: env.GetBool("ENABLE_RESOURCE_INTENSIVE_QUERIES", false),
+
+		FirebaseCredsInJSON: env.MustString("FIREBASE_CREDS_IN_JSON"),
+
+		UnityVersion:                 env.MustString("UNITY_VERSION"),
+		UnityGameTokenPoolPrivateKey: env.MustString("UNITY_GAME_TOKEN_POOL_PRIVATE_KEY"),
+		UnityGameFeeCollectorAddress: env.MustString("UNITY_GAME_FEE_COLLECTOR_ADDRESS"),
 	}
 }
 
@@ -514,6 +525,14 @@ func (a *app) Run() {
 		}
 	}
 
+	var unityGameTokenHolder types.Account
+	{
+		unityGameTokenHolder, err = types.AccountFromBase58(a.cfg.UnityGameTokenPoolPrivateKey)
+		if err != nil {
+			log.Fatalf("can't get unity game token holder account from bytes")
+		}
+	}
+
 	var walletSvcClient *walletClient.Client
 	// Wallet service
 	{
@@ -665,6 +684,31 @@ func (a *app) Run() {
 		nftClient = nftC.New(nftService)
 	}
 
+	// Firebase service
+	var firebaseSvc *firebase_svc.Service
+	{
+		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare firebase repository: %v", err)
+		}
+
+		if a.cfg.FirebaseCredsInJSON == "" {
+			log.Fatal("firebase JSON creds is not set")
+		}
+
+		firebaseSvc, err = firebase_svc.NewService(
+			firebaseRepository,
+			[]byte(a.cfg.FirebaseCredsInJSON),
+		)
+		if err != nil {
+			log.Fatalf("can't create firebase service: %v\n", err)
+		}
+		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
+			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	// Shows service
 	{
 		// Show repo
@@ -698,7 +742,16 @@ func (a *app) Run() {
 			logger,
 		))
 
-		showsService := shows.NewService(showRepo, challengeSvcClient, profileSvc, authClient, walletSvcClient.P2PTransfer, nftClient, a.cfg.TipsPercent)
+		showsService := shows.NewService(
+			showRepo,
+			challengeSvcClient,
+			profileSvc,
+			authClient,
+			walletSvcClient.P2PTransfer,
+			nftClient,
+			firebaseSvc,
+			a.cfg.TipsPercent,
+		)
 		r.Mount("/shows", shows.MakeHTTPHandler(
 			shows.MakeEndpoints(showsService, jwtMdw),
 			logger,
@@ -831,22 +884,6 @@ func (a *app) Run() {
 		))
 	}
 
-	// Firebase service
-	{
-		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare firebase repository: %v", err)
-		}
-
-		firebaseSvc := firebase_svc.NewService(
-			firebaseRepository,
-		)
-		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
-			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
-			logger,
-		))
-	}
-
 	{
 		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
 		if err != nil {
@@ -875,21 +912,32 @@ func (a *app) Run() {
 			log.Fatalf("can't prepare unity game repository: %v", err)
 		}
 
+		settingsService := gapi.NewSettingsService(unityGameRepository)
+
 		r.Mount("/gapi", gapi.MakeHTTPHandler(
 			gapi.MakeEndpoints(
 				gapi.NewService(
 					unityGameRepository,
+					settingsService,
+					gapi.NewSolanaClient(
+						solanaClient,
+						walletSvcClient,
+						a.cfg.SolanaAssetAddr,
+						a.cfg.UnityGameFeeCollectorAddress,
+						feePayer,
+						unityGameTokenHolder,
+					),
 					gapi.WithDB(db),
-					gapi.WithEnergyFull(3),
-					gapi.WithEnergyRecoveryPeriod(time.Minute*10),
-					gapi.WithMinRewardsToClaim(100),
-					gapi.WithMinVersion("1.0.0"),
 				),
-				gapi.NewSettingsService(unityGameRepository),
-				walletSvcClient,
+				settingsService,
+				jwtMdw,
+			),
+			gapi.MakeNFTPacksEndpoints(
+				gapi.NewNFTPackService(unityGameRepository),
 				jwtMdw,
 			),
 			logger,
+			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
 		))
 	}
 

@@ -13,6 +13,7 @@ type Interface interface {
 	Endpoint() string
 	IssueAsset(ctx context.Context, feePayer, issuer, asset types.Account, dest common.PublicKey, amount float64) (string, error)
 	CreateAccountWithATA(ctx context.Context, assetAddr, initAccAddr string, feePayer types.Account) (string, error)
+	DeriveATAPublicKey(ctx context.Context, recipientPK, assetPK common.PublicKey) (common.PublicKey, error)
 	GetConfirmedTransaction(ctx context.Context, txhash string) (GetConfirmedTransactionResponse, error)
 	GetConfirmedTransactionForAccount(ctx context.Context, assetAddr string, rootPubKey string, txhash string) (ConfirmedTransactionResponse, error)
 	NewAccount() types.Account
@@ -54,7 +55,7 @@ type Interface interface {
 	GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)
 	GetNFTMetadata(mintAddr string) (*ArweaveNFTMetadata, error)
 	InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
-	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount uint64) (string, error)
+	Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error)
 	Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
 }
 

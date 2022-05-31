@@ -219,6 +219,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/{show_id}/seasons/{season_id}", httptransport.NewServer(
+		e.GetSeasonByID,
+		decodeGetEpisodeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Delete("/{show_id}/seasons/{season_id}", httptransport.NewServer(
 		e.DeleteSeasonByID,
 		decodeDeleteSeasonByIDRequest,
@@ -442,6 +449,23 @@ func decodeAddSeasonRequest(_ context.Context, r *http.Request) (interface{}, er
 	req.ShowID = showID
 
 	return req, nil
+}
+
+func decodeGetSeasonByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	showID := chi.URLParam(r, "show_id")
+	if showID == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	seasonID := chi.URLParam(r, "season_id")
+	if seasonID == "" {
+		return nil, fmt.Errorf("%w: missed season id", ErrInvalidParameter)
+	}
+
+	return GetSeasonByIDRequest{
+		ShowID:   showID,
+		SeasonID: seasonID,
+	}, nil
 }
 
 func decodeDeleteSeasonByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {

@@ -22,8 +22,20 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.disableNotificationStmt, err = db.PrepareContext(ctx, disableNotification); err != nil {
+		return nil, fmt.Errorf("error preparing query DisableNotification: %w", err)
+	}
+	if q.enableNotificationStmt, err = db.PrepareContext(ctx, enableNotification); err != nil {
+		return nil, fmt.Errorf("error preparing query EnableNotification: %w", err)
+	}
 	if q.getRegistrationTokenStmt, err = db.PrepareContext(ctx, getRegistrationToken); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRegistrationToken: %w", err)
+	}
+	if q.isNotificationDisabledStmt, err = db.PrepareContext(ctx, isNotificationDisabled); err != nil {
+		return nil, fmt.Errorf("error preparing query IsNotificationDisabled: %w", err)
+	}
+	if q.isNotificationEnabledStmt, err = db.PrepareContext(ctx, isNotificationEnabled); err != nil {
+		return nil, fmt.Errorf("error preparing query IsNotificationEnabled: %w", err)
 	}
 	if q.upsertRegistrationTokenStmt, err = db.PrepareContext(ctx, upsertRegistrationToken); err != nil {
 		return nil, fmt.Errorf("error preparing query UpsertRegistrationToken: %w", err)
@@ -33,9 +45,29 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.disableNotificationStmt != nil {
+		if cerr := q.disableNotificationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing disableNotificationStmt: %w", cerr)
+		}
+	}
+	if q.enableNotificationStmt != nil {
+		if cerr := q.enableNotificationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing enableNotificationStmt: %w", cerr)
+		}
+	}
 	if q.getRegistrationTokenStmt != nil {
 		if cerr := q.getRegistrationTokenStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getRegistrationTokenStmt: %w", cerr)
+		}
+	}
+	if q.isNotificationDisabledStmt != nil {
+		if cerr := q.isNotificationDisabledStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isNotificationDisabledStmt: %w", cerr)
+		}
+	}
+	if q.isNotificationEnabledStmt != nil {
+		if cerr := q.isNotificationEnabledStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isNotificationEnabledStmt: %w", cerr)
 		}
 	}
 	if q.upsertRegistrationTokenStmt != nil {
@@ -82,7 +114,11 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                          DBTX
 	tx                          *sql.Tx
+	disableNotificationStmt     *sql.Stmt
+	enableNotificationStmt      *sql.Stmt
 	getRegistrationTokenStmt    *sql.Stmt
+	isNotificationDisabledStmt  *sql.Stmt
+	isNotificationEnabledStmt   *sql.Stmt
 	upsertRegistrationTokenStmt *sql.Stmt
 }
 
@@ -90,7 +126,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                          tx,
 		tx:                          tx,
+		disableNotificationStmt:     q.disableNotificationStmt,
+		enableNotificationStmt:      q.enableNotificationStmt,
 		getRegistrationTokenStmt:    q.getRegistrationTokenStmt,
+		isNotificationDisabledStmt:  q.isNotificationDisabledStmt,
+		isNotificationEnabledStmt:   q.isNotificationEnabledStmt,
 		upsertRegistrationTokenStmt: q.upsertRegistrationTokenStmt,
 	}
 }
