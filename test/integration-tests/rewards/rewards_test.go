@@ -335,9 +335,6 @@ func TestClaimRewards_SuccessAfterRetry(t *testing.T) {
 		require.Equal(t, "registered", allTransactions[0].Status)
 	}
 
-	err = txWatcherSvc.ResendSolanaDBTXsIfNeeded(context.Background())
-	require.NoError(t, err)
-
 	{
 		err = txWatcherSvc.ResendSolanaDBTXsIfNeeded(context.Background())
 		require.NoError(t, err)
