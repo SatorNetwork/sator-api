@@ -95,6 +95,21 @@ func (mr *MockInterfaceMockRecorder) CreateAsset(arg0, arg1, arg2, arg3 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAsset", reflect.TypeOf((*MockInterface)(nil).CreateAsset), arg0, arg1, arg2, arg3)
 }
 
+// DeriveATAPublicKey mocks base method.
+func (m *MockInterface) DeriveATAPublicKey(arg0 context.Context, arg1, arg2 common.PublicKey) (common.PublicKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeriveATAPublicKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].(common.PublicKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeriveATAPublicKey indicates an expected call of DeriveATAPublicKey.
+func (mr *MockInterfaceMockRecorder) DeriveATAPublicKey(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeriveATAPublicKey", reflect.TypeOf((*MockInterface)(nil).DeriveATAPublicKey), arg0, arg1, arg2)
+}
+
 // Endpoint mocks base method.
 func (m *MockInterface) Endpoint() string {
 	m.ctrl.T.Helper()
