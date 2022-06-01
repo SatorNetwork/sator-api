@@ -144,12 +144,12 @@ func (s *Service) SendAndWatchTx(ctx context.Context, message types.Message, acc
 		return "", errors.Wrap(err, "can't serialize message")
 	}
 
-	resp, err := s.sendSolanaTx(ctx, string(serializedMessage), tx_watcher_alias.Aliases(accountAliases).ToStrings())
+	encodedMessage := base64.StdEncoding.EncodeToString(serializedMessage)
+	resp, err := s.sendSolanaTx(ctx, encodedMessage, tx_watcher_alias.Aliases(accountAliases).ToStrings())
 	if err != nil {
 		return "", err
 	}
 
-	encodedMessage := base64.StdEncoding.EncodeToString(serializedMessage)
 	_, err = s.txwr.RegisterTransaction(ctx, txw_repository.RegisterTransactionParams{
 		SerializedMessage:      encodedMessage,
 		LatestValidBlockHeight: int64(resp.LatestValidBlockHeight),
