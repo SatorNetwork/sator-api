@@ -2,6 +2,7 @@ package tx_watcher
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 
 	"github.com/pkg/errors"
@@ -148,8 +149,9 @@ func (s *Service) SendAndWatchTx(ctx context.Context, message types.Message, acc
 		return "", err
 	}
 
+	encodedMessage := base64.StdEncoding.EncodeToString(serializedMessage)
 	_, err = s.txwr.RegisterTransaction(ctx, txw_repository.RegisterTransactionParams{
-		SerializedMessage:      string(serializedMessage),
+		SerializedMessage:      encodedMessage,
 		LatestValidBlockHeight: int64(resp.LatestValidBlockHeight),
 		AccountAliases:         tx_watcher_alias.Aliases(accountAliases).ToStrings(),
 		TxHash:                 resp.TxHash,
@@ -186,7 +188,11 @@ type sendSolanaTxResp struct {
 }
 
 func (s *Service) sendSolanaTx(ctx context.Context, serializedMessage string, accountAliases []string) (*sendSolanaTxResp, error) {
-	message, err := s.sc.DeserializeTxMessage([]byte(serializedMessage))
+	decodedMessage, err := base64.StdEncoding.DecodeString(serializedMessage)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't base64 decode string")
+	}
+	message, err := s.sc.DeserializeTxMessage(decodedMessage)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize message")
 	}
