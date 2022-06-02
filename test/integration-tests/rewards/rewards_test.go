@@ -326,6 +326,14 @@ func TestClaimRewards_SuccessAfterRetry(t *testing.T) {
 	}
 
 	{
+		allTransactions, err := txWatcherRepository.GetAllTransactions(context.Background())
+		require.NoError(t, err)
+		require.Len(t, allTransactions, 1)
+		require.Equal(t, "registered", allTransactions[0].Status)
+		require.Equal(t, int32(0), allTransactions[0].Retries)
+	}
+
+	{
 		err = txWatcherSvc.ResendSolanaDBTXsIfNeeded(context.Background())
 		require.NoError(t, err)
 
@@ -333,6 +341,7 @@ func TestClaimRewards_SuccessAfterRetry(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, allTransactions, 1)
 		require.Equal(t, "registered", allTransactions[0].Status)
+		require.Equal(t, int32(1), allTransactions[0].Retries)
 	}
 
 	{
@@ -343,5 +352,6 @@ func TestClaimRewards_SuccessAfterRetry(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, allTransactions, 1)
 		require.Equal(t, "successful", allTransactions[0].Status)
+		require.Equal(t, int32(1), allTransactions[0].Retries)
 	}
 }

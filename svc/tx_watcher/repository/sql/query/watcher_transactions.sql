@@ -26,10 +26,11 @@ UPDATE watcher_transactions
 SET status = @status
 WHERE id = @id;
 
--- name: UpdateTransaction :exec
+-- name: RegisterTxRetry :exec
 UPDATE watcher_transactions
 SET latest_valid_block_height = @latest_valid_block_height,
-    tx_hash = @tx_hash
+    tx_hash = @tx_hash,
+    retries = retries + 1
 WHERE id = @id;
 
 -- name: CleanTransactions :exec

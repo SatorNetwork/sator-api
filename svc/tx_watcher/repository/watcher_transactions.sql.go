@@ -20,7 +20,7 @@ func (q *Queries) CleanTransactions(ctx context.Context) error {
 }
 
 const getAllTransactions = `-- name: GetAllTransactions :many
-SELECT id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at FROM watcher_transactions
+SELECT id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at, retries FROM watcher_transactions
 `
 
 func (q *Queries) GetAllTransactions(ctx context.Context) ([]WatcherTransaction, error) {
@@ -41,6 +41,7 @@ func (q *Queries) GetAllTransactions(ctx context.Context) ([]WatcherTransaction,
 			&i.Status,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Retries,
 		); err != nil {
 			return nil, err
 		}
@@ -56,7 +57,7 @@ func (q *Queries) GetAllTransactions(ctx context.Context) ([]WatcherTransaction,
 }
 
 const getTransactionsByStatus = `-- name: GetTransactionsByStatus :many
-SELECT id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at FROM watcher_transactions
+SELECT id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at, retries FROM watcher_transactions
 WHERE status = $1
 `
 
@@ -78,6 +79,7 @@ func (q *Queries) GetTransactionsByStatus(ctx context.Context, status string) ([
 			&i.Status,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Retries,
 		); err != nil {
 			return nil, err
 		}
@@ -106,7 +108,7 @@ VALUES (
     $3,
     $4,
     $5
-) RETURNING id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at
+) RETURNING id, serialized_message, latest_valid_block_height, account_aliases, tx_hash, status, updated_at, created_at, retries
 `
 
 type RegisterTransactionParams struct {
@@ -135,25 +137,27 @@ func (q *Queries) RegisterTransaction(ctx context.Context, arg RegisterTransacti
 		&i.Status,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Retries,
 	)
 	return i, err
 }
 
-const updateTransaction = `-- name: UpdateTransaction :exec
+const registerTxRetry = `-- name: RegisterTxRetry :exec
 UPDATE watcher_transactions
 SET latest_valid_block_height = $1,
-    tx_hash = $2
+    tx_hash = $2,
+    retries = retries + 1
 WHERE id = $3
 `
 
-type UpdateTransactionParams struct {
+type RegisterTxRetryParams struct {
 	LatestValidBlockHeight int64     `json:"latest_valid_block_height"`
 	TxHash                 string    `json:"tx_hash"`
 	ID                     uuid.UUID `json:"id"`
 }
 
-func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
-	_, err := q.exec(ctx, q.updateTransactionStmt, updateTransaction, arg.LatestValidBlockHeight, arg.TxHash, arg.ID)
+func (q *Queries) RegisterTxRetry(ctx context.Context, arg RegisterTxRetryParams) error {
+	_, err := q.exec(ctx, q.registerTxRetryStmt, registerTxRetry, arg.LatestValidBlockHeight, arg.TxHash, arg.ID)
 	return err
 }
 

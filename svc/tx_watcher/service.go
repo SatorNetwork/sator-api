@@ -47,7 +47,7 @@ type (
 	txwRepository interface {
 		GetTransactionsByStatus(ctx context.Context, status string) ([]txw_repository.WatcherTransaction, error)
 		RegisterTransaction(ctx context.Context, arg txw_repository.RegisterTransactionParams) (txw_repository.WatcherTransaction, error)
-		UpdateTransaction(ctx context.Context, arg txw_repository.UpdateTransactionParams) error
+		RegisterTxRetry(ctx context.Context, arg txw_repository.RegisterTxRetryParams) error
 		UpdateTransactionStatus(ctx context.Context, arg txw_repository.UpdateTransactionStatusParams) error
 	}
 
@@ -170,7 +170,7 @@ func (s *Service) resendSolanaDBTX(ctx context.Context, tx txw_repository.Watche
 		return err
 	}
 
-	err = s.txwr.UpdateTransaction(ctx, txw_repository.UpdateTransactionParams{
+	err = s.txwr.RegisterTxRetry(ctx, txw_repository.RegisterTxRetryParams{
 		ID:                     tx.ID,
 		LatestValidBlockHeight: int64(resp.LatestValidBlockHeight),
 		TxHash:                 resp.TxHash,
@@ -252,19 +252,15 @@ func (s *Service) processTx(ctx context.Context, tx txw_repository.WatcherTransa
 		return nil
 	}
 
+	const maxRetries = 1
+	if tx.Retries >= maxRetries {
+		return errors.Errorf("no more retries left, tx.Retries: %v, maxRetries: %v", tx.Retries, maxRetries)
+	}
+
 	err = s.resendSolanaDBTX(ctx, tx)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (s *Service) needToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
-	cbh, err := s.sc.GetBlockHeight(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "can't get block height")
-	}
-
-	return int64(cbh) > latestValidBlockHeight, nil
 }

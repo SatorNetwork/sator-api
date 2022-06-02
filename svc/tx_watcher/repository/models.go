@@ -18,4 +18,5 @@ type WatcherTransaction struct {
 	Status                 string       `json:"status"`
 	UpdatedAt              sql.NullTime `json:"updated_at"`
 	CreatedAt              time.Time    `json:"created_at"`
+	Retries                int32        `json:"retries"`
 }
