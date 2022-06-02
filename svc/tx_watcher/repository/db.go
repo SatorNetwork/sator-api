@@ -34,8 +34,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.registerTransactionStmt, err = db.PrepareContext(ctx, registerTransaction); err != nil {
 		return nil, fmt.Errorf("error preparing query RegisterTransaction: %w", err)
 	}
-	if q.updateTransactionStmt, err = db.PrepareContext(ctx, updateTransaction); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateTransaction: %w", err)
+	if q.registerTxRetryStmt, err = db.PrepareContext(ctx, registerTxRetry); err != nil {
+		return nil, fmt.Errorf("error preparing query RegisterTxRetry: %w", err)
 	}
 	if q.updateTransactionStatusStmt, err = db.PrepareContext(ctx, updateTransactionStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateTransactionStatus: %w", err)
@@ -65,9 +65,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing registerTransactionStmt: %w", cerr)
 		}
 	}
-	if q.updateTransactionStmt != nil {
-		if cerr := q.updateTransactionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateTransactionStmt: %w", cerr)
+	if q.registerTxRetryStmt != nil {
+		if cerr := q.registerTxRetryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing registerTxRetryStmt: %w", cerr)
 		}
 	}
 	if q.updateTransactionStatusStmt != nil {
@@ -118,7 +118,7 @@ type Queries struct {
 	getAllTransactionsStmt      *sql.Stmt
 	getTransactionsByStatusStmt *sql.Stmt
 	registerTransactionStmt     *sql.Stmt
-	updateTransactionStmt       *sql.Stmt
+	registerTxRetryStmt         *sql.Stmt
 	updateTransactionStatusStmt *sql.Stmt
 }
 
@@ -130,7 +130,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAllTransactionsStmt:      q.getAllTransactionsStmt,
 		getTransactionsByStatusStmt: q.getTransactionsByStatusStmt,
 		registerTransactionStmt:     q.registerTransactionStmt,
-		updateTransactionStmt:       q.updateTransactionStmt,
+		registerTxRetryStmt:         q.registerTxRetryStmt,
 		updateTransactionStatusStmt: q.updateTransactionStatusStmt,
 	}
 }
