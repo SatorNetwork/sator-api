@@ -116,16 +116,24 @@ func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalan
 }
 
 func (c *Client) IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error) {
-	ss, err := c.solana.GetSignatureStatus(ctx, txhash)
+	ss, err := c.solana.GetSignatureStatusWithConfig(ctx, txhash, rpc.GetSignatureStatusesConfig{
+		SearchTransactionHistory: true,
+	})
 	if err != nil {
-		return false, fmt.Errorf("could not get signature status: %w", err)
+		return false, errors.Wrap(err, "can't get signature status")
 	}
+	ok1 := ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized
 
-	if ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized {
-		return true, nil
+	tx, err := c.solana.GetTransactionWithConfig(ctx, txhash, rpc.GetTransactionConfig{
+		Encoding:   rpc.GetTransactionConfigEncodingBase64,
+		Commitment: rpc.CommitmentFinalized,
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "can't get transaction by txhash")
 	}
+	ok2 := tx != nil
 
-	return false, nil
+	return ok1 || ok2, nil
 }
 
 func (s *Client) NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
