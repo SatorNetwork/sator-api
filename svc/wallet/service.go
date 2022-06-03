@@ -576,11 +576,52 @@ func (s *Service) CreateTransfer(ctx context.Context, walletID uuid.UUID, recipi
 
 	// log.Printf("CreateTransfer: toEncode: encodedData: %s", string(encodedData))
 
+	var feeInSAO float64
+	{
+		feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
+		if err != nil {
+			return PreparedTransferTransaction{}, err
+		}
+
+		wallet, err := s.wr.GetWalletByID(ctx, walletID)
+		if err != nil {
+			return PreparedTransferTransaction{}, fmt.Errorf("could not get solana account: %w", err)
+		}
+		solanaAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+		if err != nil {
+			return PreparedTransferTransaction{}, fmt.Errorf("could not get solana account: %w", err)
+		}
+		source, err := s.sc.AccountFromPrivateKeyBytes(solanaAcc.PrivateKey)
+		if err != nil {
+			return PreparedTransferTransaction{}, err
+		}
+
+		resp, err := s.sc.PrepareSendAssetsTx(
+			ctx,
+			s.satorAssetSolanaAddr,
+			feePayer,
+			source,
+			recipientPK,
+			amount,
+			&lib_solana.SendAssetsConfig{
+				PercentToCharge:           s.tokenTransferPercent,
+				ChargeSolanaFeeFromSender: true,
+				AllowFallbackToDefaultFee: true,
+				DefaultFee:                1,
+			},
+		)
+		if err != nil {
+			return PreparedTransferTransaction{}, err
+		}
+
+		feeInSAO = resp.FeeInSAO
+	}
+
 	return PreparedTransferTransaction{
-		AssetName:     asset,
-		Amount:        amount,
-		RecipientAddr: recipientPK,
-		// Fee:             amount * 0.025,
+		AssetName:       asset,
+		Amount:          amount,
+		RecipientAddr:   recipientPK,
+		Fee:             feeInSAO,
 		TransactionHash: base58.Encode(encodedData),
 		SenderWalletID:  walletID.String(),
 	}, nil
