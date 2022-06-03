@@ -195,7 +195,7 @@ type (
 
 	firebaseService interface {
 		SendNewShowNotification(ctx context.Context, showTitle string, showID uuid.UUID) error
-		SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, episodeID uuid.UUID) error
+		SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, seasonID, episodeID uuid.UUID) error
 	}
 
 	// Simple function
@@ -789,7 +789,7 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, errors.Wrap(err, "can't get show by id")
 	}
 
-	if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, show.Title, ep.Title, show.ID, episode.ID); err != nil {
+	if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, show.Title, ep.Title, show.ID, ep.SeasonID, episode.ID); err != nil {
 		return Episode{}, errors.Wrap(err, "can't send new show notification")
 	}
 

@@ -165,7 +165,7 @@ func (s *Service) SendNewShowNotification(ctx context.Context, showTitle string,
 	return nil
 }
 
-func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, episodeID uuid.UUID) error {
+func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, episodeTitle string, showID, seasonID, episodeID uuid.UUID) error {
 	err := s.SendNotificationToTopic(
 		ctx,
 		NewEpisodeTopicName,
@@ -173,6 +173,7 @@ func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, epi
 		fmt.Sprintf("%s: %s is now on Sator.", showTitle, episodeTitle),
 		map[string]string{
 			"show_id":    showID.String(),
+			"seasonID":   seasonID.String(),
 			"episode_id": episodeID.String(),
 		},
 	)
