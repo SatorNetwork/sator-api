@@ -30,6 +30,7 @@ type (
 			ctx context.Context,
 			arg firebase_repository.UpsertRegistrationTokenParams,
 		) error
+		DeleteRegistrationToken(ctx context.Context, arg firebase_repository.DeleteRegistrationTokenParams) error
 
 		IsNotificationEnabled(ctx context.Context, arg firebase_repository.IsNotificationEnabledParams) (bool, error)
 		IsNotificationDisabled(ctx context.Context, arg firebase_repository.IsNotificationDisabledParams) (bool, error)
@@ -40,6 +41,10 @@ type (
 	RegisterTokenRequest struct {
 		DeviceId string `json:"device_id"`
 		Token    string `json:"token"`
+	}
+
+	UnregisterTokenRequest struct {
+		Token string `json:"token"`
 	}
 )
 
@@ -87,6 +92,33 @@ func (s *Service) RegisterToken(ctx context.Context, userID uuid.UUID, req *Regi
 	return &Empty{}, nil
 }
 
+func (s *Service) UnregisterToken(ctx context.Context, userID uuid.UUID, deviceId string) error {
+	token, err := s.fr.GetRegistrationToken(ctx, firebase_repository.GetRegistrationTokenParams{
+		DeviceID: deviceId,
+		UserID:   userID,
+	})
+	if err != nil {
+		return err
+	}
+	topics, err := s.getUserSubscribedTopics(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if err := s.unsubscribeTokenFromTopics(ctx, token.RegistrationToken, topics); err != nil {
+		return err
+	}
+
+	err = s.fr.DeleteRegistrationToken(ctx, firebase_repository.DeleteRegistrationTokenParams{
+		DeviceID: deviceId,
+		UserID:   userID,
+	})
+	if err != nil {
+		return errors.Wrap(err, "can't delete registration token")
+	}
+
+	return nil
+}
+
 func (s *Service) getUserSubscribedTopics(ctx context.Context, userID uuid.UUID) ([]string, error) {
 	userSubscribedTopics := make([]string, 0)
 	for _, topic := range allTopics {
@@ -108,6 +140,17 @@ func (s *Service) getUserSubscribedTopics(ctx context.Context, userID uuid.UUID)
 func (s *Service) subscribeTokenToTopics(ctx context.Context, token string, topics []string) error {
 	for _, topic := range topics {
 		_, err := s.messagingClient.SubscribeToTopic(ctx, []string{token}, topic)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) unsubscribeTokenFromTopics(ctx context.Context, token string, topics []string) error {
+	for _, topic := range topics {
+		_, err := s.messagingClient.UnsubscribeFromTopic(ctx, []string{token}, topic)
 		if err != nil {
 			return err
 		}
