@@ -11,6 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dmitrymomot/random"
+	"github.com/google/uuid"
+	pkg_errors "github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/SatorNetwork/sator-api/lib/db"
 	internal_rsa "github.com/SatorNetwork/sator-api/lib/encryption/rsa"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
@@ -18,10 +23,6 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/utils"
 	"github.com/SatorNetwork/sator-api/lib/validator"
 	"github.com/SatorNetwork/sator-api/svc/auth/repository"
-
-	"github.com/dmitrymomot/random"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type (
@@ -29,6 +30,7 @@ type (
 	Service struct {
 		ur                    userRepository
 		ws                    walletService
+		fs                    firebaseService
 		jwt                   jwtInteractor
 		mail                  mailer
 		ic                    invitationsClient
@@ -122,6 +124,10 @@ type (
 		CreateWallet(ctx context.Context, userID uuid.UUID) error
 	}
 
+	firebaseService interface {
+		UnregisterToken(ctx context.Context, userID uuid.UUID, deviceId string) error
+	}
+
 	invitationsClient interface {
 		AcceptInvitation(ctx context.Context, inviteeID uuid.UUID, inviteeEmail string) error
 		IsEmailInvited(ctx context.Context, inviteeEmail string) (bool, error)
@@ -146,7 +152,7 @@ type (
 )
 
 // NewService is a factory function, returns a new instance of the Service interface implementation.
-func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invitationsClient, kyc kycClient, opt ...ServiceOption) *Service {
+func NewService(ji jwtInteractor, ur userRepository, ws walletService, fs firebaseService, ic invitationsClient, kyc kycClient, opt ...ServiceOption) *Service {
 	if ur == nil {
 		log.Fatalln("user repository is not set")
 	}
@@ -156,6 +162,9 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 	if ws == nil {
 		log.Fatalln("wallet service is not set")
 	}
+	if fs == nil {
+		log.Fatalln("firebase service is not set")
+	}
 	if ic == nil {
 		log.Fatalln("invitations client is not set")
 	}
@@ -163,7 +172,15 @@ func NewService(ji jwtInteractor, ur userRepository, ws walletService, ic invita
 		log.Fatalln("kyc client is not set")
 	}
 
-	s := &Service{jwt: ji, ur: ur, ic: ic, kyc: kyc, ws: ws, otpLen: 5}
+	s := &Service{
+		jwt:    ji,
+		ur:     ur,
+		ic:     ic,
+		kyc:    kyc,
+		ws:     ws,
+		fs:     fs,
+		otpLen: 5,
+	}
 
 	// Set up options.
 	for _, o := range opt {
@@ -254,8 +271,13 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 }
 
 // Logout revokes JWT token.
-func (s *Service) Logout(ctx context.Context, tid string) error {
+func (s *Service) Logout(ctx context.Context, tid string, userID uuid.UUID, deviceID string) error {
 	// TODO: add JWT id into the revoked tokens list
+
+	if err := s.fs.UnregisterToken(ctx, userID, deviceID); err != nil {
+		return pkg_errors.Wrap(err, "can't unregister firebase registration token")
+	}
+
 	return nil
 }
 

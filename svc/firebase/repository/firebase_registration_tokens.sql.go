@@ -9,6 +9,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const deleteRegistrationToken = `-- name: DeleteRegistrationToken :exec
+DELETE FROM firebase_registration_tokens
+WHERE device_id = $1 AND user_id = $2
+`
+
+type DeleteRegistrationTokenParams struct {
+	DeviceID string    `json:"device_id"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteRegistrationToken(ctx context.Context, arg DeleteRegistrationTokenParams) error {
+	_, err := q.exec(ctx, q.deleteRegistrationTokenStmt, deleteRegistrationToken, arg.DeviceID, arg.UserID)
+	return err
+}
+
 const getRegistrationToken = `-- name: GetRegistrationToken :one
 SELECT device_id, user_id, registration_token, updated_at, created_at FROM firebase_registration_tokens
 WHERE device_id = $1 AND user_id = $2

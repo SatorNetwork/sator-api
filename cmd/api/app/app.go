@@ -611,6 +611,31 @@ func (a *app) Run() {
 		logger,
 	))
 
+	// Firebase service
+	var firebaseSvc *firebase_svc.Service
+	{
+		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare firebase repository: %v", err)
+		}
+
+		if a.cfg.FirebaseCredsInJSON == "" {
+			log.Fatal("firebase JSON creds is not set")
+		}
+
+		firebaseSvc, err = firebase_svc.NewService(
+			firebaseRepository,
+			[]byte(a.cfg.FirebaseCredsInJSON),
+		)
+		if err != nil {
+			log.Fatalf("can't create firebase service: %v\n", err)
+		}
+		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
+			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	var authClient *authc.Client
 	var nftClient *nftC.Client
 	{
@@ -622,6 +647,7 @@ func (a *app) Run() {
 			jwtInteractor,
 			authRepository,
 			walletSvcClient,
+			firebaseSvc,
 			invitationsClient,
 			kycClient,
 			auth.WithMasterOTPCode(a.cfg.MasterOTPHash),
@@ -700,31 +726,6 @@ func (a *app) Run() {
 			logger,
 		))
 		nftClient = nftC.New(nftService)
-	}
-
-	// Firebase service
-	var firebaseSvc *firebase_svc.Service
-	{
-		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare firebase repository: %v", err)
-		}
-
-		if a.cfg.FirebaseCredsInJSON == "" {
-			log.Fatal("firebase JSON creds is not set")
-		}
-
-		firebaseSvc, err = firebase_svc.NewService(
-			firebaseRepository,
-			[]byte(a.cfg.FirebaseCredsInJSON),
-		)
-		if err != nil {
-			log.Fatalf("can't create firebase service: %v\n", err)
-		}
-		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
-			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
-			logger,
-		))
 	}
 
 	// Shows service
