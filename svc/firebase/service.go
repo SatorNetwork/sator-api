@@ -42,10 +42,6 @@ type (
 		DeviceId string `json:"device_id"`
 		Token    string `json:"token"`
 	}
-
-	UnregisterTokenRequest struct {
-		Token string `json:"token"`
-	}
 )
 
 func NewService(
