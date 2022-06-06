@@ -76,11 +76,13 @@ type (
 	}
 
 	PlayerInfo struct {
-		UserID           uuid.UUID
-		EnergyPoints     int
-		SelectedNftID    string
-		ElectricityCost  float64
-		ElectricitySpent int32
+		UserID                uuid.UUID
+		EnergyPoints          int
+		SelectedNftID         string
+		ElectricityCost       float64
+		ElectricitySpent      int32
+		EnergyRecoveryPeriod  time.Duration
+		EnergyRecoveryCurrent time.Duration
 	}
 )
 
@@ -137,22 +139,28 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 	recoveryEnergy := recoveryEnergyPoints(player, energyFull, energyRecoveryPeriod)
 	energy := recoveryEnergy + player.EnergyPoints
 
+	lastEnergyRecoveredAt := player.EnergyRefilledAt
 	if recoveryEnergy > 0 {
+		lastEnergyRecoveredAt = time.Now()
 		if err := s.gameRepo.RefillEnergyOfPlayer(ctx, repository.RefillEnergyOfPlayerParams{
 			UserID:           uid,
 			EnergyPoints:     energy,
-			EnergyRefilledAt: time.Now(),
+			EnergyRefilledAt: lastEnergyRecoveredAt,
 		}); err != nil {
 			return nil, err
 		}
 	}
 
+	timeToRecovery := time.Until(lastEnergyRecoveredAt.Add(energyRecoveryPeriod))
+
 	return &PlayerInfo{
-		UserID:           player.UserID,
-		EnergyPoints:     int(energy),
-		SelectedNftID:    player.SelectedNftID.String,
-		ElectricityCost:  player.ElectricityCosts,
-		ElectricitySpent: player.ElectricitySpent,
+		UserID:                player.UserID,
+		EnergyPoints:          int(energy),
+		SelectedNftID:         player.SelectedNftID.String,
+		ElectricityCost:       player.ElectricityCosts,
+		ElectricitySpent:      player.ElectricitySpent,
+		EnergyRecoveryPeriod:  energyRecoveryPeriod,
+		EnergyRecoveryCurrent: timeToRecovery,
 	}, nil
 }
 

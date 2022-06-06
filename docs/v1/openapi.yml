@@ -476,6 +476,12 @@ components:
               electricity_max_games:
                 type: number
                 description: Electricity max games
+              energy_recovery_period:
+                type: number
+                description: Energy recovery period
+              energy_recovery_current:
+                type: number
+                description: Time left to recover energy
 
     NFTPack:
       description: NFT Packs.

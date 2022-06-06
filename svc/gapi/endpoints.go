@@ -130,6 +130,8 @@ type GetStatusResponse struct {
 	ElectricityLeft              int32     `json:"electricity_left"`
 	ElectricityCost              float64   `json:"electricity_cost"`
 	ElectricityMaxGames          int       `json:"electricity_max_games"`
+	EnergyRecoveryPeriod         int64     `json:"energy_recovery_period"`
+	EnergyRecoveryCurrent        int64     `json:"energy_recovery_current"`
 }
 
 // MakeGetStatusEndpoint ...
@@ -180,6 +182,8 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 			ElectricityLeft:              electrLeft,
 			ElectricityCost:              player.ElectricityCost,
 			ElectricityMaxGames:          electricityMaxGames,
+			EnergyRecoveryPeriod:         int64(player.EnergyRecoveryPeriod.Seconds()),
+			EnergyRecoveryCurrent:        int64(player.EnergyRecoveryCurrent.Seconds()),
 		}
 
 		log.Printf("GetStatusResponse: %+v", resp)
