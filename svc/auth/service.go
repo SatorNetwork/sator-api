@@ -274,7 +274,8 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 func (s *Service) Logout(ctx context.Context, tid string, userID uuid.UUID, deviceID string) error {
 	// TODO: add JWT id into the revoked tokens list
 
-	if err := s.fs.UnregisterToken(ctx, userID, deviceID); err != nil {
+	err := s.fs.UnregisterToken(ctx, userID, deviceID)
+	if err != nil && err != sql.ErrNoRows {
 		return pkg_errors.Wrap(err, "can't unregister firebase registration token")
 	}
 
