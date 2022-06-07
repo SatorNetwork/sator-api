@@ -45,7 +45,7 @@ func Test_calculateUserRewardsForGame(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := calculateUserRewardsForGame(tt.args.conf, tt.args.nftType, tt.args.complexity, tt.args.result)
+			got, _, err := calculateUserRewardsForGame(tt.args.conf, tt.args.nftType, tt.args.complexity, tt.args.result)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("calculateUserRewardsForGame() error = %v, wantErr %v", err, tt.wantErr)
 				return

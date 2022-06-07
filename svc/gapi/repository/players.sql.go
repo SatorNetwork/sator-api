@@ -109,6 +109,15 @@ func (q *Queries) ResetElectricityForPlayer(ctx context.Context, userID uuid.UUI
 	return err
 }
 
+const resetEnergyRefilledAtOfPlayer = `-- name: ResetEnergyRefilledAtOfPlayer :exec
+UPDATE unity_game_players SET energy_refilled_at = now() WHERE user_id = $1
+`
+
+func (q *Queries) ResetEnergyRefilledAtOfPlayer(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.exec(ctx, q.resetEnergyRefilledAtOfPlayerStmt, resetEnergyRefilledAtOfPlayer, userID)
+	return err
+}
+
 const spendEnergyOfPlayer = `-- name: SpendEnergyOfPlayer :exec
 UPDATE unity_game_players SET energy_points = energy_points-1 WHERE user_id = $1
 `

@@ -38,8 +38,7 @@ type (
 		GetMinVersion(ctx context.Context) string
 		GetCraftStepAmount(ctx context.Context) float64
 
-		GetElectricityMaxGames(ctx context.Context) (int, error)
-		GetElectricityLeft(ctx context.Context, uid uuid.UUID) (int32, error)
+		GetElectricityLeft(ctx context.Context, uid uuid.UUID) (left, max int32, err error)
 		PayForElectricity(ctx context.Context, uid uuid.UUID) error
 
 		GetUserNFTs(ctx context.Context, uid uuid.UUID) ([]NFTInfo, error)
@@ -49,7 +48,7 @@ type (
 		SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr string) error
 
 		StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error)
-		FinishGame(ctx context.Context, uid uuid.UUID, gameResult, blocksDone int32) error
+		FinishGame(ctx context.Context, uid uuid.UUID, gameResult, blocksDone int32) (int, error)
 
 		GetUserRewards(ctx context.Context, uid uuid.UUID) (float64, error)
 		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) error
@@ -129,7 +128,7 @@ type GetStatusResponse struct {
 	CraftStepAmount              float64   `json:"craft_step_amount"`
 	ElectricityLeft              int32     `json:"electricity_left"`
 	ElectricityCost              float64   `json:"electricity_cost"`
-	ElectricityMaxGames          int       `json:"electricity_max_games"`
+	ElectricityMaxGames          int32     `json:"electricity_max_games"`
 	EnergyRecoveryPeriod         int64     `json:"energy_recovery_period"`
 	EnergyRecoveryCurrent        int64     `json:"energy_recovery_current"`
 }
@@ -167,8 +166,7 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 			selectedNFT = &player.SelectedNftID
 		}
 
-		electrLeft, _ := s.GetElectricityLeft(ctx, uid)
-		electricityMaxGames, _ := s.GetElectricityMaxGames(ctx)
+		electrLeft, electrMax, _ := s.GetElectricityLeft(ctx, uid)
 
 		resp := GetStatusResponse{
 			EnergyLeft:                   player.EnergyPoints,
@@ -181,7 +179,7 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 			CraftStepAmount:              s.GetCraftStepAmount(ctx),
 			ElectricityLeft:              electrLeft,
 			ElectricityCost:              player.ElectricityCost,
-			ElectricityMaxGames:          electricityMaxGames,
+			ElectricityMaxGames:          electrMax,
 			EnergyRecoveryPeriod:         int64(player.EnergyRecoveryPeriod.Seconds()),
 			EnergyRecoveryCurrent:        int64(player.EnergyRecoveryCurrent.Seconds()),
 		}
@@ -382,6 +380,7 @@ type (
 
 	FinishGameResponse struct {
 		UserInGameCurrency float64 `json:"user_in_game_currency"`
+		Viewers            int     `json:"viewers"`
 	}
 )
 
@@ -398,7 +397,8 @@ func MakeFinishGameEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 			return nil, err
 		}
 
-		if err := s.FinishGame(ctx, uid, req.GameResult, req.BlocksDone); err != nil {
+		viewers, err := s.FinishGame(ctx, uid, req.GameResult, req.BlocksDone)
+		if err != nil {
 			return nil, err
 		}
 
@@ -409,6 +409,7 @@ func MakeFinishGameEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 
 		resp := FinishGameResponse{
 			UserInGameCurrency: rewardsAmount,
+			Viewers:            viewers,
 		}
 
 		log.Printf("FinishGameResponse: %+v", resp)
@@ -459,7 +460,7 @@ func MakePayForElectricityEndpoint(s gameService) endpoint.Endpoint {
 			return nil, err
 		}
 
-		left, err := s.GetElectricityLeft(ctx, uid)
+		left, _, err := s.GetElectricityLeft(ctx, uid)
 		if err != nil {
 			return nil, err
 		}

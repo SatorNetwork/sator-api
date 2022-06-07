@@ -6368,6 +6368,8 @@ paths:
                 properties:
                   user_in_game_currency:
                     type: number
+                  viewers:
+                    type: number
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
