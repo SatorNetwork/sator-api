@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,8 +12,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/types"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
+	lib_errors "github.com/SatorNetwork/sator-api/lib/errors"
 	"github.com/SatorNetwork/sator-api/lib/ethereum"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	tx_watcher_alias "github.com/SatorNetwork/sator-api/svc/tx_watcher/alias"
@@ -756,7 +757,8 @@ func (s *Service) execTransfer(ctx context.Context, walletID uuid.UUID, recipien
 			if i < 4 {
 				log.Printf("can't send assets with auto derive: %v, fee accumulator address: %v\n", err, s.sc.FeeAccumulatorAddress())
 			} else {
-				return "", fmt.Errorf("transaction: %w", err)
+				log.Error(errors.Wrap(err, "can't send transaction"))
+				return "", lib_errors.ErrCantSendSolanaTransaction
 			}
 			time.Sleep(time.Second * 5)
 		} else {
