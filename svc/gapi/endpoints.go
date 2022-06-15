@@ -74,7 +74,7 @@ func MakeEndpoints(
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		GetStatus:         MakeGetStatusEndpoint(gs),
+		GetStatus:         MakeGetStatusEndpoint(gs, settings),
 		GetNFTPacks:       MakeGetNFTPacksEndpoint(gs),
 		BuyNFTPack:        MakeBuyNFTPackEndpoint(gs, validateFunc),
 		CraftNFT:          MakeCraftNFTEndpoint(gs, validateFunc),
@@ -131,10 +131,11 @@ type GetStatusResponse struct {
 	ElectricityMaxGames          int32     `json:"electricity_max_games"`
 	EnergyRecoveryPeriod         int64     `json:"energy_recovery_period"`
 	EnergyRecoveryCurrent        int64     `json:"energy_recovery_current"`
+	ConversionFee                float64   `json:"convert_commission"`
 }
 
 // MakeGetStatusEndpoint ...
-func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
+func MakeGetStatusEndpoint(s gameService, settings gameSettingsService) endpoint.Endpoint {
 	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
@@ -182,9 +183,10 @@ func MakeGetStatusEndpoint(s gameService) endpoint.Endpoint {
 			ElectricityMaxGames:          electrMax,
 			EnergyRecoveryPeriod:         int64(player.EnergyRecoveryPeriod.Seconds()),
 			EnergyRecoveryCurrent:        int64(player.EnergyRecoveryCurrent.Seconds()),
+			ConversionFee:                player.ConversionFee,
 		}
 
-		log.Printf("GetStatusResponse: %+v", resp)
+		// log.Printf("GetStatusResponse: %+v", resp)
 
 		return resp, nil
 	}

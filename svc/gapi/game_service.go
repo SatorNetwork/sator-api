@@ -71,7 +71,7 @@ type (
 
 	paymentService interface {
 		GetBalance(ctx context.Context, uid uuid.UUID) (float64, error)
-		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) (string, error)
+		ClaimRewards(ctx context.Context, uid uuid.UUID, amount, feePercent float64, feeDistribution map[string]float64) (string, error)
 		Pay(ctx context.Context, uid uuid.UUID, amount float64, info string) (string, error)
 	}
 
@@ -84,6 +84,7 @@ type (
 		ElectricitySpent      int32
 		EnergyRecoveryPeriod  time.Duration
 		EnergyRecoveryCurrent time.Duration
+		ConversionFee         float64
 	}
 )
 
@@ -154,6 +155,11 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 
 	timeToRecovery := time.Until(lastEnergyRecoveredAt.Add(energyRecoveryPeriod))
 
+	convFee, err := s.conf.GetFloat64(ctx, "convert_commission")
+	if err != nil {
+		convFee = 0
+	}
+
 	return &PlayerInfo{
 		UserID:                player.UserID,
 		EnergyPoints:          int(energy),
@@ -163,6 +169,7 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 		ElectricitySpent:      player.ElectricitySpent,
 		EnergyRecoveryPeriod:  energyRecoveryPeriod,
 		EnergyRecoveryCurrent: timeToRecovery,
+		ConversionFee:         convFee,
 	}, nil
 }
 
@@ -629,7 +636,15 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 		return fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
-	if tr, err := s.payment.ClaimRewards(ctx, uid, userRewardsAmount); err != nil {
+	fee, _ := s.conf.GetFloat64(ctx, "convert_commission")
+	feeDistr := make(map[string]float64)
+	if fee > 0 {
+		if err := s.conf.GetJSON(ctx, "convert_fee_distribution", &feeDistr); err != nil {
+			return fmt.Errorf("failed to get convert fee distribution: %w", err)
+		}
+	}
+
+	if tr, err := s.payment.ClaimRewards(ctx, uid, userRewardsAmount, fee, feeDistr); err != nil {
 		log.Printf("failed to claim rewards: %v", err)
 		return ErrCouldNotClaimRewards
 	} else {

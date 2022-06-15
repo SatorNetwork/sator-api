@@ -92,13 +92,25 @@ func (c *SolanaClient) GetBalance(ctx context.Context, uid uuid.UUID) (float64, 
 	return balance, nil
 }
 
-func (c *SolanaClient) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) (string, error) {
-	log.Println("claim rewards", uid, amount)
+func (c *SolanaClient) ClaimRewards(ctx context.Context, uid uuid.UUID, amount, fee float64, feeDistr map[string]float64) (string, error) {
+	log.Println("claim rewards", uid, amount, fee, feeDistr)
 
 	walletAddr, err := c.GetUserWalletAddress(ctx, uid)
 	if err != nil {
 		return "", fmt.Errorf("get user wallet address: %w", err)
 	}
+
+	var (
+		feeAmount     float64 = 0
+		amountToClaim float64 = amount
+	)
+
+	if fee > 0 && len(feeDistr) > 0 {
+		feeAmount = fee * amount / 100
+		amountToClaim = amount - feeAmount
+	}
+
+	log.Println("feeAmount", feeAmount, "amountToClaim", amountToClaim)
 
 	tx, err := c.sendAssetsWithAutoDerive(
 		ctx,
@@ -106,10 +118,38 @@ func (c *SolanaClient) ClaimRewards(ctx context.Context, uid uuid.UUID, amount f
 		c.feePayer,
 		c.tokenPool,
 		walletAddr,
-		amount,
+		amountToClaim,
 	)
 	if err != nil {
 		return "", fmt.Errorf("could not claim rewards: %w", err)
+	}
+	log.Println("claim rewards: transaction hash", tx)
+
+	if fee > 0 && len(feeDistr) > 0 {
+		sumPoints := 0.0
+		for _, v := range feeDistr {
+			sumPoints += v
+		}
+		pointAmount := feeAmount / sumPoints
+
+		for addr, points := range feeDistr {
+			amountToPay := pointAmount * points
+			log.Println("addr", addr, "points", points, "amountToPay", amountToPay)
+
+			if tx, err := c.sendAssetsWithAutoDerive(
+				ctx,
+				c.tokenPubKey,
+				c.feePayer,
+				c.tokenPool,
+				addr,
+				amountToPay,
+			); err != nil {
+				log.Println("could not send fee:", err)
+			} else {
+				log.Println("claim rewards fee: transaction hash", tx)
+			}
+		}
+
 	}
 
 	return tx, nil
