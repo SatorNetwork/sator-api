@@ -716,13 +716,50 @@ func (a *app) Run() {
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
+	if a.cfg.NftMarketplaceServerHost == "" {
+		log.Fatalf("nft marketplace server host isn't specified")
+	}
+	if a.cfg.NftMarketplaceServerPort == 0 {
+		log.Fatalf("nft marketplace server port isn't specified")
+	}
+	nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
+
+	// In-app purchases service
+	{
+		iapRepository, err := iap_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare iap repository: %v", err)
+		}
+
+		iapSvc := iap_svc.NewService(
+			nftMarketplaceClient,
+			iapRepository,
+			walletRepository,
+			solanaClient,
+			a.cfg.SolanaAssetAddr,
+			feePayer,
+			tokenHolder,
+		)
+		r.Mount("/iap", iap_svc.MakeHTTPHandler(
+			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	{
 		// NFT service
 		nftRepository, err := nftRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("nftRepo error: %v", err)
 		}
-		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT, a.cfg.EnableResourceIntensiveQueries)
+		nftService := nft.NewService(
+			nftMarketplaceClient,
+			nftRepository,
+			walletRepository,
+			solanaClient,
+			walletSvcClient.PayForNFT,
+			a.cfg.EnableResourceIntensiveQueries,
+		)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,
@@ -872,36 +909,6 @@ func (a *app) Run() {
 		)
 		r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
 			trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
-			logger,
-		))
-	}
-
-	// In-app purchases service
-	{
-		iapRepository, err := iap_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare iap repository: %v", err)
-		}
-
-		if a.cfg.NftMarketplaceServerHost == "" {
-			log.Fatalf("nft marketplace server host isn't specified")
-		}
-		if a.cfg.NftMarketplaceServerPort == 0 {
-			log.Fatalf("nft marketplace server port isn't specified")
-		}
-		nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
-
-		iapSvc := iap_svc.NewService(
-			nftMarketplaceClient,
-			iapRepository,
-			walletRepository,
-			solanaClient,
-			a.cfg.SolanaAssetAddr,
-			feePayer,
-			tokenHolder,
-		)
-		r.Mount("/iap", iap_svc.MakeHTTPHandler(
-			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
 			logger,
 		))
 	}
