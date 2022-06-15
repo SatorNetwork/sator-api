@@ -173,9 +173,9 @@ type Config struct {
 	EnableResourceIntensiveQueries bool
 	FirebaseCredsInJSON            string
 	UnityVersion                   string
-
-	UnityGameFeeCollectorAddress string
-	UnityGameTokenPoolPrivateKey string
+	UnityGameFeeCollectorAddress   string
+	UnityGameTokenPoolPrivateKey   string
+	DisableRewardsForQuiz          bool
 }
 
 var buildTag string
@@ -311,6 +311,8 @@ func ConfigFromEnv() *Config {
 		UnityVersion:                 env.MustString("UNITY_VERSION"),
 		UnityGameTokenPoolPrivateKey: env.MustString("UNITY_GAME_TOKEN_POOL_PRIVATE_KEY"),
 		UnityGameFeeCollectorAddress: env.MustString("UNITY_GAME_FEE_COLLECTOR_ADDRESS"),
+
+		DisableRewardsForQuiz: env.GetBool("DISABLE_REWARDS_FOR_QUIZ", false),
 	}
 }
 
@@ -847,6 +849,7 @@ func (a *app) Run() {
 			quizV2Repository,
 			serverRSAPrivateKey,
 			a.cfg.QuizV2ShuffleQuestions,
+			a.cfg.DisableRewardsForQuiz,
 			a.cfg.QuizLobbyLatency,
 		)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(

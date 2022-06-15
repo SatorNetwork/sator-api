@@ -24,6 +24,7 @@ type QuizEngine interface {
 	GetAnswer(userID, questionID uuid.UUID) (cell.Cell, error)
 	RegisterQuestionSendingEvent(questionNum int) error
 	GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error)
+	GetPlayers() ([]*result_table.Player, error)
 	GetWinnersAndLosers() ([]*result_table.Winner, []*result_table.Loser, error)
 	GetWinners() ([]*result_table.Winner, error)
 	DistributedPrizePool() float64
@@ -137,6 +138,10 @@ func (e *quizEngine) RegisterQuestionSendingEvent(questionNum int) error {
 
 func (e *quizEngine) GetPrizePoolDistribution() (map[uuid.UUID]result_table.UserReward, error) {
 	return e.resultTable.GetPrizePoolDistribution()
+}
+
+func (e *quizEngine) GetPlayers() ([]*result_table.Player, error) {
+	return e.resultTable.GetPlayers()
 }
 
 func (e *quizEngine) GetWinnersAndLosers() ([]*result_table.Winner, []*result_table.Loser, error) {
