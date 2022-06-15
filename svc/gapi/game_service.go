@@ -644,7 +644,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 		}
 	}
 
-	if tr, err := s.payment.ClaimRewards(ctx, uid, userRewardsAmount, fee, feeDistr); err != nil {
+	if tr, err := s.payment.ClaimRewards(ctx, uid, amount, fee, feeDistr); err != nil {
 		log.Printf("failed to claim rewards: %v", err)
 		return ErrCouldNotClaimRewards
 	} else {
