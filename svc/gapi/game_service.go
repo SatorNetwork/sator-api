@@ -639,7 +639,7 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 	fee, _ := s.conf.GetFloat64(ctx, "convert_commission")
 	feeDistr := make(map[string]float64)
 	if fee > 0 {
-		if err := s.conf.GetJSON(ctx, "convert_fee_distribution", &feeDistr); err != nil {
+		if err := s.conf.GetJSON(ctx, "conversion_fee_accumulator", &feeDistr); err != nil {
 			return fmt.Errorf("failed to get convert fee distribution: %w", err)
 		}
 	}
