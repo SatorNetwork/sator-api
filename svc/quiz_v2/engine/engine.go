@@ -25,8 +25,9 @@ type Engine struct {
 	qr                 interfaces.QuizV2Repository
 	restrictionManager restriction_manager.RestrictionManager
 
-	shuffleQuestions bool
-	quizLobbyLatency time.Duration
+	shuffleQuestions      bool
+	disableRewardsForQuiz bool
+	quizLobbyLatency      time.Duration
 
 	done chan struct{}
 }
@@ -38,6 +39,7 @@ func New(
 	qr interfaces.QuizV2Repository,
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
+	disableRewardsForQuiz bool,
 	quizLobbyLatency time.Duration,
 ) *Engine {
 	return &Engine{
@@ -52,8 +54,9 @@ func New(
 		qr:                 qr,
 		restrictionManager: restrictionManager,
 
-		shuffleQuestions: shuffleQuestions,
-		quizLobbyLatency: quizLobbyLatency,
+		shuffleQuestions:      shuffleQuestions,
+		disableRewardsForQuiz: disableRewardsForQuiz,
+		quizLobbyLatency:      quizLobbyLatency,
 
 		done: make(chan struct{}),
 	}
@@ -116,6 +119,7 @@ func (e *Engine) getOrCreateRoom(challengeID string, eventsChan chan engine_even
 			e.qr,
 			e.restrictionManager,
 			e.shuffleQuestions,
+			e.disableRewardsForQuiz,
 			e.quizLobbyLatency,
 			eventsChan,
 		)
