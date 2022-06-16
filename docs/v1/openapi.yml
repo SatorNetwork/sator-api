@@ -4676,6 +4676,32 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /nft/{mint_address}/buy/marketplace:
+    post:
+      tags:
+        - "NFT"
+      summary: Buy NFT Via Marketplace
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: mint_address
+          in: path
+          description: NFT Mint Address.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Buy NFT Via Marketplace.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/EmptyBody"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /nft/categories:
     get:
       tags:
