@@ -94,6 +94,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Post("/{mint_address}/buy/marketplace", httptransport.NewServer(
+		e.BuyNFTViaMarketplace,
+		decodeBuyNFTViaMarketplaceRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Delete("/{nft_id}", httptransport.NewServer(
 		e.DeleteNFTItemByID,
 		decodeDeleteNFTByIDRequest,
@@ -224,6 +231,15 @@ func decodeBuyNFTRequest(_ context.Context, r *http.Request) (interface{}, error
 		return nil, fmt.Errorf("%w: missed nft_id parameter", ErrInvalidParameter)
 	}
 	return nftId, nil
+}
+
+func decodeBuyNFTViaMarketplaceRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	mintAddress := chi.URLParam(r, "mint_address")
+	if mintAddress == "" {
+		return nil, fmt.Errorf("%w: missed mint address", ErrInvalidParameter)
+	}
+
+	return mintAddress, nil
 }
 
 func decodeGetCategoriesRequest(_ context.Context, r *http.Request) (interface{}, error) {
