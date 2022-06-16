@@ -10,9 +10,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/portto/solana-go-sdk/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/types"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
 	lib_nft_marketplace "github.com/SatorNetwork/sator-api/lib/nft_marketplace"
