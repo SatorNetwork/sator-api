@@ -114,3 +114,46 @@ func getTransactionAmountForAccountIdx(pre, post []rpc.TransactionMetaTokenBalan
 
 	return float64(postTokenBalance-preTokenBalance) / 1e9, nil
 }
+
+func (c *Client) IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error) {
+	ss, err := c.solana.GetSignatureStatusWithConfig(ctx, txhash, rpc.GetSignatureStatusesConfig{
+		SearchTransactionHistory: true,
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "can't get signature status")
+	}
+	ok1 := ss != nil && ss.ConfirmationStatus != nil && *ss.ConfirmationStatus == rpc.CommitmentFinalized
+
+	tx, err := c.solana.GetTransactionWithConfig(ctx, txhash, rpc.GetTransactionConfig{
+		Encoding:   rpc.GetTransactionConfigEncodingBase64,
+		Commitment: rpc.CommitmentFinalized,
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "can't get transaction by txhash")
+	}
+	ok2 := tx != nil
+
+	return ok1 || ok2, nil
+}
+
+func (s *Client) NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
+	cbh, err := s.GetBlockHeight(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "can't get block height")
+	}
+
+	return int64(cbh) > latestValidBlockHeight, nil
+}
+
+func (c *Client) GetBlockHeight(ctx context.Context) (uint64, error) {
+	res := struct {
+		GeneralResponse
+		Result uint64 `json:"result"`
+	}{}
+
+	if err := c.request(ctx, "getBlockHeight", nil, &res); err != nil {
+		return 0, err
+	}
+
+	return res.Result, nil
+}

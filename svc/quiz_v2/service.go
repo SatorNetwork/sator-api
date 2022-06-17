@@ -71,12 +71,24 @@ func NewService(
 	qr interfaces.QuizV2Repository,
 	serverRSAPrivateKey *rsa.PrivateKey,
 	shuffleQuestions bool,
+	disableRewardsForQuiz bool,
 	quizLobbyLatency time.Duration,
 ) *Service {
 	restrictionManager := restriction_manager.New(challenges)
 
+	engine := engine.New(
+		challenges,
+		stakeLevels,
+		rewards,
+		qr,
+		restrictionManager,
+		shuffleQuestions,
+		disableRewardsForQuiz,
+		quizLobbyLatency,
+	)
+
 	s := &Service{
-		engine:              engine.New(challenges, stakeLevels, rewards, qr, restrictionManager, shuffleQuestions, quizLobbyLatency),
+		engine:              engine,
 		restrictionManager:  restrictionManager,
 		natsURL:             natsURL,
 		natsWSURL:           natsWSURL,

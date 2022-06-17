@@ -82,6 +82,8 @@ import (
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/svc/trading_platforms"
 	tradingPlatformsRepo "github.com/SatorNetwork/sator-api/svc/trading_platforms/repository"
+	tx_watcher_svc "github.com/SatorNetwork/sator-api/svc/tx_watcher"
+	tx_watcher_repository "github.com/SatorNetwork/sator-api/svc/tx_watcher/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	walletClient "github.com/SatorNetwork/sator-api/svc/wallet/client"
 	walletRepo "github.com/SatorNetwork/sator-api/svc/wallet/repository"
@@ -171,9 +173,9 @@ type Config struct {
 	EnableResourceIntensiveQueries bool
 	FirebaseCredsInJSON            string
 	UnityVersion                   string
-
-	UnityGameFeeCollectorAddress string
-	UnityGameTokenPoolPrivateKey string
+	UnityGameFeeCollectorAddress   string
+	UnityGameTokenPoolPrivateKey   string
+	DisableRewardsForQuiz          bool
 }
 
 var buildTag string
@@ -309,6 +311,8 @@ func ConfigFromEnv() *Config {
 		UnityVersion:                 env.MustString("UNITY_VERSION"),
 		UnityGameTokenPoolPrivateKey: env.MustString("UNITY_GAME_TOKEN_POOL_PRIVATE_KEY"),
 		UnityGameFeeCollectorAddress: env.MustString("UNITY_GAME_FEE_COLLECTOR_ADDRESS"),
+
+		DisableRewardsForQuiz: env.GetBool("DISABLE_REWARDS_FOR_QUIZ", false),
 	}
 }
 
@@ -525,6 +529,21 @@ func (a *app) Run() {
 		}
 	}
 
+	var txWatcherSvc *tx_watcher_svc.Service
+	{
+		txWatcherRepository, err := tx_watcher_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare tx watcher repository: %v", err)
+		}
+
+		txWatcherSvc = tx_watcher_svc.NewService(
+			txWatcherRepository,
+			solanaClient,
+			feePayer,
+			tokenHolder,
+		)
+	}
+
 	var unityGameTokenHolder types.Account
 	{
 		unityGameTokenHolder, err = types.AccountFromBase58(a.cfg.UnityGameTokenPoolPrivateKey)
@@ -540,6 +559,7 @@ func (a *app) Run() {
 			walletRepository,
 			solanaClient,
 			ethereumClient,
+			txWatcherSvc,
 			wallet.WithAssetSolanaAddress(a.cfg.SolanaAssetAddr),
 			wallet.WithSolanaFeePayer(a.cfg.SolanaFeePayerAddr, feePayer.PrivateKey),
 			wallet.WithSolanaTokenHolder(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey),
@@ -593,6 +613,31 @@ func (a *app) Run() {
 		logger,
 	))
 
+	// Firebase service
+	var firebaseSvc *firebase_svc.Service
+	{
+		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare firebase repository: %v", err)
+		}
+
+		if a.cfg.FirebaseCredsInJSON == "" {
+			log.Fatal("firebase JSON creds is not set")
+		}
+
+		firebaseSvc, err = firebase_svc.NewService(
+			firebaseRepository,
+			[]byte(a.cfg.FirebaseCredsInJSON),
+		)
+		if err != nil {
+			log.Fatalf("can't create firebase service: %v\n", err)
+		}
+		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
+			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	var authClient *authc.Client
 	var nftClient *nftC.Client
 	{
@@ -604,6 +649,7 @@ func (a *app) Run() {
 			jwtInteractor,
 			authRepository,
 			walletSvcClient,
+			firebaseSvc,
 			invitationsClient,
 			kycClient,
 			auth.WithMasterOTPCode(a.cfg.MasterOTPHash),
@@ -670,43 +716,55 @@ func (a *app) Run() {
 	// Challenge client instance
 	var challengeSvcClient *challengeClient.Client
 
+	if a.cfg.NftMarketplaceServerHost == "" {
+		log.Fatalf("nft marketplace server host isn't specified")
+	}
+	if a.cfg.NftMarketplaceServerPort == 0 {
+		log.Fatalf("nft marketplace server port isn't specified")
+	}
+	nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
+
+	// In-app purchases service
+	{
+		iapRepository, err := iap_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare iap repository: %v", err)
+		}
+
+		iapSvc := iap_svc.NewService(
+			nftMarketplaceClient,
+			iapRepository,
+			walletRepository,
+			solanaClient,
+			a.cfg.SolanaAssetAddr,
+			feePayer,
+			tokenHolder,
+		)
+		r.Mount("/iap", iap_svc.MakeHTTPHandler(
+			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
+			logger,
+		))
+	}
+
 	{
 		// NFT service
 		nftRepository, err := nftRepo.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("nftRepo error: %v", err)
 		}
-		nftService := nft.NewService(nftRepository, solanaClient, walletSvcClient.PayForNFT, a.cfg.EnableResourceIntensiveQueries)
+		nftService := nft.NewService(
+			nftMarketplaceClient,
+			nftRepository,
+			walletRepository,
+			solanaClient,
+			walletSvcClient.PayForNFT,
+			a.cfg.EnableResourceIntensiveQueries,
+		)
 		r.Mount("/nft", nft.MakeHTTPHandler(
 			nft.MakeEndpoints(nftService, jwtMdw),
 			logger,
 		))
 		nftClient = nftC.New(nftService)
-	}
-
-	// Firebase service
-	var firebaseSvc *firebase_svc.Service
-	{
-		firebaseRepository, err := firebase_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare firebase repository: %v", err)
-		}
-
-		if a.cfg.FirebaseCredsInJSON == "" {
-			log.Fatal("firebase JSON creds is not set")
-		}
-
-		firebaseSvc, err = firebase_svc.NewService(
-			firebaseRepository,
-			[]byte(a.cfg.FirebaseCredsInJSON),
-		)
-		if err != nil {
-			log.Fatalf("can't create firebase service: %v\n", err)
-		}
-		r.Mount("/firebase", firebase_svc.MakeHTTPHandler(
-			firebase_svc.MakeEndpoints(firebaseSvc, jwtMdw),
-			logger,
-		))
 	}
 
 	// Shows service
@@ -828,6 +886,7 @@ func (a *app) Run() {
 			quizV2Repository,
 			serverRSAPrivateKey,
 			a.cfg.QuizV2ShuffleQuestions,
+			a.cfg.DisableRewardsForQuiz,
 			a.cfg.QuizLobbyLatency,
 		)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
@@ -850,36 +909,6 @@ func (a *app) Run() {
 		)
 		r.Mount("/trading_platforms", trading_platforms.MakeHTTPHandler(
 			trading_platforms.MakeEndpoints(tradingPlatformsSvc, jwtMdw),
-			logger,
-		))
-	}
-
-	// In-app purchases service
-	{
-		iapRepository, err := iap_repository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare iap repository: %v", err)
-		}
-
-		if a.cfg.NftMarketplaceServerHost == "" {
-			log.Fatalf("nft marketplace server host isn't specified")
-		}
-		if a.cfg.NftMarketplaceServerPort == 0 {
-			log.Fatalf("nft marketplace server port isn't specified")
-		}
-		nftMarketplaceClient := nft_marketplace_client.New(a.cfg.NftMarketplaceServerHost, a.cfg.NftMarketplaceServerPort)
-
-		iapSvc := iap_svc.NewService(
-			nftMarketplaceClient,
-			iapRepository,
-			walletRepository,
-			solanaClient,
-			a.cfg.SolanaAssetAddr,
-			feePayer,
-			tokenHolder,
-		)
-		r.Mount("/iap", iap_svc.MakeHTTPHandler(
-			iap_svc.MakeEndpoints(iapSvc, jwtMdw),
 			logger,
 		))
 	}

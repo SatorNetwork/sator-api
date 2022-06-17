@@ -321,6 +321,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowCategories = mdw(e.GetShowCategories)
 
 			e.AddSeason = mdw(e.AddSeason)
+			e.GetSeasonByID = mdw(e.GetSeasonByID)
 			e.DeleteSeasonByID = mdw(e.DeleteSeasonByID)
 
 			e.AddEpisode = mdw(e.AddEpisode)

@@ -60,7 +60,8 @@ type defaultRoom struct {
 	rewards            interfaces.RewardsService
 	restrictionManager restriction_manager.RestrictionManager
 
-	done chan struct{}
+	disableRewardsForQuiz bool
+	done                  chan struct{}
 }
 
 func New(
@@ -71,6 +72,7 @@ func New(
 	qr interfaces.QuizV2Repository,
 	restrictionManager restriction_manager.RestrictionManager,
 	shuffleQuestions bool,
+	disableRewardsForQuiz bool,
 	quizLobbyLatency time.Duration,
 	eventsChan chan engine_events.Event,
 ) (*defaultRoom, error) {
@@ -107,7 +109,8 @@ func New(
 		rewards:            rewards,
 		restrictionManager: restrictionManager,
 
-		done: make(chan struct{}),
+		disableRewardsForQuiz: disableRewardsForQuiz,
+		done:                  make(chan struct{}),
 	}, nil
 }
 
@@ -396,6 +399,11 @@ func (r *defaultRoom) sendWinnersTable() {
 		)
 		return
 	}
+	players, err := r.quizEngine.GetPlayers()
+	if err != nil {
+		log.Printf("can't get players: %v\n", err)
+		return
+	}
 
 	msgWinners := make([]*message.Winner, 0, len(winners))
 	for _, w := range winners {
@@ -422,6 +430,18 @@ func (r *defaultRoom) sendWinnersTable() {
 		})
 	}
 
+	msgPlayers := make([]*message.Player, 0, len(players))
+	for _, player := range players {
+		p := r.pm.GetPlayerByID(player.UserID)
+
+		msgPlayers = append(msgPlayers, &message.Player{
+			UserID:   player.UserID,
+			Username: p.Username(),
+			PTS:      player.PTS,
+			Avatar:   p.Avatar(),
+		})
+	}
+
 	payload := message.WinnersTableMessage{
 		ChallengeID:           r.ChallengeID(),
 		PrizePool:             challenge.PrizePool,
@@ -430,6 +450,8 @@ func (r *defaultRoom) sendWinnersTable() {
 		Losers:                msgLosers,
 		PrizePoolDistribution: usernameIDToPrize,
 		CurrentPrizePool:      fmt.Sprintf("%v SAO", r.quizEngine.GetCurrentPrizePool()),
+		DisabledRewards:       r.disableRewardsForQuiz,
+		Players:               msgPlayers,
 	}
 	msg, err := message.NewWinnersTableMessage(&payload)
 	if err != nil {

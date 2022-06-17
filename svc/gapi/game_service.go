@@ -71,16 +71,20 @@ type (
 
 	paymentService interface {
 		GetBalance(ctx context.Context, uid uuid.UUID) (float64, error)
-		ClaimRewards(ctx context.Context, uid uuid.UUID, amount float64) (string, error)
+		ClaimRewards(ctx context.Context, uid uuid.UUID, amount, feePercent float64, feeDistribution map[string]float64) (string, error)
 		Pay(ctx context.Context, uid uuid.UUID, amount float64, info string) (string, error)
 	}
 
 	PlayerInfo struct {
-		UserID           uuid.UUID
-		EnergyPoints     int
-		SelectedNftID    string
-		ElectricityCost  float64
-		ElectricitySpent int32
+		UserID                uuid.UUID
+		EnergyPoints          int
+		EnergyPointsFull      int
+		SelectedNftID         string
+		ElectricityCost       float64
+		ElectricitySpent      int32
+		EnergyRecoveryPeriod  time.Duration
+		EnergyRecoveryCurrent time.Duration
+		ConversionFee         float64
 	}
 )
 
@@ -137,22 +141,35 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 	recoveryEnergy := recoveryEnergyPoints(player, energyFull, energyRecoveryPeriod)
 	energy := recoveryEnergy + player.EnergyPoints
 
+	lastEnergyRecoveredAt := player.EnergyRefilledAt
 	if recoveryEnergy > 0 {
+		lastEnergyRecoveredAt = time.Now()
 		if err := s.gameRepo.RefillEnergyOfPlayer(ctx, repository.RefillEnergyOfPlayerParams{
 			UserID:           uid,
 			EnergyPoints:     energy,
-			EnergyRefilledAt: time.Now(),
+			EnergyRefilledAt: lastEnergyRecoveredAt,
 		}); err != nil {
 			return nil, err
 		}
 	}
 
+	timeToRecovery := time.Until(lastEnergyRecoveredAt.Add(energyRecoveryPeriod))
+
+	convFee, err := s.conf.GetFloat64(ctx, "convert_commission")
+	if err != nil {
+		convFee = 0
+	}
+
 	return &PlayerInfo{
-		UserID:           player.UserID,
-		EnergyPoints:     int(energy),
-		SelectedNftID:    player.SelectedNftID.String,
-		ElectricityCost:  player.ElectricityCosts,
-		ElectricitySpent: player.ElectricitySpent,
+		UserID:                player.UserID,
+		EnergyPoints:          int(energy),
+		EnergyPointsFull:      int(energyFull),
+		SelectedNftID:         player.SelectedNftID.String,
+		ElectricityCost:       player.ElectricityCosts,
+		ElectricitySpent:      player.ElectricitySpent,
+		EnergyRecoveryPeriod:  energyRecoveryPeriod,
+		EnergyRecoveryCurrent: timeToRecovery,
+		ConversionFee:         convFee,
 	}, nil
 }
 
@@ -181,13 +198,13 @@ func (s *Service) GetCraftStepAmount(ctx context.Context) float64 {
 	return craftStepAmount
 }
 
-func (s *Service) GetElectricityMaxGames(ctx context.Context) (int, error) {
+func (s *Service) GetElectricityMaxGames(ctx context.Context) int32 {
 	electricityMaxGames, err := s.conf.GetInt(context.Background(), "electricity_max_games")
 	if err != nil || electricityMaxGames == 0 {
-		electricityMaxGames = int(s.electricityMaxGames)
+		return s.electricityMaxGames
 	}
 
-	return electricityMaxGames, nil
+	return int32(electricityMaxGames)
 }
 
 // GetEnergyLeft ...
@@ -419,7 +436,8 @@ func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr stri
 func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error) {
 	log.Printf("start game: %s, %d, %t", uid, complexity, isTraining)
 
-	if left, _ := s.GetElectricityLeft(ctx, uid); left < 1 {
+	leftElectr, _, _ := s.GetElectricityLeft(ctx, uid)
+	if leftElectr < 1 {
 		log.Printf("not enough electricity to start game")
 		return nil, ErrNotEnoughElectricity
 	}
@@ -468,6 +486,12 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 		return nil, fmt.Errorf("failed to take the energy of player: %w", err)
 	}
 
+	if player.EnergyPoints == player.EnergyPointsFull {
+		if err := repo.ResetEnergyRefilledAtOfPlayer(ctx, uid); err != nil {
+			return nil, fmt.Errorf("failed to update energy refilled at of player: %w", err)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -477,12 +501,12 @@ func (s *Service) StartGame(ctx context.Context, uid uuid.UUID, complexity int32
 
 // FinishGame ...
 // TODO: rewards calculation
-func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksDone int32) error {
+func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksDone int32) (int, error) {
 	log.Printf("finish game: %s, %d, %d", uid, result, blocksDone)
 
 	tx, err := s.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to start transaction: %w", err)
+		return 0, fmt.Errorf("failed to start transaction: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -490,28 +514,32 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 
 	currentGame, err := repo.GetCurrentGame(ctx, uid)
 	if err != nil {
-		return fmt.Errorf("failed to get current game: %w", err)
+		return 0, fmt.Errorf("failed to get current game: %w", err)
 	}
 
-	var rewardsAmount, electricityCost float64
-	var electricitySpent int32
+	var (
+		rewardsAmount, electricityCost float64
+		electricitySpent               int32
+		viewers                        int
+	)
+
 	if !currentGame.IsTraining {
 		nft, err := repo.GetUserNFT(ctx, repository.GetUserNFTParams{
 			UserID: uid,
 			ID:     currentGame.NFTID,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to get current nft: %w", err)
+			return 0, fmt.Errorf("failed to get current nft: %w", err)
 		}
 
-		rewardsAmount, err = calculateUserRewardsForGame(s.conf, nft.NftType, currentGame.Complexity, result)
+		rewardsAmount, viewers, err = calculateUserRewardsForGame(s.conf, nft.NftType, currentGame.Complexity, result)
 		if err != nil {
-			return fmt.Errorf("failed to calculate user rewards: %w", err)
+			return 0, fmt.Errorf("failed to calculate user rewards: %w", err)
 		}
 
 		electricityCost, err = calculateElectricityCost(s.conf, nft.NftType, result, rewardsAmount)
 		if err != nil {
-			return fmt.Errorf("failed to calculate electricity cost: %w", err)
+			return 0, fmt.Errorf("failed to calculate electricity cost: %w", err)
 		}
 
 		if electricityCost > 0 {
@@ -527,7 +555,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 		Result:           sql.NullInt32{Int32: result, Valid: true},
 		ElectricityCosts: electricityCost,
 	}); err != nil {
-		return fmt.Errorf("failed to finish game: %w", err)
+		return 0, fmt.Errorf("failed to finish game: %w", err)
 	}
 
 	if err := repo.RewardsDeposit(ctx, repository.RewardsDepositParams{
@@ -535,7 +563,7 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 		RelationID: uuid.NullUUID{UUID: currentGame.ID, Valid: true},
 		Amount:     rewardsAmount,
 	}); err != nil {
-		return fmt.Errorf("failed to withdraw rewards: %w", err)
+		return 0, fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
 	if err := repo.AddElectricityToPlayer(ctx, repository.AddElectricityToPlayerParams{
@@ -543,10 +571,10 @@ func (s *Service) FinishGame(ctx context.Context, uid uuid.UUID, result, blocksD
 		ElectricityCosts: electricityCost,
 		ElectricitySpent: electricitySpent,
 	}); err != nil {
-		return fmt.Errorf("failed to take the energy of player: %w", err)
+		return 0, fmt.Errorf("failed to take the energy of player: %w", err)
 	}
 
-	return tx.Commit()
+	return viewers, tx.Commit()
 }
 
 // GetMinAmountToClaim ...
@@ -608,7 +636,15 @@ func (s *Service) ClaimRewards(ctx context.Context, uid uuid.UUID, amount float6
 		return fmt.Errorf("failed to withdraw rewards: %w", err)
 	}
 
-	if tr, err := s.payment.ClaimRewards(ctx, uid, userRewardsAmount); err != nil {
+	fee, _ := s.conf.GetFloat64(ctx, "convert_commission")
+	feeDistr := make(map[string]float64)
+	if fee > 0 {
+		if err := s.conf.GetJSON(ctx, "conversion_fee_accumulator", &feeDistr); err != nil {
+			return fmt.Errorf("failed to get convert fee distribution: %w", err)
+		}
+	}
+
+	if tr, err := s.payment.ClaimRewards(ctx, uid, amount, fee, feeDistr); err != nil {
 		log.Printf("failed to claim rewards: %v", err)
 		return ErrCouldNotClaimRewards
 	} else {
@@ -627,24 +663,14 @@ func castDbNftInfoToNFTInfo(dbNftInfo *repository.UnityGameNft) *NFTInfo {
 	}
 }
 
-func (s *Service) GetElectricityLeft(ctx context.Context, uid uuid.UUID) (int32, error) {
-	electricityMax, err := s.conf.GetInt32(ctx, "electricity_max_games")
-	if err != nil {
-		log.Printf("failed to get electricity max: %v", err)
-		electricityMax = s.electricityMaxGames
-	}
-
-	log.Printf("electricity max: %d", electricityMax)
-
+func (s *Service) GetElectricityLeft(ctx context.Context, uid uuid.UUID) (left, max int32, err error) {
+	electricityMax := s.GetElectricityMaxGames(ctx)
 	player, err := s.gameRepo.GetPlayer(ctx, uid)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get player: %w", err)
+		return 0, electricityMax, fmt.Errorf("failed to get player: %w", err)
 	}
 
-	log.Printf("player: %+v", player)
-	log.Printf("electricityMax - player.ElectricitySpent: %v", electricityMax-player.ElectricitySpent)
-
-	return electricityMax - player.ElectricitySpent, nil
+	return electricityMax - player.ElectricitySpent, electricityMax, nil
 }
 
 func (s *Service) PayForElectricity(ctx context.Context, uid uuid.UUID) error {

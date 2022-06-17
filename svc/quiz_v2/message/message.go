@@ -258,6 +258,9 @@ type WinnersTableMessage struct {
 	Losers                []*Loser           `json:"losers"`
 	PrizePoolDistribution map[string]float64 `json:"prize_pool_distribution"`
 	CurrentPrizePool      string             `json:"current_prize_pool"`
+
+	DisabledRewards bool      `json:"disabled_rewards"`
+	Players         []*Player `json:"players"`
 }
 
 type Winner struct {
@@ -269,6 +272,13 @@ type Winner struct {
 }
 
 type Loser struct {
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	PTS      uint32 `json:"pts"`
+	Avatar   string `json:"avatar"`
+}
+
+type Player struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	PTS      uint32 `json:"pts"`

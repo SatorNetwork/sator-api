@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	common "github.com/portto/solana-go-sdk/common"
+	rpc "github.com/portto/solana-go-sdk/rpc"
 	types "github.com/portto/solana-go-sdk/types"
 )
 
@@ -110,6 +111,21 @@ func (mr *MockInterfaceMockRecorder) DeriveATAPublicKey(arg0, arg1, arg2 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeriveATAPublicKey", reflect.TypeOf((*MockInterface)(nil).DeriveATAPublicKey), arg0, arg1, arg2)
 }
 
+// DeserializeTxMessage mocks base method.
+func (m *MockInterface) DeserializeTxMessage(arg0 []byte) (types.Message, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeserializeTxMessage", arg0)
+	ret0, _ := ret[0].(types.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeserializeTxMessage indicates an expected call of DeserializeTxMessage.
+func (mr *MockInterfaceMockRecorder) DeserializeTxMessage(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeserializeTxMessage", reflect.TypeOf((*MockInterface)(nil).DeserializeTxMessage), arg0)
+}
+
 // Endpoint mocks base method.
 func (m *MockInterface) Endpoint() string {
 	m.ctrl.T.Helper()
@@ -153,6 +169,21 @@ func (mr *MockInterfaceMockRecorder) GetAccountBalanceSOL(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountBalanceSOL", reflect.TypeOf((*MockInterface)(nil).GetAccountBalanceSOL), arg0, arg1)
 }
 
+// GetBlockHeight mocks base method.
+func (m *MockInterface) GetBlockHeight(arg0 context.Context) (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlockHeight", arg0)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlockHeight indicates an expected call of GetBlockHeight.
+func (mr *MockInterfaceMockRecorder) GetBlockHeight(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHeight", reflect.TypeOf((*MockInterface)(nil).GetBlockHeight), arg0)
+}
+
 // GetConfirmedTransaction mocks base method.
 func (m *MockInterface) GetConfirmedTransaction(arg0 context.Context, arg1 string) (GetConfirmedTransactionResponse, error) {
 	m.ctrl.T.Helper()
@@ -181,6 +212,21 @@ func (m *MockInterface) GetConfirmedTransactionForAccount(arg0 context.Context, 
 func (mr *MockInterfaceMockRecorder) GetConfirmedTransactionForAccount(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedTransactionForAccount", reflect.TypeOf((*MockInterface)(nil).GetConfirmedTransactionForAccount), arg0, arg1, arg2, arg3)
+}
+
+// GetLatestBlockhash mocks base method.
+func (m *MockInterface) GetLatestBlockhash(arg0 context.Context) (rpc.GetLatestBlockhashValue, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestBlockhash", arg0)
+	ret0, _ := ret[0].(rpc.GetLatestBlockhashValue)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLatestBlockhash indicates an expected call of GetLatestBlockhash.
+func (mr *MockInterfaceMockRecorder) GetLatestBlockhash(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestBlockhash", reflect.TypeOf((*MockInterface)(nil).GetLatestBlockhash), arg0)
 }
 
 // GetNFTMetadata mocks base method.
@@ -334,6 +380,21 @@ func (mr *MockInterfaceMockRecorder) InitializeStakePool(arg0, arg1, arg2, arg3 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeStakePool", reflect.TypeOf((*MockInterface)(nil).InitializeStakePool), arg0, arg1, arg2, arg3)
 }
 
+// IsTransactionSuccessful mocks base method.
+func (m *MockInterface) IsTransactionSuccessful(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsTransactionSuccessful", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsTransactionSuccessful indicates an expected call of IsTransactionSuccessful.
+func (mr *MockInterfaceMockRecorder) IsTransactionSuccessful(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsTransactionSuccessful", reflect.TypeOf((*MockInterface)(nil).IsTransactionSuccessful), arg0, arg1)
+}
+
 // IssueAsset mocks base method.
 func (m *MockInterface) IssueAsset(arg0 context.Context, arg1, arg2, arg3 types.Account, arg4 common.PublicKey, arg5 float64) (string, error) {
 	m.ctrl.T.Helper()
@@ -349,6 +410,21 @@ func (mr *MockInterfaceMockRecorder) IssueAsset(arg0, arg1, arg2, arg3, arg4, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssueAsset", reflect.TypeOf((*MockInterface)(nil).IssueAsset), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
+// NeedToRetry mocks base method.
+func (m *MockInterface) NeedToRetry(arg0 context.Context, arg1 int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NeedToRetry", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NeedToRetry indicates an expected call of NeedToRetry.
+func (mr *MockInterfaceMockRecorder) NeedToRetry(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NeedToRetry", reflect.TypeOf((*MockInterface)(nil).NeedToRetry), arg0, arg1)
+}
+
 // NewAccount mocks base method.
 func (m *MockInterface) NewAccount() types.Account {
 	m.ctrl.T.Helper()
@@ -361,6 +437,21 @@ func (m *MockInterface) NewAccount() types.Account {
 func (mr *MockInterfaceMockRecorder) NewAccount() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccount", reflect.TypeOf((*MockInterface)(nil).NewAccount))
+}
+
+// NewTransaction mocks base method.
+func (m *MockInterface) NewTransaction(arg0 types.NewTransactionParam) (types.Transaction, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewTransaction", arg0)
+	ret0, _ := ret[0].(types.Transaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewTransaction indicates an expected call of NewTransaction.
+func (mr *MockInterfaceMockRecorder) NewTransaction(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTransaction", reflect.TypeOf((*MockInterface)(nil).NewTransaction), arg0)
 }
 
 // PrepareSendAssetsTx mocks base method.
@@ -420,6 +511,21 @@ func (m *MockInterface) SendAssetsWithAutoDerive(arg0 context.Context, arg1 stri
 func (mr *MockInterfaceMockRecorder) SendAssetsWithAutoDerive(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAssetsWithAutoDerive", reflect.TypeOf((*MockInterface)(nil).SendAssetsWithAutoDerive), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+}
+
+// SendConstructedTransaction mocks base method.
+func (m *MockInterface) SendConstructedTransaction(arg0 context.Context, arg1 types.Transaction) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendConstructedTransaction", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SendConstructedTransaction indicates an expected call of SendConstructedTransaction.
+func (mr *MockInterfaceMockRecorder) SendConstructedTransaction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendConstructedTransaction", reflect.TypeOf((*MockInterface)(nil).SendConstructedTransaction), arg0, arg1)
 }
 
 // SendTransaction mocks base method.

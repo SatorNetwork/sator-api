@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
+	"github.com/portto/solana-go-sdk/rpc"
 	"github.com/portto/solana-go-sdk/types"
 
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
@@ -149,6 +150,72 @@ func (s *solanaMultiProvider) GetConfirmedTransactionForAccount(ctx context.Cont
 	return lib_solana.ConfirmedTransactionResponse{}, ErrSolanaProvidersDontRespond
 }
 
+func (s *solanaMultiProvider) IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error) {
+	for _, p := range s.providers {
+		resp, err := p.IsTransactionSuccessful(ctx, txhash)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return false, ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) NeedToRetry(ctx context.Context, latestValidBlockHeight int64) (bool, error) {
+	for _, p := range s.providers {
+		resp, err := p.NeedToRetry(ctx, latestValidBlockHeight)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return false, ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) GetBlockHeight(ctx context.Context) (uint64, error) {
+	for _, p := range s.providers {
+		resp, err := p.GetBlockHeight(ctx)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return 0, ErrSolanaProvidersDontRespond
+}
+
 func (s *solanaMultiProvider) NewAccount() types.Account {
 	return s.providers[0].NewAccount()
 }
@@ -186,6 +253,28 @@ func (s *solanaMultiProvider) FeeAccumulatorAddress() string {
 func (s *solanaMultiProvider) RequestAirdrop(ctx context.Context, pubKey string, amount float64) (string, error) {
 	for _, p := range s.providers {
 		resp, err := p.RequestAirdrop(ctx, pubKey, amount)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return "", ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) SendConstructedTransaction(ctx context.Context, tx types.Transaction) (string, error) {
+	for _, p := range s.providers {
+		resp, err := p.SendConstructedTransaction(ctx, tx)
 		if err != nil {
 			s.m.registerError(ctx, p.Endpoint(), err.Error())
 		}
@@ -483,6 +572,50 @@ func (s *solanaMultiProvider) SerializeTxMessage(message types.Message) ([]byte,
 		return resp, err
 	}
 	return nil, ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) DeserializeTxMessage(message []byte) (types.Message, error) {
+	for _, p := range s.providers {
+		resp, err := p.DeserializeTxMessage(message)
+		if err != nil && tryNextProvider(err) {
+			continue
+		}
+		return resp, err
+	}
+	return types.Message{}, ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) NewTransaction(param types.NewTransactionParam) (types.Transaction, error) {
+	for _, p := range s.providers {
+		resp, err := p.NewTransaction(param)
+		if err != nil && tryNextProvider(err) {
+			continue
+		}
+		return resp, err
+	}
+	return types.Transaction{}, ErrSolanaProvidersDontRespond
+}
+
+func (s *solanaMultiProvider) GetLatestBlockhash(ctx context.Context) (rpc.GetLatestBlockhashValue, error) {
+	for _, p := range s.providers {
+		resp, err := p.GetLatestBlockhash(ctx)
+		if err != nil {
+			s.m.registerError(ctx, p.Endpoint(), err.Error())
+		}
+		if err != nil && tryNextProvider(err) {
+			s.m.registerNotAvailableError(ctx, p.Endpoint())
+			continue
+		}
+
+		if err != nil {
+			s.m.registerOtherError(ctx, p.Endpoint())
+		} else {
+			s.m.registerSuccessCall(ctx, p.Endpoint())
+		}
+
+		return resp, err
+	}
+	return rpc.GetLatestBlockhashValue{}, ErrSolanaProvidersDontRespond
 }
 
 func (s *solanaMultiProvider) GetNFTsByWalletAddress(ctx context.Context, walletAddr string) ([]*lib_solana.ArweaveNFTMetadata, error) {

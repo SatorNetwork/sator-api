@@ -64,3 +64,18 @@ func (mr *MockMessagingClientInterfaceMockRecorder) SubscribeToTopic(arg0, arg1,
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeToTopic", reflect.TypeOf((*MockMessagingClientInterface)(nil).SubscribeToTopic), arg0, arg1, arg2)
 }
+
+// UnsubscribeFromTopic mocks base method.
+func (m *MockMessagingClientInterface) UnsubscribeFromTopic(arg0 context.Context, arg1 []string, arg2 string) (*messaging.TopicManagementResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnsubscribeFromTopic", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*messaging.TopicManagementResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnsubscribeFromTopic indicates an expected call of UnsubscribeFromTopic.
+func (mr *MockMessagingClientInterfaceMockRecorder) UnsubscribeFromTopic(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnsubscribeFromTopic", reflect.TypeOf((*MockMessagingClientInterface)(nil).UnsubscribeFromTopic), arg0, arg1, arg2)
+}

@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -15,9 +14,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/types"
+	log "github.com/sirupsen/logrus"
 
 	lib_appstore "github.com/SatorNetwork/sator-api/lib/appstore"
 	appstore_client "github.com/SatorNetwork/sator-api/lib/appstore/client"
+	lib_errors "github.com/SatorNetwork/sator-api/lib/errors"
 	lib_nft_marketplace "github.com/SatorNetwork/sator-api/lib/nft_marketplace"
 	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
@@ -158,7 +159,8 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		return nil
 	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(constantBackOff), maxRetries))
 	if err != nil {
-		return nil, err
+		log.Error(errors.Wrap(err, "can't send transaction"))
+		return nil, lib_errors.ErrCantSendSolanaTransaction
 	}
 
 	receiptInJson, err := json.Marshal(iapResp)

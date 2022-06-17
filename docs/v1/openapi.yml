@@ -476,6 +476,12 @@ components:
               electricity_max_games:
                 type: number
                 description: Electricity max games
+              energy_recovery_period:
+                type: number
+                description: Energy recovery period
+              energy_recovery_current:
+                type: number
+                description: Time left to recover energy
 
     NFTPack:
       description: NFT Packs.
@@ -4670,6 +4676,32 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /nft/{mint_address}/buy/marketplace:
+    post:
+      tags:
+        - "NFT"
+      summary: Buy NFT Via Marketplace
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: mint_address
+          in: path
+          description: NFT Mint Address.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Buy NFT Via Marketplace.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/EmptyBody"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /nft/categories:
     get:
       tags:
@@ -6361,6 +6393,8 @@ paths:
                 type: object
                 properties:
                   user_in_game_currency:
+                    type: number
+                  viewers:
                     type: number
         "400":
           $ref: "#/components/responses/DefaultError"

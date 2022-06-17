@@ -221,7 +221,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 
 	r.Get("/{show_id}/seasons/{season_id}", httptransport.NewServer(
 		e.GetSeasonByID,
-		decodeGetEpisodeByIDRequest,
+		decodeGetSeasonByIDRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)

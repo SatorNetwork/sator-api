@@ -64,7 +64,7 @@ type (
 
 	authService interface {
 		Login(ctx context.Context, email, password, deviceID string) (Token, error)
-		Logout(ctx context.Context, tid string) error
+		Logout(ctx context.Context, tid string, userID uuid.UUID, deviceID string) error
 		SignUp(ctx context.Context, email, password, username, deviceID string) (Token, error)
 		RefreshToken(ctx context.Context, uid uuid.UUID, username, role, deviceID string) (Token, error)
 
@@ -346,7 +346,11 @@ func MakeLogoutEndpoint(s authService) endpoint.Endpoint {
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
-		if err := s.Logout(ctx, tid.String()); err != nil {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user id: %w", err)
+		}
+		if err := s.Logout(ctx, tid.String(), uid, deviceid.FromContext(ctx)); err != nil {
 			return nil, err
 		}
 		return true, nil

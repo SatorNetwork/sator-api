@@ -24,6 +24,7 @@ type (
 		GetNFTsByUserID        endpoint.Endpoint
 		GetNFTByID             endpoint.Endpoint
 		BuyNFT                 endpoint.Endpoint
+		BuyNFTViaMarketplace   endpoint.Endpoint
 		GetCategories          endpoint.Endpoint
 		GetMainScreenData      endpoint.Endpoint
 		DeleteNFTItemByID      endpoint.Endpoint
@@ -40,6 +41,7 @@ type (
 		GetNFTsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]*NFT, error)
 		GetNFTByID(ctx context.Context, nftID, userID uuid.UUID) (*NFT, error)
 		BuyNFT(ctx context.Context, userUid uuid.UUID, nftID uuid.UUID) error
+		BuyNFTViaMarketplace(ctx context.Context, userID uuid.UUID, mintAddress string) (*Empty, error)
 		GetCategories(ctx context.Context) ([]*Category, error)
 		GetMainScreenCategory(ctx context.Context) (*Category, error)
 		DeleteNFTItemByID(ctx context.Context, nftID uuid.UUID) error
@@ -224,6 +226,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetNFTsByUserID:        MakeGetNFTsByUserIDEndpoint(s, validateFunc),
 		GetNFTByID:             MakeGetNFTByIDEndpoint(s),
 		BuyNFT:                 MakeBuyNFTEndpoint(s),
+		BuyNFTViaMarketplace:   MakeBuyNFTViaMarketplaceEndpoint(s),
 		GetCategories:          MakeGetCategoriesEndpoint(s),
 		GetMainScreenData:      MakeGetMainScreenDataEndpoint(s),
 		DeleteNFTItemByID:      MakeDeleteNFTItemByIDEndpoint(s),
@@ -242,6 +245,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetNFTsByUserID = mdw(e.GetNFTsByUserID)
 			e.GetNFTByID = mdw(e.GetNFTByID)
 			e.BuyNFT = mdw(e.BuyNFT)
+			e.BuyNFTViaMarketplace = mdw(e.BuyNFTViaMarketplace)
 			e.GetCategories = mdw(e.GetCategories)
 			e.GetMainScreenData = mdw(e.GetMainScreenData)
 			e.DeleteNFTItemByID = mdw(e.DeleteNFTItemByID)
@@ -440,6 +444,27 @@ func MakeBuyNFTEndpoint(s service) endpoint.Endpoint {
 		}
 
 		err = s.BuyNFT(ctx, userUid, uuid.MustParse(nftID))
+		if err != nil {
+			return nil, err
+		}
+
+		return Empty{}, nil
+	}
+}
+
+func MakeBuyNFTViaMarketplaceEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		userUid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		mintAddress, ok := request.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected request type, want: string, got: %T", request)
+		}
+
+		_, err = s.BuyNFTViaMarketplace(ctx, userUid, mintAddress)
 		if err != nil {
 			return nil, err
 		}

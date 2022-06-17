@@ -17,3 +17,7 @@ SET
 -- name: GetRegistrationToken :one
 SELECT * FROM firebase_registration_tokens
 WHERE device_id = @device_id AND user_id = @user_id;
+
+-- name: DeleteRegistrationToken :exec
+DELETE FROM firebase_registration_tokens
+WHERE device_id = @device_id AND user_id = @user_id;
