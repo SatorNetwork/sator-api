@@ -119,6 +119,7 @@ type (
 		InitializeStakePool(ctx context.Context, feePayer, issuer types.Account, asset common.PublicKey) (txHast string, stakePool types.Account, err error)
 		Stake(ctx context.Context, feePayer, userWallet types.Account, pool, asset common.PublicKey, duration int64, amount float64) (string, error)
 		Unstake(ctx context.Context, feePayer, userWallet types.Account, stakePool, asset common.PublicKey) (string, error)
+		IsTransactionSuccessful(ctx context.Context, txhash string) (bool, error)
 	}
 
 	ethereumClient interface {
@@ -866,9 +867,10 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 		return false, err
 	}
 
+	var tx string
 	for i := 0; i < 5; i++ {
 		newCtx, cancel := context.WithCancel(context.Background())
-		if tx, err := s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, amount); err != nil {
+		if tx, err = s.sc.Stake(newCtx, feePayer, userWallet, stakePool, asset, duration, amount); err != nil {
 			if i < 4 {
 				log.Println(err)
 			} else {
@@ -882,6 +884,17 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 			log.Printf("successful transaction: %s", tx)
 			break
 		}
+	}
+
+	for i := 0; i < 3; i++ {
+		ok, err := s.sc.IsTransactionSuccessful(ctx, tx)
+		if err != nil {
+			return false, fmt.Errorf("%w: %v", ErrTransactionFailed, err)
+		}
+		if ok {
+			break
+		}
+		time.Sleep(time.Second * 10)
 	}
 
 	// Store stake data in our db.
