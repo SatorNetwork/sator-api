@@ -113,6 +113,7 @@ var (
 		FirebaseCredsInJSON:          "{}",
 		UnityGameFeeCollectorAddress: "5HWrR1KpvbBA6QU4pMzJ3XGzj7y69qkkyPnLqRjQbTNT",
 		UnityGameTokenPoolPrivateKey: "439mPhbnm7TsnP8b6bZqroSFaLmJZGMDTxkidoABr217CzgFRBoYcVfKZ5XJfaHcuWKVAwsrZvqbGVyR8psm74gD",
+		DisableRewardsForQuiz:        true,
 	}
 )
 

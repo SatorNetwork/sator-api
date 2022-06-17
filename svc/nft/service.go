@@ -3,6 +3,7 @@ package nft
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,18 +12,24 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/types"
 
 	"github.com/SatorNetwork/sator-api/lib/db"
+	lib_nft_marketplace "github.com/SatorNetwork/sator-api/lib/nft_marketplace"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	"github.com/SatorNetwork/sator-api/svc/nft/repository"
+	"github.com/SatorNetwork/sator-api/svc/wallet"
+	wallet_repository "github.com/SatorNetwork/sator-api/svc/wallet/repository"
 )
 
 type (
 	// Service struct
 	Service struct {
-		nftRepo    nftRepository
-		sc         solanaClient
-		buyNFTFunc buyNFTFunction
+		nftMarketplace lib_nft_marketplace.Interface
+		nftRepo        nftRepository
+		wr             walletRepository
+		sc             solanaClient
+		buyNFTFunc     buyNFTFunction
 
 		enableResourceIntensiveQueries bool
 	}
@@ -126,9 +133,19 @@ type (
 		GetNFTFromCache(ctx context.Context, mintAddr string) (repository.NftCache, error)
 	}
 
+	walletRepository interface {
+		GetSolanaAccountByUserIDAndType(
+			ctx context.Context,
+			arg wallet_repository.GetSolanaAccountByUserIDAndTypeParams,
+		) (wallet_repository.SolanaAccount, error)
+	}
+
 	solanaClient interface {
+		AccountFromPrivateKeyBytes(pk []byte) (types.Account, error)
 		GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error)
 		GetNFTMetadata(mintAddr string) (*lib_solana.ArweaveNFTMetadata, error)
+		TransactionDeserialize(tx []byte) (types.Transaction, error)
+		SerializeTxMessage(message types.Message) ([]byte, error)
 	}
 
 	NFTItemRow struct {
@@ -153,11 +170,21 @@ type (
 
 // NewService is a factory function,
 // returns a new instance of the Service interface implementation
-func NewService(nftRepo nftRepository, sc solanaClient, buyNFTFunc buyNFTFunction, enableResourceIntensiveQueries bool, opt ...Option) *Service {
+func NewService(
+	nftMarketplace lib_nft_marketplace.Interface,
+	nftRepo nftRepository,
+	wr walletRepository,
+	sc solanaClient,
+	buyNFTFunc buyNFTFunction,
+	enableResourceIntensiveQueries bool,
+	opt ...Option,
+) *Service {
 	s := &Service{
-		nftRepo:    nftRepo,
-		sc:         sc,
-		buyNFTFunc: buyNFTFunc,
+		nftMarketplace: nftMarketplace,
+		nftRepo:        nftRepo,
+		wr:             wr,
+		sc:             sc,
+		buyNFTFunc:     buyNFTFunc,
 
 		enableResourceIntensiveQueries: enableResourceIntensiveQueries,
 	}
@@ -231,6 +258,67 @@ func (s *Service) BuyNFT(ctx context.Context, userID uuid.UUID, nftID uuid.UUID)
 	}
 
 	return nil
+}
+
+func (s *Service) BuyNFTViaMarketplace(ctx context.Context, userID uuid.UUID, mintAddress string) (*Empty, error) {
+	solanaAccount, err := s.wr.GetSolanaAccountByUserIDAndType(ctx, wallet_repository.GetSolanaAccountByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: wallet.WalletTypeSator,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get solana account by user id and type")
+	}
+
+	log.Printf("Preparing buy tx, mint address: %v, charge tokens from: %v", mintAddress, solanaAccount.PublicKey)
+	prepareBuyTxResp, err := s.nftMarketplace.PrepareBuyTx(&lib_nft_marketplace.PrepareBuyTxRequest{
+		MintAddress:      mintAddress,
+		ChargeTokensFrom: solanaAccount.PublicKey,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't prepare buy tx")
+	}
+
+	nftBuyer, err := s.sc.AccountFromPrivateKeyBytes(solanaAccount.PrivateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get account from private key bytes")
+	}
+
+	nftBuyerSignature, err := s.getNFTBuyerSignature(nftBuyer, prepareBuyTxResp.EncodedTx)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get nft buyer signature")
+	}
+
+	log.Printf("Sending prepared buy tx, txid: %v", prepareBuyTxResp.PreparedBuyTxId)
+	_, err = s.nftMarketplace.SendPreparedBuyTx(&lib_nft_marketplace.SendPreparedBuyTxRequest{
+		PreparedBuyTxId: prepareBuyTxResp.PreparedBuyTxId,
+		BuyerSignature:  base64.StdEncoding.EncodeToString(nftBuyerSignature),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't send prepared buy tx")
+	}
+
+	return &Empty{}, nil
+}
+
+func (s *Service) getNFTBuyerSignature(nftBuyer types.Account, encodedTx string) ([]byte, error) {
+	var nftBuyerSignature []byte
+	{
+		serializedTx, err := base64.StdEncoding.DecodeString(encodedTx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't decode transaction")
+		}
+		tx, err := s.sc.TransactionDeserialize(serializedTx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize transaction")
+		}
+		serializedMessage, err := s.sc.SerializeTxMessage(tx.Message)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't serialize message")
+		}
+		nftBuyerSignature = nftBuyer.Sign(serializedMessage)
+	}
+
+	return nftBuyerSignature, nil
 }
 
 func (s *Service) GetNFTs(ctx context.Context, limit, offset int32, withMinted bool) ([]*NFT, error) {
