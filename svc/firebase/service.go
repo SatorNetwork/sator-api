@@ -212,7 +212,7 @@ func (s *Service) SendNewEpisodeNotification(ctx context.Context, showTitle, epi
 		fmt.Sprintf("%s: %s is now on Sator.", showTitle, episodeTitle),
 		map[string]string{
 			"show_id":    showID.String(),
-			"seasonID":   seasonID.String(),
+			"season_id":  seasonID.String(),
 			"episode_id": episodeID.String(),
 		},
 	)
