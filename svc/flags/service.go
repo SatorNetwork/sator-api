@@ -16,7 +16,7 @@ type (
 
 	flagRepository interface {
 		GetFlagByKey(ctx context.Context, key string) (repository.Flag, error)
-		CreateFlag(ctx context.Context, arg repository.CreateFlagParams) (repository.Flag, error)
+		CreateFlag(ctx context.Context, arg repository.CreateFlagParams) error
 	}
 )
 
@@ -37,7 +37,7 @@ var flags = []repository.CreateFlagParams{
 
 func (s *Service) Init(ctx context.Context) error {
 	for i := range flags {
-		if _, err := s.fr.CreateFlag(ctx, flags[i]); err != nil {
+		if err := s.fr.CreateFlag(ctx, flags[i]); err != nil {
 			return err
 		}
 	}

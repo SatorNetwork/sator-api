@@ -3,11 +3,11 @@ SELECT *
 FROM flags
 WHERE key = $1;
 
--- name: CreateFlag :one
+-- name: CreateFlag :exec
 INSERT INTO flags (
     key,
     value
 ) VALUES (
     @key,
     @value
-) ON CONFLICT DO NOTHING RETURNING *;
+) ON CONFLICT DO NOTHING;

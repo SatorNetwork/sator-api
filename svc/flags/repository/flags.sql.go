@@ -9,14 +9,14 @@ import (
 	"context"
 )
 
-const createFlag = `-- name: CreateFlag :one
+const createFlag = `-- name: CreateFlag :exec
 INSERT INTO flags (
     key,
     value
 ) VALUES (
     $1,
     $2
-) ON CONFLICT DO NOTHING RETURNING key, value
+) ON CONFLICT DO NOTHING
 `
 
 type CreateFlagParams struct {
@@ -24,11 +24,9 @@ type CreateFlagParams struct {
 	Value string `json:"value"`
 }
 
-func (q *Queries) CreateFlag(ctx context.Context, arg CreateFlagParams) (Flag, error) {
-	row := q.queryRow(ctx, q.createFlagStmt, createFlag, arg.Key, arg.Value)
-	var i Flag
-	err := row.Scan(&i.Key, &i.Value)
-	return i, err
+func (q *Queries) CreateFlag(ctx context.Context, arg CreateFlagParams) error {
+	_, err := q.exec(ctx, q.createFlagStmt, createFlag, arg.Key, arg.Value)
+	return err
 }
 
 const getFlagByKey = `-- name: GetFlagByKey :one
