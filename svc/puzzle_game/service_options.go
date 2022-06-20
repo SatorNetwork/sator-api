@@ -27,3 +27,10 @@ func WithUserMultiplierFunction(fn getUserRewardsMultiplierFunc) ServiceOption {
 		s.getUserRewardsMultiplierFn = fn
 	}
 }
+
+// WithFlagsServiceClient sets the flags service client for the service.
+func WithFlagsServiceClient(fls flagsService) ServiceOption {
+	return func(s *Service) {
+		s.flagsSvc = fls
+	}
+}

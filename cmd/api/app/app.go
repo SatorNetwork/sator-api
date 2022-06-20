@@ -53,6 +53,8 @@ import (
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	firebase_svc "github.com/SatorNetwork/sator-api/svc/firebase"
 	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
+	"github.com/SatorNetwork/sator-api/svc/flags"
+	flagsRepository "github.com/SatorNetwork/sator-api/svc/flags/repository"
 	"github.com/SatorNetwork/sator-api/svc/gapi"
 	unityGameRepo "github.com/SatorNetwork/sator-api/svc/gapi/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
@@ -913,6 +915,20 @@ func (a *app) Run() {
 		))
 	}
 
+	var flagsSvc *flags.Service
+	{
+		flagsReposiory, err := flagsRepository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare flags repository: %v", err)
+		}
+
+		flagsSvc = flags.NewService(flagsReposiory)
+
+		if err = flagsSvc.Init(ctx); err != nil {
+			log.Fatalf("can't prepare flags: %v", err)
+		}
+	}
+
 	{
 		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
 		if err != nil {
@@ -926,6 +942,7 @@ func (a *app) Run() {
 			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
 			puzzle_game.WithFileServiceClient(fileSvc),
 			puzzle_game.WithUserMultiplierFunction(walletSvcClient.GetMultiplier),
+			puzzle_game.WithFlagsServiceClient(flagsSvc),
 		)
 
 		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/files"
+	flags_alias "github.com/SatorNetwork/sator-api/svc/flags/alias"
 	"github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 )
 
@@ -29,6 +31,7 @@ type (
 	Service struct {
 		pgr                        puzzleGameRepository
 		filesSvc                   filesService
+		flagsSvc                   flagsService
 		chargeForUnlock            chargeForUnlockFunc          // function to charge user for unlocking puzzle game
 		rewardsFn                  rewardsFunc                  // function to send rewards for puzzle game
 		getUserRewardsMultiplierFn getUserRewardsMultiplierFunc // function to get user rewards multiplier
@@ -59,6 +62,10 @@ type (
 	filesService interface {
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 		GetImagesListByIDs(ctx context.Context, ids []uuid.UUID) ([]files.File, error)
+	}
+
+	flagsService interface {
+		GetFlagValueByKey(ctx context.Context, key flags_alias.Key) (flags_alias.Value, error)
 	}
 
 	chargeForUnlockFunc          func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -283,26 +290,38 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.New("payment service is not set")
 	}
 
-	opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
+	value, err := s.flagsSvc.GetFlagValueByKey(ctx, flags_alias.FlagKeyPuzzleGameRewards)
 	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
+		return PuzzleGame{}, errors.Wrap(err, "can't get flag")
 	}
 
-	if opt.Locked {
-		return PuzzleGame{}, errors.New("this unlock option is not available")
-	}
-
-	if opt.Amount > 0 {
-		if err := s.chargeForUnlock(ctx, userID, opt.Amount,
-			fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
-			return PuzzleGame{}, errors.Wrap(err, "can't charge for unlock puzzle game")
+	var steps int32
+	if value == flags_alias.FlagValueEnabled {
+		opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
+		if err != nil {
+			return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
 		}
+
+		if opt.Locked {
+			return PuzzleGame{}, errors.New("this unlock option is not available")
+		}
+
+		if opt.Amount > 0 {
+			if err := s.chargeForUnlock(ctx, userID, opt.Amount,
+				fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
+				return PuzzleGame{}, errors.Wrap(err, "can't charge for unlock puzzle game")
+			}
+		}
+
+		steps = opt.Steps
+	} else {
+		steps = math.MaxInt32
 	}
 
 	if _, err := s.pgr.UnlockPuzzleGame(ctx, repository.UnlockPuzzleGameParams{
 		PuzzleGameID: puzzleGameID,
 		UserID:       userID,
-		Steps:        opt.Steps,
+		Steps:        steps,
 	}); err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "can't unlock puzzle game")
 	}
