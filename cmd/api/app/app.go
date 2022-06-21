@@ -39,6 +39,8 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/solana_multiprovider"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
+	announcement_svc "github.com/SatorNetwork/sator-api/svc/announcement"
+	announcement_repository "github.com/SatorNetwork/sator-api/svc/announcement/repository"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authc "github.com/SatorNetwork/sator-api/svc/auth/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -967,6 +969,22 @@ func (a *app) Run() {
 			),
 			logger,
 			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
+		))
+	}
+
+	// In-app purchases service
+	{
+		announcementRepository, err := announcement_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare announcement repository: %v", err)
+		}
+
+		announcementSvc := announcement_svc.NewService(
+			announcementRepository,
+		)
+		r.Mount("/announcement", announcement_svc.MakeHTTPHandler(
+			announcement_svc.MakeEndpoints(announcementSvc, jwtMdw),
+			logger,
 		))
 	}
 
