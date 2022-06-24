@@ -21,6 +21,7 @@ type (
 		DeleteAnnouncement      endpoint.Endpoint
 		ListAnnouncements       endpoint.Endpoint
 		ListUnreadAnnouncements endpoint.Endpoint
+		ListActiveAnnouncements endpoint.Endpoint
 		MarkAsRead              endpoint.Endpoint
 		MarkAllAsRead           endpoint.Endpoint
 	}
@@ -32,6 +33,7 @@ type (
 		DeleteAnnouncementByID(ctx context.Context, req *DeleteAnnouncementRequest) error
 		ListAnnouncements(ctx context.Context) ([]*Announcement, error)
 		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error)
+		ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error)
 		MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsReadRequest) error
 		MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
 	}
@@ -47,6 +49,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		DeleteAnnouncement:      MakeDeleteAnnouncementEndpoint(s, validateFunc),
 		ListAnnouncements:       MakeListAnnouncementsEndpoint(s, validateFunc),
 		ListUnreadAnnouncements: MakeListUnreadAnnouncementsEndpoint(s, validateFunc),
+		ListActiveAnnouncements: MakeListActiveAnnouncementsEndpoint(s, validateFunc),
 		MarkAsRead:              MakeMarkAsReadEndpoint(s, validateFunc),
 		MarkAllAsRead:           MakeMarkAllAsReadEndpoint(s, validateFunc),
 	}
@@ -60,6 +63,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.DeleteAnnouncement = mdw(e.DeleteAnnouncement)
 			e.ListAnnouncements = mdw(e.ListAnnouncements)
 			e.ListUnreadAnnouncements = mdw(e.ListUnreadAnnouncements)
+			e.ListActiveAnnouncements = mdw(e.ListActiveAnnouncements)
 			e.MarkAsRead = mdw(e.MarkAsRead)
 			e.MarkAllAsRead = mdw(e.MarkAllAsRead)
 		}
@@ -186,6 +190,21 @@ func MakeListUnreadAnnouncementsEndpoint(s service, v validator.ValidateFunc) en
 		}
 
 		resp, err := s.ListUnreadAnnouncements(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+func MakeListActiveAnnouncementsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.ListActiveAnnouncements(ctx)
 		if err != nil {
 			return nil, err
 		}

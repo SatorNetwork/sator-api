@@ -76,6 +76,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/active", httptransport.NewServer(
+		e.ListActiveAnnouncements,
+		decodeListActiveAnnouncementsRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/{id}/read", httptransport.NewServer(
 		e.MarkAsRead,
 		decodeMarkAsReadRequest,
@@ -135,6 +142,10 @@ func decodeListAnnouncementsRequest(_ context.Context, r *http.Request) (interfa
 }
 
 func decodeListUnreadAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return &Empty{}, nil
+}
+
+func decodeListActiveAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return &Empty{}, nil
 }
 

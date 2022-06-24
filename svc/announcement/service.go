@@ -25,6 +25,7 @@ type (
 		DeleteAnnouncementByID(ctx context.Context, id uuid.UUID) error
 		ListAnnouncements(ctx context.Context) ([]announcement_repository.Announcement, error)
 		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]announcement_repository.Announcement, error)
+		ListActiveAnnouncements(ctx context.Context) ([]announcement_repository.Announcement, error)
 
 		MarkAsRead(ctx context.Context, arg announcement_repository.MarkAsReadParams) error
 		IsRead(ctx context.Context, arg announcement_repository.IsReadParams) (bool, error)
@@ -187,6 +188,15 @@ func (s *Service) ListAnnouncements(ctx context.Context) ([]*Announcement, error
 
 func (s *Service) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error) {
 	announcements, err := s.ar.ListUnreadAnnouncements(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewAnnouncementsFromSQLC(announcements), nil
+}
+
+func (s *Service) ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error) {
+	announcements, err := s.ar.ListActiveAnnouncements(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,10 @@ SELECT * FROM announcements WHERE id IN (
     WHERE user_id = @user_id
 );
 
+-- name: ListActiveAnnouncements :many
+SELECT * FROM announcements
+WHERE starts_at <= NOW() AND NOW() <= ends_at;
+
 -- name: CleanUpReadAnnouncements :exec
 DELETE FROM read_announcements;
 

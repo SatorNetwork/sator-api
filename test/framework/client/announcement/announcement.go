@@ -245,6 +245,33 @@ func (c *AnnouncementClient) ListUnreadAnnouncements(accessToken string) ([]*Ann
 	return resp.Data, nil
 }
 
+func (c *AnnouncementClient) ListActiveAnnouncements(accessToken string) ([]*Announcement, error) {
+	url := "http://localhost:8080/announcement/active"
+	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+
+	var resp AnnouncementsWrapper
+	if err := json.Unmarshal(rawBody, &resp); err != nil {
+		return nil, errors.Wrap(err, "can't unmarshal response body")
+	}
+
+	return resp.Data, nil
+}
+
 func (c *AnnouncementClient) MarkAsRead(accessToken string, req *MarkAsReadRequest) error {
 	url := fmt.Sprintf("http://localhost:8080/announcement/%v/read", req.AnnouncementID)
 	httpReq, err := http.NewRequest(http.MethodPost, url, nil)
