@@ -22,6 +22,7 @@ type (
 		) (announcement_repository.Announcement, error)
 		GetAnnouncementByID(ctx context.Context, id uuid.UUID) (announcement_repository.Announcement, error)
 		UpdateAnnouncementByID(ctx context.Context, arg announcement_repository.UpdateAnnouncementByIDParams) error
+		DeleteAnnouncementByID(ctx context.Context, id uuid.UUID) error
 		ListAnnouncements(ctx context.Context) ([]announcement_repository.Announcement, error)
 		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]announcement_repository.Announcement, error)
 
@@ -64,6 +65,10 @@ type (
 		ActionUrl   string `json:"action_url"`
 		StartsAt    int64  `json:"starts_at"`
 		EndsAt      int64  `json:"ends_at"`
+	}
+
+	DeleteAnnouncementRequest struct {
+		ID string `json:"id"`
 	}
 
 	MarkAsReadRequest struct {
@@ -130,6 +135,20 @@ func (s *Service) UpdateAnnouncementByID(ctx context.Context, req *UpdateAnnounc
 		StartsAt:    startsAt,
 		EndsAt:      endsAt,
 	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) DeleteAnnouncementByID(ctx context.Context, req *DeleteAnnouncementRequest) error {
+	id, err := uuid.Parse(req.ID)
+	if err != nil {
+		return err
+	}
+
+	err = s.ar.DeleteAnnouncementByID(ctx, id)
 	if err != nil {
 		return err
 	}

@@ -61,6 +61,10 @@ type (
 		EndsAt      int64  `json:"ends_at"`
 	}
 
+	DeleteAnnouncementRequest struct {
+		ID string `json:"id"`
+	}
+
 	MarkAsReadRequest struct {
 		AnnouncementID string `json:"announcement_id"`
 	}
@@ -141,6 +145,33 @@ func (c *AnnouncementClient) UpdateAnnouncement(accessToken string, req *UpdateA
 	}
 	reader := bytes.NewReader(body)
 	httpReq, err := http.NewRequest(http.MethodPut, url, reader)
+	if err != nil {
+		return errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+
+	return nil
+}
+
+func (c *AnnouncementClient) DeleteAnnouncement(accessToken string, req *DeleteAnnouncementRequest) error {
+	url := fmt.Sprintf("http://localhost:8080/announcement/%v", req.ID)
+	body, err := json.Marshal(req)
+	if err != nil {
+		return errors.Wrap(err, "can't marshal request")
+	}
+	reader := bytes.NewReader(body)
+	httpReq, err := http.NewRequest(http.MethodDelete, url, reader)
 	if err != nil {
 		return errors.Wrap(err, "can't create http request")
 	}

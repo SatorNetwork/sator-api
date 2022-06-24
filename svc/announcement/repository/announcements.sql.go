@@ -75,6 +75,16 @@ func (q *Queries) CreateAnnouncement(ctx context.Context, arg CreateAnnouncement
 	return i, err
 }
 
+const deleteAnnouncementByID = `-- name: DeleteAnnouncementByID :exec
+DELETE FROM announcements
+WHERE id = $1
+`
+
+func (q *Queries) DeleteAnnouncementByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteAnnouncementByIDStmt, deleteAnnouncementByID, id)
+	return err
+}
+
 const getAnnouncementByID = `-- name: GetAnnouncementByID :one
 SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements
 WHERE id = $1

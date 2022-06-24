@@ -18,6 +18,7 @@ type (
 		CreateAnnouncement      endpoint.Endpoint
 		GetAnnouncementByID     endpoint.Endpoint
 		UpdateAnnouncement      endpoint.Endpoint
+		DeleteAnnouncement      endpoint.Endpoint
 		ListAnnouncements       endpoint.Endpoint
 		ListUnreadAnnouncements endpoint.Endpoint
 		MarkAsRead              endpoint.Endpoint
@@ -28,6 +29,7 @@ type (
 		CreateAnnouncement(ctx context.Context, req *CreateAnnouncementRequest) (*CreateAnnouncementResponse, error)
 		GetAnnouncementByID(ctx context.Context, req *GetAnnouncementByIDRequest) (*Announcement, error)
 		UpdateAnnouncementByID(ctx context.Context, req *UpdateAnnouncementRequest) error
+		DeleteAnnouncementByID(ctx context.Context, req *DeleteAnnouncementRequest) error
 		ListAnnouncements(ctx context.Context) ([]*Announcement, error)
 		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error)
 		MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsReadRequest) error
@@ -42,6 +44,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		CreateAnnouncement:      MakeCreateAnnouncementEndpoint(s, validateFunc),
 		GetAnnouncementByID:     MakeGetAnnouncementByIDEndpoint(s, validateFunc),
 		UpdateAnnouncement:      MakeUpdateAnnouncementEndpoint(s, validateFunc),
+		DeleteAnnouncement:      MakeDeleteAnnouncementEndpoint(s, validateFunc),
 		ListAnnouncements:       MakeListAnnouncementsEndpoint(s, validateFunc),
 		ListUnreadAnnouncements: MakeListUnreadAnnouncementsEndpoint(s, validateFunc),
 		MarkAsRead:              MakeMarkAsReadEndpoint(s, validateFunc),
@@ -54,6 +57,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.CreateAnnouncement = mdw(e.CreateAnnouncement)
 			e.GetAnnouncementByID = mdw(e.GetAnnouncementByID)
 			e.UpdateAnnouncement = mdw(e.UpdateAnnouncement)
+			e.DeleteAnnouncement = mdw(e.DeleteAnnouncement)
 			e.ListAnnouncements = mdw(e.ListAnnouncements)
 			e.ListUnreadAnnouncements = mdw(e.ListUnreadAnnouncements)
 			e.MarkAsRead = mdw(e.MarkAsRead)
@@ -125,6 +129,29 @@ func MakeUpdateAnnouncementEndpoint(s service, v validator.ValidateFunc) endpoin
 		}
 
 		err := s.UpdateAnnouncementByID(ctx, typedReq)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
+func MakeDeleteAnnouncementEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		typedReq, ok := req.(*DeleteAnnouncementRequest)
+		if !ok {
+			return nil, errors.Errorf("can't cast untyped request to delete-announcement-request")
+		}
+		if err := v(typedReq); err != nil {
+			return nil, err
+		}
+
+		err := s.DeleteAnnouncementByID(ctx, typedReq)
 		if err != nil {
 			return nil, err
 		}

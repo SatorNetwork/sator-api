@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createAnnouncementStmt, err = db.PrepareContext(ctx, createAnnouncement); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAnnouncement: %w", err)
 	}
+	if q.deleteAnnouncementByIDStmt, err = db.PrepareContext(ctx, deleteAnnouncementByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAnnouncementByID: %w", err)
+	}
 	if q.getAnnouncementByIDStmt, err = db.PrepareContext(ctx, getAnnouncementByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnnouncementByID: %w", err)
 	}
@@ -70,6 +73,11 @@ func (q *Queries) Close() error {
 	if q.createAnnouncementStmt != nil {
 		if cerr := q.createAnnouncementStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createAnnouncementStmt: %w", cerr)
+		}
+	}
+	if q.deleteAnnouncementByIDStmt != nil {
+		if cerr := q.deleteAnnouncementByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAnnouncementByIDStmt: %w", cerr)
 		}
 	}
 	if q.getAnnouncementByIDStmt != nil {
@@ -149,6 +157,7 @@ type Queries struct {
 	cleanUpAnnouncementsStmt     *sql.Stmt
 	cleanUpReadAnnouncementsStmt *sql.Stmt
 	createAnnouncementStmt       *sql.Stmt
+	deleteAnnouncementByIDStmt   *sql.Stmt
 	getAnnouncementByIDStmt      *sql.Stmt
 	isNotReadStmt                *sql.Stmt
 	isReadStmt                   *sql.Stmt
@@ -165,6 +174,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		cleanUpAnnouncementsStmt:     q.cleanUpAnnouncementsStmt,
 		cleanUpReadAnnouncementsStmt: q.cleanUpReadAnnouncementsStmt,
 		createAnnouncementStmt:       q.createAnnouncementStmt,
+		deleteAnnouncementByIDStmt:   q.deleteAnnouncementByIDStmt,
 		getAnnouncementByIDStmt:      q.getAnnouncementByIDStmt,
 		isNotReadStmt:                q.isNotReadStmt,
 		isReadStmt:                   q.isReadStmt,

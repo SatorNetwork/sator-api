@@ -55,6 +55,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Delete("/{id}", httptransport.NewServer(
+		e.DeleteAnnouncement,
+		decodeDeleteAnnouncementRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/", httptransport.NewServer(
 		e.ListAnnouncements,
 		decodeListAnnouncementsRequest,
@@ -107,6 +114,15 @@ func decodeGetAnnouncementByIDRequest(_ context.Context, r *http.Request) (inter
 
 func decodeUpdateAnnouncementRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req UpdateAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "could not decode request body")
+	}
+
+	return &req, nil
+}
+
+func decodeDeleteAnnouncementRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req DeleteAnnouncementRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(err, "could not decode request body")
 	}

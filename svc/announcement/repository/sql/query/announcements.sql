@@ -28,6 +28,10 @@ SET
     ends_at = @ends_at
 WHERE id = @id;
 
+-- name: DeleteAnnouncementByID :exec
+DELETE FROM announcements
+WHERE id = @id;
+
 -- name: ListAnnouncements :many
 SELECT * FROM announcements;
 

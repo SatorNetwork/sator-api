@@ -94,6 +94,15 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrlUpd, announcement1.ActionUrl)
 	require.Equal(t, startsAtUpd, announcement1.StartsAt)
 	require.Equal(t, endsAtUpd, announcement1.EndsAt)
+
+	err = c.Announcement.DeleteAnnouncement(user.AccessToken(), &announcement.DeleteAnnouncementRequest{
+		ID: resp.ID,
+	})
+	require.NoError(t, err)
+	_, err = c.Announcement.GetAnnouncementByID(user.AccessToken(), &announcement.GetAnnouncementByIDRequest{
+		ID: resp.ID,
+	})
+	require.Error(t, err)
 }
 
 func TestUserEndpoints(t *testing.T) {
