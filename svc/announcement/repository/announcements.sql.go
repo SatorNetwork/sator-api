@@ -75,6 +75,16 @@ func (q *Queries) CreateAnnouncement(ctx context.Context, arg CreateAnnouncement
 	return i, err
 }
 
+const deleteAnnouncementByID = `-- name: DeleteAnnouncementByID :exec
+DELETE FROM announcements
+WHERE id = $1
+`
+
+func (q *Queries) DeleteAnnouncementByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteAnnouncementByIDStmt, deleteAnnouncementByID, id)
+	return err
+}
+
 const getAnnouncementByID = `-- name: GetAnnouncementByID :one
 SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements
 WHERE id = $1
@@ -94,6 +104,43 @@ func (q *Queries) GetAnnouncementByID(ctx context.Context, id uuid.UUID) (Announ
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listActiveAnnouncements = `-- name: ListActiveAnnouncements :many
+SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements
+WHERE starts_at <= NOW() AND NOW() <= ends_at
+`
+
+func (q *Queries) ListActiveAnnouncements(ctx context.Context) ([]Announcement, error) {
+	rows, err := q.query(ctx, q.listActiveAnnouncementsStmt, listActiveAnnouncements)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Announcement
+	for rows.Next() {
+		var i Announcement
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.ActionUrl,
+			&i.StartsAt,
+			&i.EndsAt,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAnnouncements = `-- name: ListAnnouncements :many

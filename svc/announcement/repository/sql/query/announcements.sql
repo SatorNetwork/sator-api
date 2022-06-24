@@ -28,6 +28,10 @@ SET
     ends_at = @ends_at
 WHERE id = @id;
 
+-- name: DeleteAnnouncementByID :exec
+DELETE FROM announcements
+WHERE id = @id;
+
 -- name: ListAnnouncements :many
 SELECT * FROM announcements;
 
@@ -40,6 +44,10 @@ SELECT * FROM announcements WHERE id IN (
     FROM read_announcements
     WHERE user_id = @user_id
 );
+
+-- name: ListActiveAnnouncements :many
+SELECT * FROM announcements
+WHERE starts_at <= NOW() AND NOW() <= ends_at;
 
 -- name: CleanUpReadAnnouncements :exec
 DELETE FROM read_announcements;

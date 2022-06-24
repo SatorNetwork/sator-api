@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createAnnouncementStmt, err = db.PrepareContext(ctx, createAnnouncement); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAnnouncement: %w", err)
 	}
+	if q.deleteAnnouncementByIDStmt, err = db.PrepareContext(ctx, deleteAnnouncementByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAnnouncementByID: %w", err)
+	}
 	if q.getAnnouncementByIDStmt, err = db.PrepareContext(ctx, getAnnouncementByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAnnouncementByID: %w", err)
 	}
@@ -39,6 +42,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.isReadStmt, err = db.PrepareContext(ctx, isRead); err != nil {
 		return nil, fmt.Errorf("error preparing query IsRead: %w", err)
+	}
+	if q.listActiveAnnouncementsStmt, err = db.PrepareContext(ctx, listActiveAnnouncements); err != nil {
+		return nil, fmt.Errorf("error preparing query ListActiveAnnouncements: %w", err)
 	}
 	if q.listAnnouncementsStmt, err = db.PrepareContext(ctx, listAnnouncements); err != nil {
 		return nil, fmt.Errorf("error preparing query ListAnnouncements: %w", err)
@@ -72,6 +78,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createAnnouncementStmt: %w", cerr)
 		}
 	}
+	if q.deleteAnnouncementByIDStmt != nil {
+		if cerr := q.deleteAnnouncementByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAnnouncementByIDStmt: %w", cerr)
+		}
+	}
 	if q.getAnnouncementByIDStmt != nil {
 		if cerr := q.getAnnouncementByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAnnouncementByIDStmt: %w", cerr)
@@ -85,6 +96,11 @@ func (q *Queries) Close() error {
 	if q.isReadStmt != nil {
 		if cerr := q.isReadStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing isReadStmt: %w", cerr)
+		}
+	}
+	if q.listActiveAnnouncementsStmt != nil {
+		if cerr := q.listActiveAnnouncementsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listActiveAnnouncementsStmt: %w", cerr)
 		}
 	}
 	if q.listAnnouncementsStmt != nil {
@@ -149,9 +165,11 @@ type Queries struct {
 	cleanUpAnnouncementsStmt     *sql.Stmt
 	cleanUpReadAnnouncementsStmt *sql.Stmt
 	createAnnouncementStmt       *sql.Stmt
+	deleteAnnouncementByIDStmt   *sql.Stmt
 	getAnnouncementByIDStmt      *sql.Stmt
 	isNotReadStmt                *sql.Stmt
 	isReadStmt                   *sql.Stmt
+	listActiveAnnouncementsStmt  *sql.Stmt
 	listAnnouncementsStmt        *sql.Stmt
 	listUnreadAnnouncementsStmt  *sql.Stmt
 	markAsReadStmt               *sql.Stmt
@@ -165,9 +183,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		cleanUpAnnouncementsStmt:     q.cleanUpAnnouncementsStmt,
 		cleanUpReadAnnouncementsStmt: q.cleanUpReadAnnouncementsStmt,
 		createAnnouncementStmt:       q.createAnnouncementStmt,
+		deleteAnnouncementByIDStmt:   q.deleteAnnouncementByIDStmt,
 		getAnnouncementByIDStmt:      q.getAnnouncementByIDStmt,
 		isNotReadStmt:                q.isNotReadStmt,
 		isReadStmt:                   q.isReadStmt,
+		listActiveAnnouncementsStmt:  q.listActiveAnnouncementsStmt,
 		listAnnouncementsStmt:        q.listAnnouncementsStmt,
 		listUnreadAnnouncementsStmt:  q.listUnreadAnnouncementsStmt,
 		markAsReadStmt:               q.markAsReadStmt,

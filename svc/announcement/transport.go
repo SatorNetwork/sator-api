@@ -55,6 +55,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Delete("/{id}", httptransport.NewServer(
+		e.DeleteAnnouncement,
+		decodeDeleteAnnouncementRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/", httptransport.NewServer(
 		e.ListAnnouncements,
 		decodeListAnnouncementsRequest,
@@ -65,6 +72,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	r.Get("/unread", httptransport.NewServer(
 		e.ListUnreadAnnouncements,
 		decodeListUnreadAnnouncementsRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/active", httptransport.NewServer(
+		e.ListActiveAnnouncements,
+		decodeListActiveAnnouncementsRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
@@ -114,11 +128,24 @@ func decodeUpdateAnnouncementRequest(_ context.Context, r *http.Request) (interf
 	return &req, nil
 }
 
+func decodeDeleteAnnouncementRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req DeleteAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(err, "could not decode request body")
+	}
+
+	return &req, nil
+}
+
 func decodeListAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return &Empty{}, nil
 }
 
 func decodeListUnreadAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return &Empty{}, nil
+}
+
+func decodeListActiveAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return &Empty{}, nil
 }
 

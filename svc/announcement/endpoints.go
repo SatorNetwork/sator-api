@@ -18,8 +18,10 @@ type (
 		CreateAnnouncement      endpoint.Endpoint
 		GetAnnouncementByID     endpoint.Endpoint
 		UpdateAnnouncement      endpoint.Endpoint
+		DeleteAnnouncement      endpoint.Endpoint
 		ListAnnouncements       endpoint.Endpoint
 		ListUnreadAnnouncements endpoint.Endpoint
+		ListActiveAnnouncements endpoint.Endpoint
 		MarkAsRead              endpoint.Endpoint
 		MarkAllAsRead           endpoint.Endpoint
 	}
@@ -28,8 +30,10 @@ type (
 		CreateAnnouncement(ctx context.Context, req *CreateAnnouncementRequest) (*CreateAnnouncementResponse, error)
 		GetAnnouncementByID(ctx context.Context, req *GetAnnouncementByIDRequest) (*Announcement, error)
 		UpdateAnnouncementByID(ctx context.Context, req *UpdateAnnouncementRequest) error
+		DeleteAnnouncementByID(ctx context.Context, req *DeleteAnnouncementRequest) error
 		ListAnnouncements(ctx context.Context) ([]*Announcement, error)
 		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error)
+		ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error)
 		MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsReadRequest) error
 		MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
 	}
@@ -42,8 +46,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		CreateAnnouncement:      MakeCreateAnnouncementEndpoint(s, validateFunc),
 		GetAnnouncementByID:     MakeGetAnnouncementByIDEndpoint(s, validateFunc),
 		UpdateAnnouncement:      MakeUpdateAnnouncementEndpoint(s, validateFunc),
+		DeleteAnnouncement:      MakeDeleteAnnouncementEndpoint(s, validateFunc),
 		ListAnnouncements:       MakeListAnnouncementsEndpoint(s, validateFunc),
 		ListUnreadAnnouncements: MakeListUnreadAnnouncementsEndpoint(s, validateFunc),
+		ListActiveAnnouncements: MakeListActiveAnnouncementsEndpoint(s, validateFunc),
 		MarkAsRead:              MakeMarkAsReadEndpoint(s, validateFunc),
 		MarkAllAsRead:           MakeMarkAllAsReadEndpoint(s, validateFunc),
 	}
@@ -54,8 +60,10 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.CreateAnnouncement = mdw(e.CreateAnnouncement)
 			e.GetAnnouncementByID = mdw(e.GetAnnouncementByID)
 			e.UpdateAnnouncement = mdw(e.UpdateAnnouncement)
+			e.DeleteAnnouncement = mdw(e.DeleteAnnouncement)
 			e.ListAnnouncements = mdw(e.ListAnnouncements)
 			e.ListUnreadAnnouncements = mdw(e.ListUnreadAnnouncements)
+			e.ListActiveAnnouncements = mdw(e.ListActiveAnnouncements)
 			e.MarkAsRead = mdw(e.MarkAsRead)
 			e.MarkAllAsRead = mdw(e.MarkAllAsRead)
 		}
@@ -133,6 +141,29 @@ func MakeUpdateAnnouncementEndpoint(s service, v validator.ValidateFunc) endpoin
 	}
 }
 
+func MakeDeleteAnnouncementEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		typedReq, ok := req.(*DeleteAnnouncementRequest)
+		if !ok {
+			return nil, errors.Errorf("can't cast untyped request to delete-announcement-request")
+		}
+		if err := v(typedReq); err != nil {
+			return nil, err
+		}
+
+		err := s.DeleteAnnouncementByID(ctx, typedReq)
+		if err != nil {
+			return nil, err
+		}
+
+		return true, nil
+	}
+}
+
 func MakeListAnnouncementsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
@@ -159,6 +190,21 @@ func MakeListUnreadAnnouncementsEndpoint(s service, v validator.ValidateFunc) en
 		}
 
 		resp, err := s.ListUnreadAnnouncements(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+func MakeListActiveAnnouncementsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.ListActiveAnnouncements(ctx)
 		if err != nil {
 			return nil, err
 		}
