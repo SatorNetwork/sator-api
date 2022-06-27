@@ -24,6 +24,12 @@ const (
 	defaultMinimumReward  = 1
 )
 
+// Predefined challenge kinds
+const (
+	ChallengeKindQuiz         = 0
+	ChallengeKindVerification = 1
+)
+
 type (
 	// Service struct
 	Service struct {

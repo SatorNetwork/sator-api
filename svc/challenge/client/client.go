@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/SatorNetwork/sator-api/svc/challenge"
 	"github.com/google/uuid"
@@ -31,6 +32,8 @@ type (
 
 		NumberUsersWhoHaveAccessToEpisode(ctx context.Context, episodeID uuid.UUID) (int32, error)
 		ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]uuid.UUID, error)
+
+		AddChallenge(ctx context.Context, ch challenge.Challenge) (challenge.Challenge, error)
 	}
 )
 
@@ -144,4 +147,43 @@ func (c *Client) ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.U
 	}
 
 	return res, nil
+}
+
+// Create verification challenge
+func (c *Client) CreateVerificationChallenge(ctx context.Context, showID, epID uuid.UUID, episodeTitle string) (uuid.UUID, error) {
+	res, err := c.s.AddChallenge(ctx, challenge.Challenge{
+		ShowID:             showID,
+		EpisodeID:          &epID,
+		Kind:               challenge.ChallengeKindVerification,
+		Title:              episodeTitle,
+		Description:        fmt.Sprintf("Verify that you have access to episode %s", episodeTitle),
+		UserMaxAttempts:    2,
+		QuestionsPerGame:   1,
+		TimePerQuestionSec: 10,
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return res.ID, nil
+}
+
+// Create quiz challenge
+func (c *Client) CreateQuizChallenge(ctx context.Context, showID, epID uuid.UUID, episodeTitle string) (uuid.UUID, error) {
+	res, err := c.s.AddChallenge(ctx, challenge.Challenge{
+		ShowID:             showID,
+		EpisodeID:          &epID,
+		Kind:               challenge.ChallengeKindQuiz,
+		Title:              episodeTitle,
+		Description:        fmt.Sprintf("Quiz for episode %s", episodeTitle),
+		UserMaxAttempts:    2,
+		QuestionsPerGame:   5,
+		TimePerQuestionSec: 10,
+		PrizePoolAmount:    1,
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return res.ID, nil
 }
