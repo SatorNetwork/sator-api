@@ -104,6 +104,8 @@ var (
 		ServerRSAPrivateKey:          serverRSAPrivateKey,
 		SatorAPIKey:                  "582e89d8-69ca-4206-8e7f-1fc822b41307",
 		PuzzleGameShuffle:            false,
+		PuzzleGamePaidStepsEnabled:   true,
+		PuzzleGameRewardsEnabled:     true,
 		TipsPercent:                  0.5,
 		TokenTransferPercent:         0.75,
 		ClaimRewardsPercent:          0.75,
