@@ -290,13 +290,13 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.New("payment service is not set")
 	}
 
-	value, err := s.flagsSvc.GetFlagValueByKey(ctx, flags_alias.FlagKeyPuzzleGameRewards)
+	flagValue, err := s.flagsSvc.GetFlagValueByKey(ctx, flags_alias.FlagKeyPuzzleGamePaidSteps)
 	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get flag")
+		return PuzzleGame{}, errors.Wrap(err, "can't get flags")
 	}
 
 	var steps int32
-	if value == flags_alias.FlagValueEnabled {
+	if flagValue == flags_alias.FlagValueEnabled {
 		opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
 		if err != nil {
 			return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
@@ -514,9 +514,14 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 	att.Status = controller.PuzzleStatus
 	att.Tiles = sql.NullString{String: string(tilesBytes), Valid: true}
 
+	flagValue, err := s.flagsSvc.GetFlagValueByKey(ctx, flags_alias.FlagKeyPuzzleGameRewards)
+	if err != nil {
+		return PuzzleGame{}, errors.Wrap(err, "can't get flags")
+	}
+
 	var rewardsAmount, lockRewardsAmount float64 = 0, 0
 	if att.Status == PuzzleGameStatusFinished {
-		if pg.PrizePool > 0 {
+		if pg.PrizePool > 0 && flagValue == flags_alias.FlagValueEnabled {
 			rewardsAmount = pg.PrizePool
 
 			if s.getUserRewardsMultiplierFn != nil {

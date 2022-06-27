@@ -41,3 +41,48 @@ func (q *Queries) GetFlagByKey(ctx context.Context, key string) (Flag, error) {
 	err := row.Scan(&i.Key, &i.Value)
 	return i, err
 }
+
+const getFlags = `-- name: GetFlags :many
+SELECT key, value FROM flags
+`
+
+func (q *Queries) GetFlags(ctx context.Context) ([]Flag, error) {
+	rows, err := q.query(ctx, q.getFlagsStmt, getFlags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Flag
+	for rows.Next() {
+		var i Flag
+		if err := rows.Scan(&i.Key, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateFlag = `-- name: UpdateFlag :one
+UPDATE flags SET value = $1
+WHERE key = $2
+RETURNING key, value
+`
+
+type UpdateFlagParams struct {
+	Value string `json:"value"`
+	Key   string `json:"key"`
+}
+
+func (q *Queries) UpdateFlag(ctx context.Context, arg UpdateFlagParams) (Flag, error) {
+	row := q.queryRow(ctx, q.updateFlagStmt, updateFlag, arg.Value, arg.Key)
+	var i Flag
+	err := row.Scan(&i.Key, &i.Value)
+	return i, err
+}

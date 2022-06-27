@@ -927,6 +927,11 @@ func (a *app) Run() {
 		if err = flagsSvc.Init(ctx); err != nil {
 			log.Fatalf("can't prepare flags: %v", err)
 		}
+
+		r.Mount("/flags", flags.MakeHTTPHandler(
+			flags.MakeEndpoints(flagsSvc, jwtMdw),
+			logger,
+		))
 	}
 
 	{

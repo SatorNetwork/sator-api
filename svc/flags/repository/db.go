@@ -30,6 +30,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getFlagByKeyStmt, err = db.PrepareContext(ctx, getFlagByKey); err != nil {
 		return nil, fmt.Errorf("error preparing query GetFlagByKey: %w", err)
 	}
+	if q.getFlagsStmt, err = db.PrepareContext(ctx, getFlags); err != nil {
+		return nil, fmt.Errorf("error preparing query GetFlags: %w", err)
+	}
+	if q.updateFlagStmt, err = db.PrepareContext(ctx, updateFlag); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateFlag: %w", err)
+	}
 	return &q, nil
 }
 
@@ -43,6 +49,16 @@ func (q *Queries) Close() error {
 	if q.getFlagByKeyStmt != nil {
 		if cerr := q.getFlagByKeyStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getFlagByKeyStmt: %w", cerr)
+		}
+	}
+	if q.getFlagsStmt != nil {
+		if cerr := q.getFlagsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getFlagsStmt: %w", cerr)
+		}
+	}
+	if q.updateFlagStmt != nil {
+		if cerr := q.updateFlagStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateFlagStmt: %w", cerr)
 		}
 	}
 	return err
@@ -86,6 +102,8 @@ type Queries struct {
 	tx               *sql.Tx
 	createFlagStmt   *sql.Stmt
 	getFlagByKeyStmt *sql.Stmt
+	getFlagsStmt     *sql.Stmt
+	updateFlagStmt   *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -94,5 +112,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:               tx,
 		createFlagStmt:   q.createFlagStmt,
 		getFlagByKeyStmt: q.getFlagByKeyStmt,
+		getFlagsStmt:     q.getFlagsStmt,
+		updateFlagStmt:   q.updateFlagStmt,
 	}
 }

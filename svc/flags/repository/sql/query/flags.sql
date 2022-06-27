@@ -11,3 +11,11 @@ INSERT INTO flags (
     @key,
     @value
 ) ON CONFLICT DO NOTHING;
+
+-- name: UpdateFlag :one
+UPDATE flags SET value = @value
+WHERE key = @key
+RETURNING *;
+
+-- name: GetFlags :many
+SELECT * FROM flags;
