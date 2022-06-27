@@ -37,6 +37,10 @@ func TestStake(t *testing.T) {
 		Unstake(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return("", nil).
 		AnyTimes()
+	solanaMock.EXPECT().
+		IsTransactionSuccessful(gomock.Any(), gomock.Any()).
+		Return(true, nil).
+		AnyTimes()
 
 	defer app_config.RunAndWait()()
 

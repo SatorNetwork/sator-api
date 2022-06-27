@@ -27,3 +27,17 @@ func WithUserMultiplierFunction(fn getUserRewardsMultiplierFunc) ServiceOption {
 		s.getUserRewardsMultiplierFn = fn
 	}
 }
+
+// IsRewardsEnabled returns true if rewards are enabled for the service.
+func IsRewardsEnabled(enabled bool) ServiceOption {
+	return func(s *Service) {
+		s.rewardsEnabled = enabled
+	}
+}
+
+// IsPaidStepsEnabled returns true if paid steps are enabled for the service.
+func IsPaidStepsEnabled(enabled bool) ServiceOption {
+	return func(s *Service) {
+		s.paidStepsEnabled = enabled
+	}
+}

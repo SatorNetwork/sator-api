@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -33,6 +34,8 @@ type (
 		rewardsFn                  rewardsFunc                  // function to send rewards for puzzle game
 		getUserRewardsMultiplierFn getUserRewardsMultiplierFunc // function to get user rewards multiplier
 		puzzleGameShuffle          bool
+		rewardsEnabled             bool
+		paidStepsEnabled           bool
 	}
 
 	puzzleGameRepository interface {
@@ -109,7 +112,12 @@ func (pg *PuzzleGame) HideCorrectPositions() PuzzleGame {
 }
 
 func NewService(pgr puzzleGameRepository, puzzleGameShuffle bool, opt ...ServiceOption) *Service {
-	s := &Service{pgr: pgr, puzzleGameShuffle: puzzleGameShuffle}
+	s := &Service{
+		pgr:               pgr,
+		puzzleGameShuffle: puzzleGameShuffle,
+		paidStepsEnabled:  false,
+		rewardsEnabled:    false,
+	}
 
 	for _, o := range opt {
 		o(s)
@@ -283,26 +291,33 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.New("payment service is not set")
 	}
 
-	opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
-	}
-
-	if opt.Locked {
-		return PuzzleGame{}, errors.New("this unlock option is not available")
-	}
-
-	if opt.Amount > 0 {
-		if err := s.chargeForUnlock(ctx, userID, opt.Amount,
-			fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
-			return PuzzleGame{}, errors.Wrap(err, "can't charge for unlock puzzle game")
+	var steps int32
+	if s.paidStepsEnabled {
+		opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
+		if err != nil {
+			return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
 		}
+
+		if opt.Locked {
+			return PuzzleGame{}, errors.New("this unlock option is not available")
+		}
+
+		if opt.Amount > 0 {
+			if err := s.chargeForUnlock(ctx, userID, opt.Amount,
+				fmt.Sprintf("Unlock puzzle game #%s", puzzleGameID.String())); err != nil {
+				return PuzzleGame{}, errors.Wrap(err, "can't charge for unlock puzzle game")
+			}
+		}
+
+		steps = opt.Steps
+	} else {
+		steps = math.MaxInt32
 	}
 
 	if _, err := s.pgr.UnlockPuzzleGame(ctx, repository.UnlockPuzzleGameParams{
 		PuzzleGameID: puzzleGameID,
 		UserID:       userID,
-		Steps:        opt.Steps,
+		Steps:        steps,
 	}); err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "can't unlock puzzle game")
 	}
@@ -497,7 +512,7 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 
 	var rewardsAmount, lockRewardsAmount float64 = 0, 0
 	if att.Status == PuzzleGameStatusFinished {
-		if pg.PrizePool > 0 {
+		if pg.PrizePool > 0 && s.rewardsEnabled {
 			rewardsAmount = pg.PrizePool
 
 			if s.getUserRewardsMultiplierFn != nil {
