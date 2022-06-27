@@ -1,5 +1,5 @@
 -- name: GetNFTPacksList :many
-SELECT * FROM unity_game_nft_packs WHERE deleted_at IS NULL;
+SELECT * FROM unity_game_nft_packs WHERE deleted_at IS NULL ORDER BY price ASC;
 
 -- name: AddNFTPack :one
 INSERT INTO unity_game_nft_packs ( name, drop_chances, price) VALUES ($1, $2, $3) RETURNING *;
