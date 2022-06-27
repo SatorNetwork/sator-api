@@ -21,11 +21,15 @@ type Flag struct {
 	Value string `json:"value"`
 }
 
+type GetFlagsResponse struct {
+	Data []*Flag
+}
+
 type UpdateFlagResponse struct {
 	Data *Flag
 }
 
-func (a *FlagsClient) GetFlags(apiKey string) ([]Flag, error) {
+func (a *FlagsClient) GetFlags(apiKey string) ([]*Flag, error) {
 	url := fmt.Sprintf("http://localhost:8080/flags/")
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -44,12 +48,12 @@ func (a *FlagsClient) GetFlags(apiKey string) ([]Flag, error) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp []Flag
+	var resp GetFlagsResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
 
-	return resp, nil
+	return resp.Data, nil
 }
 
 func (a *FlagsClient) UpdateFlag(apiKey string, req *Flag) (*Flag, error) {

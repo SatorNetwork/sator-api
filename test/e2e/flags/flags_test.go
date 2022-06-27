@@ -17,7 +17,6 @@ import (
 )
 
 func TestGetFlags(t *testing.T) {
-	t.Skip()
 	defer app_config.RunAndWait()()
 
 	err := utils.BootstrapIfNeeded(context.Background(), t)
@@ -28,6 +27,7 @@ func TestGetFlags(t *testing.T) {
 	signUpRequest := auth.RandomSignUpRequest()
 	u := user.NewInitializedUser(signUpRequest, t)
 	u.SetRole(rbac.RoleAdmin)
+	u.RefreshToken()
 
 	flagsList, err := c.FlagsClient.GetFlags(u.AccessToken())
 	require.NoError(t, err)
@@ -36,7 +36,6 @@ func TestGetFlags(t *testing.T) {
 }
 
 func TestUpdateFlag(t *testing.T) {
-	t.Skip()
 	defer app_config.RunAndWait()()
 
 	err := utils.BootstrapIfNeeded(context.Background(), t)
@@ -47,7 +46,7 @@ func TestUpdateFlag(t *testing.T) {
 	signUpRequest := auth.RandomSignUpRequest()
 	u := user.NewInitializedUser(signUpRequest, t)
 	u.SetRole(rbac.RoleAdmin)
-	u.SignUp()
+	u.RefreshToken()
 
 	flag, err := c.FlagsClient.UpdateFlag(u.AccessToken(), &flags.Flag{
 		Key:   alias.FlagKeyPuzzleGameRewards.String(),
