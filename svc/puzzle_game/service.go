@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/svc/files"
-	flags_alias "github.com/SatorNetwork/sator-api/svc/flags/alias"
 	"github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
 )
 
@@ -31,11 +30,12 @@ type (
 	Service struct {
 		pgr                        puzzleGameRepository
 		filesSvc                   filesService
-		flagsSvc                   flagsService
 		chargeForUnlock            chargeForUnlockFunc          // function to charge user for unlocking puzzle game
 		rewardsFn                  rewardsFunc                  // function to send rewards for puzzle game
 		getUserRewardsMultiplierFn getUserRewardsMultiplierFunc // function to get user rewards multiplier
 		puzzleGameShuffle          bool
+		rewardsEnabled             bool
+		paidStepsEnabled           bool
 	}
 
 	puzzleGameRepository interface {
@@ -62,10 +62,6 @@ type (
 	filesService interface {
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 		GetImagesListByIDs(ctx context.Context, ids []uuid.UUID) ([]files.File, error)
-	}
-
-	flagsService interface {
-		GetFlagValueByKey(ctx context.Context, key flags_alias.Key) (flags_alias.Value, error)
 	}
 
 	chargeForUnlockFunc          func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -116,7 +112,12 @@ func (pg *PuzzleGame) HideCorrectPositions() PuzzleGame {
 }
 
 func NewService(pgr puzzleGameRepository, puzzleGameShuffle bool, opt ...ServiceOption) *Service {
-	s := &Service{pgr: pgr, puzzleGameShuffle: puzzleGameShuffle}
+	s := &Service{
+		pgr:               pgr,
+		puzzleGameShuffle: puzzleGameShuffle,
+		paidStepsEnabled:  false,
+		rewardsEnabled:    false,
+	}
 
 	for _, o := range opt {
 		o(s)
@@ -290,13 +291,8 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.New("payment service is not set")
 	}
 
-	value, err := s.flagsSvc.GetFlagValueByKey(ctx, flags_alias.FlagKeyPuzzleGameRewards)
-	if err != nil {
-		return PuzzleGame{}, errors.Wrap(err, "can't get flag")
-	}
-
 	var steps int32
-	if value == flags_alias.FlagValueEnabled {
+	if s.paidStepsEnabled {
 		opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
 		if err != nil {
 			return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
@@ -516,7 +512,7 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 
 	var rewardsAmount, lockRewardsAmount float64 = 0, 0
 	if att.Status == PuzzleGameStatusFinished {
-		if pg.PrizePool > 0 {
+		if pg.PrizePool > 0 && s.rewardsEnabled {
 			rewardsAmount = pg.PrizePool
 
 			if s.getUserRewardsMultiplierFn != nil {

@@ -53,8 +53,6 @@ import (
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	firebase_svc "github.com/SatorNetwork/sator-api/svc/firebase"
 	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
-	"github.com/SatorNetwork/sator-api/svc/flags"
-	flagsRepository "github.com/SatorNetwork/sator-api/svc/flags/repository"
 	"github.com/SatorNetwork/sator-api/svc/gapi"
 	unityGameRepo "github.com/SatorNetwork/sator-api/svc/gapi/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
@@ -160,6 +158,8 @@ type Config struct {
 	QuizV2ShuffleQuestions         bool
 	ServerRSAPrivateKey            string
 	PuzzleGameShuffle              bool
+	PuzzleGamePaidStepsEnabled     bool
+	PuzzleGameRewardsEnabled       bool
 	TipsPercent                    float64
 	TokenTransferPercent           float64
 	ClaimRewardsPercent            float64
@@ -290,7 +290,9 @@ func ConfigFromEnv() *Config {
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
 
 		// Puzzle Game
-		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
+		PuzzleGameShuffle:          env.GetBool("PUZZLE_GAME_SHUFFLE", true),
+		PuzzleGamePaidStepsEnabled: env.GetBool("PUZZLE_GAME_PAID_STEPS_ENABLED", false),
+		PuzzleGameRewardsEnabled:   env.GetBool("PUZZLE_GAME_REWARDS_ENABLED", false),
 
 		TipsPercent:           env.GetFloat("TIPS_PERCENT", 0.5),
 		TokenTransferPercent:  env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
@@ -915,20 +917,6 @@ func (a *app) Run() {
 		))
 	}
 
-	var flagsSvc *flags.Service
-	{
-		flagsReposiory, err := flagsRepository.Prepare(ctx, db)
-		if err != nil {
-			log.Fatalf("can't prepare flags repository: %v", err)
-		}
-
-		flagsSvc = flags.NewService(flagsReposiory)
-
-		if err = flagsSvc.Init(ctx); err != nil {
-			log.Fatalf("can't prepare flags: %v", err)
-		}
-	}
-
 	{
 		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
 		if err != nil {
@@ -942,7 +930,8 @@ func (a *app) Run() {
 			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
 			puzzle_game.WithFileServiceClient(fileSvc),
 			puzzle_game.WithUserMultiplierFunction(walletSvcClient.GetMultiplier),
-			puzzle_game.WithFlagsServiceClient(flagsSvc),
+			puzzle_game.IsPaidStepsEnabled(a.cfg.PuzzleGamePaidStepsEnabled),
+			puzzle_game.IsRewardsEnabled(a.cfg.PuzzleGameRewardsEnabled),
 		)
 
 		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(
