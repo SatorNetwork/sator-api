@@ -75,6 +75,12 @@ SET episode_number = @episode_number,
     watch = @watch
 WHERE id = @id;
 
+-- name: LinkEpisodeChallenges :exec
+UPDATE episodes
+SET challenge_id = @challenge_id,
+    verification_challenge_id = @verification_challenge_id
+WHERE id = @id;
+
 -- name: DeleteEpisodeByID :exec
 DELETE FROM episodes
 WHERE id = @id;

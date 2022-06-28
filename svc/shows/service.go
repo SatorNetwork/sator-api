@@ -133,6 +133,7 @@ type (
 		GetEpisodesByShowID(ctx context.Context, arg repository.GetEpisodesByShowIDParams) ([]repository.GetEpisodesByShowIDRow, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
+		LinkEpisodeChallenges(ctx context.Context, arg repository.LinkEpisodeChallengesParams) error
 
 		// Episodes rating
 		GetEpisodeRatingByID(ctx context.Context, episodeID uuid.UUID) (repository.GetEpisodeRatingByIDRow, error)
@@ -497,7 +498,7 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 
 	needsToUpdate := false
 
-	if !episode.ChallengeID.Valid {
+	if !episode.ChallengeID.Valid || episode.ChallengeID.UUID == uuid.Nil {
 		quizID, err := s.chc.CreateQuizChallenge(ctx, episode.ShowID, episode.ID, episode.Title)
 		if err != nil {
 			return Episode{}, fmt.Errorf("could not create quiz challenge for episode with id=%s: %w", episodeID, err)
@@ -507,7 +508,7 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 		needsToUpdate = true
 	}
 
-	if !episode.VerificationChallengeID.Valid {
+	if !episode.VerificationChallengeID.Valid || episode.VerificationChallengeID.UUID == uuid.Nil {
 		verificationID, err := s.chc.CreateVerificationChallenge(ctx, episode.ShowID, episode.ID, episode.Title)
 		if err != nil {
 			return Episode{}, fmt.Errorf("could not create verification challenge for episode with id=%s: %w", episodeID, err)
@@ -518,21 +519,12 @@ func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID 
 	}
 
 	if needsToUpdate {
-		if err := s.sr.UpdateEpisode(ctx, repository.UpdateEpisodeParams{
+		if err := s.sr.LinkEpisodeChallenges(ctx, repository.LinkEpisodeChallengesParams{
 			ID:                      episode.ID,
-			EpisodeNumber:           episode.EpisodeNumber,
-			ShowID:                  episode.ShowID,
-			SeasonID:                episode.SeasonID,
-			Title:                   episode.Title,
-			Description:             episode.Description,
 			ChallengeID:             episode.ChallengeID,
 			VerificationChallengeID: episode.VerificationChallengeID,
-			Cover:                   episode.Cover,
-			ReleaseDate:             episode.ReleaseDate,
-			HintText:                episode.HintText,
-			Watch:                   episode.Watch,
 		}); err != nil {
-			return Episode{}, fmt.Errorf("could not update episode with id=%s: %w", episodeID, err)
+			return Episode{}, fmt.Errorf("could not update chalenges ids for episode with id=%s: %w", episodeID, err)
 		}
 	}
 
