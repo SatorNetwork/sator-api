@@ -53,8 +53,6 @@ import (
 	filesRepo "github.com/SatorNetwork/sator-api/svc/files/repository"
 	firebase_svc "github.com/SatorNetwork/sator-api/svc/firebase"
 	firebase_repository "github.com/SatorNetwork/sator-api/svc/firebase/repository"
-	"github.com/SatorNetwork/sator-api/svc/flags"
-	flagsRepository "github.com/SatorNetwork/sator-api/svc/flags/repository"
 	"github.com/SatorNetwork/sator-api/svc/gapi"
 	unityGameRepo "github.com/SatorNetwork/sator-api/svc/gapi/repository"
 	iap_svc "github.com/SatorNetwork/sator-api/svc/iap"
@@ -79,6 +77,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/rewards"
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
+	"github.com/SatorNetwork/sator-api/svc/settings"
+	flagsRepository "github.com/SatorNetwork/sator-api/svc/settings/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	"github.com/SatorNetwork/sator-api/svc/shows/private"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
@@ -915,22 +915,19 @@ func (a *app) Run() {
 		))
 	}
 
-	var flagsSvc *flags.Service
+	var settingsSvc *settings.Service
 	{
 		flagsReposiory, err := flagsRepository.Prepare(ctx, db)
 		if err != nil {
-			log.Fatalf("can't prepare flags repository: %v", err)
+			log.Fatalf("can't prepare settings repository: %v", err)
 		}
 
-		flagsSvc = flags.NewService(flagsReposiory)
+		settingsSvc = settings.NewService(flagsReposiory)
 
-		if err = flagsSvc.Init(ctx); err != nil {
-			log.Fatalf("can't prepare flags: %v", err)
-		}
-
-		r.Mount("/flags", flags.MakeHTTPHandler(
-			flags.MakeEndpoints(flagsSvc, jwtMdw),
+		r.Mount("/settings", settings.MakeHTTPHandler(
+			settings.MakeEndpoints(settingsSvc, jwtMdw),
 			logger,
+			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
 		))
 	}
 
@@ -947,7 +944,7 @@ func (a *app) Run() {
 			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
 			puzzle_game.WithFileServiceClient(fileSvc),
 			puzzle_game.WithUserMultiplierFunction(walletSvcClient.GetMultiplier),
-			puzzle_game.WithFlagsServiceClient(flagsSvc),
+			puzzle_game.WithSettingsServiceClient(settingsSvc),
 		)
 
 		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(

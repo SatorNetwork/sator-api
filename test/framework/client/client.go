@@ -7,12 +7,12 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/client/challenge"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db"
 	"github.com/SatorNetwork/sator-api/test/framework/client/firebase"
-	"github.com/SatorNetwork/sator-api/test/framework/client/flags"
 	"github.com/SatorNetwork/sator-api/test/framework/client/iap"
 	"github.com/SatorNetwork/sator-api/test/framework/client/nft"
 	"github.com/SatorNetwork/sator-api/test/framework/client/puzzle_game"
 	"github.com/SatorNetwork/sator-api/test/framework/client/quiz_v2"
 	"github.com/SatorNetwork/sator-api/test/framework/client/rewards"
+	"github.com/SatorNetwork/sator-api/test/framework/client/settings"
 	"github.com/SatorNetwork/sator-api/test/framework/client/shows"
 	"github.com/SatorNetwork/sator-api/test/framework/client/trading_platforms"
 	"github.com/SatorNetwork/sator-api/test/framework/client/wallet"
@@ -30,7 +30,7 @@ type Client struct {
 	RewardsClient          *rewards.RewardsClient
 	FirebaseClient         *firebase.FirebaseClient
 	NftClient              *nft.NftClient
-	FlagsClient            *flags.FlagsClient
+	SettingsClient         *settings.SettingsClient
 
 	DB *db.DB
 }
@@ -52,7 +52,7 @@ func NewClient() *Client {
 		RewardsClient:          rewards.New(),
 		FirebaseClient:         firebase.New(),
 		NftClient:              nft.New(),
-		FlagsClient:            flags.New(),
+		SettingsClient:         settings.New(),
 
 		DB: db,
 	}

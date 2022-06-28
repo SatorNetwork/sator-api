@@ -1,9 +1,8 @@
-package flags
+package settings
 
 import (
 	"context"
-	"github.com/SatorNetwork/sator-api/svc/flags/alias"
-	"github.com/SatorNetwork/sator-api/test/framework/client/flags"
+	"github.com/SatorNetwork/sator-api/test/framework/client/settings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/utils"
 )
 
-func TestGetFlags(t *testing.T) {
+func TestAddSetting(t *testing.T) {
 	defer app_config.RunAndWait()()
 
 	err := utils.BootstrapIfNeeded(context.Background(), t)
@@ -29,13 +28,19 @@ func TestGetFlags(t *testing.T) {
 	u.SetRole(rbac.RoleAdmin)
 	u.RefreshToken()
 
-	flagsList, err := c.FlagsClient.GetFlags(u.AccessToken())
+	req := &settings.Setting{
+		Key:         "test",
+		Name:        "test",
+		Value:       true,
+		ValueType:   "bool",
+		Description: "",
+	}
+	setting, err := c.SettingsClient.AddSetting(u.AccessToken(), req)
 	require.NoError(t, err)
-	require.NotEmpty(t, flagsList)
-	require.GreaterOrEqual(t, len(flagsList), 1)
+	require.Equal(t, setting, req)
 }
 
-func TestUpdateFlag(t *testing.T) {
+func TestUpdateSetting(t *testing.T) {
 	defer app_config.RunAndWait()()
 
 	err := utils.BootstrapIfNeeded(context.Background(), t)
@@ -48,10 +53,19 @@ func TestUpdateFlag(t *testing.T) {
 	u.SetRole(rbac.RoleAdmin)
 	u.RefreshToken()
 
-	flag, err := c.FlagsClient.UpdateFlag(u.AccessToken(), &flags.Flag{
-		Key:   alias.FlagKeyPuzzleGameRewards.String(),
-		Value: alias.FlagValueDisabled.String(),
-	})
+	req := &settings.Setting{
+		Key:         "test",
+		Name:        "test",
+		Value:       true,
+		ValueType:   "bool",
+		Description: "",
+	}
+	setting, err := c.SettingsClient.AddSetting(u.AccessToken(), req)
 	require.NoError(t, err)
-	require.Equal(t, alias.FlagValueDisabled.String(), flag.Value)
+
+	setting.Name = "test123"
+
+	setting, err = c.SettingsClient.UpdateSetting(u.AccessToken(), setting)
+	require.NoError(t, err)
+	require.Equal(t, "test123", setting.Name)
 }

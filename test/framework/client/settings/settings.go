@@ -1,4 +1,4 @@
-package flags
+package settings
 
 import (
 	"bytes"
@@ -10,27 +10,61 @@ import (
 	"net/http"
 )
 
-type FlagsClient struct{}
+type SettingsClient struct{}
 
-func New() *FlagsClient {
-	return new(FlagsClient)
+func New() *SettingsClient {
+	return new(SettingsClient)
 }
 
-type Flag struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+type Setting struct {
+	Key         string      `json:"key"`
+	Name        string      `json:"name"`
+	Value       interface{} `json:"value"`
+	ValueType   string      `json:"value_type"`
+	Description string      `json:"description,omitempty"`
 }
 
-type GetFlagsResponse struct {
-	Data []*Flag
+type GetSettingsResponse struct {
+	Data []*Setting
 }
 
-type UpdateFlagResponse struct {
-	Data *Flag
+type UpdateSettingResponse struct {
+	Data *Setting
 }
 
-func (a *FlagsClient) GetFlags(apiKey string) ([]*Flag, error) {
-	url := fmt.Sprintf("http://localhost:8080/flags/")
+func (a *SettingsClient) AddSetting(apiKey string, req *Setting) (*Setting, error) {
+	url := fmt.Sprintf("http://localhost:8080/settings/")
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't marshal request")
+	}
+	reader := bytes.NewReader(body)
+	httpReq, err := http.NewRequest(http.MethodPost, url, reader)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", apiKey))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+	var resp UpdateSettingResponse
+	if err := json.Unmarshal(rawBody, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+func (a *SettingsClient) GetSettings(apiKey string) ([]*Setting, error) {
+	url := fmt.Sprintf("http://localhost:8080/settings/")
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")
@@ -48,7 +82,7 @@ func (a *FlagsClient) GetFlags(apiKey string) ([]*Flag, error) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
 
-	var resp GetFlagsResponse
+	var resp GetSettingsResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal response body")
 	}
@@ -56,8 +90,8 @@ func (a *FlagsClient) GetFlags(apiKey string) ([]*Flag, error) {
 	return resp.Data, nil
 }
 
-func (a *FlagsClient) UpdateFlag(apiKey string, req *Flag) (*Flag, error) {
-	url := fmt.Sprintf("http://localhost:8080/flags/")
+func (a *SettingsClient) UpdateSetting(apiKey string, req *Setting) (*Setting, error) {
+	url := fmt.Sprintf("http://localhost:8080/settings/")
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")
@@ -79,7 +113,7 @@ func (a *FlagsClient) UpdateFlag(apiKey string, req *Flag) (*Flag, error) {
 	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
 		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
 	}
-	var resp UpdateFlagResponse
+	var resp UpdateSettingResponse
 	if err := json.Unmarshal(rawBody, &resp); err != nil {
 		return nil, err
 	}

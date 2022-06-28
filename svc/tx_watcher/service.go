@@ -115,13 +115,13 @@ func (s *Service) ResendSolanaDBTXsIfNeeded(ctx context.Context) error {
 func (s *Service) accountByAlias(a tx_watcher_alias.Alias) (types.Account, error) {
 	switch a {
 	case tx_watcher_alias.UndefinedAlias:
-		return types.Account{}, errors.Errorf("alias %v is undefined", a)
+		return types.Account{}, errors.Errorf("types %v is undefined", a)
 	case tx_watcher_alias.FeePayerAlias:
 		return s.feePayer, nil
 	case tx_watcher_alias.TokenHolderAlias:
 		return s.tokenHolder, nil
 	default:
-		return types.Account{}, errors.Errorf("alias %v is undefined", a)
+		return types.Account{}, errors.Errorf("types %v is undefined", a)
 	}
 }
 
