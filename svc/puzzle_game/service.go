@@ -66,7 +66,6 @@ type (
 
 	settingsService interface {
 		GetBool(ctx context.Context, key string) (bool, error)
-		GetSettingByKey(ctx context.Context, key string) (*settings.Setting, error)
 	}
 
 	chargeForUnlockFunc          func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
