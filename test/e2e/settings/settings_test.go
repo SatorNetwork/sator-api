@@ -3,6 +3,8 @@ package settings
 import (
 	"context"
 	"github.com/SatorNetwork/sator-api/test/framework/client/settings"
+	"github.com/google/uuid"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,9 +30,13 @@ func TestAddSetting(t *testing.T) {
 	u.SetRole(rbac.RoleAdmin)
 	u.RefreshToken()
 
+	uid, err := uuid.NewUUID()
+	require.NoError(t, err)
+
+	key := toSnakeCase("test-" + uid.String())
 	req := &settings.Setting{
-		Key:         "test",
-		Name:        "test",
+		Key:         key,
+		Name:        "Test",
 		Value:       true,
 		ValueType:   "bool",
 		Description: "",
@@ -53,9 +59,13 @@ func TestUpdateSetting(t *testing.T) {
 	u.SetRole(rbac.RoleAdmin)
 	u.RefreshToken()
 
+	uid, err := uuid.NewUUID()
+	require.NoError(t, err)
+
+	key := "test" + uid.String()
 	req := &settings.Setting{
-		Key:         "test",
-		Name:        "test",
+		Key:         key,
+		Name:        "Test",
 		Value:       true,
 		ValueType:   "bool",
 		Description: "",
@@ -63,9 +73,31 @@ func TestUpdateSetting(t *testing.T) {
 	setting, err := c.SettingsClient.AddSetting(u.AccessToken(), req)
 	require.NoError(t, err)
 
-	setting.Name = "test123"
+	setting.Value = false
 
 	setting, err = c.SettingsClient.UpdateSetting(u.AccessToken(), setting)
 	require.NoError(t, err)
-	require.Equal(t, "test123", setting.Name)
+	require.Equal(t, false, setting.Value)
+}
+
+// format string to snake case
+func toSnakeCase(s string) string {
+	s = strings.ToLower(s)
+	s = strings.TrimSpace(s)
+	s = alphaNumUnderscore(s)
+
+	return s
+}
+
+// get only alphanumeric characters from string and replace spaces with underscores
+func alphaNumUnderscore(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			return r
+		}
+		if r == ' ' || r == '_' || r == '-' || r == '.' || r == ',' || r == ':' || r == ';' || r == '(' || r == ')' || r == '[' || r == ']' || r == '{' || r == '}' {
+			return '_'
+		}
+		return -1
+	}, s)
 }

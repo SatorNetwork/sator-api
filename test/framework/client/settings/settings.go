@@ -91,7 +91,7 @@ func (a *SettingsClient) GetSettings(apiKey string) ([]*Setting, error) {
 }
 
 func (a *SettingsClient) UpdateSetting(apiKey string, req *Setting) (*Setting, error) {
-	url := fmt.Sprintf("http://localhost:8080/settings/")
+	url := fmt.Sprintf("http://localhost:8080/settings/" + req.Key)
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal request")

@@ -26,42 +26,42 @@ func MakeHTTPHandler(e Endpoints, log logger, encodeResponse httptransport.Encod
 		httptransport.ServerBefore(jwtkit.HTTPToContext()),
 	}
 
-	r.Get("/settings", httptransport.NewServer(
+	r.Get("/", httptransport.NewServer(
 		e.GetSettings,
 		decodeGetSettingsRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/settings/value-types", httptransport.NewServer(
+	r.Get("/value-types", httptransport.NewServer(
 		e.GetSettingsValueTypes,
 		decodeGetSettingsValueTypesRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Get("/settings/{key}", httptransport.NewServer(
+	r.Get("/{key}", httptransport.NewServer(
 		e.GetSettingsByKey,
 		decodeGetSettingsByKeyRequest,
 		encodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Post("/settings", httptransport.NewServer(
+	r.Post("/", httptransport.NewServer(
 		e.AddSetting,
 		decodeAddSettingRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Put("/settings/{key}", httptransport.NewServer(
+	r.Put("/{key}", httptransport.NewServer(
 		e.UpdateSetting,
 		decodeUpdateSettingRequest,
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
 
-	r.Delete("/settings/{key}", httptransport.NewServer(
+	r.Delete("/{key}", httptransport.NewServer(
 		e.DeleteSetting,
 		decodeDeleteSettingRequest,
 		httpencoder.EncodeResponse,
