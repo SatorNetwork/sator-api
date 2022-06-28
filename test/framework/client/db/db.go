@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/test/framework/client/db/announcements"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/challenge"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db/firebase"
@@ -20,15 +21,16 @@ import (
 type DB struct {
 	dbClient *sql.DB
 
-	challengeDB  *challenge.DB
-	walletDB     *wallet.DB
-	authDB       *auth.DB
-	showsDB      *shows.DB
-	quizV2DB     *quiz_v2.DB
-	puzzleGameDB *puzzle_game.DB
-	iapDB        *iap.DB
-	firebaseDB   *firebase.DB
-	rewardsDB    *rewards.DB
+	challengeDB     *challenge.DB
+	walletDB        *wallet.DB
+	authDB          *auth.DB
+	showsDB         *shows.DB
+	quizV2DB        *quiz_v2.DB
+	puzzleGameDB    *puzzle_game.DB
+	iapDB           *iap.DB
+	firebaseDB      *firebase.DB
+	rewardsDB       *rewards.DB
+	announcementsDB *announcements.DB
 }
 
 func New() (*DB, error) {
@@ -84,17 +86,23 @@ func New() (*DB, error) {
 		return nil, errors.Wrap(err, "can't create rewards db")
 	}
 
+	announcementsDB, err := announcements.New(dbClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create announcements db")
+	}
+
 	return &DB{
-		dbClient:     dbClient,
-		challengeDB:  challengeDB,
-		authDB:       authDB,
-		walletDB:     walletDB,
-		showsDB:      showsDB,
-		quizV2DB:     quizV2DB,
-		puzzleGameDB: puzzleGameDB,
-		iapDB:        iapDB,
-		firebaseDB:   firebaseDB,
-		rewardsDB:    rewardsDB,
+		dbClient:        dbClient,
+		challengeDB:     challengeDB,
+		authDB:          authDB,
+		walletDB:        walletDB,
+		showsDB:         showsDB,
+		quizV2DB:        quizV2DB,
+		puzzleGameDB:    puzzleGameDB,
+		iapDB:           iapDB,
+		firebaseDB:      firebaseDB,
+		rewardsDB:       rewardsDB,
+		announcementsDB: announcementsDB,
 	}, nil
 }
 
@@ -156,4 +164,8 @@ func (db *DB) FirebaseDB() *firebase.DB {
 
 func (db *DB) RewardsDB() *rewards.DB {
 	return db.rewardsDB
+}
+
+func (db *DB) AnnouncementsDB() *announcements.DB {
+	return db.announcementsDB
 }

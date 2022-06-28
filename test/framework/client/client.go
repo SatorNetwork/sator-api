@@ -3,6 +3,7 @@ package client
 import (
 	"log"
 
+	"github.com/SatorNetwork/sator-api/test/framework/client/announcement"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
 	"github.com/SatorNetwork/sator-api/test/framework/client/challenge"
 	"github.com/SatorNetwork/sator-api/test/framework/client/db"
@@ -30,6 +31,7 @@ type Client struct {
 	RewardsClient          *rewards.RewardsClient
 	FirebaseClient         *firebase.FirebaseClient
 	NftClient              *nft.NftClient
+	Announcement           *announcement.AnnouncementClient
 	SettingsClient         *settings.SettingsClient
 
 	DB *db.DB
@@ -52,6 +54,7 @@ func NewClient() *Client {
 		RewardsClient:          rewards.New(),
 		FirebaseClient:         firebase.New(),
 		NftClient:              nft.New(),
+		Announcement:           announcement.New(),
 		SettingsClient:         settings.New(),
 
 		DB: db,

@@ -193,6 +193,27 @@ components:
       items:
         $ref: "#/components/schemas/InGameNFTPack"
 
+    Announcement:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        action_url:
+          type: string
+        starts_at:
+          type: number
+        ends_at:
+          type: number
+
+    Announcements:
+      type: array
+      items:
+        $ref: "#/components/schemas/Announcement"
+
   securitySchemes:
     bearerAuth: # arbitrary name for the security scheme
       type: http
@@ -496,6 +517,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/InGameNFTPackArray"
+
+    Announcement:
+      description: Announcement.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Announcement"
+
+    Announcements:
+      description: Announcements.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Announcements"
 
     UserOwnedNFTs:
       description: User owned NFTs.
@@ -6779,6 +6814,190 @@ paths:
           required: true
           schema:
             type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement:
+    post:
+      tags:
+        - "Announcement"
+      summary: Create announcement.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                action_url:
+                  type: string
+                starts_at:
+                  type: number
+                ends_at:
+                  type: number
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    get:
+      tags:
+        - "Announcement"
+      summary: Get announcements.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/Announcements"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/{id}:
+    get:
+      tags:
+        - "Announcement"
+      summary: Get announcement.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/Announcement"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    put:
+      tags:
+        - "Announcement"
+      summary: Update announcement.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                action_url:
+                  type: string
+                starts_at:
+                  type: number
+                ends_at:
+                  type: number
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+    delete:
+      tags:
+        - "Announcement"
+      summary: Delete announcement.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/unread:
+    get:
+      tags:
+        - "Announcement"
+      summary: Get unread announcements.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/Announcements"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/active:
+    get:
+      tags:
+        - "Announcement"
+      summary: Get active announcements.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/Announcements"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/{id}/read:
+    post:
+      tags:
+        - "Announcement"
+      summary: Mark announcement as read.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/read_all:
+    post:
+      tags:
+        - "Announcement"
+      summary: Mark all announcements as read.
+      security:
+        - bearerAuth: [ ]
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

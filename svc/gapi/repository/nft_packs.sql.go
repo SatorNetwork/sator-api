@@ -65,7 +65,7 @@ func (q *Queries) GetNFTPack(ctx context.Context, id uuid.UUID) (UnityGameNftPac
 }
 
 const getNFTPacksList = `-- name: GetNFTPacksList :many
-SELECT id, drop_chances, price, updated_at, created_at, deleted_at, name FROM unity_game_nft_packs WHERE deleted_at IS NULL
+SELECT id, drop_chances, price, updated_at, created_at, deleted_at, name FROM unity_game_nft_packs WHERE deleted_at IS NULL ORDER BY price ASC
 `
 
 func (q *Queries) GetNFTPacksList(ctx context.Context) ([]UnityGameNftPack, error) {

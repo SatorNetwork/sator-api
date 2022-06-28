@@ -39,6 +39,8 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/solana_multiprovider"
 	storage "github.com/SatorNetwork/sator-api/lib/storage"
 	"github.com/SatorNetwork/sator-api/lib/sumsub"
+	announcement_svc "github.com/SatorNetwork/sator-api/svc/announcement"
+	announcement_repository "github.com/SatorNetwork/sator-api/svc/announcement/repository"
 	"github.com/SatorNetwork/sator-api/svc/auth"
 	authc "github.com/SatorNetwork/sator-api/svc/auth/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
@@ -78,7 +80,7 @@ import (
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
 	"github.com/SatorNetwork/sator-api/svc/settings"
-	flagsRepository "github.com/SatorNetwork/sator-api/svc/settings/repository"
+	settingsRepository "github.com/SatorNetwork/sator-api/svc/settings/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	"github.com/SatorNetwork/sator-api/svc/shows/private"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
@@ -160,6 +162,8 @@ type Config struct {
 	QuizV2ShuffleQuestions         bool
 	ServerRSAPrivateKey            string
 	PuzzleGameShuffle              bool
+	PuzzleGamePaidStepsEnabled     bool
+	PuzzleGameRewardsEnabled       bool
 	TipsPercent                    float64
 	TokenTransferPercent           float64
 	ClaimRewardsPercent            float64
@@ -290,7 +294,9 @@ func ConfigFromEnv() *Config {
 		ServerRSAPrivateKey:    env.MustString("SERVER_RSA_PRIVATE_KEY"),
 
 		// Puzzle Game
-		PuzzleGameShuffle: env.GetBool("PUZZLE_GAME_SHUFFLE", true),
+		PuzzleGameShuffle:          env.GetBool("PUZZLE_GAME_SHUFFLE", true),
+		PuzzleGamePaidStepsEnabled: env.GetBool("PUZZLE_GAME_PAID_STEPS_ENABLED", false),
+		PuzzleGameRewardsEnabled:   env.GetBool("PUZZLE_GAME_REWARDS_ENABLED", false),
 
 		TipsPercent:           env.GetFloat("TIPS_PERCENT", 0.5),
 		TokenTransferPercent:  env.GetFloat("TOKEN_TRANSFER_PERCENT", 0.75),
@@ -917,12 +923,12 @@ func (a *app) Run() {
 
 	var settingsSvc *settings.Service
 	{
-		flagsReposiory, err := flagsRepository.Prepare(ctx, db)
+		settingsRepository, err := settingsRepository.Prepare(ctx, db)
 		if err != nil {
 			log.Fatalf("can't prepare settings repository: %v", err)
 		}
 
-		settingsSvc = settings.NewService(flagsReposiory)
+		settingsSvc = settings.NewService(settingsRepository)
 
 		r.Mount("/settings", settings.MakeHTTPHandler(
 			settings.MakeEndpoints(settingsSvc, jwtMdw),
@@ -986,6 +992,22 @@ func (a *app) Run() {
 			),
 			logger,
 			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
+		))
+	}
+
+	// In-app purchases service
+	{
+		announcementRepository, err := announcement_repository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare announcement repository: %v", err)
+		}
+
+		announcementSvc := announcement_svc.NewService(
+			announcementRepository,
+		)
+		r.Mount("/announcement", announcement_svc.MakeHTTPHandler(
+			announcement_svc.MakeEndpoints(announcementSvc, jwtMdw),
+			logger,
 		))
 	}
 

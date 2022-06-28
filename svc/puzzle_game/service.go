@@ -116,7 +116,10 @@ func (pg *PuzzleGame) HideCorrectPositions() PuzzleGame {
 }
 
 func NewService(pgr puzzleGameRepository, puzzleGameShuffle bool, opt ...ServiceOption) *Service {
-	s := &Service{pgr: pgr, puzzleGameShuffle: puzzleGameShuffle}
+	s := &Service{
+		pgr:               pgr,
+		puzzleGameShuffle: puzzleGameShuffle,
+	}
 
 	for _, o := range opt {
 		o(s)
