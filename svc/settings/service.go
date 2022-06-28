@@ -128,6 +128,9 @@ func (s *Service) DeleteSetting(ctx context.Context, key string) error {
 func (s *Service) getValueByKey(ctx context.Context, key string, valueType repository.SettingsValueType) (string, error) {
 	setting, err := s.repo.GetSettingByKey(ctx, key)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", NotFound
+		}
 		return "", fmt.Errorf("failed to get setting with key %s: %w", key, err)
 	}
 
