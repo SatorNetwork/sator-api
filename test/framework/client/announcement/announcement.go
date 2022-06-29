@@ -166,12 +166,7 @@ func (c *AnnouncementClient) UpdateAnnouncement(accessToken string, req *UpdateA
 
 func (c *AnnouncementClient) DeleteAnnouncement(accessToken string, req *DeleteAnnouncementRequest) error {
 	url := fmt.Sprintf("http://localhost:8080/announcement/%v", req.ID)
-	body, err := json.Marshal(req)
-	if err != nil {
-		return errors.Wrap(err, "can't marshal request")
-	}
-	reader := bytes.NewReader(body)
-	httpReq, err := http.NewRequest(http.MethodDelete, url, reader)
+	httpReq, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		return errors.Wrap(err, "can't create http request")
 	}
