@@ -1369,6 +1369,33 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
+  /wallets/sao:
+    get:
+      tags:
+        - "Wallet"
+      summary: Get SAO wallet of current user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Get SAO wallet of current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public_key:
+                    type: string
+                  private_key:
+                    type: string
+                  currency:
+                    type: string
+                    example: "SAO"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /wallets/{wallet_id}:
     get:
       tags:
@@ -4717,7 +4744,7 @@ paths:
         - "NFT"
       summary: Buy NFT Via Marketplace
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: mint_address
           in: path
@@ -6830,7 +6857,7 @@ paths:
         - "Announcement"
       summary: Create announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -6863,7 +6890,7 @@ paths:
         - "Announcement"
       summary: Get announcements.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcements"
@@ -6880,7 +6907,7 @@ paths:
         - "Announcement"
       summary: Get announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcement"
@@ -6896,7 +6923,7 @@ paths:
         - "Announcement"
       summary: Update announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -6929,7 +6956,7 @@ paths:
         - "Announcement"
       summary: Delete announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6946,7 +6973,7 @@ paths:
         - "Announcement"
       summary: Get unread announcements.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcements"
@@ -6963,7 +6990,7 @@ paths:
         - "Announcement"
       summary: Get active announcements.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcements"
@@ -6980,7 +7007,7 @@ paths:
         - "Announcement"
       summary: Mark announcement as read.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6997,7 +7024,7 @@ paths:
         - "Announcement"
       summary: Mark all announcements as read.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"

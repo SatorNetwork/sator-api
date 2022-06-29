@@ -21,6 +21,7 @@ type (
 	Endpoints struct {
 		CreateTransfer                endpoint.Endpoint
 		ConfirmTransfer               endpoint.Endpoint
+		GetUserWallet                 endpoint.Endpoint
 		GetWallets                    endpoint.Endpoint
 		GetWalletByID                 endpoint.Endpoint
 		GetListTransactionsByWalletID endpoint.Endpoint
@@ -42,6 +43,7 @@ type (
 		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error)
 		GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUID) ([]StakeLevel, error)
+		GetSaoWalletByUserID(ctx context.Context, userID uuid.UUID) (UserWallet, error)
 	}
 
 	CreateTransferRequest struct {
@@ -87,6 +89,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
+		GetUserWallet:                 MakeGetUserWalletEndpoint(s),
 		GetWallets:                    MakeGetWalletsEndpoint(s),
 		GetWalletByID:                 MakeGetWalletByIDEndpoint(s),
 		GetListTransactionsByWalletID: MakeGetListTransactionsByWalletIDEndpoint(s, validateFunc),
@@ -102,6 +105,7 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 	// setup middlewares for each endpoints
 	if len(m) > 0 {
 		for _, mdw := range m {
+			e.GetUserWallet = mdw(e.GetUserWallet)
 			e.GetWallets = mdw(e.GetWallets)
 			e.GetWalletByID = mdw(e.GetWalletByID)
 			e.GetListTransactionsByWalletID = mdw(e.GetListTransactionsByWalletID)
@@ -116,6 +120,22 @@ func MakeEndpoints(s service, kycMdw endpoint.Middleware, m ...endpoint.Middlewa
 	}
 
 	return e
+}
+
+func MakeGetUserWalletEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		wallet, err := s.GetSaoWalletByUserID(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return wallet, nil
+	}
 }
 
 func MakeGetListTransactionsByWalletIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {

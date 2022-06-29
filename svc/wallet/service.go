@@ -179,6 +179,34 @@ func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, txWatch
 	return s
 }
 
+type UserWallet struct {
+	WalletAddress    string `json:"public_key"`
+	WalletPrivateKey string `json:"private_key"`
+	Currency         string `json:"currency"`
+}
+
+// GetSaoWalletByUserID returns a wallet private key in base58 format or error
+func (s *Service) GetSaoWalletByUserID(ctx context.Context, userID uuid.UUID) (UserWallet, error) {
+	wallet, err := s.wr.GetWalletByUserIDAndType(ctx, repository.GetWalletByUserIDAndTypeParams{
+		UserID:     userID,
+		WalletType: WalletTypeSator,
+	})
+	if err != nil {
+		return UserWallet{}, fmt.Errorf("failed to get wallet by userID: %w", err)
+	}
+
+	solAcc, err := s.wr.GetSolanaAccountByID(ctx, wallet.SolanaAccountID)
+	if err != nil {
+		return UserWallet{}, fmt.Errorf("failed to get solana account by ID: %w", err)
+	}
+
+	return UserWallet{
+		WalletAddress:    solAcc.PublicKey,
+		WalletPrivateKey: base58.Encode(solAcc.PrivateKey),
+		Currency:         "SAO",
+	}, nil
+}
+
 // GetWallets returns current user's wallets list with balance
 func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error) {
 	wallets, err := s.wr.GetWalletsByUserID(ctx, uid)

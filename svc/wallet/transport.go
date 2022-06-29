@@ -46,6 +46,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/sao", httptransport.NewServer(
+		e.GetUserWallet,
+		decodeGetCurrentUserWalletRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/stake-levels", httptransport.NewServer(
 		e.GetStakeLevels,
 		decodeGetStakeLevelsRequest,
@@ -110,6 +117,10 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	return r
+}
+
+func decodeGetCurrentUserWalletRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
 }
 
 func decodeGetWalletsRequest(ctx context.Context, _ *http.Request) (interface{}, error) {
