@@ -1384,13 +1384,15 @@ paths:
               schema:
                 type: object
                 properties:
-                  public_key:
+                  wallet_public_key:
                     type: string
-                  private_key:
+                  wallet_private_key:
                     type: string
-                  currency:
+                  token_symbol:
                     type: string
                     example: "SAO"
+                  token_mint_address:
+                    type: string
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

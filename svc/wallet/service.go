@@ -180,9 +180,10 @@ func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, txWatch
 }
 
 type UserWallet struct {
-	WalletAddress    string `json:"public_key"`
-	WalletPrivateKey string `json:"private_key"`
-	Currency         string `json:"currency"`
+	WalletAddress    string `json:"wallet_public_key"`
+	WalletPrivateKey string `json:"wallet_private_key"`
+	TokenSymbol      string `json:"token_symbol"`
+	TokenMintAddress string `json:"token_mint_address"`
 }
 
 // GetSaoWalletByUserID returns a wallet private key in base58 format or error
@@ -203,7 +204,8 @@ func (s *Service) GetSaoWalletByUserID(ctx context.Context, userID uuid.UUID) (U
 	return UserWallet{
 		WalletAddress:    solAcc.PublicKey,
 		WalletPrivateKey: base58.Encode(solAcc.PrivateKey),
-		Currency:         "SAO",
+		TokenSymbol:      s.satorAssetName,
+		TokenMintAddress: s.satorAssetSolanaAddr,
 	}, nil
 }
 
