@@ -37,12 +37,18 @@ func TestAdminEndpoints(t *testing.T) {
 	actionUrl1 := "action-url-1"
 	startsAt1 := time.Now().Unix()
 	endsAt1 := time.Now().Unix()
+	announcementType := "type-1"
+	typeSpecificParams := map[string]string{
+		"key": "value",
+	}
 	resp, err := c.Announcement.CreateAnnouncement(user.AccessToken(), &announcement.CreateAnnouncementRequest{
-		Title:       title1,
-		Description: description1,
-		ActionUrl:   actionUrl1,
-		StartsAt:    startsAt1,
-		EndsAt:      endsAt1,
+		Title:              title1,
+		Description:        description1,
+		ActionUrl:          actionUrl1,
+		StartsAt:           startsAt1,
+		EndsAt:             endsAt1,
+		Type:               announcementType,
+		TypeSpecificParams: typeSpecificParams,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.ID)
@@ -57,6 +63,8 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrl1, announcement1.ActionUrl)
 	require.Equal(t, startsAt1, announcement1.StartsAt)
 	require.Equal(t, endsAt1, announcement1.EndsAt)
+	require.Equal(t, announcementType, announcement1.Type)
+	require.Equal(t, typeSpecificParams, announcement1.TypeSpecificParams)
 
 	announcements, err := c.Announcement.ListAnnouncements(user.AccessToken())
 	require.NoError(t, err)
@@ -68,19 +76,27 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrl1, announcement1.ActionUrl)
 	require.Equal(t, startsAt1, announcement1.StartsAt)
 	require.Equal(t, endsAt1, announcement1.EndsAt)
+	require.Equal(t, announcementType, announcement1.Type)
+	require.Equal(t, typeSpecificParams, announcement1.TypeSpecificParams)
 
 	titleUpd := "title-upd"
 	descriptionUpd := "description-upd"
 	actionUrlUpd := "action-url-upd"
 	startsAtUpd := time.Now().Unix()
 	endsAtUpd := time.Now().Unix()
+	announcementTypeUpd := "type-upd"
+	typeSpecificParamsUpd := map[string]string{
+		"key": "value-upd",
+	}
 	err = c.Announcement.UpdateAnnouncement(user.AccessToken(), &announcement.UpdateAnnouncementRequest{
-		ID:          resp.ID,
-		Title:       titleUpd,
-		Description: descriptionUpd,
-		ActionUrl:   actionUrlUpd,
-		StartsAt:    startsAtUpd,
-		EndsAt:      endsAtUpd,
+		ID:                 resp.ID,
+		Title:              titleUpd,
+		Description:        descriptionUpd,
+		ActionUrl:          actionUrlUpd,
+		StartsAt:           startsAtUpd,
+		EndsAt:             endsAtUpd,
+		Type:               announcementTypeUpd,
+		TypeSpecificParams: typeSpecificParamsUpd,
 	})
 	require.NoError(t, err)
 
@@ -94,6 +110,8 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrlUpd, announcement1.ActionUrl)
 	require.Equal(t, startsAtUpd, announcement1.StartsAt)
 	require.Equal(t, endsAtUpd, announcement1.EndsAt)
+	require.Equal(t, announcementTypeUpd, announcement1.Type)
+	require.Equal(t, typeSpecificParamsUpd, announcement1.TypeSpecificParams)
 
 	err = c.Announcement.DeleteAnnouncement(user.AccessToken(), &announcement.DeleteAnnouncementRequest{
 		ID: resp.ID,
@@ -121,6 +139,12 @@ func TestAdminEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		_, err = findAnnouncementByID(announcements, resp2.ID)
 		require.NoError(t, err)
+	}
+
+	{
+		resp, err := c.Announcement.GetAnnouncementTypes(user.AccessToken())
+		require.NoError(t, err)
+		require.Equal(t, []string{"show", "episode", "link"}, resp.Types)
 	}
 }
 

@@ -34,23 +34,29 @@ INSERT INTO announcements (
     description,
     action_url,
     starts_at,
-    ends_at
+    ends_at,
+    type,
+    type_specific_params
 )
 VALUES (
     $1,
     $2,
     $3,
     $4,
-    $5
-) RETURNING id, title, description, action_url, starts_at, ends_at, updated_at, created_at
+    $5,
+    $6,
+    $7
+) RETURNING id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params
 `
 
 type CreateAnnouncementParams struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	ActionUrl   string    `json:"action_url"`
-	StartsAt    time.Time `json:"starts_at"`
-	EndsAt      time.Time `json:"ends_at"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	ActionUrl          string    `json:"action_url"`
+	StartsAt           time.Time `json:"starts_at"`
+	EndsAt             time.Time `json:"ends_at"`
+	Type               string    `json:"type"`
+	TypeSpecificParams string    `json:"type_specific_params"`
 }
 
 func (q *Queries) CreateAnnouncement(ctx context.Context, arg CreateAnnouncementParams) (Announcement, error) {
@@ -60,6 +66,8 @@ func (q *Queries) CreateAnnouncement(ctx context.Context, arg CreateAnnouncement
 		arg.ActionUrl,
 		arg.StartsAt,
 		arg.EndsAt,
+		arg.Type,
+		arg.TypeSpecificParams,
 	)
 	var i Announcement
 	err := row.Scan(
@@ -71,6 +79,8 @@ func (q *Queries) CreateAnnouncement(ctx context.Context, arg CreateAnnouncement
 		&i.EndsAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Type,
+		&i.TypeSpecificParams,
 	)
 	return i, err
 }
@@ -86,7 +96,7 @@ func (q *Queries) DeleteAnnouncementByID(ctx context.Context, id uuid.UUID) erro
 }
 
 const getAnnouncementByID = `-- name: GetAnnouncementByID :one
-SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements
+SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params FROM announcements
 WHERE id = $1
 `
 
@@ -102,12 +112,14 @@ func (q *Queries) GetAnnouncementByID(ctx context.Context, id uuid.UUID) (Announ
 		&i.EndsAt,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.Type,
+		&i.TypeSpecificParams,
 	)
 	return i, err
 }
 
 const listActiveAnnouncements = `-- name: ListActiveAnnouncements :many
-SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements
+SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params FROM announcements
 WHERE starts_at <= NOW() AND NOW() <= ends_at
 `
 
@@ -129,6 +141,8 @@ func (q *Queries) ListActiveAnnouncements(ctx context.Context) ([]Announcement, 
 			&i.EndsAt,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Type,
+			&i.TypeSpecificParams,
 		); err != nil {
 			return nil, err
 		}
@@ -144,7 +158,7 @@ func (q *Queries) ListActiveAnnouncements(ctx context.Context) ([]Announcement, 
 }
 
 const listAnnouncements = `-- name: ListAnnouncements :many
-SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements
+SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params FROM announcements
 `
 
 func (q *Queries) ListAnnouncements(ctx context.Context) ([]Announcement, error) {
@@ -165,6 +179,8 @@ func (q *Queries) ListAnnouncements(ctx context.Context) ([]Announcement, error)
 			&i.EndsAt,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Type,
+			&i.TypeSpecificParams,
 		); err != nil {
 			return nil, err
 		}
@@ -180,7 +196,7 @@ func (q *Queries) ListAnnouncements(ctx context.Context) ([]Announcement, error)
 }
 
 const listUnreadAnnouncements = `-- name: ListUnreadAnnouncements :many
-SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at FROM announcements WHERE id IN (
+SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params FROM announcements WHERE id IN (
     SELECT id
     FROM announcements
         EXCEPT
@@ -208,6 +224,8 @@ func (q *Queries) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID)
 			&i.EndsAt,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Type,
+			&i.TypeSpecificParams,
 		); err != nil {
 			return nil, err
 		}
@@ -229,17 +247,21 @@ SET
     description = $2,
     action_url = $3,
     starts_at = $4,
-    ends_at = $5
-WHERE id = $6
+    ends_at = $5,
+    type = $6,
+    type_specific_params = $7
+WHERE id = $8
 `
 
 type UpdateAnnouncementByIDParams struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	ActionUrl   string    `json:"action_url"`
-	StartsAt    time.Time `json:"starts_at"`
-	EndsAt      time.Time `json:"ends_at"`
-	ID          uuid.UUID `json:"id"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	ActionUrl          string    `json:"action_url"`
+	StartsAt           time.Time `json:"starts_at"`
+	EndsAt             time.Time `json:"ends_at"`
+	Type               string    `json:"type"`
+	TypeSpecificParams string    `json:"type_specific_params"`
+	ID                 uuid.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateAnnouncementByID(ctx context.Context, arg UpdateAnnouncementByIDParams) error {
@@ -249,6 +271,8 @@ func (q *Queries) UpdateAnnouncementByID(ctx context.Context, arg UpdateAnnounce
 		arg.ActionUrl,
 		arg.StartsAt,
 		arg.EndsAt,
+		arg.Type,
+		arg.TypeSpecificParams,
 		arg.ID,
 	)
 	return err

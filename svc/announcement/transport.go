@@ -97,6 +97,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/types", httptransport.NewServer(
+		e.GetAnnouncementTypes,
+		decodeGetAnnouncementTypesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -162,6 +169,10 @@ func decodeMarkAsReadRequest(_ context.Context, r *http.Request) (interface{}, e
 }
 
 func decodeMarkAllAsReadRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return &Empty{}, nil
+}
+
+func decodeGetAnnouncementTypesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return &Empty{}, nil
 }
 

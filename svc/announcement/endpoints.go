@@ -24,6 +24,7 @@ type (
 		ListActiveAnnouncements endpoint.Endpoint
 		MarkAsRead              endpoint.Endpoint
 		MarkAllAsRead           endpoint.Endpoint
+		GetAnnouncementTypes    endpoint.Endpoint
 	}
 
 	service interface {
@@ -36,6 +37,7 @@ type (
 		ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error)
 		MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsReadRequest) error
 		MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
+		GetAnnouncementTypes(ctx context.Context) (*GetAnnouncementTypesResponse, error)
 	}
 )
 
@@ -52,6 +54,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		ListActiveAnnouncements: MakeListActiveAnnouncementsEndpoint(s, validateFunc),
 		MarkAsRead:              MakeMarkAsReadEndpoint(s, validateFunc),
 		MarkAllAsRead:           MakeMarkAllAsReadEndpoint(s, validateFunc),
+		GetAnnouncementTypes:    MakeGetAnnouncementTypesEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoint
@@ -66,6 +69,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.ListActiveAnnouncements = mdw(e.ListActiveAnnouncements)
 			e.MarkAsRead = mdw(e.MarkAsRead)
 			e.MarkAllAsRead = mdw(e.MarkAllAsRead)
+			e.GetAnnouncementTypes = mdw(e.GetAnnouncementTypes)
 		}
 	}
 
@@ -254,5 +258,20 @@ func MakeMarkAllAsReadEndpoint(s service, v validator.ValidateFunc) endpoint.End
 		}
 
 		return true, nil
+	}
+}
+
+func MakeGetAnnouncementTypesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetAnnouncementTypes(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }

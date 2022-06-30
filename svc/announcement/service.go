@@ -2,6 +2,7 @@ package announcement
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,11 +36,13 @@ type (
 	Empty struct{}
 
 	CreateAnnouncementRequest struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		ActionUrl   string `json:"action_url"`
-		StartsAt    int64  `json:"starts_at"`
-		EndsAt      int64  `json:"ends_at"`
+		Title              string            `json:"title"`
+		Description        string            `json:"description"`
+		ActionUrl          string            `json:"action_url"`
+		StartsAt           int64             `json:"starts_at"`
+		EndsAt             int64             `json:"ends_at"`
+		Type               string            `json:"type"`
+		TypeSpecificParams map[string]string `json:"type_specific_params"`
 	}
 
 	CreateAnnouncementResponse struct {
@@ -51,21 +54,25 @@ type (
 	}
 
 	Announcement struct {
-		ID          string `json:"id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		ActionUrl   string `json:"action_url"`
-		StartsAt    int64  `json:"starts_at"`
-		EndsAt      int64  `json:"ends_at"`
+		ID                 string            `json:"id"`
+		Title              string            `json:"title"`
+		Description        string            `json:"description"`
+		ActionUrl          string            `json:"action_url"`
+		StartsAt           int64             `json:"starts_at"`
+		EndsAt             int64             `json:"ends_at"`
+		Type               string            `json:"type"`
+		TypeSpecificParams map[string]string `json:"type_specific_params"`
 	}
 
 	UpdateAnnouncementRequest struct {
-		ID          string `json:"id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		ActionUrl   string `json:"action_url"`
-		StartsAt    int64  `json:"starts_at"`
-		EndsAt      int64  `json:"ends_at"`
+		ID                 string            `json:"id"`
+		Title              string            `json:"title"`
+		Description        string            `json:"description"`
+		ActionUrl          string            `json:"action_url"`
+		StartsAt           int64             `json:"starts_at"`
+		EndsAt             int64             `json:"ends_at"`
+		Type               string            `json:"type"`
+		TypeSpecificParams map[string]string `json:"type_specific_params"`
 	}
 
 	DeleteAnnouncementRequest struct {
@@ -74,6 +81,10 @@ type (
 
 	MarkAsReadRequest struct {
 		AnnouncementID string `json:"announcement_id"`
+	}
+
+	GetAnnouncementTypesResponse struct {
+		Types []string `json:"types"`
 	}
 )
 
@@ -91,12 +102,18 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req *CreateAnnouncemen
 	startsAt := time.Unix(req.StartsAt, 0).UTC()
 	endsAt := time.Unix(req.EndsAt, 0).UTC()
 
+	typeSpecificParamsInJSON, err := json.Marshal(req.TypeSpecificParams)
+	if err != nil {
+		return nil, err
+	}
 	announcement, err := s.ar.CreateAnnouncement(ctx, announcement_repository.CreateAnnouncementParams{
-		Title:       req.Title,
-		Description: req.Description,
-		ActionUrl:   req.ActionUrl,
-		StartsAt:    startsAt,
-		EndsAt:      endsAt,
+		Title:              req.Title,
+		Description:        req.Description,
+		ActionUrl:          req.ActionUrl,
+		StartsAt:           startsAt,
+		EndsAt:             endsAt,
+		Type:               req.Type,
+		TypeSpecificParams: string(typeSpecificParamsInJSON),
 	})
 	if err != nil {
 		return nil, err
@@ -117,7 +134,7 @@ func (s *Service) GetAnnouncementByID(ctx context.Context, req *GetAnnouncementB
 		return nil, err
 	}
 
-	return NewAnnouncementFromSQLC(&a), nil
+	return NewAnnouncementFromSQLC(&a)
 }
 
 func (s *Service) UpdateAnnouncementByID(ctx context.Context, req *UpdateAnnouncementRequest) error {
@@ -128,13 +145,19 @@ func (s *Service) UpdateAnnouncementByID(ctx context.Context, req *UpdateAnnounc
 	startsAt := time.Unix(req.StartsAt, 0).UTC()
 	endsAt := time.Unix(req.EndsAt, 0).UTC()
 
+	typeSpecificParamsInJSON, err := json.Marshal(req.TypeSpecificParams)
+	if err != nil {
+		return err
+	}
 	err = s.ar.UpdateAnnouncementByID(ctx, announcement_repository.UpdateAnnouncementByIDParams{
-		ID:          id,
-		Title:       req.Title,
-		Description: req.Description,
-		ActionUrl:   req.ActionUrl,
-		StartsAt:    startsAt,
-		EndsAt:      endsAt,
+		ID:                 id,
+		Title:              req.Title,
+		Description:        req.Description,
+		ActionUrl:          req.ActionUrl,
+		StartsAt:           startsAt,
+		EndsAt:             endsAt,
+		Type:               req.Type,
+		TypeSpecificParams: string(typeSpecificParamsInJSON),
 	})
 	if err != nil {
 		return err
@@ -157,24 +180,35 @@ func (s *Service) DeleteAnnouncementByID(ctx context.Context, req *DeleteAnnounc
 	return nil
 }
 
-func NewAnnouncementFromSQLC(a *announcement_repository.Announcement) *Announcement {
-	return &Announcement{
-		ID:          a.ID.String(),
-		Title:       a.Title,
-		Description: a.Description,
-		ActionUrl:   a.ActionUrl,
-		StartsAt:    a.StartsAt.Unix(),
-		EndsAt:      a.EndsAt.Unix(),
+func NewAnnouncementFromSQLC(a *announcement_repository.Announcement) (*Announcement, error) {
+	var typeSpecificParams map[string]string
+	err := json.Unmarshal([]byte(a.TypeSpecificParams), &typeSpecificParams)
+	if err != nil {
+		return nil, err
 	}
+	return &Announcement{
+		ID:                 a.ID.String(),
+		Title:              a.Title,
+		Description:        a.Description,
+		ActionUrl:          a.ActionUrl,
+		StartsAt:           a.StartsAt.Unix(),
+		EndsAt:             a.EndsAt.Unix(),
+		Type:               a.Type,
+		TypeSpecificParams: typeSpecificParams,
+	}, nil
 }
 
-func NewAnnouncementsFromSQLC(sqlcAnnouncements []announcement_repository.Announcement) []*Announcement {
+func NewAnnouncementsFromSQLC(sqlcAnnouncements []announcement_repository.Announcement) ([]*Announcement, error) {
 	announcements := make([]*Announcement, 0, len(sqlcAnnouncements))
-	for _, a := range sqlcAnnouncements {
-		announcements = append(announcements, NewAnnouncementFromSQLC(&a))
+	for _, sqlcA := range sqlcAnnouncements {
+		a, err := NewAnnouncementFromSQLC(&sqlcA)
+		if err != nil {
+			return nil, err
+		}
+		announcements = append(announcements, a)
 	}
 
-	return announcements
+	return announcements, nil
 }
 
 func (s *Service) ListAnnouncements(ctx context.Context) ([]*Announcement, error) {
@@ -183,7 +217,7 @@ func (s *Service) ListAnnouncements(ctx context.Context) ([]*Announcement, error
 		return nil, err
 	}
 
-	return NewAnnouncementsFromSQLC(announcements), nil
+	return NewAnnouncementsFromSQLC(announcements)
 }
 
 func (s *Service) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error) {
@@ -192,7 +226,7 @@ func (s *Service) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID)
 		return nil, err
 	}
 
-	return NewAnnouncementsFromSQLC(announcements), nil
+	return NewAnnouncementsFromSQLC(announcements)
 }
 
 func (s *Service) ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error) {
@@ -201,7 +235,7 @@ func (s *Service) ListActiveAnnouncements(ctx context.Context) ([]*Announcement,
 		return nil, err
 	}
 
-	return NewAnnouncementsFromSQLC(announcements), nil
+	return NewAnnouncementsFromSQLC(announcements)
 }
 
 func (s *Service) MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsReadRequest) error {
@@ -238,4 +272,10 @@ func (s *Service) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (s *Service) GetAnnouncementTypes(ctx context.Context) (*GetAnnouncementTypesResponse, error) {
+	return &GetAnnouncementTypesResponse{
+		Types: []string{"show", "episode", "link"},
+	}, nil
 }

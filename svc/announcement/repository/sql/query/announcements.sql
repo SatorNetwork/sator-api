@@ -4,14 +4,18 @@ INSERT INTO announcements (
     description,
     action_url,
     starts_at,
-    ends_at
+    ends_at,
+    type,
+    type_specific_params
 )
 VALUES (
     @title,
     @description,
     @action_url,
     @starts_at,
-    @ends_at
+    @ends_at,
+    @type,
+    @type_specific_params
 ) RETURNING *;
 
 -- name: GetAnnouncementByID :one
@@ -25,7 +29,9 @@ SET
     description = @description,
     action_url = @action_url,
     starts_at = @starts_at,
-    ends_at = @ends_at
+    ends_at = @ends_at,
+    type = @type,
+    type_specific_params = @type_specific_params
 WHERE id = @id;
 
 -- name: DeleteAnnouncementByID :exec

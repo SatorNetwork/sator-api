@@ -16,11 +16,13 @@ type (
 	AnnouncementClient struct{}
 
 	CreateAnnouncementRequest struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		ActionUrl   string `json:"action_url"`
-		StartsAt    int64  `json:"starts_at"`
-		EndsAt      int64  `json:"ends_at"`
+		Title              string            `json:"title"`
+		Description        string            `json:"description"`
+		ActionUrl          string            `json:"action_url"`
+		StartsAt           int64             `json:"starts_at"`
+		EndsAt             int64             `json:"ends_at"`
+		Type               string            `json:"type"`
+		TypeSpecificParams map[string]string `json:"type_specific_params"`
 	}
 
 	CreateAnnouncementResponseWrapper struct {
@@ -44,21 +46,25 @@ type (
 	}
 
 	Announcement struct {
-		ID          string `json:"id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		ActionUrl   string `json:"action_url"`
-		StartsAt    int64  `json:"starts_at"`
-		EndsAt      int64  `json:"ends_at"`
+		ID                 string            `json:"id"`
+		Title              string            `json:"title"`
+		Description        string            `json:"description"`
+		ActionUrl          string            `json:"action_url"`
+		StartsAt           int64             `json:"starts_at"`
+		EndsAt             int64             `json:"ends_at"`
+		Type               string            `json:"type"`
+		TypeSpecificParams map[string]string `json:"type_specific_params"`
 	}
 
 	UpdateAnnouncementRequest struct {
-		ID          string `json:"id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		ActionUrl   string `json:"action_url"`
-		StartsAt    int64  `json:"starts_at"`
-		EndsAt      int64  `json:"ends_at"`
+		ID                 string            `json:"id"`
+		Title              string            `json:"title"`
+		Description        string            `json:"description"`
+		ActionUrl          string            `json:"action_url"`
+		StartsAt           int64             `json:"starts_at"`
+		EndsAt             int64             `json:"ends_at"`
+		Type               string            `json:"type"`
+		TypeSpecificParams map[string]string `json:"type_specific_params"`
 	}
 
 	DeleteAnnouncementRequest struct {
@@ -67,6 +73,14 @@ type (
 
 	MarkAsReadRequest struct {
 		AnnouncementID string `json:"announcement_id"`
+	}
+
+	GetAnnouncementTypesResponseWrapper struct {
+		Data *GetAnnouncementTypesResponse `json:"data"`
+	}
+
+	GetAnnouncementTypesResponse struct {
+		Types []string `json:"types"`
 	}
 )
 
@@ -309,4 +323,31 @@ func (c *AnnouncementClient) MarkAllAsRead(accessToken string) error {
 	}
 
 	return nil
+}
+
+func (c *AnnouncementClient) GetAnnouncementTypes(accessToken string) (*GetAnnouncementTypesResponse, error) {
+	url := "http://localhost:8080/announcement/types"
+	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't create http request")
+	}
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't make http request")
+	}
+	rawBody, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't read response body")
+	}
+	if !client_utils.IsStatusCodeSuccess(httpResp.StatusCode) {
+		return nil, errors.Errorf("unexpected status code: %v, body: %s", httpResp.StatusCode, rawBody)
+	}
+
+	var resp GetAnnouncementTypesResponseWrapper
+	if err := json.Unmarshal(rawBody, &resp); err != nil {
+		return nil, errors.Wrap(err, "can't unmarshal response body")
+	}
+
+	return resp.Data, nil
 }
