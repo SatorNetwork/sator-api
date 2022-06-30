@@ -24,10 +24,3 @@ func WithChargeForUnlockFunc(fn chargeForUnlockFunc) ServiceOption {
 		s.chargeForUnlockFn = fn
 	}
 }
-
-// IsRewardsDisabled ...
-func IsRewardsDisabled(isRewardsDisabled bool) ServiceOption {
-	return func(s *Service) {
-		s.isRewardsDisabled = isRewardsDisabled
-	}
-}
