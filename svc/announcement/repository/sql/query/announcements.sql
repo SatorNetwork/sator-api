@@ -39,7 +39,8 @@ DELETE FROM announcements
 WHERE id = @id;
 
 -- name: ListAnnouncements :many
-SELECT * FROM announcements;
+SELECT * FROM announcements
+LIMIT @limit_val OFFSET @offset_val;
 
 -- name: ListUnreadAnnouncements :many
 SELECT * FROM announcements WHERE id IN (
@@ -49,11 +50,13 @@ SELECT * FROM announcements WHERE id IN (
     SELECT announcement_id
     FROM read_announcements
     WHERE user_id = @user_id
-);
+)
+LIMIT @limit_val OFFSET @offset_val;
 
 -- name: ListActiveAnnouncements :many
 SELECT * FROM announcements
-WHERE starts_at <= NOW() AND NOW() <= ends_at;
+WHERE starts_at <= NOW() AND NOW() <= ends_at
+LIMIT @limit_val OFFSET @offset_val;
 
 -- name: CleanUpReadAnnouncements :exec
 DELETE FROM read_announcements;

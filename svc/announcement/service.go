@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/lib/utils"
 	announcement_repository "github.com/SatorNetwork/sator-api/svc/announcement/repository"
 )
 
@@ -24,9 +25,9 @@ type (
 		GetAnnouncementByID(ctx context.Context, id uuid.UUID) (announcement_repository.Announcement, error)
 		UpdateAnnouncementByID(ctx context.Context, arg announcement_repository.UpdateAnnouncementByIDParams) error
 		DeleteAnnouncementByID(ctx context.Context, id uuid.UUID) error
-		ListAnnouncements(ctx context.Context) ([]announcement_repository.Announcement, error)
-		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]announcement_repository.Announcement, error)
-		ListActiveAnnouncements(ctx context.Context) ([]announcement_repository.Announcement, error)
+		ListAnnouncements(ctx context.Context, arg announcement_repository.ListAnnouncementsParams) ([]announcement_repository.Announcement, error)
+		ListUnreadAnnouncements(ctx context.Context, arg announcement_repository.ListUnreadAnnouncementsParams) ([]announcement_repository.Announcement, error)
+		ListActiveAnnouncements(ctx context.Context, arg announcement_repository.ListActiveAnnouncementsParams) ([]announcement_repository.Announcement, error)
 
 		MarkAsRead(ctx context.Context, arg announcement_repository.MarkAsReadParams) error
 		IsRead(ctx context.Context, arg announcement_repository.IsReadParams) (bool, error)
@@ -51,6 +52,10 @@ type (
 
 	GetAnnouncementByIDRequest struct {
 		ID string `json:"id"`
+	}
+
+	ListAnnouncementRequest struct {
+		utils.PaginationRequest
 	}
 
 	Announcement struct {
@@ -211,8 +216,11 @@ func NewAnnouncementsFromSQLC(sqlcAnnouncements []announcement_repository.Announ
 	return announcements, nil
 }
 
-func (s *Service) ListAnnouncements(ctx context.Context) ([]*Announcement, error) {
-	announcements, err := s.ar.ListAnnouncements(ctx)
+func (s *Service) ListAnnouncements(ctx context.Context, req *ListAnnouncementRequest) ([]*Announcement, error) {
+	announcements, err := s.ar.ListAnnouncements(ctx, announcement_repository.ListAnnouncementsParams{
+		OffsetVal: req.Offset(),
+		LimitVal:  req.Limit(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -220,8 +228,12 @@ func (s *Service) ListAnnouncements(ctx context.Context) ([]*Announcement, error
 	return NewAnnouncementsFromSQLC(announcements)
 }
 
-func (s *Service) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error) {
-	announcements, err := s.ar.ListUnreadAnnouncements(ctx, userID)
+func (s *Service) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID, req *ListAnnouncementRequest) ([]*Announcement, error) {
+	announcements, err := s.ar.ListUnreadAnnouncements(ctx, announcement_repository.ListUnreadAnnouncementsParams{
+		UserID:    userID,
+		OffsetVal: req.Offset(),
+		LimitVal:  req.Limit(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -229,8 +241,11 @@ func (s *Service) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID)
 	return NewAnnouncementsFromSQLC(announcements)
 }
 
-func (s *Service) ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error) {
-	announcements, err := s.ar.ListActiveAnnouncements(ctx)
+func (s *Service) ListActiveAnnouncements(ctx context.Context, req *ListAnnouncementRequest) ([]*Announcement, error) {
+	announcements, err := s.ar.ListActiveAnnouncements(ctx, announcement_repository.ListActiveAnnouncementsParams{
+		OffsetVal: req.Offset(),
+		LimitVal:  req.Limit(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +271,11 @@ func (s *Service) MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsR
 }
 
 func (s *Service) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
-	announcements, err := s.ar.ListUnreadAnnouncements(ctx, userID)
+	announcements, err := s.ar.ListUnreadAnnouncements(ctx, announcement_repository.ListUnreadAnnouncementsParams{
+		UserID:    userID,
+		OffsetVal: 0,
+		LimitVal:  1000,
+	})
 	if err != nil {
 		return err
 	}

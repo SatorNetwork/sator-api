@@ -13,6 +13,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+)
+
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -147,15 +153,30 @@ func decodeDeleteAnnouncementRequest(_ context.Context, r *http.Request) (interf
 }
 
 func decodeListAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return &Empty{}, nil
+	return &ListAnnouncementRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeListUnreadAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return &Empty{}, nil
+	return &ListAnnouncementRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeListActiveAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return &Empty{}, nil
+	return &ListAnnouncementRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeMarkAsReadRequest(_ context.Context, r *http.Request) (interface{}, error) {

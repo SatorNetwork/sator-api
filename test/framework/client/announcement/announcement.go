@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/SatorNetwork/sator-api/lib/utils"
 	client_utils "github.com/SatorNetwork/sator-api/test/framework/client/utils"
 )
 
@@ -200,8 +201,8 @@ func (c *AnnouncementClient) DeleteAnnouncement(accessToken string, req *DeleteA
 	return nil
 }
 
-func (c *AnnouncementClient) ListAnnouncements(accessToken string) ([]*Announcement, error) {
-	url := "http://localhost:8080/announcement"
+func (c *AnnouncementClient) ListAnnouncements(accessToken string, p *utils.PaginationRequest) ([]*Announcement, error) {
+	url := fmt.Sprintf("http://localhost:8080/announcement?page=%v&items_per_page=%v", p.Page, p.ItemsPerPage)
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")
@@ -227,8 +228,8 @@ func (c *AnnouncementClient) ListAnnouncements(accessToken string) ([]*Announcem
 	return resp.Data, nil
 }
 
-func (c *AnnouncementClient) ListUnreadAnnouncements(accessToken string) ([]*Announcement, error) {
-	url := "http://localhost:8080/announcement/unread"
+func (c *AnnouncementClient) ListUnreadAnnouncements(accessToken string, p *utils.PaginationRequest) ([]*Announcement, error) {
+	url := fmt.Sprintf("http://localhost:8080/announcement/unread?page=%v&items_per_page=%v", p.Page, p.ItemsPerPage)
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")
@@ -254,8 +255,8 @@ func (c *AnnouncementClient) ListUnreadAnnouncements(accessToken string) ([]*Ann
 	return resp.Data, nil
 }
 
-func (c *AnnouncementClient) ListActiveAnnouncements(accessToken string) ([]*Announcement, error) {
-	url := "http://localhost:8080/announcement/active"
+func (c *AnnouncementClient) ListActiveAnnouncements(accessToken string, p *utils.PaginationRequest) ([]*Announcement, error) {
+	url := fmt.Sprintf("http://localhost:8080/announcement/active?page=%v&items_per_page=%v", p.Page, p.ItemsPerPage)
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't create http request")

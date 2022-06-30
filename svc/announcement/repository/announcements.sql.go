@@ -121,10 +121,16 @@ func (q *Queries) GetAnnouncementByID(ctx context.Context, id uuid.UUID) (Announ
 const listActiveAnnouncements = `-- name: ListActiveAnnouncements :many
 SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params FROM announcements
 WHERE starts_at <= NOW() AND NOW() <= ends_at
+LIMIT $2 OFFSET $1
 `
 
-func (q *Queries) ListActiveAnnouncements(ctx context.Context) ([]Announcement, error) {
-	rows, err := q.query(ctx, q.listActiveAnnouncementsStmt, listActiveAnnouncements)
+type ListActiveAnnouncementsParams struct {
+	OffsetVal int32 `json:"offset_val"`
+	LimitVal  int32 `json:"limit_val"`
+}
+
+func (q *Queries) ListActiveAnnouncements(ctx context.Context, arg ListActiveAnnouncementsParams) ([]Announcement, error) {
+	rows, err := q.query(ctx, q.listActiveAnnouncementsStmt, listActiveAnnouncements, arg.OffsetVal, arg.LimitVal)
 	if err != nil {
 		return nil, err
 	}
@@ -159,10 +165,16 @@ func (q *Queries) ListActiveAnnouncements(ctx context.Context) ([]Announcement, 
 
 const listAnnouncements = `-- name: ListAnnouncements :many
 SELECT id, title, description, action_url, starts_at, ends_at, updated_at, created_at, type, type_specific_params FROM announcements
+LIMIT $2 OFFSET $1
 `
 
-func (q *Queries) ListAnnouncements(ctx context.Context) ([]Announcement, error) {
-	rows, err := q.query(ctx, q.listAnnouncementsStmt, listAnnouncements)
+type ListAnnouncementsParams struct {
+	OffsetVal int32 `json:"offset_val"`
+	LimitVal  int32 `json:"limit_val"`
+}
+
+func (q *Queries) ListAnnouncements(ctx context.Context, arg ListAnnouncementsParams) ([]Announcement, error) {
+	rows, err := q.query(ctx, q.listAnnouncementsStmt, listAnnouncements, arg.OffsetVal, arg.LimitVal)
 	if err != nil {
 		return nil, err
 	}
@@ -204,10 +216,17 @@ SELECT id, title, description, action_url, starts_at, ends_at, updated_at, creat
     FROM read_announcements
     WHERE user_id = $1
 )
+LIMIT $3 OFFSET $2
 `
 
-func (q *Queries) ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]Announcement, error) {
-	rows, err := q.query(ctx, q.listUnreadAnnouncementsStmt, listUnreadAnnouncements, userID)
+type ListUnreadAnnouncementsParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	OffsetVal int32     `json:"offset_val"`
+	LimitVal  int32     `json:"limit_val"`
+}
+
+func (q *Queries) ListUnreadAnnouncements(ctx context.Context, arg ListUnreadAnnouncementsParams) ([]Announcement, error) {
+	rows, err := q.query(ctx, q.listUnreadAnnouncementsStmt, listUnreadAnnouncements, arg.UserID, arg.OffsetVal, arg.LimitVal)
 	if err != nil {
 		return nil, err
 	}
