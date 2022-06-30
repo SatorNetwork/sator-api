@@ -49,8 +49,8 @@ FROM
 	LEFT JOIN user_attempts_per_challenge ON user_attempts_per_challenge.challenge_id = challenges.id
 WHERE (passed_challenges_data.reward_amount = 0
 	OR passed_challenges_data.reward_amount IS NULL)
-AND episodes.archived = FALSE
-AND shows.archived = FALSE
+AND episodes.status = 'archived'
+AND shows.status = 'archived'
 AND (attempts IS NULL OR user_max_attempts - attempts > 0)
 ORDER BY
 	(challenges.players_to_start - sorted_challenges.players_num) ASC,
