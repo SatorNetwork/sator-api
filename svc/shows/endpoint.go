@@ -128,6 +128,7 @@ type (
 		RealmsTitle    string   `json:"realms_title,omitempty"`
 		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
 		Watch          string   `json:"watch,omitempty"`
+		Status         string   `json:"status,omitempty"`
 	}
 
 	// UpdateShowRequest struct
@@ -141,6 +142,7 @@ type (
 		RealmsTitle    string   `json:"realms_title,omitempty"`
 		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
 		Watch          string   `json:"watch,omitempty"`
+		Status         string   `json:"status,omitempty"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -168,6 +170,7 @@ type (
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 		HintText                string `json:"hint_text,omitempty"`
 		Watch                   string `json:"watch,omitempty"`
+		Status                  string `json:"status,omitempty"`
 	}
 
 	// UpdateEpisodeRequest struct
@@ -184,6 +187,7 @@ type (
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 		HintText                string `json:"hint_text,omitempty"`
 		Watch                   string `json:"watch,omitempty"`
+		Status                  string `json:"status,omitempty"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
@@ -522,6 +526,7 @@ func MakeAddShowEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
 			Watch:          req.Watch,
+			Status:         req.Status,
 		})
 		if err != nil {
 			return nil, err
@@ -626,6 +631,7 @@ func MakeAddEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoi
 			ReleaseDate:   req.ReleaseDate,
 			HintText:      req.HintText,
 			Watch:         req.Watch,
+			Status:        req.Status,
 		}
 
 		if req.ChallengeID != "" {
