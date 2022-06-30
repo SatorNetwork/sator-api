@@ -47,6 +47,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 					String: "test-watch",
 					Valid:  true,
 				},
+				Status: shows_repository.ShowsStatusTypePublished,
 			})
 			if err != nil {
 				return err
@@ -66,6 +67,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 				ShowID:        show.ID,
 				EpisodeNumber: 1,
 				Title:         "test-episode-ep",
+				Status:        shows_repository.EpisodesStatusTypePublished,
 			})
 			if err != nil {
 				return err
