@@ -25,6 +25,7 @@ type (
 		GetShowChallenges  endpoint.Endpoint
 		GetShowByID        endpoint.Endpoint
 		GetShowsByCategory endpoint.Endpoint
+		GetShowsByStatus   endpoint.Endpoint
 		UpdateShow         endpoint.Endpoint
 
 		AddShowCategory        endpoint.Endpoint
@@ -40,6 +41,7 @@ type (
 		AddEpisode               endpoint.Endpoint
 		DeleteEpisodeByID        endpoint.Endpoint
 		GetActivatedUserEpisodes endpoint.Endpoint
+		GetEpisodesByStatus      endpoint.Endpoint
 		GetEpisodeByID           endpoint.Endpoint
 		GetEpisodesByShowID      endpoint.Endpoint
 		UpdateEpisode            endpoint.Endpoint
@@ -65,6 +67,7 @@ type (
 		GetShowByID(ctx context.Context, id uuid.UUID) (Show, error)
 		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowsByOldCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
+		GetShowsByStatus(ctx context.Context, status string, limit, offset int32) ([]Show, error)
 		UpdateShow(ctx context.Context, sh Show) error
 
 		AddShowCategory(ctx context.Context, sc ShowCategory) (ShowCategory, error)
@@ -82,6 +85,7 @@ type (
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
 		GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID, page, itemsPerPage int32) ([]Episode, error)
 		GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetEpisodesByStatus(ctx context.Context, status string, limit, offset int32) ([]Episode, error)
 		GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (Episode, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
@@ -100,6 +104,11 @@ type (
 	// GetShowChallengesRequest struct
 	GetShowChallengesRequest struct {
 		ShowID string `json:"show_id" validate:"required,uuid"`
+		utils.PaginationRequest
+	}
+
+	GetByStatusRequest struct {
+		Status string `json:"status" validate:"required"`
 		utils.PaginationRequest
 	}
 
@@ -271,6 +280,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetShowChallenges:  MakeGetShowChallengesEndpoint(s, validateFunc),
 		GetShowByID:        MakeGetShowByIDEndpoint(s),
 		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
+		GetShowsByStatus:   MakeGetShowsByStatusEndpoint(s, validateFunc),
 		UpdateShow:         MakeUpdateShowEndpoint(s),
 
 		AddShowCategory:        MakeAddShowCategoryEndpoint(s, validateFunc),
@@ -286,6 +296,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		AddEpisode:               MakeAddEpisodeEndpoint(s, validateFunc),
 		DeleteEpisodeByID:        MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
 		GetActivatedUserEpisodes: MakeGetActivatedUserEpisodesEndpoint(s, validateFunc),
+		GetEpisodesByStatus:      MakeGetEpisodesByStatusEndpoint(s, validateFunc),
 		GetEpisodeByID:           MakeGetEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodesByShowID:      MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		UpdateEpisode:            MakeUpdateEpisodeEndpoint(s, validateFunc),
@@ -463,6 +474,21 @@ func MakeGetShowsByCategoryEndpoint(s service, v validator.ValidateFunc) endpoin
 		}
 
 		return resp, nil
+	}
+}
+
+func MakeGetShowsByStatusEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetByStatusRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		return s.GetShowsByStatus(ctx, req.Status, req.Limit(), req.Offset())
 	}
 }
 
@@ -788,6 +814,21 @@ func MakeGetActivatedUserEpisodesEndpoint(s service, v validator.ValidateFunc) e
 		}
 
 		return resp, nil
+	}
+}
+
+func MakeGetEpisodesByStatusEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetByStatusRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		return s.GetEpisodesByStatus(ctx, req.Status, req.Limit(), req.Offset())
 	}
 }
 

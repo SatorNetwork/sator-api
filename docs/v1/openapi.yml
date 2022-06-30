@@ -2035,6 +2035,166 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /shows/status/{status}:
+    get:
+      tags:
+        - "Shows"
+      summary: Get shows by status.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: status
+          in: path
+          description: Show status.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns shows list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Peaky Blinders"
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    has_new_episode:
+                      type: boolean
+                      example: true
+                    claps:
+                      type: integer
+                      example: 234
+                    realms_title:
+                      type: string
+                      example: "Realms"
+                    realms_subtitle:
+                      type: string
+                      example: "Watch on Netflix. Then earn SAO. "
+                    watch:
+                      type: string
+                      example: "https://youtube.com/ERGbevesrf"
+                    has_nft:
+                      type: boolean
+                    categories:
+                      type: array
+                      items:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/episodes/status/{status}:
+    get:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Get episodes by status.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: status
+          in: path
+          description: Episode status.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+
+      responses:
+        "200":
+          description: Returns list episodes by status.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    show_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    season_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    episode_number:
+                      type: number
+                      example: 13
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    title:
+                      type: string
+                      example: "Pilot episode"
+                    show_title:
+                      type: string
+                      example: "Peaky Blinders"
+                    description:
+                      type: string
+                      example: "description"
+                    release_date:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                    challenge_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    verification_challenge_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/{show_id}:
     get:
       tags:

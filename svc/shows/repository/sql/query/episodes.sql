@@ -16,7 +16,7 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
-AND episodes.archived = FALSE
+AND episodes.status = 'published'
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
 
@@ -26,11 +26,11 @@ SELECT
     seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = $1 AND episodes.archived = FALSE;
+WHERE episodes.id = $1 AND episodes.status = 'published';
 
 -- name: GetRawEpisodeByID :one
 SELECT * FROM episodes
-WHERE episodes.id = $1 AND episodes.archived = FALSE;
+WHERE episodes.id = $1 AND episodes.status = 'published';
 
 -- name: AddEpisode :one
 INSERT INTO episodes (
@@ -44,20 +44,22 @@ INSERT INTO episodes (
     challenge_id,
     verification_challenge_id,
     hint_text,
-    watch
+    watch,
+    status
 )
 VALUES (
-           @show_id,
-           @season_id,
-           @episode_number,
-           @cover,
-           @title,
-           @description,
-           @release_date,
-           @challenge_id,
-           @verification_challenge_id,
-           @hint_text,
-           @watch
+    @show_id,
+    @season_id,
+    @episode_number,
+    @cover,
+    @title,
+    @description,
+    @release_date,
+    @challenge_id,
+    @verification_challenge_id,
+    @hint_text,
+    @watch,
+    @status
 ) RETURNING *;
 
 -- name: UpdateEpisode :exec
@@ -72,7 +74,8 @@ SET episode_number = @episode_number,
     description = @description,
     release_date = @release_date,
     hint_text = @hint_text,
-    watch = @watch
+    watch = @watch,
+    status = @status
 WHERE id = @id;
 
 -- name: LinkEpisodeChallenges :exec
@@ -104,10 +107,11 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY(@episode_ids::uuid[])
-AND episodes.archived = FALSE
+AND episodes.status = 'published'
 ORDER BY episodes.episode_number DESC;
 
--- name: GetAllEpisodes :many
+-- name: GetEpisodesByStatus :many
 SELECT *
 FROM episodes
-WHERE archived = FALSE;
+WHERE status = $1
+LIMIT $2 OFFSET $3;
