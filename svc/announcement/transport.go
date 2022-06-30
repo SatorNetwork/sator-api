@@ -129,12 +129,14 @@ func decodeUpdateAnnouncementRequest(_ context.Context, r *http.Request) (interf
 }
 
 func decodeDeleteAnnouncementRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req DeleteAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "could not decode request body")
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed announcement id parameter", ErrInvalidParameter)
 	}
 
-	return &req, nil
+	return &DeleteAnnouncementRequest{
+		ID: id,
+	}, nil
 }
 
 func decodeListAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
