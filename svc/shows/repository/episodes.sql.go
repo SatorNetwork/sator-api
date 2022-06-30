@@ -97,7 +97,8 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) (Episode
 }
 
 const deleteEpisodeByID = `-- name: DeleteEpisodeByID :exec
-DELETE FROM episodes
+UPDATE shows
+SET status = 'archived'
 WHERE id = $1
 `
 

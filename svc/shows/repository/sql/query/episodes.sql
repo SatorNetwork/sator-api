@@ -85,7 +85,8 @@ SET challenge_id = @challenge_id,
 WHERE id = @id;
 
 -- name: DeleteEpisodeByID :exec
-DELETE FROM episodes
+UPDATE shows
+SET status = 'archived'
 WHERE id = @id;
 
 -- name: GetEpisodeIDByVerificationChallengeID :one
