@@ -39,6 +39,7 @@ type (
 		activatedRealmPeriod time.Duration
 		chargeForUnlockFn    chargeForUnlockFunc
 		showRepo             showsRepository
+		isRewardsDisabled    bool
 	}
 
 	chargeForUnlockFunc func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -218,6 +219,7 @@ func NewService(cr challengesRepository, showRepo showsRepository, fn playURLGen
 		playUrlFn:            fn,
 		attemptsNumber:       2,
 		activatedRealmPeriod: time.Hour * 24,
+		isRewardsDisabled:    false,
 	}
 
 	for _, o := range opt {
@@ -262,7 +264,7 @@ func (s *Service) GetByID(ctx context.Context, challengeID, userID uuid.UUID, mu
 	epID, _ := s.showRepo.GetEpisodeIDByQuizChallengeID(ctx, uuid.NullUUID{UUID: challengeID, Valid: true})
 	res, _ := s.VerifyUserAccessToEpisode(ctx, userID, epID, mustAccess)
 
-	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward, &epID, res.Result), nil
+	return castToChallenge(challenge, s.playUrlFn, attemptsLeft, receivedReward, &epID, res.Result, s.isRewardsDisabled), nil
 }
 
 func (s *Service) GetRawChallengeByID(ctx context.Context, challengeID uuid.UUID) (RawChallenge, error) {
@@ -459,13 +461,13 @@ func (s *Service) GetChallengesByShowID(ctx context.Context, showID, userID uuid
 				attemptsLeft = 0
 			}
 		}
-		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward, nil, false))
+		result = append(result, castToChallenge(v, s.playUrlFn, attemptsLeft, receivedReward, nil, false, s.isRewardsDisabled))
 	}
 
 	return result, nil
 }
 
-func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64, epID *uuid.UUID, isActivated bool) Challenge {
+func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attemptsLeft int32, receivedReward float64, epID *uuid.UUID, isActivated, isRewardsDisabled bool) Challenge {
 	ch := Challenge{
 		ID:                 c.ID,
 		ShowID:             c.ShowID,
@@ -489,6 +491,15 @@ func castToChallenge(c repository.Challenge, playUrlFn playURLGenerator, attempt
 		IsRealmActivated:   isActivated,
 		PercentForQuiz:     c.PercentForQuiz,
 		MinimumReward:      c.MinimumReward,
+	}
+
+	if isRewardsDisabled {
+		ch.ReceivedReward = 0
+		ch.ReceivedRewardStr = ""
+		ch.CurrentPrizePool = ""
+		ch.PrizePool = ""
+		ch.MinimumReward = 0
+		ch.PercentForQuiz = 0
 	}
 
 	if ch.MaxWinners == 0 {
@@ -589,7 +600,7 @@ func (s *Service) AddChallenge(ctx context.Context, ch Challenge) (Challenge, er
 		return Challenge{}, fmt.Errorf("could not add challenge with title=%s: %w", ch.Title, err)
 	}
 
-	return castToChallenge(challenge, s.playUrlFn, 0, 0, nil, false), nil
+	return castToChallenge(challenge, s.playUrlFn, 0, 0, nil, false, s.isRewardsDisabled), nil
 }
 
 // DeleteChallengeByID ...

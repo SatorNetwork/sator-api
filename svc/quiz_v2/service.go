@@ -198,6 +198,9 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 	if !s.disableRewardsForQuiz {
 		challenge.CurrentPrizePool = fmt.Sprintf("%v SAO", currentPrizePool)
+	} else {
+		challenge.CurrentPrizePool = ""
+		challenge.Winners = ""
 	}
 	challenge.CurrentPrizePoolAmount = currentPrizePool
 

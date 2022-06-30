@@ -794,6 +794,7 @@ func (a *app) Run() {
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(a.cfg.AppBaseURL, "/")),
 			),
 			challenge.WithChargeForUnlockFunc(walletSvcClient.PayForService),
+			challenge.IsRewardsDisabled(a.cfg.DisableRewardsForQuiz),
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(
