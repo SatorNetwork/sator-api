@@ -24,6 +24,7 @@ type (
 		ListActiveAnnouncements endpoint.Endpoint
 		MarkAsRead              endpoint.Endpoint
 		MarkAllAsRead           endpoint.Endpoint
+		GetAnnouncementTypes    endpoint.Endpoint
 	}
 
 	service interface {
@@ -31,11 +32,12 @@ type (
 		GetAnnouncementByID(ctx context.Context, req *GetAnnouncementByIDRequest) (*Announcement, error)
 		UpdateAnnouncementByID(ctx context.Context, req *UpdateAnnouncementRequest) error
 		DeleteAnnouncementByID(ctx context.Context, req *DeleteAnnouncementRequest) error
-		ListAnnouncements(ctx context.Context) ([]*Announcement, error)
-		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID) ([]*Announcement, error)
-		ListActiveAnnouncements(ctx context.Context) ([]*Announcement, error)
+		ListAnnouncements(ctx context.Context, req *ListAnnouncementRequest) ([]*Announcement, error)
+		ListUnreadAnnouncements(ctx context.Context, userID uuid.UUID, req *ListAnnouncementRequest) ([]*Announcement, error)
+		ListActiveAnnouncements(ctx context.Context, req *ListAnnouncementRequest) ([]*Announcement, error)
 		MarkAsRead(ctx context.Context, userID uuid.UUID, req *MarkAsReadRequest) error
 		MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
+		GetAnnouncementTypes(ctx context.Context) (*GetAnnouncementTypesResponse, error)
 	}
 )
 
@@ -52,6 +54,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		ListActiveAnnouncements: MakeListActiveAnnouncementsEndpoint(s, validateFunc),
 		MarkAsRead:              MakeMarkAsReadEndpoint(s, validateFunc),
 		MarkAllAsRead:           MakeMarkAllAsReadEndpoint(s, validateFunc),
+		GetAnnouncementTypes:    MakeGetAnnouncementTypesEndpoint(s, validateFunc),
 	}
 
 	// setup middlewares for each endpoint
@@ -66,6 +69,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.ListActiveAnnouncements = mdw(e.ListActiveAnnouncements)
 			e.MarkAsRead = mdw(e.MarkAsRead)
 			e.MarkAllAsRead = mdw(e.MarkAllAsRead)
+			e.GetAnnouncementTypes = mdw(e.GetAnnouncementTypes)
 		}
 	}
 
@@ -170,7 +174,15 @@ func MakeListAnnouncementsEndpoint(s service, v validator.ValidateFunc) endpoint
 			return nil, err
 		}
 
-		resp, err := s.ListAnnouncements(ctx)
+		typedReq, ok := req.(*ListAnnouncementRequest)
+		if !ok {
+			return nil, errors.Errorf("can't cast untyped request to list-announcement-request")
+		}
+		if err := v(typedReq); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.ListAnnouncements(ctx, typedReq)
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +201,15 @@ func MakeListUnreadAnnouncementsEndpoint(s service, v validator.ValidateFunc) en
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		resp, err := s.ListUnreadAnnouncements(ctx, userID)
+		typedReq, ok := req.(*ListAnnouncementRequest)
+		if !ok {
+			return nil, errors.Errorf("can't cast untyped request to list-announcement-request")
+		}
+		if err := v(typedReq); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.ListUnreadAnnouncements(ctx, userID, typedReq)
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +224,15 @@ func MakeListActiveAnnouncementsEndpoint(s service, v validator.ValidateFunc) en
 			return nil, err
 		}
 
-		resp, err := s.ListActiveAnnouncements(ctx)
+		typedReq, ok := req.(*ListAnnouncementRequest)
+		if !ok {
+			return nil, errors.Errorf("can't cast untyped request to list-announcement-request")
+		}
+		if err := v(typedReq); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.ListActiveAnnouncements(ctx, typedReq)
 		if err != nil {
 			return nil, err
 		}
@@ -254,5 +282,20 @@ func MakeMarkAllAsReadEndpoint(s service, v validator.ValidateFunc) endpoint.End
 		}
 
 		return true, nil
+	}
+}
+
+func MakeGetAnnouncementTypesEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetAnnouncementTypes(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	}
 }
