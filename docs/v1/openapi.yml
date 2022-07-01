@@ -208,6 +208,10 @@ components:
           type: number
         ends_at:
           type: number
+        type:
+          type: string
+        type_specific_params:
+          type: object
 
     Announcements:
       type: array
@@ -6877,6 +6881,10 @@ paths:
                   type: number
                 ends_at:
                   type: number
+                type:
+                  type: string
+                type_specific_params:
+                  type: object
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6943,6 +6951,10 @@ paths:
                   type: number
                 ends_at:
                   type: number
+                type:
+                  type: string
+                type_specific_params:
+                  type: object
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -7030,6 +7042,33 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/types:
+    get:
+      tags:
+        - "Announcement"
+      summary: Get available announcement types.
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          description: Array of available announcement types.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  types:
+                    type: array
+                    items:
+                      type:
+                        string
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
