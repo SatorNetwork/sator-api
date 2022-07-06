@@ -33,3 +33,7 @@ WHERE user_id = $1;
 -- name: GetTotalStake :one
 SELECT coalesce(SUM(coalesce(stake_amount, 0)), 0)::DOUBLE PRECISION
 FROM stake;
+
+-- name: GetAllStakes :many
+SELECT *
+FROM stake;
