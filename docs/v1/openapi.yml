@@ -6762,7 +6762,7 @@ paths:
     put:
       tags:
         - "Unity Game API / Settings API"
-      summary: Claim rewards. Convert in-game currency to SAO.
+      summary: Update setting value by key.
       security:
         - bearerAuth: []
       parameters:
