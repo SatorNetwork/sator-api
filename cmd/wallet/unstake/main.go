@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"github.com/SatorNetwork/sator-api/lib/ethereum"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
+	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	tx_watcher_svc "github.com/SatorNetwork/sator-api/svc/tx_watcher"
 	tx_watcher_repository "github.com/SatorNetwork/sator-api/svc/tx_watcher/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
@@ -132,6 +133,12 @@ func main() {
 		wallet.WithResourceIntensiveQueries(enableResourceIntensiveQueries),
 	)
 
+	// auth repo
+	authRepository, err := authRepo.Prepare(ctx, db)
+	if err != nil {
+		log.Fatalf("authRepo error: %v", err)
+	}
+
 	stakes, err := walletRepository.GetAllStakes(ctx)
 	if err != nil {
 		log.Fatalf("can't get wallets: %v", err)
@@ -139,8 +146,19 @@ func main() {
 
 	total := len(stakes)
 	for i, s := range stakes {
+		user, err := authRepository.GetUserByID(ctx, s.UserID)
+		if err != nil {
+			log.Printf("can't get user user_id=%s err: %v", s.UserID, err)
+			continue
+		}
+
+		if user.Disabled {
+			continue
+		}
+
 		if err = walletService.Unstake(ctx, s.UserID, s.WalletID); err != nil {
-			log.Fatalf("can't unstake user_id = %s, wallet_id = %s, err: %v", s.UserID, s.ID, err)
+			log.Printf("can't unstake user_id = %s, wallet_id = %s, err: %v", s.UserID, s.ID, err)
+			continue
 		}
 		log.Printf("Unstake for user_id = %s done. %v/%v", s.UserID, i+1, total)
 	}
