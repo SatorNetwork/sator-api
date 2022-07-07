@@ -2739,6 +2739,145 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /shows/episodes/{episode_id}:
+    get:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Get episode by id with show and season objects.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns episode by id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  show:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      title:
+                        type: string
+                        example: "Peaky Blinders"
+                      cover:
+                        type: string
+                        example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                      has_new_episode:
+                        type: boolean
+                        example: true
+                      claps:
+                        type: integer
+                        example: 234
+                      realms_title:
+                        type: string
+                        example: "Realms"
+                      realms_subtitle:
+                        type: string
+                        example: "Watch on Netflix. Then earn SAO. "
+                      watch:
+                        type: string
+                        example: "https://youtube.com/ERGbevesrf"
+                      has_nft:
+                        type: boolean
+                      categories:
+                        type: array
+                        items:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+
+                  season:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      show_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      season_number:
+                        type: number
+                        example: 13
+
+                  episode:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      show_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      season_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      episode_number:
+                        type: number
+                        example: 13
+                      cover:
+                        type: string
+                        example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                      title:
+                        type: string
+                        example: "Peaky Blinders"
+                      description:
+                        type: string
+                        example: "description"
+                      release_date:
+                        type: string
+                        example: "2006-01-02T15:04:05Z07:00"
+                      challenge_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      verification_challenge_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      rating:
+                        type: number
+                        example: 8.76
+                        description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                      ratings_count:
+                        type: number
+                        example: 123
+                        description: "How many times episode was rated"
+                      users_episode_rating:
+                        type: number
+                        example: 7
+                        description: "Rating set by the user"
+                      active_users:
+                        type: number
+                        example: 12
+                        description: "How  many users have access to episode"
+                      user_rewards_amount:
+                        type: number
+                        example: 12
+                        description: "episode received reward amount by user"
+                      total_rewards_amount:
+                        type: number
+                        example: 12
+                        description: "episode received reward amount by all users"
+                      hint_text:
+                        type: string
+                        example: "hint text"
+                      watch:
+                        type: string
+                        example: "www.watch.com/this_episode"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /shows/reviews:
     get:
       tags:
@@ -7055,7 +7194,7 @@ paths:
         - "Announcement"
       summary: Get available announcement types.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           description: Array of available announcement types.
@@ -7067,8 +7206,7 @@ paths:
                   types:
                     type: array
                     items:
-                      type:
-                        string
+                      type: string
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

@@ -490,7 +490,7 @@ func castToListSeasons(source []repository.Season, episodes map[string][]Episode
 }
 
 // GetEpisodeByID returns episode with provided id.
-func (s *Service) GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (Episode, error) {
+func (s *Service) GetEpisodeByID(ctx context.Context, episodeID, userID uuid.UUID) (Episode, error) {
 	episode, err := s.sr.GetEpisodeByID(ctx, episodeID)
 	if err != nil {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episodeID, err)
@@ -1272,4 +1272,33 @@ func castToShowCategory(source repository.ShowCategory) ShowCategory {
 		Disabled: source.Disabled.Bool,
 		Sort:     source.Sort,
 	}
+}
+
+type FullEpisodeData struct {
+	Episode Episode `json:"episode"`
+	Season  Season  `json:"season"`
+	Show    Show    `json:"show"`
+}
+
+func (s *Service) GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID, userID uuid.UUID) (FullEpisodeData, error) {
+	episode, err := s.GetEpisodeByID(ctx, episodeID, userID)
+	if err != nil {
+		return FullEpisodeData{}, err
+	}
+
+	season, err := s.GetSeasonByID(ctx, episode.SeasonID, userID)
+	if err != nil {
+		return FullEpisodeData{}, err
+	}
+
+	show, err := s.GetShowByID(ctx, episode.ShowID)
+	if err != nil {
+		return FullEpisodeData{}, err
+	}
+
+	return FullEpisodeData{
+		Episode: episode,
+		Season:  *season,
+		Show:    show,
+	}, nil
 }

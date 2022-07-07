@@ -134,6 +134,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/episodes/{episode_id}", httptransport.NewServer(
+		e.GetEpisodeByIDWithShowAndSeason,
+		decodeGetEpisodeByIDWithShowAndSeasonRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/reviews", httptransport.NewServer(
 		e.GetReviewsListByUserID,
 		decodeGetReviewsListByUserIDRequest,
@@ -624,4 +631,13 @@ func decodeGetShowCategoriesRequest(_ context.Context, r *http.Request) (interfa
 			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
 		},
 	}, nil
+}
+
+func decodeGetEpisodeByIDWithShowAndSeasonRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	episodeID := chi.URLParam(r, "episode_id")
+	if episodeID == "" {
+		return nil, fmt.Errorf("%w: missed episode id", ErrInvalidParameter)
+	}
+
+	return episodeID, nil
 }

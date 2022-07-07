@@ -37,12 +37,13 @@ type (
 		GetSeasonByID    endpoint.Endpoint
 		DeleteSeasonByID endpoint.Endpoint
 
-		AddEpisode               endpoint.Endpoint
-		DeleteEpisodeByID        endpoint.Endpoint
-		GetActivatedUserEpisodes endpoint.Endpoint
-		GetEpisodeByID           endpoint.Endpoint
-		GetEpisodesByShowID      endpoint.Endpoint
-		UpdateEpisode            endpoint.Endpoint
+		AddEpisode                      endpoint.Endpoint
+		DeleteEpisodeByID               endpoint.Endpoint
+		GetActivatedUserEpisodes        endpoint.Endpoint
+		GetEpisodeByID                  endpoint.Endpoint
+		GetEpisodesByShowID             endpoint.Endpoint
+		GetEpisodeByIDWithShowAndSeason endpoint.Endpoint
+		UpdateEpisode                   endpoint.Endpoint
 
 		RateEpisode            endpoint.Endpoint
 		ReviewEpisode          endpoint.Endpoint
@@ -82,7 +83,8 @@ type (
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
 		GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID, page, itemsPerPage int32) ([]Episode, error)
 		GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
-		GetEpisodeByID(ctx context.Context, showID, episodeID, userID uuid.UUID) (Episode, error)
+		GetEpisodeByID(ctx context.Context, episodeID, userID uuid.UUID) (Episode, error)
+		GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID, userID uuid.UUID) (FullEpisodeData, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
 		RateEpisode(ctx context.Context, episodeID, userID uuid.UUID, rating int32) error
@@ -283,12 +285,13 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetSeasonByID:    MakeGetSeasonByIDEndpoint(s, validateFunc),
 		DeleteSeasonByID: MakeDeleteSeasonByIDEndpoint(s, validateFunc),
 
-		AddEpisode:               MakeAddEpisodeEndpoint(s, validateFunc),
-		DeleteEpisodeByID:        MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
-		GetActivatedUserEpisodes: MakeGetActivatedUserEpisodesEndpoint(s, validateFunc),
-		GetEpisodeByID:           MakeGetEpisodeByIDEndpoint(s, validateFunc),
-		GetEpisodesByShowID:      MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
-		UpdateEpisode:            MakeUpdateEpisodeEndpoint(s, validateFunc),
+		AddEpisode:                      MakeAddEpisodeEndpoint(s, validateFunc),
+		DeleteEpisodeByID:               MakeDeleteEpisodeByIDEndpoint(s, validateFunc),
+		GetActivatedUserEpisodes:        MakeGetActivatedUserEpisodesEndpoint(s, validateFunc),
+		GetEpisodeByID:                  MakeGetEpisodeByIDEndpoint(s, validateFunc),
+		GetEpisodesByShowID:             MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
+		GetEpisodeByIDWithShowAndSeason: MakeGetEpisodeByIDWithShowAndSeasonEndpoint(s),
+		UpdateEpisode:                   MakeUpdateEpisodeEndpoint(s, validateFunc),
 
 		RateEpisode:            MakeRateEpisodeEndpoint(s, validateFunc),
 		ReviewEpisode:          MakeReviewEpisodeEndpoint(s, validateFunc),
@@ -329,6 +332,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetActivatedUserEpisodes = mdw(e.GetActivatedUserEpisodes)
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
+			e.GetEpisodeByIDWithShowAndSeason = mdw(e.GetEpisodeByIDWithShowAndSeason)
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
 
 			e.RateEpisode = mdw(e.RateEpisode)
@@ -746,17 +750,12 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 			return nil, err
 		}
 
-		showID, err := uuid.Parse(req.ShowID)
-		if err != nil {
-			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
-		}
-
 		episodeID, err := uuid.Parse(req.EpisodeID)
 		if err != nil {
 			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
 		}
 
-		resp, err := s.GetEpisodeByID(ctx, showID, episodeID, uid)
+		resp, err := s.GetEpisodeByID(ctx, episodeID, uid)
 		if err != nil {
 			return nil, err
 		}
@@ -1283,6 +1282,31 @@ func MakeGetShowCategoriesEndpoint(s service, v validator.ValidateFunc) endpoint
 		}
 
 		resp, err := s.GetShowCategories(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+func MakeGetEpisodeByIDWithShowAndSeasonEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not get id: %w", err)
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		resp, err := s.GetEpisodeByIDWithShowAndSeason(ctx, id, uid)
 		if err != nil {
 			return nil, err
 		}
