@@ -13,11 +13,12 @@ CREATE TABLE IF NOT EXISTS read_announcements (
     updated_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     PRIMARY KEY(announcement_id, user_id),
-    FOREIGN KEY (announcement_id) REFERENCES announcements(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 CREATE TRIGGER update_read_announcements_modtime BEFORE
     UPDATE ON read_announcements FOR EACH ROW EXECUTE PROCEDURE read_announcements_update_updated_at_column();
+    
 -- +migrate Down
 DROP TRIGGER IF EXISTS update_read_announcements_modtime ON read_announcements;
 DROP TABLE IF EXISTS read_announcements;
