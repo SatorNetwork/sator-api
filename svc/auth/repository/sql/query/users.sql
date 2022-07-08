@@ -93,7 +93,9 @@ UPDATE users SET disabled = TRUE, block_reason = 'detected scam: multiple accoun
 WHERE sanitized_email IN (
         SELECT users.sanitized_email
         FROM users 
-        WHERE users.sanitized_email <> '' AND users.sanitized_email IS NOT NULL
+        WHERE users.sanitized_email <> '' 
+            AND users.sanitized_email IS NOT NULL 
+            AND users.verified_at IS NOT NULL
         GROUP BY users.sanitized_email
         HAVING count(users.id) > 1 
     )
