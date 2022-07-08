@@ -21,6 +21,8 @@ WHERE id IN (
         WHERE users_devices.device_id != $1
         GROUP BY users_devices.device_id
         HAVING count(users_devices.user_id) > 1 
+    ) AND user_id IN (
+        SELECT user_id FROM users WHERE verified_at IS NOT NULL
     )
 ) 
 AND email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
