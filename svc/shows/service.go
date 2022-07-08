@@ -1286,7 +1286,7 @@ func (s *Service) GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID
 		return FullEpisodeData{}, err
 	}
 
-	season, err := s.GetSeasonByID(ctx, episode.SeasonID, userID)
+	season, err := s.GetSeasonByID(ctx, episode.ShowID, episode.SeasonID)
 	if err != nil {
 		return FullEpisodeData{}, err
 	}
