@@ -128,6 +128,7 @@ type GetStatusResponse struct {
 	MinAmountOfCurrencyToConvert float64   `json:"min_amount_of_currency_to_convert"`
 	MinVersion                   string    `json:"min_version"`
 	SelectedNFTID                *string   `json:"selected_nft_id"`
+	SelectedCharaterID           string    `json:"selected_character_id"`
 	UserOwnedNFTList             []NFTInfo `json:"user_owned_nft_list"`
 	CraftStepAmount              float64   `json:"craft_step_amount"`
 	ElectricityLeft              int32     `json:"electricity_left"`
@@ -180,6 +181,7 @@ func MakeGetStatusEndpoint(s gameService, settings gameSettingsService) endpoint
 			MinAmountOfCurrencyToConvert: s.GetMinAmountToClaim(),
 			MinVersion:                   s.GetMinVersion(ctx),
 			SelectedNFTID:                selectedNFT,
+			SelectedCharaterID:           player.SelectedCharaterID,
 			UserOwnedNFTList:             userNFTs,
 			CraftStepAmount:              s.GetCraftStepAmount(ctx),
 			ElectricityLeft:              electrLeft,
