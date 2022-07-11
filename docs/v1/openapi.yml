@@ -507,6 +507,9 @@ components:
               energy_recovery_current:
                 type: number
                 description: Time left to recover energy
+              character_id:
+                type: string
+                description: Player's character id
 
     NFTPack:
       description: NFT Packs.
@@ -6528,6 +6531,32 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/UserOwnedNFTs"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /gapi/select-character:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Select NFT.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                character_id:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":

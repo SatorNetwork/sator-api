@@ -20,6 +20,7 @@ type (
 		BuyNFTPack        endpoint.Endpoint
 		CraftNFT          endpoint.Endpoint
 		SelectNFT         endpoint.Endpoint
+		SelectCharacter   endpoint.Endpoint
 		StartGame         endpoint.Endpoint
 		FinishGame        endpoint.Endpoint
 		ClaimRewards      endpoint.Endpoint
@@ -46,6 +47,7 @@ type (
 		BuyNFTPack(ctx context.Context, uid, packID uuid.UUID) (*NFTInfo, error)
 		CraftNFT(ctx context.Context, uid uuid.UUID, nftsToCraft []string) (*NFTInfo, error)
 		SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr string) error
+		SelectCharacter(ctx context.Context, userID uuid.UUID, characterID string) error
 
 		StartGame(ctx context.Context, uid uuid.UUID, complexity int32, isTraining bool) (*GameConfig, error)
 		FinishGame(ctx context.Context, uid uuid.UUID, gameResult, blocksDone int32) (int, error)
@@ -83,6 +85,7 @@ func MakeEndpoints(
 		FinishGame:        MakeFinishGameEndpoint(gs, validateFunc),
 		ClaimRewards:      MakeClaimRewardsEndpoint(gs, validateFunc),
 		PayForElectricity: MakePayForElectricityEndpoint(gs),
+		SelectCharacter:   MakeSelectCharacterEndpoint(gs, validateFunc),
 
 		GetSettings:           MakeGetSettingsEndpoint(settings),
 		GetSettingsByKey:      MakeGetSettingsByKeyEndpoint(settings),
@@ -104,6 +107,7 @@ func MakeEndpoints(
 			e.FinishGame = mdw(e.FinishGame)
 			e.ClaimRewards = mdw(e.ClaimRewards)
 			e.PayForElectricity = mdw(e.PayForElectricity)
+			e.SelectCharacter = mdw(e.SelectCharacter)
 
 			e.GetSettings = mdw(e.GetSettings)
 			e.GetSettingsByKey = mdw(e.GetSettingsByKey)
@@ -474,6 +478,32 @@ func MakePayForElectricityEndpoint(s gameService) endpoint.Endpoint {
 		log.Printf("PayForElectricityResponse: %+v", resp)
 
 		return resp, nil
+	}
+}
+
+type (
+	SelectCharacterRequest struct {
+		CharacterID string `json:"character_id" validate:"required"`
+	}
+)
+
+func MakeSelectCharacterEndpoint(s gameService, validateFunc validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		userID, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(SelectCharacterRequest)
+		if err := validateFunc(req); err != nil {
+			return nil, err
+		}
+
+		if err := s.SelectCharacter(ctx, userID, req.CharacterID); err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 }
 
