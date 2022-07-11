@@ -56,14 +56,15 @@ type UnityGameNftPack struct {
 }
 
 type UnityGamePlayer struct {
-	UserID           uuid.UUID      `json:"user_id"`
-	EnergyPoints     int32          `json:"energy_points"`
-	EnergyRefilledAt time.Time      `json:"energy_refilled_at"`
-	SelectedNftID    sql.NullString `json:"selected_nft_id"`
-	UpdatedAt        sql.NullTime   `json:"updated_at"`
-	CreatedAt        time.Time      `json:"created_at"`
-	ElectricitySpent int32          `json:"electricity_spent"`
-	ElectricityCosts float64        `json:"electricity_costs"`
+	UserID              uuid.UUID      `json:"user_id"`
+	EnergyPoints        int32          `json:"energy_points"`
+	EnergyRefilledAt    time.Time      `json:"energy_refilled_at"`
+	SelectedNftID       sql.NullString `json:"selected_nft_id"`
+	UpdatedAt           sql.NullTime   `json:"updated_at"`
+	CreatedAt           time.Time      `json:"created_at"`
+	ElectricitySpent    int32          `json:"electricity_spent"`
+	ElectricityCosts    float64        `json:"electricity_costs"`
+	SelectedCharacterID sql.NullString `json:"selected_character_id"`
 }
 
 type UnityGameResult struct {
