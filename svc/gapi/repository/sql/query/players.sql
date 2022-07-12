@@ -26,3 +26,8 @@ WHERE user_id = $3;
 
 -- name: ResetElectricityForPlayer :exec
 UPDATE unity_game_players SET electricity_costs = 0, electricity_spent = 0 WHERE user_id = $1;
+
+-- name: SelectCharacterToPlayer :exec
+UPDATE unity_game_players
+SET selected_character_id = $1
+WHERE user_id = $2;

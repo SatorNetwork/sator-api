@@ -51,6 +51,7 @@ type (
 		GetPlayer(ctx context.Context, userID uuid.UUID) (repository.UnityGamePlayer, error)
 		RefillEnergyOfPlayer(ctx context.Context, arg repository.RefillEnergyOfPlayerParams) error
 		StoreSelectedNFT(ctx context.Context, arg repository.StoreSelectedNFTParams) error
+		SelectCharacterToPlayer(ctx context.Context, arg repository.SelectCharacterToPlayerParams) error
 
 		GetUserRewards(ctx context.Context, userID uuid.UUID) (float64, error)
 		RewardsDeposit(ctx context.Context, arg repository.RewardsDepositParams) error
@@ -85,6 +86,7 @@ type (
 		EnergyRecoveryPeriod  time.Duration
 		EnergyRecoveryCurrent time.Duration
 		ConversionFee         float64
+		SelectedCharaterID    string
 	}
 )
 
@@ -170,6 +172,7 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 		EnergyRecoveryPeriod:  energyRecoveryPeriod,
 		EnergyRecoveryCurrent: timeToRecovery,
 		ConversionFee:         convFee,
+		SelectedCharaterID:    player.SelectedCharacterID.String,
 	}, nil
 }
 
@@ -427,6 +430,20 @@ func (s *Service) SelectNFT(ctx context.Context, uid uuid.UUID, nftMintAddr stri
 		SelectedNftID: sql.NullString{String: nft.ID, Valid: true},
 	}); err != nil {
 		return fmt.Errorf("failed to store selected nft: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) SelectCharacter(ctx context.Context, userID uuid.UUID, characterID string) error {
+	if err := s.gameRepo.SelectCharacterToPlayer(ctx, repository.SelectCharacterToPlayerParams{
+		SelectedCharacterID: sql.NullString{
+			String: characterID,
+			Valid:  true,
+		},
+		UserID: userID,
+	}); err != nil {
+		return fmt.Errorf("failed to select character: %w", err)
 	}
 
 	return nil

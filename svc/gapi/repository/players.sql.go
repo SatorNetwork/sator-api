@@ -34,7 +34,7 @@ func (q *Queries) AddElectricityToPlayer(ctx context.Context, arg AddElectricity
 
 const addNewPlayer = `-- name: AddNewPlayer :one
 INSERT INTO unity_game_players (user_id, energy_points, energy_refilled_at, selected_nft_id) 
-VALUES ($1, $2, $3, $4) RETURNING user_id, energy_points, energy_refilled_at, selected_nft_id, updated_at, created_at, electricity_spent, electricity_costs
+VALUES ($1, $2, $3, $4) RETURNING user_id, energy_points, energy_refilled_at, selected_nft_id, updated_at, created_at, electricity_spent, electricity_costs, selected_character_id
 `
 
 type AddNewPlayerParams struct {
@@ -61,12 +61,13 @@ func (q *Queries) AddNewPlayer(ctx context.Context, arg AddNewPlayerParams) (Uni
 		&i.CreatedAt,
 		&i.ElectricitySpent,
 		&i.ElectricityCosts,
+		&i.SelectedCharacterID,
 	)
 	return i, err
 }
 
 const getPlayer = `-- name: GetPlayer :one
-SELECT user_id, energy_points, energy_refilled_at, selected_nft_id, updated_at, created_at, electricity_spent, electricity_costs FROM unity_game_players WHERE user_id = $1
+SELECT user_id, energy_points, energy_refilled_at, selected_nft_id, updated_at, created_at, electricity_spent, electricity_costs, selected_character_id FROM unity_game_players WHERE user_id = $1
 `
 
 func (q *Queries) GetPlayer(ctx context.Context, userID uuid.UUID) (UnityGamePlayer, error) {
@@ -81,6 +82,7 @@ func (q *Queries) GetPlayer(ctx context.Context, userID uuid.UUID) (UnityGamePla
 		&i.CreatedAt,
 		&i.ElectricitySpent,
 		&i.ElectricityCosts,
+		&i.SelectedCharacterID,
 	)
 	return i, err
 }
@@ -115,6 +117,22 @@ UPDATE unity_game_players SET energy_refilled_at = now() WHERE user_id = $1
 
 func (q *Queries) ResetEnergyRefilledAtOfPlayer(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.exec(ctx, q.resetEnergyRefilledAtOfPlayerStmt, resetEnergyRefilledAtOfPlayer, userID)
+	return err
+}
+
+const selectCharacterToPlayer = `-- name: SelectCharacterToPlayer :exec
+UPDATE unity_game_players
+SET selected_character_id = $1
+WHERE user_id = $2
+`
+
+type SelectCharacterToPlayerParams struct {
+	SelectedCharacterID sql.NullString `json:"selected_character_id"`
+	UserID              uuid.UUID      `json:"user_id"`
+}
+
+func (q *Queries) SelectCharacterToPlayer(ctx context.Context, arg SelectCharacterToPlayerParams) error {
+	_, err := q.exec(ctx, q.selectCharacterToPlayerStmt, selectCharacterToPlayer, arg.SelectedCharacterID, arg.UserID)
 	return err
 }
 

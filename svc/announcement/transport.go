@@ -13,6 +13,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SatorNetwork/sator-api/lib/httpencoder"
+	"github.com/SatorNetwork/sator-api/lib/utils"
+)
+
+const (
+	pageParam         = "page"
+	itemsPerPageParam = "items_per_page"
 )
 
 type (
@@ -97,6 +103,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/types", httptransport.NewServer(
+		e.GetAnnouncementTypes,
+		decodeGetAnnouncementTypesRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	return r
 }
 
@@ -129,24 +142,41 @@ func decodeUpdateAnnouncementRequest(_ context.Context, r *http.Request) (interf
 }
 
 func decodeDeleteAnnouncementRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req DeleteAnnouncementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(err, "could not decode request body")
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed announcement id parameter", ErrInvalidParameter)
 	}
 
-	return &req, nil
+	return &DeleteAnnouncementRequest{
+		ID: id,
+	}, nil
 }
 
 func decodeListAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return &Empty{}, nil
+	return &ListAnnouncementRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeListUnreadAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return &Empty{}, nil
+	return &ListAnnouncementRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeListActiveAnnouncementsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return &Empty{}, nil
+	return &ListAnnouncementRequest{
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(pageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(itemsPerPageParam)),
+		},
+	}, nil
 }
 
 func decodeMarkAsReadRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -160,6 +190,10 @@ func decodeMarkAsReadRequest(_ context.Context, r *http.Request) (interface{}, e
 }
 
 func decodeMarkAllAsReadRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return &Empty{}, nil
+}
+
+func decodeGetAnnouncementTypesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return &Empty{}, nil
 }
 

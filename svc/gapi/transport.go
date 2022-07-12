@@ -67,6 +67,13 @@ func MakeHTTPHandler(gameEndpoints Endpoints, nftPackEndpoints NFTPacksEndpoints
 		options...,
 	).ServeHTTP)
 
+	r.Post("/select-character", httptransport.NewServer(
+		gameEndpoints.SelectCharacter,
+		decodeSelectCharacterRequest,
+		encodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/start-game", httptransport.NewServer(
 		gameEndpoints.StartGame,
 		decodeStartGameRequest,
@@ -240,6 +247,15 @@ func decodeCraftNFTRequest(ctx context.Context, r *http.Request) (interface{}, e
 
 func decodeSelectNFTRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	var req SelectNFTRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+func decodeSelectCharacterRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req SelectCharacterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, err
 	}
