@@ -41,7 +41,7 @@ VALUES (
     $9,
     $10,
     $11,
-    $12
+    $12::episodes_status_type
 ) RETURNING id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, status
 `
 
@@ -98,7 +98,7 @@ func (q *Queries) AddEpisode(ctx context.Context, arg AddEpisodeParams) (Episode
 
 const deleteEpisodeByID = `-- name: DeleteEpisodeByID :exec
 UPDATE shows
-SET status = 'archived'
+SET status = 'archived'::episodes_status_type
 WHERE id = $1
 `
 
@@ -113,7 +113,7 @@ SELECT
     seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = $1 AND episodes.status = 'published'
+WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type
 `
 
 type GetEpisodeByIDRow struct {
@@ -203,7 +203,7 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
-AND episodes.status = 'published'
+AND episodes.status = 'published'::episodes_status_type
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3
 `
@@ -280,18 +280,18 @@ func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShow
 const getEpisodesByStatus = `-- name: GetEpisodesByStatus :many
 SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, status
 FROM episodes
-WHERE status = $1
-LIMIT $2 OFFSET $3
+WHERE status = $1::episodes_status_type
+LIMIT $3 OFFSET $2
 `
 
 type GetEpisodesByStatusParams struct {
 	Status EpisodesStatusType `json:"status"`
-	Limit  int32              `json:"limit"`
-	Offset int32              `json:"offset"`
+	Offset int32              `json:"offset_val"`
+	Limit  int32              `json:"limit_val"`
 }
 
 func (q *Queries) GetEpisodesByStatus(ctx context.Context, arg GetEpisodesByStatusParams) ([]Episode, error) {
-	rows, err := q.query(ctx, q.getEpisodesByStatusStmt, getEpisodesByStatus, arg.Status, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.getEpisodesByStatusStmt, getEpisodesByStatus, arg.Status, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 JOIN shows ON shows.id = episodes.show_id
 WHERE episodes.id = ANY($1::uuid[])
-AND episodes.status = 'published'
+AND episodes.status = 'published'::episodes_status_type
 ORDER BY episodes.episode_number DESC
 `
 
@@ -405,7 +405,7 @@ func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UU
 
 const getRawEpisodeByID = `-- name: GetRawEpisodeByID :one
 SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, status FROM episodes
-WHERE episodes.id = $1 AND episodes.status = 'published'
+WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type
 `
 
 func (q *Queries) GetRawEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, error) {
@@ -462,7 +462,7 @@ SET episode_number = $1,
     release_date = $9,
     hint_text = $10,
     watch = $11,
-    status = $12
+    status = $12::episodes_status_type
 WHERE id = $13
 `
 

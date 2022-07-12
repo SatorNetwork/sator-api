@@ -34,7 +34,7 @@ VALUES (
     $6,
     $7,
     $8,
-    $9
+    $9::shows_status_type
 ) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
 `
 
@@ -82,7 +82,7 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 
 const deleteShowByID = `-- name: DeleteShowByID :exec
 UPDATE shows
-SET status = 'archived'
+SET status = 'archived'::shows_status_type
 WHERE id = $1
 `
 
@@ -105,7 +105,7 @@ SELECT
     COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
-WHERE shows.id = $1 AND shows.status = 'published'
+WHERE shows.id = $1 AND shows.status = 'published'::shows_status_type
 `
 
 type GetShowByIDRow struct {
@@ -148,7 +148,7 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow
 const getShows = `-- name: GetShows :many
 SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
 FROM shows
-WHERE status = 'published'
+WHERE status = 'published'::shows_status_type
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -203,7 +203,7 @@ WHERE id IN(
               JOIN show_categories ON show_categories.id = shows_to_categories.category_id
         WHERE show_categories.disabled = FALSE
           AND show_categories.id = $1)
-AND status = 'published'
+AND status = 'published'::shows_status_type
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
@@ -255,7 +255,7 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 const getShowsByOldCategory = `-- name: GetShowsByOldCategory :many
 SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
 FROM shows
-WHERE status = 'published'
+WHERE status = 'published'::shows_status_type
 AND category = $1::varchar
 ORDER BY has_new_episode DESC,
     updated_at DESC,
@@ -308,18 +308,18 @@ func (q *Queries) GetShowsByOldCategory(ctx context.Context, arg GetShowsByOldCa
 const getShowsByStatus = `-- name: GetShowsByStatus :many
 SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
 FROM shows
-WHERE status = $1
-LIMIT $2 OFFSET $3
+WHERE status = $1::shows_status_type
+LIMIT $3 OFFSET $2
 `
 
 type GetShowsByStatusParams struct {
 	Status ShowsStatusType `json:"status"`
-	Limit  int32           `json:"limit"`
-	Offset int32           `json:"offset"`
+	Offset int32           `json:"offset_val"`
+	Limit  int32           `json:"limit_val"`
 }
 
 func (q *Queries) GetShowsByStatus(ctx context.Context, arg GetShowsByStatusParams) ([]Show, error) {
-	rows, err := q.query(ctx, q.getShowsByStatusStmt, getShowsByStatus, arg.Status, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.getShowsByStatusStmt, getShowsByStatus, arg.Status, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +405,7 @@ SET title = $1,
     realms_title = $6,
     realms_subtitle = $7,
     watch = $8,
-    status = $9
+    status = $9::shows_status_type
 WHERE id = $10
 `
 

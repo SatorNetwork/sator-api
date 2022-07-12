@@ -1,7 +1,7 @@
 -- name: GetShows :many
 SELECT *
 FROM shows
-WHERE status = 'published'
+WHERE status = 'published'::shows_status_type
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -10,7 +10,7 @@ LIMIT $1 OFFSET $2;
 -- name: GetShowsByOldCategory :many
 SELECT *
 FROM shows
-WHERE status = 'published'
+WHERE status = 'published'::shows_status_type
 AND category = @category::varchar
 ORDER BY has_new_episode DESC,
     updated_at DESC,
@@ -32,7 +32,7 @@ SELECT
     COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
-WHERE shows.id = @id AND shows.status = 'published';
+WHERE shows.id = @id AND shows.status = 'published'::shows_status_type;
 
 -- name: GetShowsByCategory :many
 SELECT * FROM shows
@@ -41,7 +41,7 @@ WHERE id IN(
               JOIN show_categories ON show_categories.id = shows_to_categories.category_id
         WHERE show_categories.disabled = FALSE
           AND show_categories.id = @category_id)
-AND status = 'published'
+AND status = 'published'::shows_status_type
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
@@ -68,7 +68,7 @@ VALUES (
     @realms_title,
     @realms_subtitle,
     @watch,
-    @status
+    @status::shows_status_type
 ) RETURNING *;
 
 -- name: UpdateShow :exec
@@ -81,12 +81,12 @@ SET title = @title,
     realms_title = @realms_title,
     realms_subtitle = @realms_subtitle,
     watch = @watch,
-    status = @status
+    status = @status::shows_status_type
 WHERE id = @id;
 
 -- name: DeleteShowByID :exec
 UPDATE shows
-SET status = 'archived'
+SET status = 'archived'::shows_status_type
 WHERE id = @id;
 
 -- name: GetShowsByTitle :many
@@ -96,5 +96,5 @@ WHERE title = @title;
 -- name: GetShowsByStatus :many
 SELECT *
 FROM shows
-WHERE status = $1
-LIMIT $2 OFFSET $3;
+WHERE status = @status::shows_status_type
+LIMIT @limit_val OFFSET @offset_val;
