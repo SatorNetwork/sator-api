@@ -573,6 +573,7 @@ func MakeUpdateShowEndpoint(s service) endpoint.Endpoint {
 			RealmsTitle:    req.RealmsTitle,
 			RealmsSubtitle: req.RealmsSubtitle,
 			Watch:          req.Watch,
+			Status:         req.Status,
 		})
 		if err != nil {
 			return nil, err
@@ -705,6 +706,7 @@ func MakeUpdateEpisodeEndpoint(s service, v validator.ValidateFunc) endpoint.End
 			ReleaseDate:   req.ReleaseDate,
 			HintText:      req.HintText,
 			Watch:         req.Watch,
+			Status:        req.Status,
 		}
 
 		if req.ChallengeID != "" {
