@@ -46,6 +46,7 @@ type AddShowRequest struct {
 	RealmsTitle    string   `json:"realms_title,omitempty"`
 	RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
 	Watch          string   `json:"watch,omitempty"`
+	Status         string   `json:"status,omitempty"`
 }
 
 type AddShowResponseWrapper struct {
@@ -95,6 +96,7 @@ type AddEpisodeRequest struct {
 	VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 	HintText                string `json:"hint_text,omitempty"`
 	Watch                   string `json:"watch,omitempty"`
+	Status                  string `json:"status,omitempty"`
 }
 
 type SendTipsRequest struct {

@@ -161,6 +161,7 @@ func (db *DB) addShow(ctx context.Context) (*shows_repository.Show, error) {
 		RealmsTitle:    sql.NullString{},
 		RealmsSubtitle: sql.NullString{},
 		Watch:          sql.NullString{},
+		Status:         shows_repository.ShowsStatusTypePublished,
 	})
 	if err != nil {
 		return nil, err
@@ -185,6 +186,7 @@ func (db *DB) addEpisode(ctx context.Context, showID, challengeID uuid.UUID) err
 		VerificationChallengeID: uuid.NullUUID{},
 		HintText:                sql.NullString{},
 		Watch:                   sql.NullString{},
+		Status:                  shows_repository.EpisodesStatusTypePublished,
 	})
 	if err != nil {
 		return err

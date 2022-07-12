@@ -6,27 +6,68 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+type EpisodesStatusType string
+
+const (
+	EpisodesStatusTypeDraft     EpisodesStatusType = "draft"
+	EpisodesStatusTypePublished EpisodesStatusType = "published"
+	EpisodesStatusTypeArchived  EpisodesStatusType = "archived"
+)
+
+func (e *EpisodesStatusType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EpisodesStatusType(s)
+	case string:
+		*e = EpisodesStatusType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EpisodesStatusType: %T", src)
+	}
+	return nil
+}
+
+type ShowsStatusType string
+
+const (
+	ShowsStatusTypeDraft     ShowsStatusType = "draft"
+	ShowsStatusTypePublished ShowsStatusType = "published"
+	ShowsStatusTypeArchived  ShowsStatusType = "archived"
+)
+
+func (e *ShowsStatusType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ShowsStatusType(s)
+	case string:
+		*e = ShowsStatusType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ShowsStatusType: %T", src)
+	}
+	return nil
+}
+
 type Episode struct {
-	ID                      uuid.UUID      `json:"id"`
-	ShowID                  uuid.UUID      `json:"show_id"`
-	SeasonID                uuid.NullUUID  `json:"season_id"`
-	EpisodeNumber           int32          `json:"episode_number"`
-	Cover                   sql.NullString `json:"cover"`
-	Title                   string         `json:"title"`
-	Description             sql.NullString `json:"description"`
-	ReleaseDate             sql.NullTime   `json:"release_date"`
-	UpdatedAt               sql.NullTime   `json:"updated_at"`
-	CreatedAt               time.Time      `json:"created_at"`
-	ChallengeID             uuid.NullUUID  `json:"challenge_id"`
-	VerificationChallengeID uuid.NullUUID  `json:"verification_challenge_id"`
-	HintText                sql.NullString `json:"hint_text"`
-	Watch                   sql.NullString `json:"watch"`
-	Archived                bool           `json:"archived"`
+	ID                      uuid.UUID          `json:"id"`
+	ShowID                  uuid.UUID          `json:"show_id"`
+	SeasonID                uuid.NullUUID      `json:"season_id"`
+	EpisodeNumber           int32              `json:"episode_number"`
+	Cover                   sql.NullString     `json:"cover"`
+	Title                   string             `json:"title"`
+	Description             sql.NullString     `json:"description"`
+	ReleaseDate             sql.NullTime       `json:"release_date"`
+	UpdatedAt               sql.NullTime       `json:"updated_at"`
+	CreatedAt               time.Time          `json:"created_at"`
+	ChallengeID             uuid.NullUUID      `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID      `json:"verification_challenge_id"`
+	HintText                sql.NullString     `json:"hint_text"`
+	Watch                   sql.NullString     `json:"watch"`
+	Status                  EpisodesStatusType `json:"status"`
 }
 
 type Rating struct {
@@ -54,18 +95,18 @@ type Season struct {
 }
 
 type Show struct {
-	ID             uuid.UUID      `json:"id"`
-	Title          string         `json:"title"`
-	Cover          string         `json:"cover"`
-	HasNewEpisode  bool           `json:"has_new_episode"`
-	UpdatedAt      sql.NullTime   `json:"updated_at"`
-	CreatedAt      time.Time      `json:"created_at"`
-	Category       sql.NullString `json:"category"`
-	Description    sql.NullString `json:"description"`
-	RealmsTitle    sql.NullString `json:"realms_title"`
-	RealmsSubtitle sql.NullString `json:"realms_subtitle"`
-	Watch          sql.NullString `json:"watch"`
-	Archived       bool           `json:"archived"`
+	ID             uuid.UUID       `json:"id"`
+	Title          string          `json:"title"`
+	Cover          string          `json:"cover"`
+	HasNewEpisode  bool            `json:"has_new_episode"`
+	UpdatedAt      sql.NullTime    `json:"updated_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	Category       sql.NullString  `json:"category"`
+	Description    sql.NullString  `json:"description"`
+	RealmsTitle    sql.NullString  `json:"realms_title"`
+	RealmsSubtitle sql.NullString  `json:"realms_subtitle"`
+	Watch          sql.NullString  `json:"watch"`
+	Status         ShowsStatusType `json:"status"`
 }
 
 type ShowCategory struct {

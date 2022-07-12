@@ -47,6 +47,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/status/{status}", httptransport.NewServer(
+		e.GetEpisodesByStatus,
+		decodeGetByStatusRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Post("/", httptransport.NewServer(
 		e.AddShow,
 		decodeAddShowRequest,
@@ -134,6 +141,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/episodes/status/{status}", httptransport.NewServer(
+		e.GetEpisodesByStatus,
+		decodeGetByStatusRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+  
 	r.Get("/episodes/{episode_id}", httptransport.NewServer(
 		e.GetEpisodeByIDWithShowAndSeason,
 		decodeGetEpisodeByIDWithShowAndSeasonRequest,
@@ -433,6 +447,16 @@ func decodeGetActivatedUserEpisodesRequest(_ context.Context, r *http.Request) (
 	return utils.PaginationRequest{
 		Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
 		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+	}, nil
+}
+
+func decodeGetByStatusRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetByStatusRequest{
+		Status: chi.URLParam(r, "status"),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
 	}, nil
 }
 
