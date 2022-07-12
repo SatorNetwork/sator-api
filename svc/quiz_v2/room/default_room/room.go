@@ -465,6 +465,11 @@ func (r *defaultRoom) sendWinnersTable() {
 }
 
 func (r *defaultRoom) sendRewards() {
+	if r.disableRewardsForQuiz {
+		r.st.SetStatus(status_transactor.RewardsAreSent)
+		return
+	}
+
 	userIDToReward, err := r.quizEngine.GetPrizePoolDistribution()
 	if err != nil {
 		log.Printf("can't get prize pool distribution: %v\n", err)
