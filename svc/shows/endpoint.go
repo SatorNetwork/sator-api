@@ -41,7 +41,7 @@ type (
 		AddEpisode                      endpoint.Endpoint
 		DeleteEpisodeByID               endpoint.Endpoint
 		GetActivatedUserEpisodes        endpoint.Endpoint
-    GetEpisodesByStatus             endpoint.Endpoint
+		GetEpisodesByStatus             endpoint.Endpoint
 		GetEpisodeByID                  endpoint.Endpoint
 		GetEpisodesByShowID             endpoint.Endpoint
 		GetEpisodeByIDWithShowAndSeason endpoint.Endpoint
@@ -110,7 +110,7 @@ type (
 	}
 
 	GetByStatusRequest struct {
-		Status string `json:"status" validate:"required"`
+		Status string `json:"status" validate:"required,oneof=draft published archived"`
 		utils.PaginationRequest
 	}
 
@@ -130,7 +130,7 @@ type (
 		RealmsTitle    string   `json:"realms_title,omitempty"`
 		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
 		Watch          string   `json:"watch,omitempty"`
-		Status         string   `json:"status,omitempty"`
+		Status         string   `json:"status" validate:"required,oneof=draft published archived"`
 	}
 
 	// UpdateShowRequest struct
@@ -144,7 +144,7 @@ type (
 		RealmsTitle    string   `json:"realms_title,omitempty"`
 		RealmsSubtitle string   `json:"realms_subtitle,omitempty"`
 		Watch          string   `json:"watch,omitempty"`
-		Status         string   `json:"status,omitempty"`
+		Status         string   `json:"status" validate:"required,oneof=draft published archived"`
 	}
 
 	// GetEpisodeByIDRequest struct
@@ -172,7 +172,7 @@ type (
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 		HintText                string `json:"hint_text,omitempty"`
 		Watch                   string `json:"watch,omitempty"`
-		Status                  string `json:"status,omitempty"`
+		Status                  string `json:"status" validate:"required,oneof=draft published archived"`
 	}
 
 	// UpdateEpisodeRequest struct
@@ -189,7 +189,7 @@ type (
 		VerificationChallengeID string `json:"verification_challenge_id,omitempty"`
 		HintText                string `json:"hint_text,omitempty"`
 		Watch                   string `json:"watch,omitempty"`
-		Status                  string `json:"status,omitempty"`
+		Status                  string `json:"status" validate:"required,oneof=draft published archived"`
 	}
 
 	// GetEpisodesByShowIDRequest struct
