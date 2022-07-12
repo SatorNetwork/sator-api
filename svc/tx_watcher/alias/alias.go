@@ -17,7 +17,7 @@ func newAliasFromString(s string) (Alias, error) {
 	case "token_holder":
 		return TokenHolderAlias, nil
 	default:
-		return UndefinedAlias, errors.Errorf("alias with such name %v doesn't exist", s)
+		return UndefinedAlias, errors.Errorf("types with such name %v doesn't exist", s)
 	}
 }
 
@@ -41,7 +41,7 @@ func NewAliasesFromStrings(strings []string) (Aliases, error) {
 	for _, s := range strings {
 		alias, err := newAliasFromString(s)
 		if err != nil {
-			return nil, errors.Wrap(err, "can't get new alias from string")
+			return nil, errors.Wrap(err, "can't get new types from string")
 		}
 		aliases = append(aliases, alias)
 	}

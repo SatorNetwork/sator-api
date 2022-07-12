@@ -28,16 +28,9 @@ func WithUserMultiplierFunction(fn getUserRewardsMultiplierFunc) ServiceOption {
 	}
 }
 
-// IsRewardsEnabled returns true if rewards are enabled for the service.
-func IsRewardsEnabled(enabled bool) ServiceOption {
+// WithSettingsServiceClient sets the settings service client for the service.
+func WithSettingsServiceClient(sc settingsService) ServiceOption {
 	return func(s *Service) {
-		s.rewardsEnabled = enabled
-	}
-}
-
-// IsPaidStepsEnabled returns true if paid steps are enabled for the service.
-func IsPaidStepsEnabled(enabled bool) ServiceOption {
-	return func(s *Service) {
-		s.paidStepsEnabled = enabled
+		s.settingsSvc = sc
 	}
 }
