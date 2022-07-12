@@ -85,7 +85,7 @@ SET challenge_id = @challenge_id,
 WHERE id = @id;
 
 -- name: DeleteEpisodeByID :exec
-UPDATE shows
+UPDATE episodes
 SET status = 'archived'::episodes_status_type
 WHERE id = @id;
 
