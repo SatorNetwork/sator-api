@@ -459,8 +459,6 @@ func (s *Service) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameU
 		return nil, errors.Wrap(err, "can't get puzzle game unlock options")
 	}
 
-	result = make([]PuzzleGameUnlockOption, 0, len(options))
-
 	for _, opt := range options {
 		result = append(result, PuzzleGameUnlockOption{
 			ID:       opt.ID,
