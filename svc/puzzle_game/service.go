@@ -433,19 +433,24 @@ func getRandomImage(images []PuzzleGameImage) string {
 
 // GetPuzzleGameUnlockOptions returns all available puzzle game unlock options
 func (s *Service) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error) {
-	options, err := s.pgr.GetPuzzleGameUnlockOptions(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't get puzzle game unlock options")
-	}
+	result := make([]PuzzleGameUnlockOption, 0)
 
-	result := make([]PuzzleGameUnlockOption, 0, len(options))
-	for _, opt := range options {
-		result = append(result, PuzzleGameUnlockOption{
-			ID:       opt.ID,
-			Amount:   opt.Amount,
-			Steps:    opt.Steps,
-			IsLocked: opt.Locked,
-		})
+	if s.rewardsEnabled {
+		options, err := s.pgr.GetPuzzleGameUnlockOptions(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't get puzzle game unlock options")
+		}
+
+		result = make([]PuzzleGameUnlockOption, 0, len(options))
+
+		for _, opt := range options {
+			result = append(result, PuzzleGameUnlockOption{
+				ID:       opt.ID,
+				Amount:   opt.Amount,
+				Steps:    opt.Steps,
+				IsLocked: opt.Locked,
+			})
+		}
 	}
 
 	return result, nil
