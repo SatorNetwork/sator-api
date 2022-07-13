@@ -21,6 +21,7 @@ type (
 		AddShow            endpoint.Endpoint
 		DeleteShowByID     endpoint.Endpoint
 		GetShows           endpoint.Endpoint
+		GetAllShows        endpoint.Endpoint
 		GetShowsWithNFT    endpoint.Endpoint
 		GetShowChallenges  endpoint.Endpoint
 		GetShowByID        endpoint.Endpoint
@@ -44,6 +45,7 @@ type (
 		GetEpisodesByStatus             endpoint.Endpoint
 		GetEpisodeByID                  endpoint.Endpoint
 		GetEpisodesByShowID             endpoint.Endpoint
+		GetAllEpisodesByShowID          endpoint.Endpoint
 		GetEpisodeByIDWithShowAndSeason endpoint.Endpoint
 		UpdateEpisode                   endpoint.Endpoint
 
@@ -63,6 +65,7 @@ type (
 		AddShow(ctx context.Context, sh Show) (Show, error)
 		DeleteShowByID(ctx context.Context, id uuid.UUID) error
 		GetShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
+		GetAllShows(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowsWithNFT(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (Show, error)
@@ -86,6 +89,7 @@ type (
 		DeleteEpisodeByID(ctx context.Context, showId, episodeId uuid.UUID) error
 		GetActivatedUserEpisodes(ctx context.Context, userID uuid.UUID, page, itemsPerPage int32) ([]Episode, error)
 		GetEpisodesByShowID(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
+		GetAllEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetEpisodesByStatus(ctx context.Context, status string, limit, offset int32) ([]Episode, error)
 		GetEpisodeByID(ctx context.Context, episodeID, userID uuid.UUID) (Episode, error)
 		GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID, userID uuid.UUID) (FullEpisodeData, error)
@@ -282,6 +286,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		AddShow:            MakeAddShowEndpoint(s, validateFunc),
 		DeleteShowByID:     MakeDeleteShowByIDEndpoint(s),
 		GetShows:           MakeGetShowsEndpoint(s, validateFunc),
+		GetAllShows:        MakeGetAllShowsEndpoint(s, validateFunc),
 		GetShowsWithNFT:    MakeGetShowsEndpoint(s, validateFunc),
 		GetShowChallenges:  MakeGetShowChallengesEndpoint(s, validateFunc),
 		GetShowByID:        MakeGetShowByIDEndpoint(s),
@@ -305,6 +310,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetEpisodesByStatus:             MakeGetEpisodesByStatusEndpoint(s, validateFunc),
 		GetEpisodeByID:                  MakeGetEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodesByShowID:             MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
+		GetAllEpisodesByShowID:          MakeGetAllEpisodesByShowIDEndpoint(s, validateFunc),
 		GetEpisodeByIDWithShowAndSeason: MakeGetEpisodeByIDWithShowAndSeasonEndpoint(s),
 		UpdateEpisode:                   MakeUpdateEpisodeEndpoint(s, validateFunc),
 
@@ -326,6 +332,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.AddShow = mdw(e.AddShow)
 			e.DeleteShowByID = mdw(e.DeleteShowByID)
 			e.GetShows = mdw(e.GetShows)
+			e.GetAllShows = mdw(e.GetAllShows)
 			e.GetShowsWithNFT = mdw(e.GetShowsWithNFT)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
 			e.GetShowByID = mdw(e.GetShowByID)
@@ -347,6 +354,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetActivatedUserEpisodes = mdw(e.GetActivatedUserEpisodes)
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
+			e.GetAllEpisodesByShowID = mdw(e.GetAllEpisodesByShowID)
 			e.GetEpisodeByIDWithShowAndSeason = mdw(e.GetEpisodeByIDWithShowAndSeason)
 			e.UpdateEpisode = mdw(e.UpdateEpisode)
 
@@ -388,6 +396,27 @@ func MakeGetShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint
 		}
 
 		resp, err := s.GetShows(ctx, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetShowsEndpoint ...
+func MakeGetAllShowsEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleContentManager, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(utils.PaginationRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		resp, err := s.GetAllShows(ctx, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
@@ -862,6 +891,32 @@ func MakeGetEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoi
 		}
 
 		resp, err := s.GetEpisodesByShowID(ctx, showID, uid, req.Limit(), req.Offset())
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetAllEpisodesByShowIDEndpoint ...
+func MakeGetAllEpisodesByShowIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleContentManager, rbac.RoleAdmin); err != nil {
+			return nil, err
+		}
+
+		req := request.(GetEpisodesByShowIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		showID, err := uuid.Parse(req.ShowID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get show id: %w", err)
+		}
+
+		resp, err := s.GetAllEpisodesByShowID(ctx, showID, req.Limit(), req.Offset())
 		if err != nil {
 			return nil, err
 		}
