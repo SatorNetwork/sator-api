@@ -588,18 +588,19 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 	}
 
 	response := PuzzleGame{
-		ID:           pg.ID,
-		EpisodeID:    pg.EpisodeID,
-		PrizePool:    pg.PrizePool,
-		Rewards:      rewardsAmount,
-		BonusRewards: lockRewardsAmount,
-		PartsX:       pg.PartsX,
-		Steps:        att.Steps,
-		StepsTaken:   att.StepsTaken,
-		Status:       att.Status,
-		Tiles:        controller.Puzzle.Tiles,
-		Images:       nil,
-		Image:        att.Image.String,
+		ID:             pg.ID,
+		EpisodeID:      pg.EpisodeID,
+		PrizePool:      pg.PrizePool,
+		Rewards:        rewardsAmount,
+		BonusRewards:   lockRewardsAmount,
+		PartsX:         pg.PartsX,
+		Steps:          att.Steps,
+		StepsTaken:     att.StepsTaken,
+		Status:         att.Status,
+		Tiles:          controller.Puzzle.Tiles,
+		Images:         nil,
+		Image:          att.Image.String,
+		RewardsEnabled: s.rewardsEnabled,
 	}
 	return response.HideCorrectPositions(), nil
 }
