@@ -1,4 +1,4 @@
--- name: GetEpisodesByShowID :many
+-- name: GetPublishedEpisodesByShowID :many
 WITH avg_ratings AS (
     SELECT 
         episode_id,
@@ -20,7 +20,17 @@ AND episodes.status = 'published'::episodes_status_type
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
 
--- name: GetEpisodeByID :one
+-- name: GetAllEpisodesByShowID :many
+SELECT 
+    episodes.*, 
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.show_id = $1
+ORDER BY episodes.episode_number DESC
+    LIMIT $2 OFFSET $3;
+
+-- name: GetPublishedEpisodeByID :one
 SELECT 
     episodes.*, 
     seasons.season_number as season_number
@@ -28,9 +38,21 @@ FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
 WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type;
 
--- name: GetRawEpisodeByID :one
+-- name: GetEpisodeByID :one
+SELECT 
+    episodes.*, 
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = $1;
+
+-- name: GetPublishedRawEpisodeByID :one
 SELECT * FROM episodes
 WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type;
+
+-- name: GetRawEpisodeByID :one
+SELECT * FROM episodes
+WHERE episodes.id = $1;
 
 -- name: AddEpisode :one
 INSERT INTO episodes (
@@ -99,7 +121,7 @@ SELECT id
 FROM episodes
 WHERE challenge_id = $1;
 
--- name: GetListEpisodesByIDs :many
+-- name: GetPublishedListEpisodesByIDs :many
 SELECT
     episodes.*,
     seasons.season_number as season_number,

@@ -91,77 +91,22 @@ func (q *Queries) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getShowByID = `-- name: GetShowByID :one
-WITH show_claps_sum AS (
-    SELECT 
-        COUNT(*) AS claps,
-        show_id
-    FROM show_claps
-    WHERE show_id = $1
-    GROUP BY show_id  
-)
-SELECT 
-    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.status,
-    COALESCE(show_claps_sum.claps, 0) as claps
-FROM shows
-LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
-WHERE shows.id = $1 AND shows.status = 'published'::shows_status_type
-`
-
-type GetShowByIDRow struct {
-	ID             uuid.UUID       `json:"id"`
-	Title          string          `json:"title"`
-	Cover          string          `json:"cover"`
-	HasNewEpisode  bool            `json:"has_new_episode"`
-	UpdatedAt      sql.NullTime    `json:"updated_at"`
-	CreatedAt      time.Time       `json:"created_at"`
-	Category       sql.NullString  `json:"category"`
-	Description    sql.NullString  `json:"description"`
-	RealmsTitle    sql.NullString  `json:"realms_title"`
-	RealmsSubtitle sql.NullString  `json:"realms_subtitle"`
-	Watch          sql.NullString  `json:"watch"`
-	Status         ShowsStatusType `json:"status"`
-	Claps          int64           `json:"claps"`
-}
-
-func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (GetShowByIDRow, error) {
-	row := q.queryRow(ctx, q.getShowByIDStmt, getShowByID, id)
-	var i GetShowByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Cover,
-		&i.HasNewEpisode,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-		&i.Category,
-		&i.Description,
-		&i.RealmsTitle,
-		&i.RealmsSubtitle,
-		&i.Watch,
-		&i.Status,
-		&i.Claps,
-	)
-	return i, err
-}
-
-const getShows = `-- name: GetShows :many
+const getAllShows = `-- name: GetAllShows :many
 SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
 FROM shows
-WHERE status = 'published'::shows_status_type
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
 LIMIT $1 OFFSET $2
 `
 
-type GetShowsParams struct {
+type GetAllShowsParams struct {
 	Limit  int32 `json:"limit"`
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, error) {
-	rows, err := q.query(ctx, q.getShowsStmt, getShows, arg.Limit, arg.Offset)
+func (q *Queries) GetAllShows(ctx context.Context, arg GetAllShowsParams) ([]Show, error) {
+	rows, err := q.query(ctx, q.getAllShowsStmt, getAllShows, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -194,6 +139,137 @@ func (q *Queries) GetShows(ctx context.Context, arg GetShowsParams) ([]Show, err
 		return nil, err
 	}
 	return items, nil
+}
+
+const getPublishedShowByID = `-- name: GetPublishedShowByID :one
+WITH show_claps_sum AS (
+    SELECT 
+        COUNT(*) AS claps,
+        show_id
+    FROM show_claps
+    WHERE show_id = $1
+    GROUP BY show_id  
+)
+SELECT 
+    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.status,
+    COALESCE(show_claps_sum.claps, 0) as claps
+FROM shows
+LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
+WHERE shows.id = $1 AND shows.status = 'published'::shows_status_type
+`
+
+type GetPublishedShowByIDRow struct {
+	ID             uuid.UUID       `json:"id"`
+	Title          string          `json:"title"`
+	Cover          string          `json:"cover"`
+	HasNewEpisode  bool            `json:"has_new_episode"`
+	UpdatedAt      sql.NullTime    `json:"updated_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	Category       sql.NullString  `json:"category"`
+	Description    sql.NullString  `json:"description"`
+	RealmsTitle    sql.NullString  `json:"realms_title"`
+	RealmsSubtitle sql.NullString  `json:"realms_subtitle"`
+	Watch          sql.NullString  `json:"watch"`
+	Status         ShowsStatusType `json:"status"`
+	Claps          int64           `json:"claps"`
+}
+
+func (q *Queries) GetPublishedShowByID(ctx context.Context, id uuid.UUID) (GetPublishedShowByIDRow, error) {
+	row := q.queryRow(ctx, q.getPublishedShowByIDStmt, getPublishedShowByID, id)
+	var i GetPublishedShowByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Cover,
+		&i.HasNewEpisode,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.Category,
+		&i.Description,
+		&i.RealmsTitle,
+		&i.RealmsSubtitle,
+		&i.Watch,
+		&i.Status,
+		&i.Claps,
+	)
+	return i, err
+}
+
+const getPublishedShows = `-- name: GetPublishedShows :many
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+FROM shows
+WHERE status = 'published'::shows_status_type
+ORDER BY has_new_episode DESC,
+    updated_at DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetPublishedShowsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetPublishedShows(ctx context.Context, arg GetPublishedShowsParams) ([]Show, error) {
+	rows, err := q.query(ctx, q.getPublishedShowsStmt, getPublishedShows, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Show
+	for rows.Next() {
+		var i Show
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Cover,
+			&i.HasNewEpisode,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.Category,
+			&i.Description,
+			&i.RealmsTitle,
+			&i.RealmsSubtitle,
+			&i.Watch,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getShowByID = `-- name: GetShowByID :one
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+FROM shows
+WHERE shows.id = $1
+`
+
+func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
+	row := q.queryRow(ctx, q.getShowByIDStmt, getShowByID, id)
+	var i Show
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Cover,
+		&i.HasNewEpisode,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.Category,
+		&i.Description,
+		&i.RealmsTitle,
+		&i.RealmsSubtitle,
+		&i.Watch,
+		&i.Status,
+	)
+	return i, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many

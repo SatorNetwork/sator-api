@@ -107,13 +107,89 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAllEpisodesByShowID = `-- name: GetAllEpisodesByShowID :many
+SELECT 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, 
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.show_id = $1
+ORDER BY episodes.episode_number DESC
+    LIMIT $2 OFFSET $3
+`
+
+type GetAllEpisodesByShowIDParams struct {
+	ShowID uuid.UUID `json:"show_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type GetAllEpisodesByShowIDRow struct {
+	ID                      uuid.UUID          `json:"id"`
+	ShowID                  uuid.UUID          `json:"show_id"`
+	SeasonID                uuid.NullUUID      `json:"season_id"`
+	EpisodeNumber           int32              `json:"episode_number"`
+	Cover                   sql.NullString     `json:"cover"`
+	Title                   string             `json:"title"`
+	Description             sql.NullString     `json:"description"`
+	ReleaseDate             sql.NullTime       `json:"release_date"`
+	UpdatedAt               sql.NullTime       `json:"updated_at"`
+	CreatedAt               time.Time          `json:"created_at"`
+	ChallengeID             uuid.NullUUID      `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID      `json:"verification_challenge_id"`
+	HintText                sql.NullString     `json:"hint_text"`
+	Watch                   sql.NullString     `json:"watch"`
+	Status                  EpisodesStatusType `json:"status"`
+	SeasonNumber            int32              `json:"season_number"`
+}
+
+func (q *Queries) GetAllEpisodesByShowID(ctx context.Context, arg GetAllEpisodesByShowIDParams) ([]GetAllEpisodesByShowIDRow, error) {
+	rows, err := q.query(ctx, q.getAllEpisodesByShowIDStmt, getAllEpisodesByShowID, arg.ShowID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllEpisodesByShowIDRow
+	for rows.Next() {
+		var i GetAllEpisodesByShowIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.SeasonID,
+			&i.EpisodeNumber,
+			&i.Cover,
+			&i.Title,
+			&i.Description,
+			&i.ReleaseDate,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.ChallengeID,
+			&i.VerificationChallengeID,
+			&i.HintText,
+			&i.Watch,
+			&i.Status,
+			&i.SeasonNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEpisodeByID = `-- name: GetEpisodeByID :one
 SELECT 
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, 
     seasons.season_number as season_number
 FROM episodes
 JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type
+WHERE episodes.id = $1
 `
 
 type GetEpisodeByIDRow struct {
@@ -185,98 +261,6 @@ func (q *Queries) GetEpisodeIDByVerificationChallengeID(ctx context.Context, ver
 	return id, err
 }
 
-const getEpisodesByShowID = `-- name: GetEpisodesByShowID :many
-WITH avg_ratings AS (
-    SELECT 
-        episode_id,
-        AVG(rating)::FLOAT AS avg_rating,
-        COUNT(episode_id) AS ratings
-    FROM ratings
-    GROUP BY episode_id
-)
-SELECT 
-    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, 
-    seasons.season_number as season_number,
-    coalesce(avg_ratings.avg_rating, 0) as avg_rating,
-    coalesce(avg_ratings.ratings, 0) as ratings
-FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
-LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
-WHERE episodes.show_id = $1
-AND episodes.status = 'published'::episodes_status_type
-ORDER BY episodes.episode_number DESC
-    LIMIT $2 OFFSET $3
-`
-
-type GetEpisodesByShowIDParams struct {
-	ShowID uuid.UUID `json:"show_id"`
-	Limit  int32     `json:"limit"`
-	Offset int32     `json:"offset"`
-}
-
-type GetEpisodesByShowIDRow struct {
-	ID                      uuid.UUID          `json:"id"`
-	ShowID                  uuid.UUID          `json:"show_id"`
-	SeasonID                uuid.NullUUID      `json:"season_id"`
-	EpisodeNumber           int32              `json:"episode_number"`
-	Cover                   sql.NullString     `json:"cover"`
-	Title                   string             `json:"title"`
-	Description             sql.NullString     `json:"description"`
-	ReleaseDate             sql.NullTime       `json:"release_date"`
-	UpdatedAt               sql.NullTime       `json:"updated_at"`
-	CreatedAt               time.Time          `json:"created_at"`
-	ChallengeID             uuid.NullUUID      `json:"challenge_id"`
-	VerificationChallengeID uuid.NullUUID      `json:"verification_challenge_id"`
-	HintText                sql.NullString     `json:"hint_text"`
-	Watch                   sql.NullString     `json:"watch"`
-	Status                  EpisodesStatusType `json:"status"`
-	SeasonNumber            int32              `json:"season_number"`
-	AvgRating               float64            `json:"avg_rating"`
-	Ratings                 int64              `json:"ratings"`
-}
-
-func (q *Queries) GetEpisodesByShowID(ctx context.Context, arg GetEpisodesByShowIDParams) ([]GetEpisodesByShowIDRow, error) {
-	rows, err := q.query(ctx, q.getEpisodesByShowIDStmt, getEpisodesByShowID, arg.ShowID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetEpisodesByShowIDRow
-	for rows.Next() {
-		var i GetEpisodesByShowIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ShowID,
-			&i.SeasonID,
-			&i.EpisodeNumber,
-			&i.Cover,
-			&i.Title,
-			&i.Description,
-			&i.ReleaseDate,
-			&i.UpdatedAt,
-			&i.CreatedAt,
-			&i.ChallengeID,
-			&i.VerificationChallengeID,
-			&i.HintText,
-			&i.Watch,
-			&i.Status,
-			&i.SeasonNumber,
-			&i.AvgRating,
-			&i.Ratings,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getEpisodesByStatus = `-- name: GetEpisodesByStatus :many
 SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, status
 FROM episodes
@@ -329,7 +313,151 @@ func (q *Queries) GetEpisodesByStatus(ctx context.Context, arg GetEpisodesByStat
 	return items, nil
 }
 
-const getListEpisodesByIDs = `-- name: GetListEpisodesByIDs :many
+const getPublishedEpisodeByID = `-- name: GetPublishedEpisodeByID :one
+SELECT 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, 
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type
+`
+
+type GetPublishedEpisodeByIDRow struct {
+	ID                      uuid.UUID          `json:"id"`
+	ShowID                  uuid.UUID          `json:"show_id"`
+	SeasonID                uuid.NullUUID      `json:"season_id"`
+	EpisodeNumber           int32              `json:"episode_number"`
+	Cover                   sql.NullString     `json:"cover"`
+	Title                   string             `json:"title"`
+	Description             sql.NullString     `json:"description"`
+	ReleaseDate             sql.NullTime       `json:"release_date"`
+	UpdatedAt               sql.NullTime       `json:"updated_at"`
+	CreatedAt               time.Time          `json:"created_at"`
+	ChallengeID             uuid.NullUUID      `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID      `json:"verification_challenge_id"`
+	HintText                sql.NullString     `json:"hint_text"`
+	Watch                   sql.NullString     `json:"watch"`
+	Status                  EpisodesStatusType `json:"status"`
+	SeasonNumber            int32              `json:"season_number"`
+}
+
+func (q *Queries) GetPublishedEpisodeByID(ctx context.Context, id uuid.UUID) (GetPublishedEpisodeByIDRow, error) {
+	row := q.queryRow(ctx, q.getPublishedEpisodeByIDStmt, getPublishedEpisodeByID, id)
+	var i GetPublishedEpisodeByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonID,
+		&i.EpisodeNumber,
+		&i.Cover,
+		&i.Title,
+		&i.Description,
+		&i.ReleaseDate,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.ChallengeID,
+		&i.VerificationChallengeID,
+		&i.HintText,
+		&i.Watch,
+		&i.Status,
+		&i.SeasonNumber,
+	)
+	return i, err
+}
+
+const getPublishedEpisodesByShowID = `-- name: GetPublishedEpisodesByShowID :many
+WITH avg_ratings AS (
+    SELECT 
+        episode_id,
+        AVG(rating)::FLOAT AS avg_rating,
+        COUNT(episode_id) AS ratings
+    FROM ratings
+    GROUP BY episode_id
+)
+SELECT 
+    episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, 
+    seasons.season_number as season_number,
+    coalesce(avg_ratings.avg_rating, 0) as avg_rating,
+    coalesce(avg_ratings.ratings, 0) as ratings
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id
+LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
+WHERE episodes.show_id = $1
+AND episodes.status = 'published'::episodes_status_type
+ORDER BY episodes.episode_number DESC
+    LIMIT $2 OFFSET $3
+`
+
+type GetPublishedEpisodesByShowIDParams struct {
+	ShowID uuid.UUID `json:"show_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type GetPublishedEpisodesByShowIDRow struct {
+	ID                      uuid.UUID          `json:"id"`
+	ShowID                  uuid.UUID          `json:"show_id"`
+	SeasonID                uuid.NullUUID      `json:"season_id"`
+	EpisodeNumber           int32              `json:"episode_number"`
+	Cover                   sql.NullString     `json:"cover"`
+	Title                   string             `json:"title"`
+	Description             sql.NullString     `json:"description"`
+	ReleaseDate             sql.NullTime       `json:"release_date"`
+	UpdatedAt               sql.NullTime       `json:"updated_at"`
+	CreatedAt               time.Time          `json:"created_at"`
+	ChallengeID             uuid.NullUUID      `json:"challenge_id"`
+	VerificationChallengeID uuid.NullUUID      `json:"verification_challenge_id"`
+	HintText                sql.NullString     `json:"hint_text"`
+	Watch                   sql.NullString     `json:"watch"`
+	Status                  EpisodesStatusType `json:"status"`
+	SeasonNumber            int32              `json:"season_number"`
+	AvgRating               float64            `json:"avg_rating"`
+	Ratings                 int64              `json:"ratings"`
+}
+
+func (q *Queries) GetPublishedEpisodesByShowID(ctx context.Context, arg GetPublishedEpisodesByShowIDParams) ([]GetPublishedEpisodesByShowIDRow, error) {
+	rows, err := q.query(ctx, q.getPublishedEpisodesByShowIDStmt, getPublishedEpisodesByShowID, arg.ShowID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPublishedEpisodesByShowIDRow
+	for rows.Next() {
+		var i GetPublishedEpisodesByShowIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.SeasonID,
+			&i.EpisodeNumber,
+			&i.Cover,
+			&i.Title,
+			&i.Description,
+			&i.ReleaseDate,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.ChallengeID,
+			&i.VerificationChallengeID,
+			&i.HintText,
+			&i.Watch,
+			&i.Status,
+			&i.SeasonNumber,
+			&i.AvgRating,
+			&i.Ratings,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPublishedListEpisodesByIDs = `-- name: GetPublishedListEpisodesByIDs :many
 SELECT
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status,
     seasons.season_number as season_number,
@@ -342,7 +470,7 @@ AND episodes.status = 'published'::episodes_status_type
 ORDER BY episodes.episode_number DESC
 `
 
-type GetListEpisodesByIDsRow struct {
+type GetPublishedListEpisodesByIDsRow struct {
 	ID                      uuid.UUID          `json:"id"`
 	ShowID                  uuid.UUID          `json:"show_id"`
 	SeasonID                uuid.NullUUID      `json:"season_id"`
@@ -362,15 +490,15 @@ type GetListEpisodesByIDsRow struct {
 	ShowTitle               string             `json:"show_title"`
 }
 
-func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UUID) ([]GetListEpisodesByIDsRow, error) {
-	rows, err := q.query(ctx, q.getListEpisodesByIDsStmt, getListEpisodesByIDs, pq.Array(episodeIds))
+func (q *Queries) GetPublishedListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UUID) ([]GetPublishedListEpisodesByIDsRow, error) {
+	rows, err := q.query(ctx, q.getPublishedListEpisodesByIDsStmt, getPublishedListEpisodesByIDs, pq.Array(episodeIds))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetListEpisodesByIDsRow
+	var items []GetPublishedListEpisodesByIDsRow
 	for rows.Next() {
-		var i GetListEpisodesByIDsRow
+		var i GetPublishedListEpisodesByIDsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ShowID,
@@ -403,9 +531,37 @@ func (q *Queries) GetListEpisodesByIDs(ctx context.Context, episodeIds []uuid.UU
 	return items, nil
 }
 
-const getRawEpisodeByID = `-- name: GetRawEpisodeByID :one
+const getPublishedRawEpisodeByID = `-- name: GetPublishedRawEpisodeByID :one
 SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, status FROM episodes
 WHERE episodes.id = $1 AND episodes.status = 'published'::episodes_status_type
+`
+
+func (q *Queries) GetPublishedRawEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, error) {
+	row := q.queryRow(ctx, q.getPublishedRawEpisodeByIDStmt, getPublishedRawEpisodeByID, id)
+	var i Episode
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonID,
+		&i.EpisodeNumber,
+		&i.Cover,
+		&i.Title,
+		&i.Description,
+		&i.ReleaseDate,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.ChallengeID,
+		&i.VerificationChallengeID,
+		&i.HintText,
+		&i.Watch,
+		&i.Status,
+	)
+	return i, err
+}
+
+const getRawEpisodeByID = `-- name: GetRawEpisodeByID :one
+SELECT id, show_id, season_id, episode_number, cover, title, description, release_date, updated_at, created_at, challenge_id, verification_challenge_id, hint_text, watch, status FROM episodes
+WHERE episodes.id = $1
 `
 
 func (q *Queries) GetRawEpisodeByID(ctx context.Context, id uuid.UUID) (Episode, error) {

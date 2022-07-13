@@ -1,7 +1,15 @@
--- name: GetShows :many
+-- name: GetPublishedShows :many
 SELECT *
 FROM shows
 WHERE status = 'published'::shows_status_type
+ORDER BY has_new_episode DESC,
+    updated_at DESC,
+    created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: GetAllShows :many
+SELECT *
+FROM shows
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -17,8 +25,12 @@ ORDER BY has_new_episode DESC,
     created_at DESC
 LIMIT @limit_val OFFSET @offset_val;
 
-
 -- name: GetShowByID :one
+SELECT *
+FROM shows
+WHERE shows.id = @id;
+
+-- name: GetPublishedShowByID :one
 WITH show_claps_sum AS (
     SELECT 
         COUNT(*) AS claps,

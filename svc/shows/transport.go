@@ -47,6 +47,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/all", httptransport.NewServer(
+		e.GetAllShows,
+		decodeGetAllShowsRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/status/{status}", httptransport.NewServer(
 		e.GetEpisodesByStatus,
 		decodeGetByStatusRequest,
@@ -134,6 +141,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		options...,
 	).ServeHTTP)
 
+	r.Get("/{show_id}/episodes/all", httptransport.NewServer(
+		e.GetAllEpisodesByShowID,
+		decodeGetAllEpisodesByShowIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
 	r.Get("/episodes", httptransport.NewServer(
 		e.GetActivatedUserEpisodes,
 		decodeGetActivatedUserEpisodesRequest,
@@ -147,7 +161,7 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 		httpencoder.EncodeResponse,
 		options...,
 	).ServeHTTP)
-  
+
 	r.Get("/episodes/{episode_id}", httptransport.NewServer(
 		e.GetEpisodeByIDWithShowAndSeason,
 		decodeGetEpisodeByIDWithShowAndSeasonRequest,
@@ -300,6 +314,13 @@ func decodeGetShowsRequest(_ context.Context, r *http.Request) (interface{}, err
 	}, nil
 }
 
+func decodeGetAllShowsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return utils.PaginationRequest{
+		Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+		ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+	}, nil
+}
+
 func decodeGetShowChallengesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetShowChallengesRequest{
 		ShowID: chi.URLParam(r, "show_id"),
@@ -434,6 +455,16 @@ func decodeGetEpisodeByIDRequest(_ context.Context, r *http.Request) (interface{
 }
 
 func decodeGetEpisodesByShowIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return GetEpisodesByShowIDRequest{
+		ShowID: chi.URLParam(r, "show_id"),
+		PaginationRequest: utils.PaginationRequest{
+			Page:         utils.StrToInt32(r.URL.Query().Get(utils.PageParam)),
+			ItemsPerPage: utils.StrToInt32(r.URL.Query().Get(utils.ItemsPerPageParam)),
+		},
+	}, nil
+}
+
+func decodeGetAllEpisodesByShowIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return GetEpisodesByShowIDRequest{
 		ShowID: chi.URLParam(r, "show_id"),
 		PaginationRequest: utils.PaginationRequest{
