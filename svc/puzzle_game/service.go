@@ -89,6 +89,8 @@ type (
 		// depends on user role
 		Images []PuzzleGameImage `json:"images,omitempty"`
 		Image  string            `json:"image,omitempty"`
+
+		RewardsEnabled bool `json:"rewards_enabled,omitempty"`
 	}
 
 	PuzzleGameImage struct {
@@ -150,6 +152,7 @@ func (s *Service) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 	result := NewPuzzleGameFromSQLC(puzzleGame)
 	result.Images = puzzleGameImages
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -178,6 +181,7 @@ func (s *Service) GetPuzzleGameByEpisodeID(ctx context.Context, epID uuid.UUID, 
 	result := NewPuzzleGameFromSQLC(puzzleGame)
 	result.Images = puzzleGameImages
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -191,7 +195,9 @@ func (s *Service) CreatePuzzleGame(ctx context.Context, epID uuid.UUID, prizePoo
 		return PuzzleGame{}, errors.Wrap(err, "can't create puzzle game")
 	}
 
-	return NewPuzzleGameFromSQLC(puzzleGame), nil
+	result := NewPuzzleGameFromSQLC(puzzleGame)
+	result.RewardsEnabled = s.rewardsEnabled
+	return result, nil
 }
 
 // UpdatePuzzleGame updates puzzle game settings
@@ -213,6 +219,7 @@ func (s *Service) UpdatePuzzleGame(ctx context.Context, id uuid.UUID, prizePool 
 	result := NewPuzzleGameFromSQLC(puzzleGame)
 	result.Images = puzzleGameImages
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -283,7 +290,13 @@ func (s *Service) GetPuzzleGameForUser(ctx context.Context, userID, episodeID uu
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game by episode id")
 	}
 
-	return s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusNew)
+	result, err := s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusNew)
+	if err != nil {
+		return PuzzleGame{}, nil
+	}
+
+	result.RewardsEnabled = s.rewardsEnabled
+	return result, nil
 }
 
 func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (PuzzleGame, error) {
@@ -332,6 +345,7 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game for user")
 	}
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -372,6 +386,7 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 	}
 
 	result.Tiles = p.Tiles
+	result.RewardsEnabled = s.rewardsEnabled
 	return result.HideCorrectPositions(), nil
 }
 
