@@ -353,11 +353,11 @@ func (s *Service) GetWalletByID(ctx context.Context, userID, walletID uuid.UUID)
 				Name: ActionReceiveTokens.Name(),
 				URL:  "",
 			},
-			{
-				Type: ActionStakeTokens.String(),
-				Name: ActionStakeTokens.Name(),
-				URL:  "",
-			},
+			// {
+			// 	Type: ActionStakeTokens.String(),
+			// 	Name: ActionStakeTokens.Name(),
+			// 	URL:  "",
+			// },
 		},
 		Balance: balance,
 	}, nil
