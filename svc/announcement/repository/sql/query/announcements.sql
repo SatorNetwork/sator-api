@@ -50,7 +50,7 @@ SELECT * FROM announcements WHERE id IN (
     SELECT announcement_id
     FROM read_announcements
     WHERE user_id = @user_id
-)
+) AND NOW() <= ends_at
 LIMIT @limit_val OFFSET @offset_val;
 
 -- name: ListActiveAnnouncements :many

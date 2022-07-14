@@ -176,7 +176,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-1",
 			ActionUrl:   "action-url-1",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 
@@ -221,7 +221,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-2",
 			ActionUrl:   "action-url-2",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 
@@ -247,7 +247,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-3",
 			ActionUrl:   "action-url-3",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 		resp4, err := c.Announcement.CreateAnnouncement(user1.AccessToken(), &announcement.CreateAnnouncementRequest{
@@ -255,7 +255,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-4",
 			ActionUrl:   "action-url-4",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
@@ -292,7 +292,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-5",
 			ActionUrl:   "action-url-5",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 		_, err = c.Announcement.CreateAnnouncement(user1.AccessToken(), &announcement.CreateAnnouncementRequest{
@@ -300,7 +300,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-6",
 			ActionUrl:   "action-url-6",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
