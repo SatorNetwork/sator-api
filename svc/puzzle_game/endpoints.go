@@ -3,6 +3,7 @@ package puzzle_game
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/SatorNetwork/gopuzzlegame"
 
@@ -303,6 +304,8 @@ func MakeStartPuzzleGameEndpoint(s service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
+		log.Printf("[DEBUG] StartPuzzleGame: %+v", res)
 
 		return res, nil
 	}
