@@ -18,16 +18,17 @@ import (
 type (
 	// Endpoints collection of profile service
 	Endpoints struct {
-		AddShow            endpoint.Endpoint
-		DeleteShowByID     endpoint.Endpoint
-		GetShows           endpoint.Endpoint
-		GetAllShows        endpoint.Endpoint
-		GetShowsWithNFT    endpoint.Endpoint
-		GetShowChallenges  endpoint.Endpoint
-		GetShowByID        endpoint.Endpoint
-		GetShowsByCategory endpoint.Endpoint
-		GetShowsByStatus   endpoint.Endpoint
-		UpdateShow         endpoint.Endpoint
+		AddShow              endpoint.Endpoint
+		DeleteShowByID       endpoint.Endpoint
+		GetShows             endpoint.Endpoint
+		GetAllShows          endpoint.Endpoint
+		GetShowsWithNFT      endpoint.Endpoint
+		GetShowChallenges    endpoint.Endpoint
+		GetShowByID          endpoint.Endpoint
+		GetPublishedShowByID endpoint.Endpoint
+		GetShowsByCategory   endpoint.Endpoint
+		GetShowsByStatus     endpoint.Endpoint
+		UpdateShow           endpoint.Endpoint
 
 		AddShowCategory        endpoint.Endpoint
 		DeleteShowCategoryByID endpoint.Endpoint
@@ -44,6 +45,7 @@ type (
 		GetActivatedUserEpisodes        endpoint.Endpoint
 		GetEpisodesByStatus             endpoint.Endpoint
 		GetEpisodeByID                  endpoint.Endpoint
+		GetPublishedEpisodeByID         endpoint.Endpoint
 		GetEpisodesByShowID             endpoint.Endpoint
 		GetAllEpisodesByShowID          endpoint.Endpoint
 		GetEpisodeByIDWithShowAndSeason endpoint.Endpoint
@@ -69,6 +71,7 @@ type (
 		GetShowsWithNFT(ctx context.Context, page, itemsPerPage int32) (interface{}, error)
 		GetShowChallenges(ctx context.Context, showID, userID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowByID(ctx context.Context, id uuid.UUID) (Show, error)
+		GetPublishedShowByID(ctx context.Context, id uuid.UUID) (Show, error)
 		GetShowsByCategory(ctx context.Context, category uuid.UUID, limit, offset int32) (interface{}, error)
 		GetShowsByOldCategory(ctx context.Context, category string, limit, offset int32) (interface{}, error)
 		GetShowsByStatus(ctx context.Context, status string, limit, offset int32) ([]Show, error)
@@ -92,6 +95,7 @@ type (
 		GetAllEpisodesByShowID(ctx context.Context, showID uuid.UUID, limit, offset int32) (interface{}, error)
 		GetEpisodesByStatus(ctx context.Context, status string, limit, offset int32) ([]Episode, error)
 		GetEpisodeByID(ctx context.Context, episodeID, userID uuid.UUID) (Episode, error)
+		GetPublishedEpisodeByID(ctx context.Context, episodeID, userID uuid.UUID) (Episode, error)
 		GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID, userID uuid.UUID) (FullEpisodeData, error)
 		UpdateEpisode(ctx context.Context, ep Episode) error
 
@@ -283,16 +287,17 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 	validateFunc := validator.ValidateStruct()
 
 	e := Endpoints{
-		AddShow:            MakeAddShowEndpoint(s, validateFunc),
-		DeleteShowByID:     MakeDeleteShowByIDEndpoint(s),
-		GetShows:           MakeGetShowsEndpoint(s, validateFunc),
-		GetAllShows:        MakeGetAllShowsEndpoint(s, validateFunc),
-		GetShowsWithNFT:    MakeGetShowsEndpoint(s, validateFunc),
-		GetShowChallenges:  MakeGetShowChallengesEndpoint(s, validateFunc),
-		GetShowByID:        MakeGetShowByIDEndpoint(s),
-		GetShowsByCategory: MakeGetShowsByCategoryEndpoint(s, validateFunc),
-		GetShowsByStatus:   MakeGetShowsByStatusEndpoint(s, validateFunc),
-		UpdateShow:         MakeUpdateShowEndpoint(s),
+		AddShow:              MakeAddShowEndpoint(s, validateFunc),
+		DeleteShowByID:       MakeDeleteShowByIDEndpoint(s),
+		GetShows:             MakeGetShowsEndpoint(s, validateFunc),
+		GetAllShows:          MakeGetAllShowsEndpoint(s, validateFunc),
+		GetShowsWithNFT:      MakeGetShowsEndpoint(s, validateFunc),
+		GetShowChallenges:    MakeGetShowChallengesEndpoint(s, validateFunc),
+		GetShowByID:          MakeGetShowByIDEndpoint(s),
+		GetPublishedShowByID: MakeGetPublishedShowByIDEndpoint(s),
+		GetShowsByCategory:   MakeGetShowsByCategoryEndpoint(s, validateFunc),
+		GetShowsByStatus:     MakeGetShowsByStatusEndpoint(s, validateFunc),
+		UpdateShow:           MakeUpdateShowEndpoint(s),
 
 		AddShowCategory:        MakeAddShowCategoryEndpoint(s, validateFunc),
 		DeleteShowCategoryByID: MakeDeleteShowCategoryByIDEndpoint(s),
@@ -309,6 +314,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 		GetActivatedUserEpisodes:        MakeGetActivatedUserEpisodesEndpoint(s, validateFunc),
 		GetEpisodesByStatus:             MakeGetEpisodesByStatusEndpoint(s, validateFunc),
 		GetEpisodeByID:                  MakeGetEpisodeByIDEndpoint(s, validateFunc),
+		GetPublishedEpisodeByID:         MakeGetPublishedEpisodeByIDEndpoint(s, validateFunc),
 		GetEpisodesByShowID:             MakeGetEpisodesByShowIDEndpoint(s, validateFunc),
 		GetAllEpisodesByShowID:          MakeGetAllEpisodesByShowIDEndpoint(s, validateFunc),
 		GetEpisodeByIDWithShowAndSeason: MakeGetEpisodeByIDWithShowAndSeasonEndpoint(s),
@@ -336,6 +342,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.GetShowsWithNFT = mdw(e.GetShowsWithNFT)
 			e.GetShowChallenges = mdw(e.GetShowChallenges)
 			e.GetShowByID = mdw(e.GetShowByID)
+			e.GetPublishedShowByID = mdw(e.GetPublishedShowByID)
 			e.GetShowsByCategory = mdw(e.GetShowsByCategory)
 			e.UpdateShow = mdw(e.UpdateShow)
 
@@ -353,6 +360,7 @@ func MakeEndpoints(s service, m ...endpoint.Middleware) Endpoints {
 			e.DeleteEpisodeByID = mdw(e.DeleteEpisodeByID)
 			e.GetActivatedUserEpisodes = mdw(e.GetActivatedUserEpisodes)
 			e.GetEpisodeByID = mdw(e.GetEpisodeByID)
+			e.GetPublishedEpisodeByID = mdw(e.GetPublishedEpisodeByID)
 			e.GetEpisodesByShowID = mdw(e.GetEpisodesByShowID)
 			e.GetAllEpisodesByShowID = mdw(e.GetAllEpisodesByShowID)
 			e.GetEpisodeByIDWithShowAndSeason = mdw(e.GetEpisodeByIDWithShowAndSeason)
@@ -469,6 +477,27 @@ func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 		}
 
 		resp, err := s.GetShowByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetPublishedShowByIDEndpoint ...
+func MakeGetPublishedShowByIDEndpoint(s service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
+
+		id, err := uuid.Parse(request.(string))
+		if err != nil {
+			return nil, fmt.Errorf("%w show id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.GetPublishedShowByID(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -799,7 +828,7 @@ func MakeDeleteEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetEpisodeByIDEndpoint ...
 func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleContentManager, rbac.RoleAdmin); err != nil {
 			return nil, err
 		}
 
@@ -819,6 +848,37 @@ func MakeGetEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.En
 		}
 
 		resp, err := s.GetEpisodeByID(ctx, episodeID, uid)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	}
+}
+
+// MakeGetPublishedEpisodeByIDEndpoint ...
+func MakeGetPublishedEpisodeByIDEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
+			return nil, err
+		}
+
+		uid, err := jwt.UserIDFromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get user profile id: %w", err)
+		}
+
+		req := request.(GetEpisodeByIDRequest)
+		if err := v(req); err != nil {
+			return nil, err
+		}
+
+		episodeID, err := uuid.Parse(req.EpisodeID)
+		if err != nil {
+			return nil, fmt.Errorf("%w episode id: %v", ErrInvalidParameter, err)
+		}
+
+		resp, err := s.GetPublishedEpisodeByID(ctx, episodeID, uid)
 		if err != nil {
 			return nil, err
 		}
