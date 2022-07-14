@@ -1079,7 +1079,7 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, fmt.Errorf("could not add episode #%d for show_id=%s: %w", ep.EpisodeNumber, ep.ShowID.String(), err)
 	}
 
-	episodeByID, err := s.sr.GetPublishedEpisodeByID(ctx, episode.ID)
+	episodeByID, err := s.sr.GetEpisodeByID(ctx, episode.ID)
 	if err != nil {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
 	}
@@ -1095,7 +1095,7 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		}
 	}
 
-	return castPublishedRowToEpisode(episodeByID), nil
+	return castRowToEpisode(episodeByID), nil
 }
 
 // UpdateEpisode ..
@@ -1146,7 +1146,7 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		return fmt.Errorf("could not update episode with id=%s:%w", ep.ID, err)
 	}
 
-	show, err := s.sr.GetPublishedShowByID(ctx, ep.ShowID)
+	show, err := s.sr.GetShowByID(ctx, ep.ShowID)
 	if err != nil {
 		return errors.Wrap(err, "can't get show by id")
 	}
@@ -1558,7 +1558,7 @@ type FullEpisodeData struct {
 }
 
 func (s *Service) GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID, userID uuid.UUID) (FullEpisodeData, error) {
-	episode, err := s.GetEpisodeByID(ctx, episodeID, userID)
+	episode, err := s.GetPublishedEpisodeByID(ctx, episodeID, userID)
 	if err != nil {
 		return FullEpisodeData{}, err
 	}
@@ -1568,7 +1568,7 @@ func (s *Service) GetEpisodeByIDWithShowAndSeason(ctx context.Context, episodeID
 		return FullEpisodeData{}, err
 	}
 
-	show, err := s.GetShowByID(ctx, episode.ShowID)
+	show, err := s.GetPublishedShowByID(ctx, episode.ShowID)
 	if err != nil {
 		return FullEpisodeData{}, err
 	}
