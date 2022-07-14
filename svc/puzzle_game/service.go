@@ -350,6 +350,16 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 }
 
 func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID) (PuzzleGame, error) {
+	if !s.paidStepsEnabled {
+		if _, err := s.pgr.UnlockPuzzleGame(ctx, repository.UnlockPuzzleGameParams{
+			PuzzleGameID: puzzleGameID,
+			UserID:       userID,
+			Steps:        math.MaxInt32,
+		}); err != nil {
+			return PuzzleGame{}, errors.Wrap(err, "can't unlock puzzle game")
+		}
+	}
+
 	img, err := s.GetRandomImageURL(ctx, puzzleGameID)
 	if err != nil {
 		return PuzzleGame{}, errors.Wrap(err, "could not start puzzle game")
