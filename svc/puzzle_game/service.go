@@ -89,6 +89,8 @@ type (
 		// depends on user role
 		Images []PuzzleGameImage `json:"images,omitempty"`
 		Image  string            `json:"image,omitempty"`
+
+		RewardsEnabled bool `json:"rewards_enabled,omitempty"`
 	}
 
 	PuzzleGameImage struct {
@@ -150,6 +152,7 @@ func (s *Service) GetPuzzleGameByID(ctx context.Context, id uuid.UUID) (PuzzleGa
 	result := NewPuzzleGameFromSQLC(puzzleGame)
 	result.Images = puzzleGameImages
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -178,6 +181,7 @@ func (s *Service) GetPuzzleGameByEpisodeID(ctx context.Context, epID uuid.UUID, 
 	result := NewPuzzleGameFromSQLC(puzzleGame)
 	result.Images = puzzleGameImages
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -191,7 +195,9 @@ func (s *Service) CreatePuzzleGame(ctx context.Context, epID uuid.UUID, prizePoo
 		return PuzzleGame{}, errors.Wrap(err, "can't create puzzle game")
 	}
 
-	return NewPuzzleGameFromSQLC(puzzleGame), nil
+	result := NewPuzzleGameFromSQLC(puzzleGame)
+	result.RewardsEnabled = s.rewardsEnabled
+	return result, nil
 }
 
 // UpdatePuzzleGame updates puzzle game settings
@@ -213,6 +219,7 @@ func (s *Service) UpdatePuzzleGame(ctx context.Context, id uuid.UUID, prizePool 
 	result := NewPuzzleGameFromSQLC(puzzleGame)
 	result.Images = puzzleGameImages
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -283,7 +290,13 @@ func (s *Service) GetPuzzleGameForUser(ctx context.Context, userID, episodeID uu
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game by episode id")
 	}
 
-	return s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusNew)
+	result, err := s.getPuzzleGameForUser(ctx, userID, pg, PuzzleGameStatusNew)
+	if err != nil {
+		return PuzzleGame{}, nil
+	}
+
+	result.RewardsEnabled = s.rewardsEnabled
+	return result, nil
 }
 
 func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uuid.UUID, option string) (PuzzleGame, error) {
@@ -332,6 +345,7 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game for user")
 	}
 
+	result.RewardsEnabled = s.rewardsEnabled
 	return result, nil
 }
 
@@ -372,6 +386,7 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 	}
 
 	result.Tiles = p.Tiles
+	result.RewardsEnabled = s.rewardsEnabled
 	return result.HideCorrectPositions(), nil
 }
 
@@ -433,12 +448,17 @@ func getRandomImage(images []PuzzleGameImage) string {
 
 // GetPuzzleGameUnlockOptions returns all available puzzle game unlock options
 func (s *Service) GetPuzzleGameUnlockOptions(ctx context.Context) ([]PuzzleGameUnlockOption, error) {
+	result := make([]PuzzleGameUnlockOption, 0)
+
+	if !s.rewardsEnabled {
+		return result, nil
+	}
+
 	options, err := s.pgr.GetPuzzleGameUnlockOptions(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get puzzle game unlock options")
 	}
 
-	result := make([]PuzzleGameUnlockOption, 0, len(options))
 	for _, opt := range options {
 		result = append(result, PuzzleGameUnlockOption{
 			ID:       opt.ID,
@@ -568,18 +588,19 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 	}
 
 	response := PuzzleGame{
-		ID:           pg.ID,
-		EpisodeID:    pg.EpisodeID,
-		PrizePool:    pg.PrizePool,
-		Rewards:      rewardsAmount,
-		BonusRewards: lockRewardsAmount,
-		PartsX:       pg.PartsX,
-		Steps:        att.Steps,
-		StepsTaken:   att.StepsTaken,
-		Status:       att.Status,
-		Tiles:        controller.Puzzle.Tiles,
-		Images:       nil,
-		Image:        att.Image.String,
+		ID:             pg.ID,
+		EpisodeID:      pg.EpisodeID,
+		PrizePool:      pg.PrizePool,
+		Rewards:        rewardsAmount,
+		BonusRewards:   lockRewardsAmount,
+		PartsX:         pg.PartsX,
+		Steps:          att.Steps,
+		StepsTaken:     att.StepsTaken,
+		Status:         att.Status,
+		Tiles:          controller.Puzzle.Tiles,
+		Images:         nil,
+		Image:          att.Image.String,
+		RewardsEnabled: s.rewardsEnabled,
 	}
 	return response.HideCorrectPositions(), nil
 }
