@@ -69,6 +69,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Get("/{show_id}", httptransport.NewServer(
+		e.GetPublishedShowByID,
+		decodeGetPublishedShowByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{show_id}/all", httptransport.NewServer(
 		e.GetShowByID,
 		decodeGetShowByIDRequest,
 		httpencoder.EncodeResponse,
@@ -177,6 +184,13 @@ func MakeHTTPHandler(e Endpoints, log logger) http.Handler {
 	).ServeHTTP)
 
 	r.Get("/{show_id}/episodes/{episode_id}", httptransport.NewServer(
+		e.GetPublishedEpisodeByID,
+		decodeGetEpisodeByIDRequest,
+		httpencoder.EncodeResponse,
+		options...,
+	).ServeHTTP)
+
+	r.Get("/{show_id}/episodes/{episode_id}/all", httptransport.NewServer(
 		e.GetEpisodeByID,
 		decodeGetEpisodeByIDRequest,
 		httpencoder.EncodeResponse,
@@ -332,6 +346,15 @@ func decodeGetShowChallengesRequest(_ context.Context, r *http.Request) (interfa
 }
 
 func decodeGetShowByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := chi.URLParam(r, "show_id")
+	if id == "" {
+		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
+	}
+
+	return id, nil
+}
+
+func decodeGetPublishedShowByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := chi.URLParam(r, "show_id")
 	if id == "" {
 		return nil, fmt.Errorf("%w: missed show id", ErrInvalidParameter)
