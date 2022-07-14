@@ -90,7 +90,7 @@ type (
 		Images []PuzzleGameImage `json:"images,omitempty"`
 		Image  string            `json:"image,omitempty"`
 
-		RewardsEnabled bool `json:"rewards_enabled,omitempty"`
+		RewardsEnabled bool `json:"rewards_enabled"`
 	}
 
 	PuzzleGameImage struct {
