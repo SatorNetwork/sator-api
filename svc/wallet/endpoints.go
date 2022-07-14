@@ -40,7 +40,7 @@ type (
 		ConfirmTransfer(ctx context.Context, uid, senderWalletID uuid.UUID, tx string) error
 		GetStake(ctx context.Context, userID uuid.UUID) (Stake, error)
 		SetStake(ctx context.Context, userID, walletID uuid.UUID, duration int64, amount float64) (bool, error)
-		Unstake(ctx context.Context, userID, walletID uuid.UUID) error
+		Unstake(ctx context.Context, userID, walletID uuid.UUID, forceUnstake bool) error
 		PossibleMultiplier(ctx context.Context, additionalAmount float64, userID, walletID uuid.UUID) (int32, error)
 		GetEnabledStakeLevelsList(ctx context.Context, userID uuid.UUID) ([]StakeLevel, error)
 		GetSaoWalletByUserID(ctx context.Context, userID uuid.UUID) (UserWallet, error)
@@ -341,7 +341,7 @@ func MakeUnstakeEndpoint(s service, v validator.ValidateFunc) endpoint.Endpoint 
 			return false, fmt.Errorf("could not get wallet id: %w", err)
 		}
 
-		err = s.Unstake(ctx, uid, walletID)
+		err = s.Unstake(ctx, uid, walletID, false)
 		if err != nil {
 			return false, err
 		}

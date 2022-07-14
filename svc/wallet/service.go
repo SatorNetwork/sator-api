@@ -55,6 +55,8 @@ type (
 		claimRewardsPercent  float64
 
 		enableResourceIntensiveQueries bool
+
+		unstakeRetries int
 	}
 
 	// ServiceOption function
@@ -170,6 +172,8 @@ func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, txWatch
 		rewardsTransactionsURL:  "rewards/wallet/%s/transactions",
 
 		minAmountToTransfer: 0,
+
+		unstakeRetries: 1,
 	}
 
 	for _, o := range opt {
@@ -973,7 +977,7 @@ func (s *Service) SetStake(ctx context.Context, userID, walletID uuid.UUID, dura
 }
 
 // Unstake method for unstake
-func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error {
+func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID, forceUnstake bool) error {
 	feePayer, err := s.sc.AccountFromPrivateKeyBytes(s.feePayerSolanaPrivateKey)
 	if err != nil {
 		return err
@@ -1006,15 +1010,15 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 		unstakeDate = stake.UpdatedAt.Time.Add(time.Hour * 24 * time.Duration(stake.StakeDuration.Int32))
 	}
 
-	if time.Now().Before(unstakeDate) {
+	if time.Now().Before(unstakeDate) && !forceUnstake {
 		return fmt.Errorf("unlock time has not yet come, unlock will be availabe at: %s", unstakeDate.String())
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < s.unstakeRetries; i++ {
 		newCtx, cancel := context.WithCancel(context.Background())
 		if tx, err := s.sc.Unstake(newCtx, feePayer, userWallet, stakePool, asset); err != nil {
-			if i < 4 {
-				log.Println(err)
+			if i < s.unstakeRetries-1 {
+				log.Errorln(err)
 			} else {
 				cancel()
 				return fmt.Errorf("transaction: %w", err)
@@ -1030,7 +1034,7 @@ func (s *Service) Unstake(ctx context.Context, userID, walletID uuid.UUID) error
 
 	err = s.wr.DeleteStakeByUserID(ctx, userID)
 	if err != nil {
-		log.Printf("could not delete stake by user id: %v", err)
+		log.Errorln("could not delete stake by user id: %v", err)
 		return nil
 	}
 

@@ -3,7 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/base64"
-	"github.com/SatorNetwork/sator-api/lib/ethereum"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
 	authRepo "github.com/SatorNetwork/sator-api/svc/auth/repository"
 	tx_watcher_svc "github.com/SatorNetwork/sator-api/svc/tx_watcher"
@@ -14,7 +17,6 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 	"github.com/zeebo/errs"
 	"golang.org/x/net/context"
-	"log"
 )
 
 var (
@@ -100,11 +102,6 @@ func main() {
 		log.Fatalf("can't prepare wallet repository: %v", err)
 	}
 
-	ethereumClient, err := ethereum.NewClient()
-	if err != nil {
-		log.Fatalf("failed to init eth client: %v", err)
-	}
-
 	txWatcherRepository, err := tx_watcher_repository.Prepare(ctx, db)
 	if err != nil {
 		log.Fatalf("can't prepare tx watcher repository: %v", err)
@@ -120,7 +117,7 @@ func main() {
 	walletService := wallet.NewService(
 		walletRepository,
 		solanaClient,
-		ethereumClient,
+		nil,
 		txWatcherSvc,
 		wallet.WithAssetSolanaAddress(solanaAssetAddr),
 		wallet.WithSolanaFeePayer(solanaFeePayerAddr, feePayer.PrivateKey),
@@ -145,21 +142,39 @@ func main() {
 	}
 
 	total := len(stakes)
+	log.Infof("total wallets: %d", total)
+
 	for i, s := range stakes {
+		if i > 0 {
+			time.Sleep(time.Second * 30)
+		}
+
 		user, err := authRepository.GetUserByID(ctx, s.UserID)
 		if err != nil {
-			log.Printf("can't get user user_id=%s err: %v", s.UserID, err)
+			log.Errorf("can't get user user_id=%s err: %v", s.UserID, err)
 			continue
 		}
 
-		if user.Disabled {
+		solAcc, err := walletRepository.GetSolanaAccountByUserIDAndType(ctx, walletRepo.GetSolanaAccountByUserIDAndTypeParams{
+			UserID:     s.UserID,
+			WalletType: wallet.WalletTypeSator,
+		})
+		if err != nil {
+			log.Errorf("could not get solana account by user id=%s and type=%s", s.UserID, wallet.WalletTypeSator)
 			continue
 		}
 
-		if err = walletService.Unstake(ctx, s.UserID, s.WalletID); err != nil {
-			log.Printf("can't unstake user_id = %s, wallet_id = %s, err: %v", s.UserID, s.ID, err)
+		log.Infof("%d/%d: %s %.9f wallet: %s", i+1, total, user.Email, s.StakeAmount, solAcc.PublicKey)
+
+		// if user.Disabled {
+		// 	continue
+		// }
+
+		if err = walletService.Unstake(ctx, s.UserID, s.WalletID, true); err != nil {
+			log.Errorf("can't unstake user_id = %s, wallet_id = %s, err: %v", s.UserID, s.ID, err)
 			continue
 		}
-		log.Printf("Unstake for user_id = %s done. %v/%v", s.UserID, i+1, total)
+
+		log.Infof("Unstake for user_id = %s done. %v/%v", s.UserID, i+1, total)
 	}
 }
