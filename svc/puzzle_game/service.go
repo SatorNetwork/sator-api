@@ -396,8 +396,10 @@ func (s *Service) StartPuzzleGame(ctx context.Context, userID, puzzleGameID uuid
 	}
 
 	result.Tiles = p.Tiles
-	result.RewardsEnabled = s.rewardsEnabled
-	return result.HideCorrectPositions(), nil
+	res := result.HideCorrectPositions()
+	res.RewardsEnabled = s.rewardsEnabled
+
+	return res, nil
 }
 
 func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, puzzleGame repository.PuzzleGame, status int32) (PuzzleGame, error) {
@@ -414,6 +416,7 @@ func (s *Service) getPuzzleGameForUser(ctx context.Context, userID uuid.UUID, pu
 	pg.Rewards = att.RewardsAmount
 	pg.BonusRewards = att.BonusAmount
 	pg.Status = att.Status
+	pg.RewardsEnabled = s.rewardsEnabled
 
 	if !att.Image.Valid {
 		img, err := s.GetRandomImageURL(ctx, pg.ID)
