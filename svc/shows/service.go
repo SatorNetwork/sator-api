@@ -960,7 +960,7 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 
 	if show.Status == repository.ShowsStatusTypePublished {
 		if err := s.firebaseSvc.SendNewShowNotification(ctx, show.Title, show.ID); err != nil {
-			return Show{}, errors.Wrap(err, "can't send new show notification")
+			log.Printf("could not send new show notification: %v", err)
 		}
 	}
 
@@ -969,7 +969,12 @@ func (s *Service) AddShow(ctx context.Context, sh Show) (Show, error) {
 
 // UpdateShow ...
 func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
-	err := s.sr.UpdateShow(ctx, repository.UpdateShowParams{
+	oldShow, err := s.sr.GetShowByID(ctx, sh.ID)
+	if err != nil {
+		return fmt.Errorf("could not get show with id=%s: %w", sh.ID, err)
+	}
+
+	if err := s.sr.UpdateShow(ctx, repository.UpdateShowParams{
 		Title:         sh.Title,
 		Cover:         sh.Cover,
 		HasNewEpisode: sh.HasNewEpisode,
@@ -991,13 +996,11 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		},
 		Status: repository.ShowsStatusType(sh.Status),
 		ID:     sh.ID,
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("could not update show with id=%s:%w", sh.ID, err)
 	}
 
-	err = s.sr.DeleteShowToCategoryByShowID(ctx, sh.ID)
-	if err != nil && !db.IsNotFoundError(err) {
+	if err := s.sr.DeleteShowToCategoryByShowID(ctx, sh.ID); err != nil && !db.IsNotFoundError(err) {
 		return fmt.Errorf("could not delete categories with show id=%s: %w", sh.ID, err)
 	}
 
@@ -1010,9 +1013,10 @@ func (s *Service) UpdateShow(ctx context.Context, sh Show) error {
 		}
 	}
 
-	if repository.ShowsStatusType(sh.Status) == repository.ShowsStatusTypePublished {
+	if oldShow.Status != repository.ShowsStatusTypePublished &&
+		repository.ShowsStatusType(sh.Status) == repository.ShowsStatusTypePublished {
 		if err := s.firebaseSvc.SendNewShowNotification(ctx, sh.Title, sh.ID); err != nil {
-			return errors.Wrap(err, "can't send new show notification")
+			log.Printf("can't send new show notification: %v", err)
 		}
 	}
 
@@ -1084,14 +1088,14 @@ func (s *Service) AddEpisode(ctx context.Context, ep Episode) (Episode, error) {
 		return Episode{}, fmt.Errorf("could not get episode with id=%s: %w", episode.ID, err)
 	}
 
-	show, err := s.sr.GetPublishedShowByID(ctx, ep.ShowID)
+	show, err := s.sr.GetShowByID(ctx, ep.ShowID)
 	if err != nil {
 		return Episode{}, errors.Wrap(err, "can't get show by id")
 	}
 
-	if show.Status == repository.ShowsStatusTypePublished {
+	if show.Status == repository.ShowsStatusTypePublished && episode.Status == repository.EpisodesStatusTypePublished {
 		if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, show.Title, ep.Title, show.ID, ep.SeasonID, episode.ID); err != nil {
-			return Episode{}, errors.Wrap(err, "can't send new show notification")
+			log.Printf("can't send new episode notification: %v", err)
 		}
 	}
 
@@ -1103,6 +1107,11 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 	rDate, err := utils.DateFromString(ep.ReleaseDate)
 	if err != nil {
 		return fmt.Errorf("could not add parse date from string: %w", err)
+	}
+
+	oldEpisode, err := s.sr.GetEpisodeByID(ctx, ep.ID)
+	if err != nil {
+		return fmt.Errorf("could not get episode with id=%s:%w", ep.ID, err)
 	}
 
 	params := repository.UpdateEpisodeParams{
@@ -1151,9 +1160,12 @@ func (s *Service) UpdateEpisode(ctx context.Context, ep Episode) error {
 		return errors.Wrap(err, "can't get show by id")
 	}
 
-	if repository.EpisodesStatusType(ep.Status) == repository.EpisodesStatusTypePublished {
+	if show.Status == repository.ShowsStatusTypePublished &&
+		oldEpisode.Status != repository.EpisodesStatusTypePublished &&
+		repository.EpisodesStatusType(ep.Status) == repository.EpisodesStatusTypePublished {
+
 		if err := s.firebaseSvc.SendNewEpisodeNotification(ctx, show.Title, ep.Title, show.ID, ep.SeasonID, ep.ID); err != nil {
-			return errors.Wrap(err, "can't send new show notification")
+			log.Printf("can't send new show notification: %v", err)
 		}
 	}
 
