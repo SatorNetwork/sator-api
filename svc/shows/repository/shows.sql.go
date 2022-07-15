@@ -35,7 +35,7 @@ VALUES (
     $7,
     $8,
     $9::shows_status_type
-) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+) RETURNING id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at
 `
 
 type AddShowParams struct {
@@ -76,14 +76,15 @@ func (q *Queries) AddShow(ctx context.Context, arg AddShowParams) (Show, error) 
 		&i.RealmsSubtitle,
 		&i.Watch,
 		&i.Status,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const deleteShowByID = `-- name: DeleteShowByID :exec
 UPDATE shows
-SET status = 'archived'::shows_status_type
-WHERE id = $1
+SET deleted_at = NOW()
+WHERE id = $1 AND shows.deleted_at IS NULL
 `
 
 func (q *Queries) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
@@ -92,8 +93,9 @@ func (q *Queries) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllShows = `-- name: GetAllShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at
 FROM shows
+WHERE shows.deleted_at IS NULL
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -127,6 +129,7 @@ func (q *Queries) GetAllShows(ctx context.Context, arg GetAllShowsParams) ([]Sho
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Status,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -151,11 +154,11 @@ WITH show_claps_sum AS (
     GROUP BY show_id  
 )
 SELECT 
-    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.status,
+    shows.id, shows.title, shows.cover, shows.has_new_episode, shows.updated_at, shows.created_at, shows.category, shows.description, shows.realms_title, shows.realms_subtitle, shows.watch, shows.status, shows.deleted_at,
     COALESCE(show_claps_sum.claps, 0) as claps
 FROM shows
 LEFT JOIN show_claps_sum ON show_claps_sum.show_id = shows.id
-WHERE shows.id = $1 AND shows.status = 'published'::shows_status_type
+WHERE shows.id = $1 AND shows.status = 'published'::shows_status_type AND shows.deleted_at IS NULL
 `
 
 type GetPublishedShowByIDRow struct {
@@ -171,6 +174,7 @@ type GetPublishedShowByIDRow struct {
 	RealmsSubtitle sql.NullString  `json:"realms_subtitle"`
 	Watch          sql.NullString  `json:"watch"`
 	Status         ShowsStatusType `json:"status"`
+	DeletedAt      sql.NullTime    `json:"deleted_at"`
 	Claps          int64           `json:"claps"`
 }
 
@@ -190,15 +194,17 @@ func (q *Queries) GetPublishedShowByID(ctx context.Context, id uuid.UUID) (GetPu
 		&i.RealmsSubtitle,
 		&i.Watch,
 		&i.Status,
+		&i.DeletedAt,
 		&i.Claps,
 	)
 	return i, err
 }
 
 const getPublishedShows = `-- name: GetPublishedShows :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at
 FROM shows
 WHERE status = 'published'::shows_status_type
+AND shows.deleted_at IS NULL
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -232,6 +238,7 @@ func (q *Queries) GetPublishedShows(ctx context.Context, arg GetPublishedShowsPa
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Status,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -247,9 +254,9 @@ func (q *Queries) GetPublishedShows(ctx context.Context, arg GetPublishedShowsPa
 }
 
 const getShowByID = `-- name: GetShowByID :one
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at
 FROM shows
-WHERE shows.id = $1
+WHERE shows.id = $1 AND shows.deleted_at IS NULL
 `
 
 func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
@@ -268,18 +275,20 @@ func (q *Queries) GetShowByID(ctx context.Context, id uuid.UUID) (Show, error) {
 		&i.RealmsSubtitle,
 		&i.Watch,
 		&i.Status,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getShowsByCategory = `-- name: GetShowsByCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status FROM shows
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at FROM shows
 WHERE id IN(
         SELECT DISTINCT show_id FROM shows_to_categories
               JOIN show_categories ON show_categories.id = shows_to_categories.category_id
         WHERE show_categories.disabled = FALSE
           AND show_categories.id = $1)
 AND status = 'published'::shows_status_type
+AND shows.deleted_at IS NULL
 ORDER BY has_new_episode DESC,
          updated_at DESC,
          created_at DESC
@@ -314,6 +323,7 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Status,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -329,10 +339,11 @@ func (q *Queries) GetShowsByCategory(ctx context.Context, arg GetShowsByCategory
 }
 
 const getShowsByOldCategory = `-- name: GetShowsByOldCategory :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at
 FROM shows
 WHERE status = 'published'::shows_status_type
 AND category = $1::varchar
+AND shows.deleted_at IS NULL
 ORDER BY has_new_episode DESC,
     updated_at DESC,
     created_at DESC
@@ -367,6 +378,7 @@ func (q *Queries) GetShowsByOldCategory(ctx context.Context, arg GetShowsByOldCa
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Status,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -382,9 +394,10 @@ func (q *Queries) GetShowsByOldCategory(ctx context.Context, arg GetShowsByOldCa
 }
 
 const getShowsByStatus = `-- name: GetShowsByStatus :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at
 FROM shows
 WHERE status = $1::shows_status_type
+AND shows.deleted_at IS NULL
 LIMIT $3 OFFSET $2
 `
 
@@ -416,6 +429,7 @@ func (q *Queries) GetShowsByStatus(ctx context.Context, arg GetShowsByStatusPara
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Status,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -431,8 +445,8 @@ func (q *Queries) GetShowsByStatus(ctx context.Context, arg GetShowsByStatusPara
 }
 
 const getShowsByTitle = `-- name: GetShowsByTitle :many
-SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status FROM shows
-WHERE title = $1
+SELECT id, title, cover, has_new_episode, updated_at, created_at, category, description, realms_title, realms_subtitle, watch, status, deleted_at FROM shows
+WHERE title = $1 AND shows.deleted_at IS NULL
 `
 
 func (q *Queries) GetShowsByTitle(ctx context.Context, title string) ([]Show, error) {
@@ -457,6 +471,7 @@ func (q *Queries) GetShowsByTitle(ctx context.Context, title string) ([]Show, er
 			&i.RealmsSubtitle,
 			&i.Watch,
 			&i.Status,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -482,7 +497,7 @@ SET title = $1,
     realms_subtitle = $7,
     watch = $8,
     status = $9::shows_status_type
-WHERE id = $10
+WHERE id = $10 AND shows.deleted_at IS NULL
 `
 
 type UpdateShowParams struct {

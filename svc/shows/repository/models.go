@@ -68,6 +68,7 @@ type Episode struct {
 	HintText                sql.NullString     `json:"hint_text"`
 	Watch                   sql.NullString     `json:"watch"`
 	Status                  EpisodesStatusType `json:"status"`
+	DeletedAt               sql.NullTime       `json:"deleted_at"`
 }
 
 type Rating struct {
@@ -107,6 +108,7 @@ type Show struct {
 	RealmsSubtitle sql.NullString  `json:"realms_subtitle"`
 	Watch          sql.NullString  `json:"watch"`
 	Status         ShowsStatusType `json:"status"`
+	DeletedAt      sql.NullTime    `json:"deleted_at"`
 }
 
 type ShowCategory struct {
