@@ -127,7 +127,8 @@ type (
 
 		// Seasons
 		AddSeason(ctx context.Context, arg repository.AddSeasonParams) (repository.Season, error)
-		DeleteSeasonByID(ctx context.Context, arg repository.DeleteSeasonByIDParams) error
+		DeleteSeasonByID(ctx context.Context, id uuid.UUID) error
+		DeleteSeasonByShowID(ctx context.Context, showID uuid.UUID) error
 		GetSeasonByID(ctx context.Context, id uuid.UUID) (repository.Season, error)
 		GetSeasonsByShowID(ctx context.Context, arg repository.GetSeasonsByShowIDParams) ([]repository.Season, error)
 
@@ -140,6 +141,8 @@ type (
 		GetAllEpisodesByShowID(ctx context.Context, arg repository.GetAllEpisodesByShowIDParams) ([]repository.GetAllEpisodesByShowIDRow, error)
 		GetEpisodesByStatus(ctx context.Context, arg repository.GetEpisodesByStatusParams) ([]repository.Episode, error)
 		DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error
+		DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error
+		DeleteEpisodeBySeasonID(ctx context.Context, seasonID uuid.NullUUID) error
 		UpdateEpisode(ctx context.Context, arg repository.UpdateEpisodeParams) error
 		LinkEpisodeChallenges(ctx context.Context, arg repository.LinkEpisodeChallengesParams) error
 
@@ -1029,6 +1032,14 @@ func (s *Service) DeleteShowByID(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("could not delete show with id=%s:%w", id, err)
 	}
 
+	if err := s.sr.DeleteSeasonByShowID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete seasons with show id=%s:%w", id, err)
+	}
+
+	if err := s.sr.DeleteEpisodeByShowID(ctx, id); err != nil {
+		return fmt.Errorf("could not delete episodes with show id=%s:%w", id, err)
+	}
+
 	return nil
 }
 
@@ -1221,12 +1232,13 @@ func (s *Service) GetSeasonByID(ctx context.Context, showID, seasonID uuid.UUID)
 }
 
 // DeleteSeasonByID ...
-func (s *Service) DeleteSeasonByID(ctx context.Context, showID, seasonID uuid.UUID) error {
-	if err := s.sr.DeleteSeasonByID(ctx, repository.DeleteSeasonByIDParams{
-		ID:     seasonID,
-		ShowID: showID,
-	}); err != nil {
+func (s *Service) DeleteSeasonByID(ctx context.Context, _, seasonID uuid.UUID) error {
+	if err := s.sr.DeleteSeasonByID(ctx, seasonID); err != nil {
 		return fmt.Errorf("could not delete season with id=%s:%w", seasonID, err)
+	}
+
+	if err := s.sr.DeleteEpisodeBySeasonID(ctx, uuid.NullUUID{UUID: seasonID, Valid: seasonID != uuid.Nil}); err != nil {
+		return fmt.Errorf("could not delete episodes with season id=%s:%w", seasonID, err)
 	}
 
 	return nil

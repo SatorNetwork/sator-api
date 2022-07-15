@@ -51,11 +51,20 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteEpisodeByIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEpisodeByID: %w", err)
 	}
+	if q.deleteEpisodeBySeasonIDStmt, err = db.PrepareContext(ctx, deleteEpisodeBySeasonID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteEpisodeBySeasonID: %w", err)
+	}
+	if q.deleteEpisodeByShowIDStmt, err = db.PrepareContext(ctx, deleteEpisodeByShowID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteEpisodeByShowID: %w", err)
+	}
 	if q.deleteReviewStmt, err = db.PrepareContext(ctx, deleteReview); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteReview: %w", err)
 	}
 	if q.deleteSeasonByIDStmt, err = db.PrepareContext(ctx, deleteSeasonByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteSeasonByID: %w", err)
+	}
+	if q.deleteSeasonByShowIDStmt, err = db.PrepareContext(ctx, deleteSeasonByShowID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteSeasonByShowID: %w", err)
 	}
 	if q.deleteShowByIDStmt, err = db.PrepareContext(ctx, deleteShowByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteShowByID: %w", err)
@@ -242,6 +251,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteEpisodeByIDStmt: %w", cerr)
 		}
 	}
+	if q.deleteEpisodeBySeasonIDStmt != nil {
+		if cerr := q.deleteEpisodeBySeasonIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteEpisodeBySeasonIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteEpisodeByShowIDStmt != nil {
+		if cerr := q.deleteEpisodeByShowIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteEpisodeByShowIDStmt: %w", cerr)
+		}
+	}
 	if q.deleteReviewStmt != nil {
 		if cerr := q.deleteReviewStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteReviewStmt: %w", cerr)
@@ -250,6 +269,11 @@ func (q *Queries) Close() error {
 	if q.deleteSeasonByIDStmt != nil {
 		if cerr := q.deleteSeasonByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteSeasonByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteSeasonByShowIDStmt != nil {
+		if cerr := q.deleteSeasonByShowIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteSeasonByShowIDStmt: %w", cerr)
 		}
 	}
 	if q.deleteShowByIDStmt != nil {
@@ -525,8 +549,11 @@ type Queries struct {
 	allReviewsListStmt                        *sql.Stmt
 	countUserClapsStmt                        *sql.Stmt
 	deleteEpisodeByIDStmt                     *sql.Stmt
+	deleteEpisodeBySeasonIDStmt               *sql.Stmt
+	deleteEpisodeByShowIDStmt                 *sql.Stmt
 	deleteReviewStmt                          *sql.Stmt
 	deleteSeasonByIDStmt                      *sql.Stmt
+	deleteSeasonByShowIDStmt                  *sql.Stmt
 	deleteShowByIDStmt                        *sql.Stmt
 	deleteShowCategoryByIDStmt                *sql.Stmt
 	deleteShowToCategoryByShowIDStmt          *sql.Stmt
@@ -587,8 +614,11 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		allReviewsListStmt:                        q.allReviewsListStmt,
 		countUserClapsStmt:                        q.countUserClapsStmt,
 		deleteEpisodeByIDStmt:                     q.deleteEpisodeByIDStmt,
+		deleteEpisodeBySeasonIDStmt:               q.deleteEpisodeBySeasonIDStmt,
+		deleteEpisodeByShowIDStmt:                 q.deleteEpisodeByShowIDStmt,
 		deleteReviewStmt:                          q.deleteReviewStmt,
 		deleteSeasonByIDStmt:                      q.deleteSeasonByIDStmt,
+		deleteSeasonByShowIDStmt:                  q.deleteSeasonByShowIDStmt,
 		deleteShowByIDStmt:                        q.deleteShowByIDStmt,
 		deleteShowCategoryByIDStmt:                q.deleteShowCategoryByIDStmt,
 		deleteShowToCategoryByShowIDStmt:          q.deleteShowToCategoryByShowIDStmt,

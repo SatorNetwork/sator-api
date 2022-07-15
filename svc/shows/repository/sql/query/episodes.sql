@@ -13,7 +13,7 @@ SELECT
     coalesce(avg_ratings.avg_rating, 0) as avg_rating,
     coalesce(avg_ratings.ratings, 0) as ratings
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
 AND episodes.status = 'published'::episodes_status_type
@@ -26,7 +26,7 @@ SELECT
     episodes.*, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 WHERE episodes.show_id = $1
 AND episodes.deleted_at IS NULL
 ORDER BY episodes.episode_number DESC
@@ -37,7 +37,7 @@ SELECT
     episodes.*, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 WHERE episodes.id = $1 
 AND episodes.status = 'published'::episodes_status_type
 AND episodes.deleted_at IS NULL;
@@ -47,7 +47,7 @@ SELECT
     episodes.*, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 WHERE episodes.id = $1 AND episodes.deleted_at IS NULL;
 
 -- name: GetPublishedRawEpisodeByID :one
@@ -119,6 +119,16 @@ UPDATE episodes
 SET deleted_at = NOW()
 WHERE id = @id AND episodes.deleted_at IS NULL;
 
+-- name: DeleteEpisodeByShowID :exec
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE show_id = @show_id AND episodes.deleted_at IS NULL;
+
+-- name: DeleteEpisodeBySeasonID :exec
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE season_id = @season_id AND episodes.deleted_at IS NULL;
+
 -- name: GetEpisodeIDByVerificationChallengeID :one
 SELECT id
 FROM episodes
@@ -135,8 +145,8 @@ SELECT
     seasons.season_number as season_number,
     shows.title as show_title
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
-JOIN shows ON shows.id = episodes.show_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
+JOIN shows ON shows.id = episodes.show_id AND shows.deleted_at IS NULL
 WHERE episodes.id = ANY(@episode_ids::uuid[])
 AND episodes.status = 'published'::episodes_status_type
 AND episodes.deleted_at IS NULL

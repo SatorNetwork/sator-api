@@ -90,9 +90,10 @@ type ReviewsRating struct {
 }
 
 type Season struct {
-	ID           uuid.UUID `json:"id"`
-	ShowID       uuid.UUID `json:"show_id"`
-	SeasonNumber int32     `json:"season_number"`
+	ID           uuid.UUID    `json:"id"`
+	ShowID       uuid.UUID    `json:"show_id"`
+	SeasonNumber int32        `json:"season_number"`
+	DeletedAt    sql.NullTime `json:"deleted_at"`
 }
 
 type Show struct {

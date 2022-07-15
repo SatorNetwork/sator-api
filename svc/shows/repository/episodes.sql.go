@@ -108,12 +108,34 @@ func (q *Queries) DeleteEpisodeByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteEpisodeBySeasonID = `-- name: DeleteEpisodeBySeasonID :exec
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE season_id = $1 AND episodes.deleted_at IS NULL
+`
+
+func (q *Queries) DeleteEpisodeBySeasonID(ctx context.Context, seasonID uuid.NullUUID) error {
+	_, err := q.exec(ctx, q.deleteEpisodeBySeasonIDStmt, deleteEpisodeBySeasonID, seasonID)
+	return err
+}
+
+const deleteEpisodeByShowID = `-- name: DeleteEpisodeByShowID :exec
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE show_id = $1 AND episodes.deleted_at IS NULL
+`
+
+func (q *Queries) DeleteEpisodeByShowID(ctx context.Context, showID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteEpisodeByShowIDStmt, deleteEpisodeByShowID, showID)
+	return err
+}
+
 const getAllEpisodesByShowID = `-- name: GetAllEpisodesByShowID :many
 SELECT 
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, episodes.deleted_at, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 WHERE episodes.show_id = $1
 AND episodes.deleted_at IS NULL
 ORDER BY episodes.episode_number DESC
@@ -192,7 +214,7 @@ SELECT
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, episodes.deleted_at, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 WHERE episodes.id = $1 AND episodes.deleted_at IS NULL
 `
 
@@ -326,7 +348,7 @@ SELECT
     episodes.id, episodes.show_id, episodes.season_id, episodes.episode_number, episodes.cover, episodes.title, episodes.description, episodes.release_date, episodes.updated_at, episodes.created_at, episodes.challenge_id, episodes.verification_challenge_id, episodes.hint_text, episodes.watch, episodes.status, episodes.deleted_at, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 WHERE episodes.id = $1 
 AND episodes.status = 'published'::episodes_status_type
 AND episodes.deleted_at IS NULL
@@ -392,7 +414,7 @@ SELECT
     coalesce(avg_ratings.avg_rating, 0) as avg_rating,
     coalesce(avg_ratings.ratings, 0) as ratings
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
 AND episodes.status = 'published'::episodes_status_type
@@ -478,8 +500,8 @@ SELECT
     seasons.season_number as season_number,
     shows.title as show_title
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
-JOIN shows ON shows.id = episodes.show_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
+JOIN shows ON shows.id = episodes.show_id AND shows.deleted_at IS NULL
 WHERE episodes.id = ANY($1::uuid[])
 AND episodes.status = 'published'::episodes_status_type
 AND episodes.deleted_at IS NULL
