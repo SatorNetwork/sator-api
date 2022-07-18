@@ -467,9 +467,9 @@ func MakeGetShowChallengesEndpoint(s service, v validator.ValidateFunc) endpoint
 // MakeGetShowByIDEndpoint ...
 func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		// if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
-		// 	return nil, err
-		// }
+		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+			return nil, err
+		}
 
 		id, err := uuid.Parse(request.(string))
 		if err != nil {
@@ -488,7 +488,7 @@ func MakeGetShowByIDEndpoint(s service) endpoint.Endpoint {
 // MakeGetPublishedShowByIDEndpoint ...
 func MakeGetPublishedShowByIDEndpoint(s service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		if err := rbac.CheckRoleFromContext(ctx, rbac.RoleAdmin, rbac.RoleContentManager); err != nil {
+		if err := rbac.CheckRoleFromContext(ctx, rbac.AvailableForAuthorizedUsers); err != nil {
 			return nil, err
 		}
 
