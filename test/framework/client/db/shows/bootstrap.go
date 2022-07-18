@@ -36,6 +36,7 @@ func (db *DB) Bootstrap(ctx context.Context) error {
 				String: "test-watch",
 				Valid:  true,
 			},
+			Status: shows_repository.ShowsStatusTypePublished,
 		})
 		if err != nil {
 			return err

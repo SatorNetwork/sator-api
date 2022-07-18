@@ -2,6 +2,7 @@ package announcements
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/SatorNetwork/sator-api/lib/rbac"
+	"github.com/SatorNetwork/sator-api/lib/utils"
 	announcement_repository "github.com/SatorNetwork/sator-api/svc/announcement/repository"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
@@ -37,12 +39,18 @@ func TestAdminEndpoints(t *testing.T) {
 	actionUrl1 := "action-url-1"
 	startsAt1 := time.Now().Unix()
 	endsAt1 := time.Now().Unix()
+	announcementType := "type-1"
+	typeSpecificParams := map[string]string{
+		"key": "value",
+	}
 	resp, err := c.Announcement.CreateAnnouncement(user.AccessToken(), &announcement.CreateAnnouncementRequest{
-		Title:       title1,
-		Description: description1,
-		ActionUrl:   actionUrl1,
-		StartsAt:    startsAt1,
-		EndsAt:      endsAt1,
+		Title:              title1,
+		Description:        description1,
+		ActionUrl:          actionUrl1,
+		StartsAt:           startsAt1,
+		EndsAt:             endsAt1,
+		Type:               announcementType,
+		TypeSpecificParams: typeSpecificParams,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.ID)
@@ -57,8 +65,10 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrl1, announcement1.ActionUrl)
 	require.Equal(t, startsAt1, announcement1.StartsAt)
 	require.Equal(t, endsAt1, announcement1.EndsAt)
+	require.Equal(t, announcementType, announcement1.Type)
+	require.Equal(t, typeSpecificParams, announcement1.TypeSpecificParams)
 
-	announcements, err := c.Announcement.ListAnnouncements(user.AccessToken())
+	announcements, err := c.Announcement.ListAnnouncements(user.AccessToken(), &utils.PaginationRequest{})
 	require.NoError(t, err)
 	announcement1, err = findAnnouncementByID(announcements, resp.ID)
 	require.NoError(t, err)
@@ -68,19 +78,27 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrl1, announcement1.ActionUrl)
 	require.Equal(t, startsAt1, announcement1.StartsAt)
 	require.Equal(t, endsAt1, announcement1.EndsAt)
+	require.Equal(t, announcementType, announcement1.Type)
+	require.Equal(t, typeSpecificParams, announcement1.TypeSpecificParams)
 
 	titleUpd := "title-upd"
 	descriptionUpd := "description-upd"
 	actionUrlUpd := "action-url-upd"
 	startsAtUpd := time.Now().Unix()
 	endsAtUpd := time.Now().Unix()
+	announcementTypeUpd := "type-upd"
+	typeSpecificParamsUpd := map[string]string{
+		"key": "value-upd",
+	}
 	err = c.Announcement.UpdateAnnouncement(user.AccessToken(), &announcement.UpdateAnnouncementRequest{
-		ID:          resp.ID,
-		Title:       titleUpd,
-		Description: descriptionUpd,
-		ActionUrl:   actionUrlUpd,
-		StartsAt:    startsAtUpd,
-		EndsAt:      endsAtUpd,
+		ID:                 resp.ID,
+		Title:              titleUpd,
+		Description:        descriptionUpd,
+		ActionUrl:          actionUrlUpd,
+		StartsAt:           startsAtUpd,
+		EndsAt:             endsAtUpd,
+		Type:               announcementTypeUpd,
+		TypeSpecificParams: typeSpecificParamsUpd,
 	})
 	require.NoError(t, err)
 
@@ -94,6 +112,8 @@ func TestAdminEndpoints(t *testing.T) {
 	require.Equal(t, actionUrlUpd, announcement1.ActionUrl)
 	require.Equal(t, startsAtUpd, announcement1.StartsAt)
 	require.Equal(t, endsAtUpd, announcement1.EndsAt)
+	require.Equal(t, announcementTypeUpd, announcement1.Type)
+	require.Equal(t, typeSpecificParamsUpd, announcement1.TypeSpecificParams)
 
 	err = c.Announcement.DeleteAnnouncement(user.AccessToken(), &announcement.DeleteAnnouncementRequest{
 		ID: resp.ID,
@@ -117,10 +137,16 @@ func TestAdminEndpoints(t *testing.T) {
 			StartsAt:    startsAt2,
 			EndsAt:      endsAt2,
 		})
-		announcements, err := c.Announcement.ListActiveAnnouncements(user.AccessToken())
+		announcements, err := c.Announcement.ListActiveAnnouncements(user.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		_, err = findAnnouncementByID(announcements, resp2.ID)
 		require.NoError(t, err)
+	}
+
+	{
+		resp, err := c.Announcement.GetAnnouncementTypes(user.AccessToken())
+		require.NoError(t, err)
+		require.Equal(t, []string{"show", "episode", "link"}, resp.Types)
 	}
 }
 
@@ -150,7 +176,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-1",
 			ActionUrl:   "action-url-1",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 
@@ -195,11 +221,11 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-2",
 			ActionUrl:   "action-url-2",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 
-		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(announcements))
 
@@ -208,7 +234,7 @@ func TestUserEndpoints(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Equal(t, 0, len(announcements))
 
@@ -221,7 +247,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-3",
 			ActionUrl:   "action-url-3",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 		resp4, err := c.Announcement.CreateAnnouncement(user1.AccessToken(), &announcement.CreateAnnouncementRequest{
@@ -229,13 +255,13 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-4",
 			ActionUrl:   "action-url-4",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
-		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 2)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 4)
 
@@ -243,19 +269,19 @@ func TestUserEndpoints(t *testing.T) {
 		markAsRead(t, c, user2, announcementID2)
 		markAsRead(t, c, user2, resp3.ID)
 		markAsRead(t, c, user2, resp4.ID)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 2)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 0)
 
 		markAsRead(t, c, user1, resp3.ID)
 		markAsRead(t, c, user1, resp4.ID)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 0)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 0)
 	}
@@ -266,7 +292,7 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-5",
 			ActionUrl:   "action-url-5",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
 		_, err = c.Announcement.CreateAnnouncement(user1.AccessToken(), &announcement.CreateAnnouncementRequest{
@@ -274,31 +300,138 @@ func TestUserEndpoints(t *testing.T) {
 			Description: "description-6",
 			ActionUrl:   "action-url-6",
 			StartsAt:    time.Now().Unix(),
-			EndsAt:      time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
 		})
 		require.NoError(t, err)
-		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err := c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 2)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 2)
 
 		markAllAsRead(t, c, user1)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 0)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 2)
 
 		markAllAsRead(t, c, user2)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user1.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 0)
-		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken())
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user2.AccessToken(), &utils.PaginationRequest{})
 		require.NoError(t, err)
 		require.Len(t, announcements, 0)
+	}
+}
+
+func TestPagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	defer app_config.RunAndWait()()
+
+	c := client.NewClient()
+	err := c.DB.AnnouncementsDB().Repository().CleanUpReadAnnouncements(context.Background())
+	require.NoError(t, err)
+	err = c.DB.AnnouncementsDB().Repository().CleanUpAnnouncements(context.Background())
+	require.NoError(t, err)
+
+	signUpRequest := auth.RandomSignUpRequest()
+	user := user.NewInitializedUser(signUpRequest, t)
+	user.SetRole(rbac.RoleAdmin)
+	user.RefreshToken()
+
+	announcementNum := 5
+	for i := 0; i < announcementNum; i++ {
+		resp, err := c.Announcement.CreateAnnouncement(user.AccessToken(), &announcement.CreateAnnouncementRequest{
+			Title:       fmt.Sprintf("title-%v", i),
+			Description: fmt.Sprintf("description-%v", i),
+			ActionUrl:   fmt.Sprintf("action-url-%v", i),
+			StartsAt:    time.Now().Unix(),
+			EndsAt:      time.Now().Add(time.Hour).Unix(),
+			Type:        fmt.Sprintf("type-%v", i),
+			TypeSpecificParams: map[string]string{
+				"key": "value",
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp.ID)
+	}
+
+	{
+		itemsPerPage := int32(2)
+		announcements, err := c.Announcement.ListAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         1,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 2)
+
+		announcements, err = c.Announcement.ListAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         2,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 2)
+
+		announcements, err = c.Announcement.ListAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         3,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 1)
+	}
+
+	{
+		itemsPerPage := int32(2)
+		announcements, err := c.Announcement.ListUnreadAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         1,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 2)
+
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         2,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 2)
+
+		announcements, err = c.Announcement.ListUnreadAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         3,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 1)
+	}
+
+	{
+		itemsPerPage := int32(2)
+		announcements, err := c.Announcement.ListActiveAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         1,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 2)
+
+		announcements, err = c.Announcement.ListActiveAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         2,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 2)
+
+		announcements, err = c.Announcement.ListActiveAnnouncements(user.AccessToken(), &utils.PaginationRequest{
+			Page:         3,
+			ItemsPerPage: itemsPerPage,
+		})
+		require.NoError(t, err)
+		require.Len(t, announcements, 1)
 	}
 }
 

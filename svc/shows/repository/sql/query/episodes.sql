@@ -1,4 +1,4 @@
--- name: GetEpisodesByShowID :many
+-- name: GetPublishedEpisodesByShowID :many
 WITH avg_ratings AS (
     SELECT 
         episode_id,
@@ -13,24 +13,53 @@ SELECT
     coalesce(avg_ratings.avg_rating, 0) as avg_rating,
     coalesce(avg_ratings.ratings, 0) as ratings
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
 LEFT JOIN avg_ratings ON episodes.id = avg_ratings.episode_id
 WHERE episodes.show_id = $1
-AND episodes.archived = FALSE
+AND episodes.status = 'published'::episodes_status_type
+AND episodes.deleted_at IS NULL
 ORDER BY episodes.episode_number DESC
     LIMIT $2 OFFSET $3;
+
+-- name: GetAllEpisodesByShowID :many
+SELECT 
+    episodes.*, 
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
+WHERE episodes.show_id = $1
+AND episodes.deleted_at IS NULL
+ORDER BY episodes.episode_number DESC
+    LIMIT $2 OFFSET $3;
+
+-- name: GetPublishedEpisodeByID :one
+SELECT 
+    episodes.*, 
+    seasons.season_number as season_number
+FROM episodes
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
+WHERE episodes.id = $1 
+AND episodes.status = 'published'::episodes_status_type
+AND episodes.deleted_at IS NULL;
 
 -- name: GetEpisodeByID :one
 SELECT 
     episodes.*, 
     seasons.season_number as season_number
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
-WHERE episodes.id = $1 AND episodes.archived = FALSE;
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
+WHERE episodes.id = $1 AND episodes.deleted_at IS NULL;
+
+-- name: GetPublishedRawEpisodeByID :one
+SELECT * FROM episodes
+WHERE episodes.id = $1 
+AND episodes.status = 'published'::episodes_status_type 
+AND episodes.deleted_at IS NULL;
 
 -- name: GetRawEpisodeByID :one
 SELECT * FROM episodes
-WHERE episodes.id = $1 AND episodes.archived = FALSE;
+WHERE episodes.id = $1
+AND episodes.deleted_at IS NULL;
 
 -- name: AddEpisode :one
 INSERT INTO episodes (
@@ -44,20 +73,22 @@ INSERT INTO episodes (
     challenge_id,
     verification_challenge_id,
     hint_text,
-    watch
+    watch,
+    status
 )
 VALUES (
-           @show_id,
-           @season_id,
-           @episode_number,
-           @cover,
-           @title,
-           @description,
-           @release_date,
-           @challenge_id,
-           @verification_challenge_id,
-           @hint_text,
-           @watch
+    @show_id,
+    @season_id,
+    @episode_number,
+    @cover,
+    @title,
+    @description,
+    @release_date,
+    @challenge_id,
+    @verification_challenge_id,
+    @hint_text,
+    @watch,
+    @status::episodes_status_type
 ) RETURNING *;
 
 -- name: UpdateEpisode :exec
@@ -72,42 +103,58 @@ SET episode_number = @episode_number,
     description = @description,
     release_date = @release_date,
     hint_text = @hint_text,
-    watch = @watch
-WHERE id = @id;
+    watch = @watch,
+    status = @status::episodes_status_type
+WHERE id = @id
+AND episodes.deleted_at IS NULL;
 
 -- name: LinkEpisodeChallenges :exec
 UPDATE episodes
 SET challenge_id = @challenge_id,
     verification_challenge_id = @verification_challenge_id
-WHERE id = @id;
+WHERE id = @id AND episodes.deleted_at IS NULL;
 
 -- name: DeleteEpisodeByID :exec
-DELETE FROM episodes
-WHERE id = @id;
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE id = @id AND episodes.deleted_at IS NULL;
+
+-- name: DeleteEpisodeByShowID :exec
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE show_id = @show_id AND episodes.deleted_at IS NULL;
+
+-- name: DeleteEpisodeBySeasonID :exec
+UPDATE episodes
+SET deleted_at = NOW()
+WHERE season_id = @season_id AND episodes.deleted_at IS NULL;
 
 -- name: GetEpisodeIDByVerificationChallengeID :one
 SELECT id
 FROM episodes
-WHERE verification_challenge_id = $1;
+WHERE verification_challenge_id = $1 AND episodes.deleted_at IS NULL;
 
 -- name: GetEpisodeIDByQuizChallengeID :one
 SELECT id
 FROM episodes
-WHERE challenge_id = $1;
+WHERE challenge_id = $1 AND episodes.deleted_at IS NULL;
 
--- name: GetListEpisodesByIDs :many
+-- name: GetPublishedListEpisodesByIDs :many
 SELECT
     episodes.*,
     seasons.season_number as season_number,
     shows.title as show_title
 FROM episodes
-JOIN seasons ON seasons.id = episodes.season_id
-JOIN shows ON shows.id = episodes.show_id
+JOIN seasons ON seasons.id = episodes.season_id AND seasons.deleted_at IS NULL
+JOIN shows ON shows.id = episodes.show_id AND shows.deleted_at IS NULL
 WHERE episodes.id = ANY(@episode_ids::uuid[])
-AND episodes.archived = FALSE
+AND episodes.status = 'published'::episodes_status_type
+AND episodes.deleted_at IS NULL
 ORDER BY episodes.episode_number DESC;
 
--- name: GetAllEpisodes :many
+-- name: GetEpisodesByStatus :many
 SELECT *
 FROM episodes
-WHERE archived = FALSE;
+WHERE status = @status::episodes_status_type
+AND episodes.deleted_at IS NULL
+LIMIT @limit_val OFFSET @offset_val;

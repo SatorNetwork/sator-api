@@ -38,6 +38,8 @@ type (
 		qr         interfaces.QuizV2Repository
 
 		serverRSAPrivateKey *rsa.PrivateKey
+
+		disableRewardsForQuiz bool
 	}
 
 	authClient interface {
@@ -88,16 +90,17 @@ func NewService(
 	)
 
 	s := &Service{
-		engine:              engine,
-		restrictionManager:  restrictionManager,
-		natsURL:             natsURL,
-		natsWSURL:           natsWSURL,
-		challenges:          challenges,
-		ac:                  ac,
-		pc:                  pc,
-		dbClient:            dbClient,
-		qr:                  qr,
-		serverRSAPrivateKey: serverRSAPrivateKey,
+		engine:                engine,
+		restrictionManager:    restrictionManager,
+		natsURL:               natsURL,
+		natsWSURL:             natsWSURL,
+		challenges:            challenges,
+		ac:                    ac,
+		pc:                    pc,
+		dbClient:              dbClient,
+		qr:                    qr,
+		serverRSAPrivateKey:   serverRSAPrivateKey,
+		disableRewardsForQuiz: disableRewardsForQuiz,
 	}
 
 	return s
@@ -193,7 +196,9 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 		return challenge_service.Challenge{}, err
 	}
 
-	challenge.CurrentPrizePool = fmt.Sprintf("%v SAO", currentPrizePool)
+	if !s.disableRewardsForQuiz {
+		challenge.CurrentPrizePool = fmt.Sprintf("%v SAO", currentPrizePool)
+	}
 	challenge.CurrentPrizePoolAmount = currentPrizePool
 
 	roomDetails, err := s.engine.GetRoomDetails(challengeID.String())

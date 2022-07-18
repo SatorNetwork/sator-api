@@ -49,7 +49,7 @@ type (
 
 	// FIXME: remove it when the app will be fixed
 	showsRepository interface {
-		GetEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetEpisodeByIDRow, error)
+		GetPublishedEpisodeByID(ctx context.Context, id uuid.UUID) (showRepository.GetPublishedEpisodeByIDRow, error)
 		GetEpisodeIDByVerificationChallengeID(ctx context.Context, verificationChallengeID uuid.NullUUID) (uuid.UUID, error)
 		GetEpisodeIDByQuizChallengeID(ctx context.Context, quizChallengeID uuid.NullUUID) (uuid.UUID, error)
 	}
@@ -281,7 +281,7 @@ func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid
 
 // GetVerificationQuestionByEpisodeID ...
 func (s *Service) GetVerificationQuestionByEpisodeID(ctx context.Context, episodeID, userID uuid.UUID) (interface{}, error) {
-	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
+	ep, err := s.showRepo.GetPublishedEpisodeByID(ctx, episodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
 	}
@@ -1095,7 +1095,7 @@ func (s *Service) ListIDsAvailableUserEpisodes(ctx context.Context, userID uuid.
 
 // GetAttemptsLeftForVerificationQuestion ...
 func (s *Service) GetAttemptsLeftForVerificationQuestion(ctx context.Context, episodeID, userID uuid.UUID) (int64, error) {
-	ep, err := s.showRepo.GetEpisodeByID(ctx, episodeID)
+	ep, err := s.showRepo.GetPublishedEpisodeByID(ctx, episodeID)
 	if err != nil {
 		return 0, fmt.Errorf("could not found episode with id=%s: %w", episodeID, err)
 	}

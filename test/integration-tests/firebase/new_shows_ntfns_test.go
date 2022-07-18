@@ -10,6 +10,7 @@ import (
 	lib_google_firebase "github.com/SatorNetwork/sator-api/lib/google_firebase"
 	"github.com/SatorNetwork/sator-api/lib/rbac"
 	solana_lib "github.com/SatorNetwork/sator-api/lib/solana"
+	shows_repository "github.com/SatorNetwork/sator-api/svc/shows/repository"
 	"github.com/SatorNetwork/sator-api/test/app_config"
 	"github.com/SatorNetwork/sator-api/test/framework/client"
 	"github.com/SatorNetwork/sator-api/test/framework/client/auth"
@@ -45,8 +46,9 @@ func TestShowsNotifications(t *testing.T) {
 	user.RefreshToken()
 
 	show, err := c.ShowsClient.AddShow(user.AccessToken(), &shows_client.AddShowRequest{
-		Title: "title1",
-		Cover: "cover1",
+		Title:  "title1",
+		Cover:  "cover1",
+		Status: string(shows_repository.ShowsStatusTypePublished),
 	})
 	require.NoError(t, err)
 
@@ -61,6 +63,7 @@ func TestShowsNotifications(t *testing.T) {
 		SeasonID:    season.Id,
 		Title:       "title1",
 		ReleaseDate: time.Now().Format(time.RFC3339),
+		Status:      string(shows_repository.EpisodesStatusTypePublished),
 	})
 	require.NoError(t, err)
 }

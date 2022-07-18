@@ -18,7 +18,7 @@ INSERT INTO seasons (
 ) VALUES (
     $1,
     $2
-) RETURNING id, show_id, season_number
+) RETURNING id, show_id, season_number, deleted_at
 `
 
 type AddSeasonParams struct {
@@ -29,42 +29,59 @@ type AddSeasonParams struct {
 func (q *Queries) AddSeason(ctx context.Context, arg AddSeasonParams) (Season, error) {
 	row := q.queryRow(ctx, q.addSeasonStmt, addSeason, arg.ShowID, arg.SeasonNumber)
 	var i Season
-	err := row.Scan(&i.ID, &i.ShowID, &i.SeasonNumber)
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonNumber,
+		&i.DeletedAt,
+	)
 	return i, err
 }
 
 const deleteSeasonByID = `-- name: DeleteSeasonByID :exec
-DELETE FROM seasons
-WHERE id = $1 AND show_id = $2
+UPDATE seasons
+SET deleted_at = NOW()
+WHERE id = $1 AND seasons.deleted_at IS NULL
 `
 
-type DeleteSeasonByIDParams struct {
-	ID     uuid.UUID `json:"id"`
-	ShowID uuid.UUID `json:"show_id"`
+func (q *Queries) DeleteSeasonByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteSeasonByIDStmt, deleteSeasonByID, id)
+	return err
 }
 
-func (q *Queries) DeleteSeasonByID(ctx context.Context, arg DeleteSeasonByIDParams) error {
-	_, err := q.exec(ctx, q.deleteSeasonByIDStmt, deleteSeasonByID, arg.ID, arg.ShowID)
+const deleteSeasonByShowID = `-- name: DeleteSeasonByShowID :exec
+UPDATE seasons
+SET deleted_at = NOW()
+WHERE show_id = $1 AND seasons.deleted_at IS NULL
+`
+
+func (q *Queries) DeleteSeasonByShowID(ctx context.Context, showID uuid.UUID) error {
+	_, err := q.exec(ctx, q.deleteSeasonByShowIDStmt, deleteSeasonByShowID, showID)
 	return err
 }
 
 const getSeasonByID = `-- name: GetSeasonByID :one
-SELECT id, show_id, season_number
+SELECT id, show_id, season_number, deleted_at
 FROM seasons
-WHERE id = $1
+WHERE id = $1 AND seasons.deleted_at IS NULL
 `
 
 func (q *Queries) GetSeasonByID(ctx context.Context, id uuid.UUID) (Season, error) {
 	row := q.queryRow(ctx, q.getSeasonByIDStmt, getSeasonByID, id)
 	var i Season
-	err := row.Scan(&i.ID, &i.ShowID, &i.SeasonNumber)
+	err := row.Scan(
+		&i.ID,
+		&i.ShowID,
+		&i.SeasonNumber,
+		&i.DeletedAt,
+	)
 	return i, err
 }
 
 const getSeasonsByShowID = `-- name: GetSeasonsByShowID :many
-SELECT id, show_id, season_number
+SELECT id, show_id, season_number, deleted_at
 FROM seasons
-WHERE show_id = $1
+WHERE show_id = $1 AND seasons.deleted_at IS NULL
 ORDER BY season_number DESC
 LIMIT $2 OFFSET $3
 `
@@ -84,7 +101,12 @@ func (q *Queries) GetSeasonsByShowID(ctx context.Context, arg GetSeasonsByShowID
 	var items []Season
 	for rows.Next() {
 		var i Season
-		if err := rows.Scan(&i.ID, &i.ShowID, &i.SeasonNumber); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShowID,
+			&i.SeasonNumber,
+			&i.DeletedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

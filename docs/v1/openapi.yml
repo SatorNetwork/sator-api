@@ -208,6 +208,10 @@ components:
           type: number
         ends_at:
           type: number
+        type:
+          type: string
+        type_specific_params:
+          type: object
 
     Announcements:
       type: array
@@ -503,6 +507,9 @@ components:
               energy_recovery_current:
                 type: number
                 description: Time left to recover energy
+              character_id:
+                type: string
+                description: Player's character id
 
     NFTPack:
       description: NFT Packs.
@@ -1369,6 +1376,35 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
+  /wallets/sao:
+    get:
+      tags:
+        - "Wallet"
+      summary: Get SAO wallet of current user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Get SAO wallet of current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallet_public_key:
+                    type: string
+                  wallet_private_key:
+                    type: string
+                  token_symbol:
+                    type: string
+                    example: "SAO"
+                  token_mint_address:
+                    type: string
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /wallets/{wallet_id}:
     get:
       tags:
@@ -2030,6 +2066,166 @@ paths:
                     description:
                       type: string
                       example: "Fast Questions! More detailed description about this challenge here. We can use couple senteces."
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/status/{status}:
+    get:
+      tags:
+        - "Shows"
+      summary: Get shows by status.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: status
+          in: path
+          description: Show status.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Returns shows list with pagination.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    title:
+                      type: string
+                      example: "Peaky Blinders"
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    has_new_episode:
+                      type: boolean
+                      example: true
+                    claps:
+                      type: integer
+                      example: 234
+                    realms_title:
+                      type: string
+                      example: "Realms"
+                    realms_subtitle:
+                      type: string
+                      example: "Watch on Netflix. Then earn SAO. "
+                    watch:
+                      type: string
+                      example: "https://youtube.com/ERGbevesrf"
+                    has_nft:
+                      type: boolean
+                    categories:
+                      type: array
+                      items:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/episodes/status/{status}:
+    get:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Get episodes by status.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: status
+          in: path
+          description: Episode status.
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: |
+            Set needed page number.
+            
+            By default, it returns the first page with a set number of items.
+          required: false
+          schema:
+            type: integer
+        - name: items_per_page
+          in: query
+          description: |
+            Set needed items per page.
+            
+            By default returns 20 items per page.
+          required: false
+          schema:
+            type: integer
+
+      responses:
+        "200":
+          description: Returns list episodes by status.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    show_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    season_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    episode_number:
+                      type: number
+                      example: 13
+                    cover:
+                      type: string
+                      example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                    title:
+                      type: string
+                      example: "Pilot episode"
+                    show_title:
+                      type: string
+                      example: "Peaky Blinders"
+                    description:
+                      type: string
+                      example: "description"
+                    release_date:
+                      type: string
+                      example: "2006-01-02T15:04:05Z07:00"
+                    challenge_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                    verification_challenge_id:
+                      type: string
+                      example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -2701,6 +2897,145 @@ paths:
                     verification_challenge_id:
                       type: string
                       example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /shows/episodes/{episode_id}:
+    get:
+      tags:
+        - "Shows"
+        - "Episodes"
+      summary: Get episode by id with show and season objects.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: episode_id
+          in: path
+          description: Episode ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns episode by id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  show:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      title:
+                        type: string
+                        example: "Peaky Blinders"
+                      cover:
+                        type: string
+                        example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                      has_new_episode:
+                        type: boolean
+                        example: true
+                      claps:
+                        type: integer
+                        example: 234
+                      realms_title:
+                        type: string
+                        example: "Realms"
+                      realms_subtitle:
+                        type: string
+                        example: "Watch on Netflix. Then earn SAO. "
+                      watch:
+                        type: string
+                        example: "https://youtube.com/ERGbevesrf"
+                      has_nft:
+                        type: boolean
+                      categories:
+                        type: array
+                        items:
+                          type: string
+                          example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+
+                  season:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      show_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      season_number:
+                        type: number
+                        example: 13
+
+                  episode:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      show_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      season_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      episode_number:
+                        type: number
+                        example: 13
+                      cover:
+                        type: string
+                        example: "https://m.media-amazon.com/images/M/MV5BZDUwYWJkNTMtYWMzZC00NGE3LWEzYTYtYjAzZjk0M2MzMDQxXkEyXkFqcGdeQXVyNzk4MTAyOTA@._V1_FMjpg_UX1024_.jpg"
+                      title:
+                        type: string
+                        example: "Peaky Blinders"
+                      description:
+                        type: string
+                        example: "description"
+                      release_date:
+                        type: string
+                        example: "2006-01-02T15:04:05Z07:00"
+                      challenge_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      verification_challenge_id:
+                        type: string
+                        example: "f4f78cac-5db6-4ecc-ad13-5877705f3126"
+                      rating:
+                        type: number
+                        example: 8.76
+                        description: "Average episode rating. To get percents: rating * 10 = 87.6% people like it."
+                      ratings_count:
+                        type: number
+                        example: 123
+                        description: "How many times episode was rated"
+                      users_episode_rating:
+                        type: number
+                        example: 7
+                        description: "Rating set by the user"
+                      active_users:
+                        type: number
+                        example: 12
+                        description: "How  many users have access to episode"
+                      user_rewards_amount:
+                        type: number
+                        example: 12
+                        description: "episode received reward amount by user"
+                      total_rewards_amount:
+                        type: number
+                        example: 12
+                        description: "episode received reward amount by all users"
+                      hint_text:
+                        type: string
+                        example: "hint text"
+                      watch:
+                        type: string
+                        example: "www.watch.com/this_episode"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -4717,7 +5052,7 @@ paths:
         - "NFT"
       summary: Buy NFT Via Marketplace
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: mint_address
           in: path
@@ -6363,6 +6698,32 @@ paths:
         "404":
           $ref: "#/components/responses/DefaultError"
 
+  /gapi/select-character:
+    post:
+      tags:
+        - "Unity Game API"
+      summary: Select NFT.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                character_id:
+                  type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
   /gapi/start-game:
     post:
       tags:
@@ -6590,7 +6951,7 @@ paths:
     put:
       tags:
         - "Unity Game API / Settings API"
-      summary: Claim rewards. Convert in-game currency to SAO.
+      summary: Update setting value by key.
       security:
         - bearerAuth: []
       parameters:
@@ -6830,7 +7191,7 @@ paths:
         - "Announcement"
       summary: Create announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -6848,6 +7209,10 @@ paths:
                   type: number
                 ends_at:
                   type: number
+                type:
+                  type: string
+                type_specific_params:
+                  type: object
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6863,7 +7228,7 @@ paths:
         - "Announcement"
       summary: Get announcements.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcements"
@@ -6880,7 +7245,7 @@ paths:
         - "Announcement"
       summary: Get announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcement"
@@ -6896,7 +7261,7 @@ paths:
         - "Announcement"
       summary: Update announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -6914,6 +7279,10 @@ paths:
                   type: number
                 ends_at:
                   type: number
+                type:
+                  type: string
+                type_specific_params:
+                  type: object
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6929,7 +7298,7 @@ paths:
         - "Announcement"
       summary: Delete announcement.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6946,7 +7315,7 @@ paths:
         - "Announcement"
       summary: Get unread announcements.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcements"
@@ -6963,7 +7332,7 @@ paths:
         - "Announcement"
       summary: Get active announcements.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/Announcements"
@@ -6980,7 +7349,7 @@ paths:
         - "Announcement"
       summary: Mark announcement as read.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
@@ -6997,10 +7366,36 @@ paths:
         - "Announcement"
       summary: Mark all announcements as read.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         "200":
           $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+
+  /announcement/types:
+    get:
+      tags:
+        - "Announcement"
+      summary: Get available announcement types.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Array of available announcement types.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  types:
+                    type: array
+                    items:
+                      type: string
         "400":
           $ref: "#/components/responses/DefaultError"
         "401":
