@@ -1248,6 +1248,7 @@ paths:
   /auth/request-destroy-account:
     post:
       tags:
+        - "Auth"
         - "Users"
       summary: Used for request destroy account.
       security:
@@ -1269,6 +1270,7 @@ paths:
   /auth/verify-destroy-account-code:
     post:
       tags:
+        - "Auth"
         - "Users"
       summary: Used for verify destroy account code.
       security:
@@ -1300,6 +1302,7 @@ paths:
   /auth/destroy:
     post:
       tags:
+        - "Auth"
         - "Users"
       summary: Used for destroy account.
       security:
