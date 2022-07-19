@@ -1245,6 +1245,89 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
+  /auth/request-destroy-account:
+    post:
+      tags:
+        - "Users"
+      summary: Used for request destroy account.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/DefaultError"
+
+  /auth/verify-destroy-account-code:
+    post:
+      tags:
+        - "Users"
+      summary: Used for verify destroy account code.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/DefaultError"
+
+  /auth/destroy:
+    post:
+      tags:
+        - "Users"
+      summary: Used for destroy account.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          $ref: "#/components/responses/ResultSuccess"
+        "400":
+          $ref: "#/components/responses/DefaultError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/DefaultError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/DefaultError"
+
   /profile:
     get:
       tags:
@@ -2077,7 +2160,7 @@ paths:
         - "Shows"
       summary: Get shows by status.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: status
           in: path
@@ -2089,7 +2172,7 @@ paths:
           in: query
           description: |
             Set needed page number.
-            
+
             By default, it returns the first page with a set number of items.
           required: false
           schema:
@@ -2098,7 +2181,7 @@ paths:
           in: query
           description: |
             Set needed items per page.
-            
+
             By default returns 20 items per page.
           required: false
           schema:
@@ -2156,7 +2239,7 @@ paths:
         - "Episodes"
       summary: Get episodes by status.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - name: status
           in: path
@@ -2168,7 +2251,7 @@ paths:
           in: query
           description: |
             Set needed page number.
-            
+
             By default, it returns the first page with a set number of items.
           required: false
           schema:
@@ -2177,7 +2260,7 @@ paths:
           in: query
           description: |
             Set needed items per page.
-            
+
             By default returns 20 items per page.
           required: false
           schema:
@@ -6704,7 +6787,7 @@ paths:
         - "Unity Game API"
       summary: Select NFT.
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
