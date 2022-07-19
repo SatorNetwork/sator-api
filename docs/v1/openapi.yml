@@ -1249,7 +1249,7 @@ paths:
     post:
       tags:
         - "Auth"
-        - "Users"
+        - "Profile"
       summary: Used for request destroy account.
       security:
         - bearerAuth: []
@@ -1271,7 +1271,7 @@ paths:
     post:
       tags:
         - "Auth"
-        - "Users"
+        - "Profile"
       summary: Used for verify destroy account code.
       security:
         - bearerAuth: []
@@ -1303,7 +1303,7 @@ paths:
     post:
       tags:
         - "Auth"
-        - "Users"
+        - "Profile"
       summary: Used for destroy account.
       security:
         - bearerAuth: []
