@@ -1282,7 +1282,7 @@ paths:
             schema:
               type: object
               properties:
-                code:
+                otp:
                   type: string
                   example: "123456"
       responses:
@@ -1314,7 +1314,7 @@ paths:
             schema:
               type: object
               properties:
-                code:
+                otp:
                   type: string
                   example: "123456"
       responses:

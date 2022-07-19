@@ -658,7 +658,7 @@ func MakeDestroyAccountEndpoint(s authService, v validator.ValidateFunc) endpoin
 			return nil, fmt.Errorf("could not get user id: %w", err)
 		}
 
-		if err := s.ValidateDestroyAccountCode(ctx, uid, req.OTP); err != nil {
+		if err := s.DestroyAccount(ctx, uid, req.OTP); err != nil {
 			return nil, err
 		}
 
@@ -847,7 +847,7 @@ func MakeGetBlacklistEndpoint(s authService, v validator.ValidateFunc) endpoint.
 
 // MakeGetAccessTokenByUserIDEndpoint ...
 func MakeGetAccessTokenByUserIDEndpoint(s authService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		uid, err := jwt.UserIDFromContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not get user id: %w", err)

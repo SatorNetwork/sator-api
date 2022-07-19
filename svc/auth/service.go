@@ -1049,12 +1049,12 @@ func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) erro
 // it's needed to implement the destroy account flow on the client.
 func (s *Service) ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID, otp string) error {
 	v, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
-		RequestType: repository.VerifyResetPassword,
+		RequestType: repository.VerifyDestroyAccount,
 		UserID:      uid,
 	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return fmt.Errorf("%w user with given email address", ErrNotFound)
+			return fmt.Errorf("%w destroy account request for this user", ErrNotFound)
 		}
 		return fmt.Errorf("could not get user with given email address: %w", err)
 	}
