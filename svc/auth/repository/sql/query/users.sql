@@ -41,12 +41,12 @@ WHERE username = $1
 LIMIT 1;
 
 -- name: CreateUser :one
-INSERT INTO users (email, username, password, role, sanitized_email)
-VALUES ($1, $2, $3, $4, $5) RETURNING *;
+INSERT INTO users (email, username, password, role, sanitized_email, email_hash)
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
 
 -- name: UpdateUserEmail :exec
 UPDATE users
-SET email = $2, sanitized_email = $3
+SET email = $2, sanitized_email = $3, email_hash = $4
 WHERE id = $1;
 
 -- name: UpdateUsername :exec
@@ -78,7 +78,9 @@ UPDATE users
 SET email = 'deleted',
     username = 'deleted',
     password = NULL,
-    disabled = TRUE
+    disabled = TRUE,
+    sanitized_email = NULL,
+    public_key = NULL
 WHERE id = @user_id;
 
 -- name: IsUserDisabled :one

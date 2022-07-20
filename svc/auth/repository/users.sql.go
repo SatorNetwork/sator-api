@@ -46,8 +46,8 @@ func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, username, password, role, sanitized_email)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+INSERT INTO users (email, username, password, role, sanitized_email, email_hash)
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
 `
 
 type CreateUserParams struct {
@@ -56,6 +56,7 @@ type CreateUserParams struct {
 	Password       []byte         `json:"password"`
 	Role           string         `json:"role"`
 	SanitizedEmail sql.NullString `json:"sanitized_email"`
+	EmailHash      sql.NullString `json:"email_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -65,6 +66,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Password,
 		arg.Role,
 		arg.SanitizedEmail,
+		arg.EmailHash,
 	)
 	var i User
 	err := row.Scan(
@@ -101,7 +103,9 @@ UPDATE users
 SET email = 'deleted',
     username = 'deleted',
     password = NULL,
-    disabled = TRUE
+    disabled = TRUE,
+    sanitized_email = NULL,
+    public_key = NULL
 WHERE id = $1
 `
 
@@ -466,7 +470,7 @@ func (q *Queries) UpdatePublicKey(ctx context.Context, arg UpdatePublicKeyParams
 
 const updateUserEmail = `-- name: UpdateUserEmail :exec
 UPDATE users
-SET email = $2, sanitized_email = $3
+SET email = $2, sanitized_email = $3, email_hash = $4
 WHERE id = $1
 `
 
@@ -474,10 +478,16 @@ type UpdateUserEmailParams struct {
 	ID             uuid.UUID      `json:"id"`
 	Email          string         `json:"email"`
 	SanitizedEmail sql.NullString `json:"sanitized_email"`
+	EmailHash      sql.NullString `json:"email_hash"`
 }
 
 func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
-	_, err := q.exec(ctx, q.updateUserEmailStmt, updateUserEmail, arg.ID, arg.Email, arg.SanitizedEmail)
+	_, err := q.exec(ctx, q.updateUserEmailStmt, updateUserEmail,
+		arg.ID,
+		arg.Email,
+		arg.SanitizedEmail,
+		arg.EmailHash,
+	)
 	return err
 }
 
