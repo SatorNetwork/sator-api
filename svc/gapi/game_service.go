@@ -145,7 +145,7 @@ func (s *Service) GetPlayerInfo(ctx context.Context, uid uuid.UUID) (*PlayerInfo
 
 	lastEnergyRecoveredAt := player.EnergyRefilledAt
 	if recoveryEnergy > 0 {
-		lastEnergyRecoveredAt = time.Now()
+		lastEnergyRecoveredAt = player.EnergyRefilledAt.Add(energyRecoveryPeriod * time.Duration(recoveryEnergy))
 		if err := s.gameRepo.RefillEnergyOfPlayer(ctx, repository.RefillEnergyOfPlayerParams{
 			UserID:           uid,
 			EnergyPoints:     energy,

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/rsa"
 	"database/sql"
 	"errors"
@@ -231,6 +232,7 @@ func (s *Service) Login(ctx context.Context, email, password, deviceID string) (
 			ID:             user.ID,
 			Email:          user.Email,
 			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+			EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", user.ID, user.Email, err)
 		}
@@ -317,6 +319,7 @@ func (s *Service) RefreshToken(ctx context.Context, uid uuid.UUID, username, rol
 			ID:             u.ID,
 			Email:          u.Email,
 			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+			EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
 		}
@@ -428,6 +431,7 @@ func (s *Service) SignUp(ctx context.Context, email, password, username, deviceI
 	u, err := s.ur.CreateUser(ctx, repository.CreateUserParams{
 		Email:          email,
 		SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 		Password:       passwdHash,
 		Username:       username,
 		Role:           rbac.RoleUser.String(),
@@ -515,6 +519,7 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 			ID:             u.ID,
 			Email:          u.Email,
 			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+			EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
 		}
@@ -685,6 +690,7 @@ func (s *Service) VerifyAccount(ctx context.Context, userID uuid.UUID, otp strin
 			ID:             u.ID,
 			Email:          u.Email,
 			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+			EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
 		}
@@ -786,6 +792,7 @@ func (s *Service) RequestChangeEmail(ctx context.Context, userID uuid.UUID, emai
 			ID:             u.ID,
 			Email:          u.Email,
 			SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+			EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 		}); err != nil {
 			log.Printf("could not add sanitizesd email for user with id=%s and email=%s: %v", u.ID, u.Email, err)
 		}
@@ -893,6 +900,7 @@ func (s *Service) UpdateEmail(ctx context.Context, userID uuid.UUID, email, otp 
 		ID:             userID,
 		Email:          email,
 		SanitizedEmail: sql.NullString{String: sanitizedEmail, Valid: true},
+		EmailHash:      sql.NullString{String: fmt.Sprintf("%x", md5.Sum([]byte(sanitizedEmail))), Valid: true},
 	}); err != nil {
 		return fmt.Errorf("could not update email: %w", err)
 	}
@@ -1049,12 +1057,12 @@ func (s *Service) RequestDestroyAccount(ctx context.Context, uid uuid.UUID) erro
 // it's needed to implement the destroy account flow on the client.
 func (s *Service) ValidateDestroyAccountCode(ctx context.Context, uid uuid.UUID, otp string) error {
 	v, err := s.ur.GetUserVerificationByUserID(ctx, repository.GetUserVerificationByUserIDParams{
-		RequestType: repository.VerifyResetPassword,
+		RequestType: repository.VerifyDestroyAccount,
 		UserID:      uid,
 	})
 	if err != nil {
 		if db.IsNotFoundError(err) {
-			return fmt.Errorf("%w user with given email address", ErrNotFound)
+			return fmt.Errorf("%w destroy account request for this user", ErrNotFound)
 		}
 		return fmt.Errorf("could not get user with given email address: %w", err)
 	}
