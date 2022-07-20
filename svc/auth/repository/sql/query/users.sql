@@ -75,8 +75,8 @@ WHERE id = @user_id;
 
 -- name: DestroyUser :exec
 UPDATE users
-SET email = 'deleted',
-    username = 'deleted',
+SET email = email_hash,
+    username = email_hash,
     password = NULL,
     disabled = TRUE,
     sanitized_email = NULL,

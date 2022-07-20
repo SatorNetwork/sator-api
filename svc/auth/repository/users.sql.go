@@ -100,8 +100,8 @@ func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
 
 const destroyUser = `-- name: DestroyUser :exec
 UPDATE users
-SET email = 'deleted',
-    username = 'deleted',
+SET email = email_hash,
+    username = email_hash,
     password = NULL,
     disabled = TRUE,
     sanitized_email = NULL,
