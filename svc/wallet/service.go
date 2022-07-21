@@ -55,6 +55,8 @@ type (
 		claimRewardsPercent  float64
 
 		enableResourceIntensiveQueries bool
+
+		enableRewardsWallet bool
 	}
 
 	// ServiceOption function
@@ -170,6 +172,8 @@ func NewService(wr walletRepository, sc solanaClient, ec ethereumClient, txWatch
 		rewardsTransactionsURL:  "rewards/wallet/%s/transactions",
 
 		minAmountToTransfer: 0,
+
+		enableRewardsWallet: true,
 	}
 
 	for _, o := range opt {
@@ -223,6 +227,11 @@ func (s *Service) GetWallets(ctx context.Context, uid uuid.UUID) (Wallets, error
 	for _, w := range wallets {
 		if w.WalletType == WalletTypeEthereum {
 			// disable etherium wallet
+			continue
+		}
+
+		if w.WalletType == WalletTypeRewards && !s.enableRewardsWallet {
+			// disable rewards wallet
 			continue
 		}
 
