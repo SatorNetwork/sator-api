@@ -61,3 +61,9 @@ func WithResourceIntensiveQueries(enable bool) ServiceOption {
 		s.enableResourceIntensiveQueries = enable
 	}
 }
+
+func WithRewardsWalletEnabled(enable bool) ServiceOption {
+	return func(s *Service) {
+		s.enableRewardsWallet = enable
+	}
+}

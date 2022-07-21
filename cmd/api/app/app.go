@@ -180,6 +180,7 @@ type Config struct {
 	UnityGameFeeCollectorAddress   string
 	UnityGameTokenPoolPrivateKey   string
 	DisableRewardsForQuiz          bool
+	RewardsWalletEnabled           bool
 }
 
 var buildTag string
@@ -249,7 +250,8 @@ func ConfigFromEnv() *Config {
 		CompanyAddress: env.GetString("COMPANY_ADDRESS", "New York"),
 
 		// Rewards
-		HoldRewardsPeriod: env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		HoldRewardsPeriod:    env.GetDuration("HOLD_REWARDS_PERIOD", 0),
+		RewardsWalletEnabled: env.GetBool("REWARDS_WALLET_ENABLED", true),
 
 		// Invitation
 		InvitationReward: env.GetFloat("INVITATION_REWARD", 0),
@@ -575,6 +577,7 @@ func (a *app) Run() {
 			wallet.WithTokenTransferPercent(a.cfg.TokenTransferPercent),
 			wallet.WithClaimRewardsPercent(a.cfg.ClaimRewardsPercent),
 			wallet.WithResourceIntensiveQueries(a.cfg.EnableResourceIntensiveQueries),
+			wallet.WithRewardsWalletEnabled(a.cfg.RewardsWalletEnabled),
 		)
 		walletSvcClient = walletClient.New(walletService)
 		r.Mount("/wallets", wallet.MakeHTTPHandler(
