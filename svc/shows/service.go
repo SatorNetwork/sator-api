@@ -1306,7 +1306,12 @@ func (s *Service) GetReviewsList(ctx context.Context, episodeID uuid.UUID, limit
 func (s *Service) castReviewsList(ctx context.Context, source []repository.ReviewsListRow, currentUserID uuid.UUID) []Review {
 	result := make([]Review, 0, len(source))
 	for _, r := range source {
-		result = append(result, s.castReview(ctx, r, currentUserID))
+		review, err := s.castReview(ctx, r, currentUserID)
+		if err != nil {
+			log.Printf("can't cast review: %v", err)
+			continue
+		}
+		result = append(result, review)
 	}
 
 	return result
@@ -1315,21 +1320,27 @@ func (s *Service) castReviewsList(ctx context.Context, source []repository.Revie
 func (s *Service) castReviewsListByUserID(ctx context.Context, source []repository.ReviewsListByUserIDRow, currentUserID uuid.UUID) []Review {
 	result := make([]Review, 0, len(source))
 	for _, r := range source {
-		result = append(result, s.castReview(ctx, repository.ReviewsListRow(r), currentUserID))
+		review, err := s.castReview(ctx, repository.ReviewsListRow(r), currentUserID)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		result = append(result, review)
 	}
 
 	return result
 }
 
-func (s *Service) castReview(ctx context.Context, source repository.ReviewsListRow, currentUserID uuid.UUID) Review {
+func (s *Service) castReview(ctx context.Context, source repository.ReviewsListRow, currentUserID uuid.UUID) (Review, error) {
 	prof, err := s.pc.GetProfileByUserID(ctx, source.UserID, "")
 	if err != nil {
-		log.Printf("could not get profile by user id: %v", err)
+		return Review{}, fmt.Errorf("could not get profile by userID=%s: %w", source.UserID, err)
 	}
 	username, err := s.ac.GetUsernameByID(ctx, source.UserID)
 	if err != nil {
-		log.Printf("could not get username by user id: %v", err)
+		return Review{}, fmt.Errorf("could not get username by userID=%s: %w", source.UserID, err)
 	}
+
 	isLiked, _ := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
 		UserID:   currentUserID,
 		ReviewID: source.ID,
@@ -1338,6 +1349,7 @@ func (s *Service) castReview(ctx context.Context, source repository.ReviewsListR
 			Valid: true,
 		},
 	})
+
 	isDisliked, _ := s.sr.IsUserRatedReview(ctx, repository.IsUserRatedReviewParams{
 		UserID:   currentUserID,
 		ReviewID: source.ID,
@@ -1346,6 +1358,7 @@ func (s *Service) castReview(ctx context.Context, source repository.ReviewsListR
 			Valid: true,
 		},
 	})
+
 	return Review{
 		ID:         source.ID.String(),
 		UserID:     source.UserID.String(),
@@ -1359,7 +1372,7 @@ func (s *Service) castReview(ctx context.Context, source repository.ReviewsListR
 		Dislikes:   source.DislikesNumber,
 		IsLiked:    isLiked,
 		IsDisliked: isDisliked,
-	}
+	}, nil
 }
 
 // DeleteReviewByID ..
