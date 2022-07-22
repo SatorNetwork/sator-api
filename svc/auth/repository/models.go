@@ -31,6 +31,7 @@ type User struct {
 	EmailHash      sql.NullString `json:"email_hash"`
 	KycStatus      sql.NullString `json:"kyc_status"`
 	PublicKey      sql.NullString `json:"public_key"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
 }
 
 type UserVerification struct {

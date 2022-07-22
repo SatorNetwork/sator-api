@@ -25,6 +25,7 @@ WHERE sanitized_email IN (
     )
 AND sanitized_email NOT IN (SELECT allowed_value FROM whitelist WHERE allowed_type = 'email')
 AND disabled = FALSE
+AND deleted_at IS NULL
 `
 
 func (q *Queries) BlockUsersWithDuplicateEmail(ctx context.Context) error {
@@ -35,7 +36,7 @@ func (q *Queries) BlockUsersWithDuplicateEmail(ctx context.Context) error {
 const countAllUsers = `-- name: CountAllUsers :one
 SELECT count(id)
 FROM users
-WHERE verified_at IS NOT NULL
+WHERE verified_at IS NOT NULL AND deleted_at IS NULL
 `
 
 func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
@@ -47,7 +48,7 @@ func (q *Queries) CountAllUsers(ctx context.Context) (int64, error) {
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, username, password, role, sanitized_email, email_hash)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 `
 
 type CreateUserParams struct {
@@ -84,13 +85,14 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.EmailHash,
 		&i.KycStatus,
 		&i.PublicKey,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const deleteUserByID = `-- name: DeleteUserByID :exec
 DELETE FROM users
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) DeleteUserByID(ctx context.Context, id uuid.UUID) error {
@@ -105,8 +107,9 @@ SET email = email_hash,
     password = NULL,
     disabled = TRUE,
     sanitized_email = NULL,
-    public_key = NULL
-WHERE id = $1
+    public_key = NULL,
+    deleted_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
@@ -117,7 +120,7 @@ func (q *Queries) DestroyUser(ctx context.Context, userID uuid.UUID) error {
 const getKYCStatus = `-- name: GetKYCStatus :one
 SELECT kyc_status::text
 FROM users
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
     LIMIT 1
 `
 
@@ -129,9 +132,10 @@ func (q *Queries) GetKYCStatus(ctx context.Context, id uuid.UUID) (string, error
 }
 
 const getNotSanitizedUsersListDesc = `-- name: GetNotSanitizedUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
 WHERE (sanitized_email IS NULL OR sanitized_email = '')
+AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -165,6 +169,7 @@ func (q *Queries) GetNotSanitizedUsersListDesc(ctx context.Context, arg GetNotSa
 			&i.EmailHash,
 			&i.KycStatus,
 			&i.PublicKey,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -182,7 +187,8 @@ func (q *Queries) GetNotSanitizedUsersListDesc(ctx context.Context, arg GetNotSa
 const getPublicKey = `-- name: GetPublicKey :one
 SELECT public_key
 FROM users
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
+    LIMIT 1
 `
 
 func (q *Queries) GetPublicKey(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
@@ -193,9 +199,10 @@ func (q *Queries) GetPublicKey(ctx context.Context, id uuid.UUID) (sql.NullStrin
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
 WHERE email = $1
+AND deleted_at IS NULL
 LIMIT 1
 `
 
@@ -217,14 +224,16 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.EmailHash,
 		&i.KycStatus,
 		&i.PublicKey,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
-WHERE id = $1
+WHERE id = $1 
+AND deleted_at IS NULL
 LIMIT 1
 `
 
@@ -246,14 +255,16 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.EmailHash,
 		&i.KycStatus,
 		&i.PublicKey,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserBySanitizedEmail = `-- name: GetUserBySanitizedEmail :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
 WHERE sanitized_email = $1::text
+AND deleted_at IS NULL
 LIMIT 1
 `
 
@@ -275,14 +286,16 @@ func (q *Queries) GetUserBySanitizedEmail(ctx context.Context, email string) (Us
 		&i.EmailHash,
 		&i.KycStatus,
 		&i.PublicKey,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
 WHERE username = $1
+AND deleted_at IS NULL
 LIMIT 1
 `
 
@@ -304,6 +317,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.EmailHash,
 		&i.KycStatus,
 		&i.PublicKey,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -311,7 +325,8 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 const getUsernameByID = `-- name: GetUsernameByID :one
 SELECT username 
 FROM users
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
+    LIMIT 1
 `
 
 func (q *Queries) GetUsernameByID(ctx context.Context, id uuid.UUID) (string, error) {
@@ -322,8 +337,9 @@ func (q *Queries) GetUsernameByID(ctx context.Context, id uuid.UUID) (string, er
 }
 
 const getUsersListDesc = `-- name: GetUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -357,6 +373,7 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 			&i.EmailHash,
 			&i.KycStatus,
 			&i.PublicKey,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -372,9 +389,10 @@ func (q *Queries) GetUsersListDesc(ctx context.Context, arg GetUsersListDescPara
 }
 
 const getVerifiedUsersListDesc = `-- name: GetVerifiedUsersListDesc :many
-SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key
+SELECT id, username, email, password, disabled, verified_at, updated_at, created_at, role, block_reason, sanitized_email, email_hash, kyc_status, public_key, deleted_at
 FROM users
 WHERE verified_at IS NOT NULL
+AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -408,6 +426,7 @@ func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedU
 			&i.EmailHash,
 			&i.KycStatus,
 			&i.PublicKey,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -425,7 +444,7 @@ func (q *Queries) GetVerifiedUsersListDesc(ctx context.Context, arg GetVerifiedU
 const isUserDisabled = `-- name: IsUserDisabled :one
 SELECT disabled
 FROM users
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 LIMIT 1
 `
 
@@ -439,7 +458,7 @@ func (q *Queries) IsUserDisabled(ctx context.Context, id uuid.UUID) (bool, error
 const updateKYCStatus = `-- name: UpdateKYCStatus :exec
 UPDATE users
 SET kyc_status = $1::text
-WHERE id = $2
+WHERE id = $2 AND deleted_at IS NULL
 `
 
 type UpdateKYCStatusParams struct {
@@ -455,7 +474,7 @@ func (q *Queries) UpdateKYCStatus(ctx context.Context, arg UpdateKYCStatusParams
 const updatePublicKey = `-- name: UpdatePublicKey :exec
 UPDATE users
 SET public_key = $1::text
-WHERE id = $2
+WHERE id = $2 AND deleted_at IS NULL
 `
 
 type UpdatePublicKeyParams struct {
@@ -471,7 +490,7 @@ func (q *Queries) UpdatePublicKey(ctx context.Context, arg UpdatePublicKeyParams
 const updateUserEmail = `-- name: UpdateUserEmail :exec
 UPDATE users
 SET email = $2, sanitized_email = $3, email_hash = $4
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 type UpdateUserEmailParams struct {
@@ -494,7 +513,7 @@ func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE users
 SET password = $2
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 type UpdateUserPasswordParams struct {
@@ -510,7 +529,7 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 const updateUserRole = `-- name: UpdateUserRole :exec
 UPDATE users
 SET role = $1
-WHERE id = $2
+WHERE id = $2 AND deleted_at IS NULL
 `
 
 type UpdateUserRoleParams struct {
@@ -526,7 +545,7 @@ func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) 
 const updateUserSanitizedEmail = `-- name: UpdateUserSanitizedEmail :exec
 UPDATE users
 SET sanitized_email = $1::text
-WHERE id = $2
+WHERE id = $2 AND deleted_at IS NULL
 `
 
 type UpdateUserSanitizedEmailParams struct {
@@ -542,7 +561,7 @@ func (q *Queries) UpdateUserSanitizedEmail(ctx context.Context, arg UpdateUserSa
 const updateUserStatus = `-- name: UpdateUserStatus :exec
 UPDATE users
 SET disabled = $2, block_reason = $3
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 type UpdateUserStatusParams struct {
@@ -559,7 +578,7 @@ func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusPara
 const updateUserVerifiedAt = `-- name: UpdateUserVerifiedAt :exec
 UPDATE users
 SET verified_at = $1
-WHERE id = $2
+WHERE id = $2 AND deleted_at IS NULL
 `
 
 type UpdateUserVerifiedAtParams struct {
@@ -575,7 +594,7 @@ func (q *Queries) UpdateUserVerifiedAt(ctx context.Context, arg UpdateUserVerifi
 const updateUsername = `-- name: UpdateUsername :exec
 UPDATE users
 SET username = $2
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 type UpdateUsernameParams struct {
