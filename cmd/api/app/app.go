@@ -181,6 +181,7 @@ type Config struct {
 	UnityGameTokenPoolPrivateKey   string
 	DisableRewardsForQuiz          bool
 	RewardsWalletEnabled           bool
+	DisableVerificationForRealm    bool
 }
 
 var buildTag string
@@ -320,7 +321,8 @@ func ConfigFromEnv() *Config {
 		UnityGameTokenPoolPrivateKey: env.MustString("UNITY_GAME_TOKEN_POOL_PRIVATE_KEY"),
 		UnityGameFeeCollectorAddress: env.MustString("UNITY_GAME_FEE_COLLECTOR_ADDRESS"),
 
-		DisableRewardsForQuiz: env.GetBool("DISABLE_REWARDS_FOR_QUIZ", false),
+		DisableRewardsForQuiz:       env.GetBool("DISABLE_REWARDS_FOR_QUIZ", false),
+		DisableVerificationForRealm: env.GetBool("DISABLE_VERIFICATION_FOR_REALM", false),
 	}
 }
 
@@ -797,6 +799,7 @@ func (a *app) Run() {
 				fmt.Sprintf("%s/challenges", strings.TrimSuffix(a.cfg.AppBaseURL, "/")),
 			),
 			challenge.WithChargeForUnlockFunc(walletSvcClient.PayForService),
+			challenge.WithDisabledVerification(a.cfg.DisableVerificationForRealm),
 		)
 		challengeSvcClient = challengeClient.New(challengeSvc)
 		r.Mount("/challenges", challenge.MakeHTTPHandlerChallenges(
@@ -897,6 +900,7 @@ func (a *app) Run() {
 			a.cfg.QuizV2ShuffleQuestions,
 			a.cfg.DisableRewardsForQuiz,
 			a.cfg.QuizLobbyLatency,
+			a.cfg.DisableVerificationForRealm,
 		)
 		r.Mount("/quiz_v2", quiz_v2.MakeHTTPHandler(
 			quiz_v2.MakeEndpoints(quizV2Svc, jwtMdw),

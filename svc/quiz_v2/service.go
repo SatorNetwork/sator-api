@@ -40,6 +40,7 @@ type (
 		serverRSAPrivateKey *rsa.PrivateKey
 
 		disableRewardsForQuiz bool
+		disableVerification   bool
 	}
 
 	authClient interface {
@@ -75,6 +76,7 @@ func NewService(
 	shuffleQuestions bool,
 	disableRewardsForQuiz bool,
 	quizLobbyLatency time.Duration,
+	disableVerification bool,
 ) *Service {
 	restrictionManager := restriction_manager.New(challenges)
 
@@ -101,6 +103,7 @@ func NewService(
 		qr:                    qr,
 		serverRSAPrivateKey:   serverRSAPrivateKey,
 		disableRewardsForQuiz: disableRewardsForQuiz,
+		disableVerification:   disableVerification,
 	}
 
 	return s
@@ -119,7 +122,7 @@ func (s *Service) GetQuizLink(ctx context.Context, uid uuid.UUID, username strin
 		return nil, errors.Errorf("can't choose %v questions out of %v", challenge.QuestionsPerGame, len(questions))
 	}
 
-	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid, mustAccess)
+	restricted, restrictionReason, err := s.restrictionManager.IsUserRestricted(ctx, challengeID, uid, mustAccess || s.disableVerification)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't check if user is restricted")
 	}
@@ -180,7 +183,7 @@ func (s *Service) StartEngine() {
 }
 
 func (s *Service) GetChallengeByID(ctx context.Context, challengeID, userID uuid.UUID, mustAccess bool) (challenge_service.Challenge, error) {
-	challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, userID, mustAccess)
+	challenge, err := s.challenges.GetChallengeByID(ctx, challengeID, userID, mustAccess || s.disableVerification)
 	if err != nil {
 		return challenge_service.Challenge{}, errors.Wrap(err, "can't get challenge by ID")
 	}
@@ -240,7 +243,7 @@ func (s *Service) GetChallengesSortedByPlayers(ctx context.Context, userID uuid.
 		}
 		log.Printf("Serialized SQL challenges: %s\n", serializedChallenges)
 	}
-	challenges, err := s.NewChallengesFromSQL(ctx, sqlChallenges, userID, mustAccess)
+	challenges, err := s.NewChallengesFromSQL(ctx, sqlChallenges, userID, mustAccess || s.disableVerification)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +267,7 @@ func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Chall
 		}
 
 		// TODO(evg): get rid of extra database call
-		challenge, err := s.challenges.GetChallengeByID(ctx, challengeUID, userID, mustAccess)
+		challenge, err := s.challenges.GetChallengeByID(ctx, challengeUID, userID, mustAccess || s.disableVerification)
 		if err != nil {
 			return nil, errors.Wrap(err, "can't get challenge by ID")
 		}
@@ -282,7 +285,7 @@ func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Chall
 	}
 
 	isActivated := c.IsActivated
-	if mustAccess {
+	if mustAccess || s.disableVerification {
 		isActivated = true
 	}
 
@@ -300,7 +303,7 @@ func (s *Service) NewChallengeFromSQL(ctx context.Context, c *sql_executor.Chall
 func (s *Service) NewChallengesFromSQL(ctx context.Context, sqlChallenges []*sql_executor.Challenge, userID uuid.UUID, mustAccess bool) ([]*Challenge, error) {
 	challenges := make([]*Challenge, 0)
 	for _, c := range sqlChallenges {
-		challenge, err := s.NewChallengeFromSQL(ctx, c, userID, mustAccess)
+		challenge, err := s.NewChallengeFromSQL(ctx, c, userID, mustAccess || s.disableVerification)
 		if err != nil {
 			return nil, err
 		}

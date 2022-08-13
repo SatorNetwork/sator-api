@@ -24,3 +24,11 @@ func WithChargeForUnlockFunc(fn chargeForUnlockFunc) ServiceOption {
 		s.chargeForUnlockFn = fn
 	}
 }
+
+// WithDisabledVerification ...
+// Disables verification.
+func WithDisabledVerification(disable bool) ServiceOption {
+	return func(s *Service) {
+		s.disableVerification = disable
+	}
+}

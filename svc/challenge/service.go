@@ -39,6 +39,7 @@ type (
 		activatedRealmPeriod time.Duration
 		chargeForUnlockFn    chargeForUnlockFunc
 		showRepo             showsRepository
+		disableVerification  bool
 	}
 
 	chargeForUnlockFunc func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -218,6 +219,7 @@ func NewService(cr challengesRepository, showRepo showsRepository, fn playURLGen
 		playUrlFn:            fn,
 		attemptsNumber:       2,
 		activatedRealmPeriod: time.Hour * 24,
+		disableVerification:  false,
 	}
 
 	for _, o := range opt {
@@ -393,7 +395,7 @@ func (s *Service) CheckVerificationQuestionAnswer(ctx context.Context, questionI
 
 // VerifyUserAccessToEpisode ...
 func (s *Service) VerifyUserAccessToEpisode(ctx context.Context, uid, eid uuid.UUID, mustAccess bool) (EpisodeAccess, error) {
-	if mustAccess {
+	if mustAccess || s.disableVerification {
 		return EpisodeAccess{
 			EpisodeID:       &eid,
 			Result:          true,
