@@ -192,8 +192,6 @@ func MakeGetStatusEndpoint(s gameService, settings gameSettingsService) endpoint
 			ConversionFee:                player.ConversionFee,
 		}
 
-		// log.Printf("GetStatusResponse: %+v", resp)
-
 		return resp, nil
 	}
 }
@@ -259,8 +257,6 @@ func MakeBuyNFTPackEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 			UserOwnedNftList: userNFTs,
 		}
 
-		log.Printf("BuyNFTPackResponse: %+v", resp)
-
 		return resp, nil
 	}
 }
@@ -303,8 +299,6 @@ func MakeCraftNFTEndpoint(s gameService, validateFunc validator.ValidateFunc) en
 			NewNFT:           newNFT,
 			UserOwnedNFTList: userNFTs,
 		}
-
-		log.Printf("CraftNFTResponse: %+v", resp)
 
 		return resp, nil
 	}
@@ -374,8 +368,6 @@ func MakeStartGameEndpoint(s gameService, validateFunc validator.ValidateFunc) e
 			GameConfig: gameConfig,
 		}
 
-		log.Printf("StartGameResponse: %+v", resp)
-
 		return resp, nil
 	}
 }
@@ -419,8 +411,6 @@ func MakeFinishGameEndpoint(s gameService, validateFunc validator.ValidateFunc) 
 			UserInGameCurrency: rewardsAmount,
 			Viewers:            viewers,
 		}
-
-		log.Printf("FinishGameResponse: %+v", resp)
 
 		return resp, nil
 	}
@@ -476,8 +466,6 @@ func MakePayForElectricityEndpoint(s gameService) endpoint.Endpoint {
 		resp := PayForElectricityResponse{
 			ElectricityLeft: left,
 		}
-
-		log.Printf("PayForElectricityResponse: %+v", resp)
 
 		return resp, nil
 	}
