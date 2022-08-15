@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
@@ -754,7 +755,7 @@ func castRowToEpisodeExtended(source repository.GetPublishedEpisodeByIDRow, rati
 	ep := castPublishedRowToEpisode(source)
 	ep.Rating = rating
 	ep.RatingsCount = ratingsCount
-	ep.ActiveUsers = number
+	ep.ActiveUsers = getActiveUsers(number)
 	ep.TotalRewardsAmount = receivedAmount
 	ep.UserRewardsAmount = receivedRewardAmountByUser
 	ep.UsersEpisodeRating = usersEpisodeRating
@@ -855,6 +856,11 @@ func (s *Service) GetListEpisodesByIDs(ctx context.Context, episodeIDs []uuid.UU
 	return result, err
 }
 
+func getActiveUsers(min int32) int32 {
+	rand.Seed(time.Now().UnixNano())
+	return min + rand.Int31n(50)
+}
+
 // Cast repository.GetEpisodesByShowIDRow to service Episode structure
 func castRowsToPublishedEpisode(source repository.GetPublishedEpisodesByShowIDRow, numberUsersWhoHaveAccessToEpisode int32, receivedAmount, receivedAmountByUser float64) Episode {
 	ep := Episode{
@@ -869,7 +875,7 @@ func castRowsToPublishedEpisode(source repository.GetPublishedEpisodesByShowIDRo
 		ReleaseDate:        source.ReleaseDate.Time.String(),
 		Rating:             source.AvgRating,
 		RatingsCount:       source.Ratings,
-		ActiveUsers:        numberUsersWhoHaveAccessToEpisode,
+		ActiveUsers:        getActiveUsers(numberUsersWhoHaveAccessToEpisode),
 		TotalRewardsAmount: receivedAmount,
 		UserRewardsAmount:  receivedAmountByUser,
 		HintText:           defaultHintText,

@@ -30,3 +30,5 @@ vendor/
 .env
 .vscode
 cmd/gapi
+lib/solana/client/nft_test.go
+cmd/solana/nfts/main.go
