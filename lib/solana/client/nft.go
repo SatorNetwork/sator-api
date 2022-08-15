@@ -5,6 +5,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/metaplex/tokenmeta"
-	"github.com/portto/solana-go-sdk/program/tokenprog"
 	"github.com/portto/solana-go-sdk/rpc"
 
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
@@ -43,26 +43,20 @@ type TokenAccountData struct {
 
 // GetNFTMintAddrs returns mint addrs which owned by walletAddr
 func (c *Client) GetNFTMintAddrs(ctx context.Context, walletAddr string) ([]string, error) {
-	resp, err := c.solanaRpc.GetProgramAccountsWithConfig(ctx, common.TokenProgramID.ToBase58(), rpc.GetProgramAccountsConfig{
-		Encoding: rpc.GetProgramAccountsConfigEncodingJsonParsed,
-		Filters: []rpc.GetProgramAccountsConfigFilter{
-			{
-				DataSize: tokenprog.TokenAccountSize,
-			},
-			{
-				MemCmp: &rpc.GetProgramAccountsConfigFilterMemCmp{
-					Offset: 32,
-					Bytes:  walletAddr,
-				},
-			},
-		},
+	resp, err := c.solanaRpc.GetTokenAccountsByOwnerWithConfig(ctx, walletAddr, rpc.GetTokenAccountsByOwnerConfigFilter{
+		ProgramId: common.TokenProgramID.ToBase58(),
+	}, rpc.GetTokenAccountsByOwnerConfig{
+		Encoding: rpc.GetTokenAccountsByOwnerConfigEncodingJsonParsed,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "can't get program accounts with config")
+		return nil, errors.Wrap(err, "can't get token accounts by owner")
+	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("get token accounts by owner error: %s", resp.Error.Message)
 	}
 
 	mintAddr := make([]string, 0)
-	for _, account := range resp.Result {
+	for _, account := range resp.Result.Value {
 		dataInJSON, err := json.Marshal(account.Account.Data)
 		if err != nil {
 			return nil, errors.Wrap(err, "can't marshal token account data")
