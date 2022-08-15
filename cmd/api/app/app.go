@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/dmitrymomot/go-env"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
 	kitlog "github.com/go-kit/kit/log"
@@ -397,7 +397,6 @@ func (a *app) Run() {
 	{
 		r.Use(
 			recoverer.WithLogger(logger),
-			middleware.CleanPath,
 			middleware.GetHead,
 			middleware.NoCache,
 			middleware.RealIP,

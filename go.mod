@@ -17,7 +17,6 @@ require (
 	github.com/dmitrymomot/random v1.0.6
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
 	github.com/ethereum/go-ethereum v1.10.17
-	github.com/go-chi/chi v4.1.1+incompatible
 	github.com/go-chi/httprate v0.6.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/locales v0.13.0
