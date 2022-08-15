@@ -629,7 +629,9 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 // GetNFTsByWalletAddress returns all NFTs that are related to a wallet address
 func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTListItem, error) {
 	log.Println("GetNFTsByWalletAddress")
-	defer log.Println("GetNFTsByWalletAddress done")
+	defer func() {
+		log.Println("GetNFTsByWalletAddress done")
+	}()
 
 	if !s.enableResourceIntensiveQueries {
 		log.Println("Resource intensive queries are disabled")
