@@ -628,13 +628,7 @@ func (s *Service) DoesRelationIDHasNFT(ctx context.Context, relationID uuid.UUID
 
 // GetNFTsByWalletAddress returns all NFTs that are related to a wallet address
 func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWalletAddressRequest) ([]*NFTListItem, error) {
-	log.Println("GetNFTsByWalletAddress")
-	defer func() {
-		log.Println("GetNFTsByWalletAddress done")
-	}()
-
 	if !s.enableResourceIntensiveQueries {
-		log.Println("Resource intensive queries are disabled")
 		return make([]*NFTListItem, 0), nil
 	}
 
@@ -642,21 +636,15 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get nfts from solana blockchain")
 	}
-	log.Printf("mintAddrs: %+v", mintAddrs)
 
 	nfts := make([]*NFTListItem, 0, len(mintAddrs))
 	for _, mint := range mintAddrs {
 		cachedMeta, err := s.nftRepo.GetNFTFromCache(ctx, mint)
 		if err != nil {
-			log.Printf("could not get NFT from cache with id=%s: %v", mint, err)
-
 			meta, err := s.sc.GetNFTMetadata(mint)
 			if err != nil {
-				log.Printf("could not get nft metadata from solana blockchain: %s: %v\n", mint, err)
 				continue
 			}
-
-			log.Printf("meta: %+v", meta)
 
 			nfts = append(nfts, &NFTListItem{
 				MintAddress:        mint,
@@ -678,11 +666,8 @@ func (s *Service) GetNFTsByWalletAddress(ctx context.Context, req *GetNFTsByWall
 		} else {
 			meta := &lib_solana.ArweaveNFTMetadata{}
 			if err := json.Unmarshal(cachedMeta.Metadata, meta); err != nil {
-				log.Printf("could not unmarshal nft %s: %v\n", mint, err)
 				continue
 			}
-
-			log.Printf("cached meta: %+v", meta)
 
 			nfts = append(nfts, &NFTListItem{
 				MintAddress:        mint,
