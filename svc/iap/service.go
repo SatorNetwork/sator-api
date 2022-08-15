@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	maxRetries      = 5
+	maxRetries      = 10
 	constantBackOff = 10 * time.Second
 )
 
