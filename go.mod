@@ -18,6 +18,7 @@ require (
 	github.com/dustin/go-broadcast v0.0.0-20171205050544-f664265f5a66
 	github.com/ethereum/go-ethereum v1.10.17
 	github.com/go-chi/chi v4.1.1+incompatible
+	github.com/go-chi/httprate v0.6.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/locales v0.13.0
 	github.com/go-playground/universal-translator v0.17.0
@@ -54,6 +55,8 @@ require (
 	syreclabs.com/go/faker v1.2.3
 )
 
+require github.com/cespare/xxhash/v2 v2.1.2 // indirect
+
 require (
 	cloud.google.com/go v0.97.0 // indirect
 	cloud.google.com/go/firestore v1.6.1 // indirect
@@ -65,6 +68,7 @@ require (
 	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect

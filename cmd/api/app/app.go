@@ -17,7 +17,8 @@ import (
 
 	"github.com/dmitrymomot/go-env"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/keighl/postmark"
 	_ "github.com/lib/pq" // init pg driver
@@ -33,6 +34,7 @@ import (
 	"github.com/SatorNetwork/sator-api/lib/jwt"
 	lib_postmark "github.com/SatorNetwork/sator-api/lib/mail/postmark"
 	nft_marketplace_client "github.com/SatorNetwork/sator-api/lib/nft_marketplace/client"
+	"github.com/SatorNetwork/sator-api/lib/recoverer"
 	"github.com/SatorNetwork/sator-api/lib/resizer"
 	lib_solana "github.com/SatorNetwork/sator-api/lib/solana"
 	solana_client "github.com/SatorNetwork/sator-api/lib/solana/client"
@@ -393,11 +395,18 @@ func (a *app) Run() {
 
 	r := chi.NewRouter()
 	{
-		r.Use(middleware.Recoverer)
-		r.Use(middleware.Timeout(a.cfg.HttpRequestTimeout))
-		r.Use(cors.AllowAll().Handler)
-
-		r.Use(testingMdw)
+		r.Use(
+			recoverer.WithLogger(logger),
+			middleware.CleanPath,
+			middleware.GetHead,
+			middleware.NoCache,
+			middleware.RealIP,
+			middleware.RequestID,
+			httprate.LimitByIP(100, 1*time.Minute),
+			middleware.Timeout(a.cfg.HttpRequestTimeout),
+			cors.AllowAll().Handler,
+			testingMdw,
+		)
 
 		r.NotFound(notFoundHandler)
 		r.MethodNotAllowed(methodNotAllowedHandler)
