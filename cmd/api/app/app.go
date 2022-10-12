@@ -758,6 +758,7 @@ func (a *app) Run() {
 			a.cfg.SolanaAssetAddr,
 			feePayer,
 			tokenHolder,
+			exchangeRatesClient,
 		)
 		r.Mount("/iap", iap_svc.MakeHTTPHandler(
 			iap_svc.MakeEndpoints(iapSvc, jwtMdw),

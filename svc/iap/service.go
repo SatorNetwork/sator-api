@@ -20,13 +20,14 @@ import (
 	appstore_client "github.com/SatorNetwork/sator-api/lib/appstore/client"
 	lib_errors "github.com/SatorNetwork/sator-api/lib/errors"
 	lib_nft_marketplace "github.com/SatorNetwork/sator-api/lib/nft_marketplace"
+	"github.com/SatorNetwork/sator-api/svc/exchange_rates"
 	iap_repository "github.com/SatorNetwork/sator-api/svc/iap/repository"
 	"github.com/SatorNetwork/sator-api/svc/wallet"
 	"github.com/SatorNetwork/sator-api/svc/wallet/repository"
 )
 
 const (
-	maxRetries      = 10
+	maxRetries      = 100
 	constantBackOff = 10 * time.Second
 )
 
@@ -37,10 +38,15 @@ type (
 		ir             iapRepository
 		wr             walletRepository
 		sc             solanaClient
+		exchange_rates exchangeRatesClient
 
 		satorAssetSolanaAddr string
 		feePayer             types.Account
 		tokenHolder          types.Account
+	}
+
+	exchangeRatesClient interface {
+		GetAssetPrice(ctx context.Context, req *exchange_rates.Asset) (*exchange_rates.Price, error)
 	}
 
 	iapRepository interface {
@@ -86,6 +92,7 @@ func NewService(
 	satorAssetSolanaAddr string,
 	feePayer types.Account,
 	tokenHolder types.Account,
+	exchange_rates exchangeRatesClient,
 ) *Service {
 	s := &Service{
 		client:         appstore_client.New(),
@@ -93,6 +100,7 @@ func NewService(
 		ir:             ir,
 		wr:             wr,
 		sc:             sc,
+		exchange_rates: exchange_rates,
 
 		satorAssetSolanaAddr: satorAssetSolanaAddr,
 		feePayer:             feePayer,
@@ -143,6 +151,15 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 		return nil, errors.Wrap(err, "can't get iap product by id")
 	}
 
+	saoPrice, err := s.exchange_rates.GetAssetPrice(ctx, &exchange_rates.Asset{
+		AssetType: exchange_rates.AssetTypeSAO,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get sao price")
+	}
+
+	saoAmount := (iapProduct.PriceInUsd / saoPrice.Usd) * 0.7
+
 	ctxb := context.Background()
 	err = backoff.Retry(func() error {
 		_, err := s.sc.GiveAssetsWithAutoDerive(
@@ -151,7 +168,7 @@ func (s *Service) RegisterInAppPurchase(ctx context.Context, userID uuid.UUID, r
 			s.feePayer,
 			s.tokenHolder,
 			solanaAccount.PublicKey,
-			iapProduct.PriceInSao,
+			saoAmount,
 		)
 		if err != nil {
 			return errors.Wrap(err, "can't send sator tokens")
