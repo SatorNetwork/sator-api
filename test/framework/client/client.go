@@ -13,6 +13,7 @@ import (
 	"github.com/SatorNetwork/sator-api/test/framework/client/puzzle_game"
 	"github.com/SatorNetwork/sator-api/test/framework/client/quiz_v2"
 	"github.com/SatorNetwork/sator-api/test/framework/client/rewards"
+	"github.com/SatorNetwork/sator-api/test/framework/client/settings"
 	"github.com/SatorNetwork/sator-api/test/framework/client/shows"
 	"github.com/SatorNetwork/sator-api/test/framework/client/trading_platforms"
 	"github.com/SatorNetwork/sator-api/test/framework/client/wallet"
@@ -31,6 +32,7 @@ type Client struct {
 	FirebaseClient         *firebase.FirebaseClient
 	NftClient              *nft.NftClient
 	Announcement           *announcement.AnnouncementClient
+	SettingsClient         *settings.SettingsClient
 
 	DB *db.DB
 }
@@ -53,6 +55,7 @@ func NewClient() *Client {
 		FirebaseClient:         firebase.New(),
 		NftClient:              nft.New(),
 		Announcement:           announcement.New(),
+		SettingsClient:         settings.New(),
 
 		DB: db,
 	}

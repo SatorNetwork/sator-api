@@ -16,6 +16,7 @@ import (
 
 	"github.com/SatorNetwork/sator-api/svc/files"
 	"github.com/SatorNetwork/sator-api/svc/puzzle_game/repository"
+	"github.com/SatorNetwork/sator-api/svc/settings"
 )
 
 // Predefined puzzle game states
@@ -30,12 +31,11 @@ type (
 	Service struct {
 		pgr                        puzzleGameRepository
 		filesSvc                   filesService
+		settingsSvc                settingsService
 		chargeForUnlock            chargeForUnlockFunc          // function to charge user for unlocking puzzle game
 		rewardsFn                  rewardsFunc                  // function to send rewards for puzzle game
 		getUserRewardsMultiplierFn getUserRewardsMultiplierFunc // function to get user rewards multiplier
 		puzzleGameShuffle          bool
-		rewardsEnabled             bool
-		paidStepsEnabled           bool
 	}
 
 	puzzleGameRepository interface {
@@ -62,6 +62,10 @@ type (
 	filesService interface {
 		DeleteImageByID(ctx context.Context, id uuid.UUID) error
 		GetImagesListByIDs(ctx context.Context, ids []uuid.UUID) ([]files.File, error)
+	}
+
+	settingsService interface {
+		GetBool(ctx context.Context, key string) (bool, error)
 	}
 
 	chargeForUnlockFunc          func(ctx context.Context, uid uuid.UUID, amount float64, info string) error
@@ -117,8 +121,6 @@ func NewService(pgr puzzleGameRepository, puzzleGameShuffle bool, opt ...Service
 	s := &Service{
 		pgr:               pgr,
 		puzzleGameShuffle: puzzleGameShuffle,
-		paidStepsEnabled:  false,
-		rewardsEnabled:    false,
 	}
 
 	for _, o := range opt {
@@ -304,8 +306,17 @@ func (s *Service) UnlockPuzzleGame(ctx context.Context, userID, puzzleGameID uui
 		return PuzzleGame{}, errors.New("payment service is not set")
 	}
 
+	paidStepsEnabled, err := s.settingsSvc.GetBool(ctx, settings.SettingPuzzleGamePaidStepsKey)
+	if err != nil {
+		if errors.Is(err, settings.NotFound) {
+			paidStepsEnabled = true
+		} else {
+			return PuzzleGame{}, errors.Wrap(err, "can't get settings")
+		}
+	}
+
 	var steps int32
-	if s.paidStepsEnabled {
+	if paidStepsEnabled {
 		opt, err := s.pgr.GetPuzzleGameUnlockOption(ctx, option)
 		if err != nil {
 			return PuzzleGame{}, errors.Wrap(err, "can't get puzzle game unlock option")
@@ -543,9 +554,18 @@ func (s *Service) TapTile(ctx context.Context, userID, puzzleGameID uuid.UUID, p
 	att.Status = controller.PuzzleStatus
 	att.Tiles = sql.NullString{String: string(tilesBytes), Valid: true}
 
+	rewardsEnabled, err := s.settingsSvc.GetBool(ctx, settings.SettingPuzzleGameRewardsKey)
+	if err != nil {
+		if errors.Is(err, settings.NotFound) {
+			rewardsEnabled = true
+		} else {
+			return PuzzleGame{}, errors.Wrap(err, "can't get settings")
+		}
+	}
+
 	var rewardsAmount, lockRewardsAmount float64 = 0, 0
 	if att.Status == PuzzleGameStatusFinished {
-		if pg.PrizePool > 0 && s.rewardsEnabled {
+		if pg.PrizePool > 0 && rewardsEnabled {
 			rewardsAmount = pg.PrizePool
 
 			if s.getUserRewardsMultiplierFn != nil {

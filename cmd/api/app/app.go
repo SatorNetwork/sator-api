@@ -79,6 +79,8 @@ import (
 	"github.com/SatorNetwork/sator-api/svc/rewards"
 	rewardsClient "github.com/SatorNetwork/sator-api/svc/rewards/client"
 	rewardsRepo "github.com/SatorNetwork/sator-api/svc/rewards/repository"
+	"github.com/SatorNetwork/sator-api/svc/settings"
+	settingsRepository "github.com/SatorNetwork/sator-api/svc/settings/repository"
 	"github.com/SatorNetwork/sator-api/svc/shows"
 	"github.com/SatorNetwork/sator-api/svc/shows/private"
 	showsRepo "github.com/SatorNetwork/sator-api/svc/shows/repository"
@@ -922,6 +924,22 @@ func (a *app) Run() {
 		))
 	}
 
+	var settingsSvc *settings.Service
+	{
+		settingsRepository, err := settingsRepository.Prepare(ctx, db)
+		if err != nil {
+			log.Fatalf("can't prepare settings repository: %v", err)
+		}
+
+		settingsSvc = settings.NewService(settingsRepository)
+
+		r.Mount("/settings", settings.MakeHTTPHandler(
+			settings.MakeEndpoints(settingsSvc, jwtMdw),
+			logger,
+			gapi.EncodeResponseWithSignature(a.cfg.UnityVersion),
+		))
+	}
+
 	{
 		puzzleGameRepository, err := puzzleGameRepo.Prepare(ctx, db)
 		if err != nil {
@@ -935,8 +953,7 @@ func (a *app) Run() {
 			puzzle_game.WithRewardsFunction(rewardsSvcClient.AddDepositTransaction),
 			puzzle_game.WithFileServiceClient(fileSvc),
 			puzzle_game.WithUserMultiplierFunction(walletSvcClient.GetMultiplier),
-			puzzle_game.IsPaidStepsEnabled(a.cfg.PuzzleGamePaidStepsEnabled),
-			puzzle_game.IsRewardsEnabled(a.cfg.PuzzleGameRewardsEnabled),
+			puzzle_game.WithSettingsServiceClient(settingsSvc),
 		)
 
 		r.Mount("/puzzle-game", puzzle_game.MakeHTTPHandler(
