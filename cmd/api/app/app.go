@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -519,31 +518,23 @@ func (a *app) Run() {
 
 	var feePayer types.Account
 	{
-		feePayerPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaFeePayerPrivateKey)
-		if err != nil {
-			log.Fatalf("feePayerPk base64 decoding error: %v", err)
-		}
-		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayerPk); err != nil {
-			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
-		}
-		feePayer, err = types.AccountFromBytes(feePayerPk)
+		feePayer, err = types.AccountFromBase58(a.cfg.SolanaFeePayerPrivateKey)
 		if err != nil {
 			log.Fatalf("can't get fee payer account from bytes")
+		}
+		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaFeePayerAddr, feePayer.PrivateKey); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: fee payer: %v", err)
 		}
 	}
 
 	var tokenHolder types.Account
 	{
-		tokenHolderPk, err := base64.StdEncoding.DecodeString(a.cfg.SolanaTokenHolderPrivateKey)
-		if err != nil {
-			log.Fatalf("tokenHolderPk base64 decoding error: %v", err)
-		}
-		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, tokenHolderPk); err != nil {
-			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
-		}
-		tokenHolder, err = types.AccountFromBytes(tokenHolderPk)
+		tokenHolder, err = types.AccountFromBase58(a.cfg.SolanaTokenHolderPrivateKey)
 		if err != nil {
 			log.Fatalf("can't get token holder account from bytes")
+		}
+		if err := solanaClient.CheckPrivateKey(a.cfg.SolanaTokenHolderAddr, tokenHolder.PrivateKey); err != nil {
+			log.Fatalf("solanaClient.CheckPrivateKey: token holder: %v", err)
 		}
 	}
 
